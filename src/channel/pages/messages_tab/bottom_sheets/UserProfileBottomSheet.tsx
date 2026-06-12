@@ -1,0 +1,255 @@
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TouchableWithoutFeedback, useWindowDimensions, ScrollView } from 'react-native';
+import { MessageModel } from '../models/MessageModel';
+import { Image as ExpoImage } from 'expo-image';
+import { UserPlus, UserCircle } from 'lucide-react-native';
+import { colors } from '@/core/theme/colors';
+import { useRouter } from 'expo-router';
+import { UserAvatarImage } from '@/channel/pages/widgets2/memberimage/UserAvatarImage';
+import { FollowUserButton } from '@/components/FollowUserButton';
+
+interface UserProfileBottomSheetProps {
+  user: MessageModel;
+  visible: boolean;
+  onClose: () => void;
+}
+
+import { supabase } from '@/core/supabase/client';
+import { useEffect, useState } from 'react';
+import { useAuthStore } from '@/features/auth/application/useAuthStore';
+
+export const UserProfileBottomSheet: React.FC<UserProfileBottomSheetProps> = ({ user, visible, onClose }) => {
+  const { height } = useWindowDimensions();
+  const router = useRouter();
+  const currentUser = useAuthStore(state => state.user);
+  
+  const [stats, setStats] = useState({ followers: 0, channels: 0 });
+  const [commonChannels, setCommonChannels] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (visible && user.user.id && user.user.id !== 'temp-id') {
+      const fetchProfileStats = async () => {
+        const { data } = await supabase
+          .from('profiles')
+          .select('followers_count, channels_created_count')
+          .eq('id', user.user.id)
+          .single();
+          
+        if (data) {
+          setStats({
+            followers: data.followers_count || 0,
+            channels: data.channels_created_count || 0
+          });
+        }
+      };
+
+      const fetchCommonChannels = async () => {
+        if (!currentUser?.id) return;
+        const { data } = await supabase.rpc('get_user_channels', {
+          p_user_id: currentUser.id,
+          p_target_user_id: user.user.id,
+          p_filter_type: 'similar',
+          p_page_offset: 0,
+          p_page_limit: 10
+        });
+        if (data) {
+          setCommonChannels(data);
+        }
+      };
+
+      fetchProfileStats();
+      fetchCommonChannels();
+    }
+  }, [visible, user.user.id, currentUser?.id]);
+
+  const handleViewAccount = () => {
+    onClose();
+    if (user.user.id && user.user.id !== 'temp-id') {
+      router.push(`/profile/${user.user.id}` as any);
+    }
+  };
+
+  const displayName = user.user.name || 'User';
+  const displayAvatar = user.user.avatarUrl || '';
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <View style={styles.overlay}>
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={styles.backdrop} />
+        </TouchableWithoutFeedback>
+
+        <View style={styles.container}>
+          <View style={styles.dragHandle} />
+          
+          <ExpoImage
+            source={{ uri: displayAvatar }}
+            style={styles.avatar}
+            contentFit="cover"
+          />
+          
+          <Text style={styles.name}>{displayName}</Text>
+
+          <View style={styles.statsRow}>
+            <View style={styles.statCol}>
+              <Text style={styles.statValue}>{stats.followers}</Text>
+              <Text style={styles.statLabel}>Followers</Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.statCol}>
+              <Text style={styles.statValue}>{stats.channels}</Text>
+              <Text style={styles.statLabel}>Channels</Text>
+            </View>
+          </View>
+
+          <View style={styles.actionsRow}>
+            <FollowUserButton targetUserId={user.user.id} size="medium" style={styles.btn} />
+            <TouchableOpacity activeOpacity={1} style={styles.btn} onPress={handleViewAccount}>
+              <UserCircle size={18} color="#FFF" />
+              <Text style={styles.btnText}>View Account</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Common Channels Section */}
+          <View style={{ width: '100%', marginTop: 32 }}>
+            <Text style={styles.sectionTitle}>Common Channels</Text>
+            {commonChannels.length === 0 ? (
+              <Text style={{ color: 'rgba(255,255,255,0.5)', marginTop: 8 }}>No common channels</Text>
+            ) : (
+              <View style={{ marginHorizontal: -24 }}>
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false} 
+                  style={{ marginTop: 16 }}
+                  contentContainerStyle={{ paddingHorizontal: 24 }}
+                >
+                {commonChannels.map((channel) => (
+                  <View key={channel.id} style={{ marginRight: 16, alignItems: 'center' }}>
+                    <UserAvatarImage 
+                      imageUrl={channel.avatar_url || 'https://via.placeholder.com/60'} 
+                      size={60} 
+                      showStatusRing={false}
+                      showActiveDot={false}
+                      name={channel.name}
+                    />
+                    <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: '600', marginTop: 8, maxWidth: 64 }} numberOfLines={1}>
+                      {channel.name}
+                    </Text>
+                  </View>
+                ))}
+              </ScrollView>
+              </View>
+            )}
+          </View>
+
+          {/* Spacer for bottom padding */}
+          <View style={{ height: 24 }} />
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  container: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 40,
+    backgroundColor: '#000',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    alignItems: 'center',
+  },
+  dragHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 2,
+    marginBottom: 24,
+  },
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    borderColor: 'rgba(250, 205, 17, 0.3)',
+    marginBottom: 12,
+  },
+  name: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#FFF',
+    marginBottom: 16,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  statCol: {
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#FFF',
+  },
+  statLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.6)',
+  },
+  divider: {
+    width: 1,
+    height: 24,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    marginHorizontal: 24,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 12,
+  },
+  btn: {
+    flex: 1,
+    height: 50,
+    borderRadius: 16,
+    backgroundColor: '#2A2A2A',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  primaryBtn: {
+    backgroundColor: colors.primary,
+  },
+  btnText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  primaryBtnText: {
+    color: '#000',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#FFF',
+    textAlign: 'left',
+  },
+});

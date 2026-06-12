@@ -1,0 +1,154 @@
+import React, { useState } from 'react';
+import {
+  View, Text, Image, TouchableOpacity, StyleSheet,
+  ActivityIndicator, Alert,
+} from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { useNavigation } from '@react-navigation/native';
+import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { supabase } from '@/core/supabase/supabaseConfig';
+import { Camera } from 'lucide-react-native';
+
+export const EditProfileImagePage: React.FC = () => {
+  const navigation = useNavigation();
+  const user = useAuthStore(s => s.user);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.85,
+      allowsEditing: true,
+      aspect: [1, 1],
+    });
+    if (!result.canceled && result.assets[0]) {
+      setPreview(result.assets[0].uri);
+    }
+  };
+
+  const uploadImage = async () => {
+    if (!preview || !user) return;
+    setIsUploading(true);
+    try {
+      const response = await fetch(preview);
+      const blob = await response.blob();
+      const ext = preview.split('.').pop() ?? 'jpg';
+      const path = `users/${user.id}/avatar.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('crown')
+        .upload(path, blob, { upsert: true, contentType: `image/${ext}` });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from('crown').getPublicUrl(path);
+
+      await supabase.from('profiles').update({ profile_image_url: publicUrl }).eq('id', user.id);
+      navigation.goBack();
+    } catch (e: any) {
+      Alert.alert('Upload failed', e?.message ?? 'Unknown error');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const avatarUri = preview ?? user?.profileImageUrl;
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.heading}>Profile Photo</Text>
+
+      <TouchableOpacity style={styles.avatarWrapper} onPress={pickImage}>
+        {avatarUri ? (
+          <Image source={{ uri: avatarUri }} style={styles.avatar} />
+        ) : (
+          <View style={styles.avatarPlaceholder}>
+            <Camera color="rgba(255,255,255,0.4)" size={40} />
+          </View>
+        )}
+        <View style={styles.editBadge}>
+          <Camera color="#000" size={16} />
+        </View>
+      </TouchableOpacity>
+
+      <Text style={styles.hint}>Tap the photo to select a new one</Text>
+
+      {preview && (
+        <TouchableOpacity style={styles.uploadBtn} onPress={uploadImage} disabled={isUploading}>
+          {isUploading
+            ? <ActivityIndicator color="#000" />
+            : <Text style={styles.uploadBtnText}>Save Photo</Text>
+          }
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0D0D0D',
+    alignItems: 'center',
+    paddingTop: 48,
+    paddingHorizontal: 24,
+  },
+  heading: {
+    color: '#FFF',
+    fontSize: 22,
+    fontWeight: '900',
+    marginBottom: 32,
+  },
+  avatarWrapper: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  avatar: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    borderWidth: 3,
+    borderColor: '#FACD11',
+  },
+  avatarPlaceholder: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: '#1A1A1A',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  editBadge: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    backgroundColor: '#FACD11',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#0D0D0D',
+  },
+  hint: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 13,
+    marginBottom: 32,
+  },
+  uploadBtn: {
+    backgroundColor: '#FACD11',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    alignItems: 'center',
+  },
+  uploadBtnText: {
+    color: '#000',
+    fontWeight: '900',
+    fontSize: 15,
+  },
+});

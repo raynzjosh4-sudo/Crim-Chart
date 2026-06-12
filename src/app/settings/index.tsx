@@ -1,0 +1,201 @@
+import ChartAppBar from '@/components/chartappbar/ChartAppBar';
+import { useTranslation } from '@/core/localization/i18n';
+import { colors } from '@/core/theme/colors';
+import { SettingsItem } from '@/features/settings/components/SettingsItem';
+import { useRouter } from 'expo-router';
+import {
+  Ban, Camera,
+  DownloadCloud,
+  EyeOff,
+  Globe,
+  Info,
+  LifeBuoy,
+  Lock,
+  Maximize,
+  MessageCircle,
+  MinusCircle,
+  Palette,
+  RefreshCw,
+  Send,
+  Type, UserCheck, UserPlus
+} from 'lucide-react-native';
+import React from 'react';
+import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+export default function SettingsPage() {
+  const router = useRouter();
+  const { t } = useTranslation();
+
+  const renderSectionHeader = (title: string) => (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+    </View>
+  );
+
+  const renderDivider = () => <View style={styles.divider} />;
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ChartAppBar title={t('settings')} showBack />
+
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {renderSectionHeader(t('who_can_see_content'))}
+        <SettingsItem
+          icon={Lock}
+          title={t('account_privacy')}
+          trailingText={t('public')}
+          onTap={() => router.push('/settings/privacy' as any)}
+        />
+        <SettingsItem
+          icon={Ban}
+          title={t('blocked')}
+          onTap={() => { }}
+        />
+        <SettingsItem
+          icon={Camera}
+          title={t('hide_story')}
+          onTap={() => { }}
+        />
+        <SettingsItem
+          icon={EyeOff}
+          title={t('visibility_off_Chart')}
+          onTap={() => { }}
+        />
+
+        {renderDivider()}
+
+        {renderSectionHeader(t('how_others_interact'))}
+        <SettingsItem
+          icon={Send}
+          title={t('messages_story_reuse')}
+          onTap={() => { }}
+        />
+        <SettingsItem
+          icon={MessageCircle}
+          title={t('comments')}
+          onTap={() => { }}
+        />
+        <SettingsItem
+          icon={RefreshCw}
+          title={t('sharing_reuse')}
+          onTap={() => { }}
+        />
+        <SettingsItem
+          icon={MinusCircle}
+          title={t('restricted_channels')}
+          onTap={() => { }}
+        />
+        <SettingsItem
+          icon={Type}
+          title={t('hidden_words')}
+          onTap={() => { }}
+        />
+        <SettingsItem
+          icon={UserCheck}
+          title={t('contacts_syncing')}
+          onTap={() => { }}
+        />
+        <SettingsItem
+          icon={UserPlus}
+          title={t('join_invite')}
+          onTap={() => { }}
+        />
+
+        {renderDivider()}
+
+        {renderSectionHeader(t('app_and_media'))}
+        <SettingsItem
+          icon={Palette}
+          title={t('theme')}
+          onTap={() => router.push('/settings/theme' as any)}
+        />
+        <SettingsItem
+          icon={Maximize}
+          title={t('display_text_size')}
+          onTap={() => { }}
+        />
+        <SettingsItem
+          icon={Globe}
+          title={t('language')}
+          onTap={() => router.push('/settings/localization' as any)}
+        />
+        <SettingsItem
+          icon={RefreshCw}
+          title={t('data_saver')}
+          onTap={() => router.push('/settings/data-saver' as any)}
+        />
+        <SettingsItem
+          icon={DownloadCloud}
+          title={t('download_data')}
+          onTap={() => { }}
+        />
+
+        {renderDivider()}
+
+        {renderSectionHeader(t('more_info_support'))}
+        <SettingsItem
+          icon={LifeBuoy}
+          title={t('help')}
+          onTap={() => router.push('/settings/help' as any)}
+        />
+        <SettingsItem
+          icon={Info}
+          title={t('about')}
+          onTap={() => router.push('/settings/about' as any)}
+        />
+
+        {renderDivider()}
+
+        {renderSectionHeader(t('login'))}
+        <TouchableOpacity style={styles.textButton}>
+          <Text style={[styles.textButtonLabel, { color: colors.primary }]}>{t('add_account')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.textButton}>
+          <Text style={[styles.textButtonLabel, { color: colors.primary }]}>{t('switch_account')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.textButton}>
+          <Text style={[styles.textButtonLabel, { color: '#FF453A' }]}>{t('log_out')}</Text>
+        </TouchableOpacity>
+
+        <View style={styles.footerSpacer} />
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  sectionHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 24,
+    paddingBottom: 8,
+  },
+  sectionTitle: {
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontSize: 12,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    marginTop: 16,
+  },
+  textButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  textButtonLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  footerSpacer: {
+    height: 60,
+  },
+});

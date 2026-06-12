@@ -1,0 +1,115 @@
+import { create } from 'zustand';
+import { channelRepository } from '../data/channelRepository';
+import { NativeDB } from '@/core/db/NativeDB';
+import { syncQueue } from '@/core/db/SyncQueue';
+import Toast from 'react-native-toast-message';
+import 'react-native-get-random-values';
+import { v4 as uuidv4 } from 'uuid';
+
+export enum ChannelCreationStatus {
+  idle,
+  processing,
+  success,
+  error,
+}
+
+export interface ChannelCreationState {
+  status: ChannelCreationStatus;
+  error: string | null;
+}
+
+interface ChannelCreationStore extends ChannelCreationState {
+  draftCountries: string[];
+  setDraftCountries: (countries: string[]) => void;
+  draftAge: string;
+  setDraftAge: (age: string) => void;
+  createChannel: (params: {
+    name: string;
+    description: string;
+    mediaPath?: string | null;
+    ageRestriction: string;
+    membersOtherChannels: boolean;
+    membersFollowing: boolean;
+    joinMethod: string;
+    preventLeaving: boolean;
+    countryRestrictions: string[];
+    allowCommentingBy: string;
+  }) => Promise<void>;
+  reset: () => void;
+}
+
+export const useChannelCreationController = create<ChannelCreationStore>((set) => ({
+  status: ChannelCreationStatus.idle,
+  error: null,
+  draftCountries: ['Global'],
+  setDraftCountries: (countries) => set({ draftCountries: countries }),
+  draftAge: 'All Ages',
+  setDraftAge: (age) => set({ draftAge: age }),
+
+  createChannel: async (params) => {
+    console.log('🚀 SENDING DATA TO CONTROLLER:', params.name);
+    
+    set({ status: ChannelCreationStatus.processing, error: null });
+    
+    try {
+      const channelId = uuidv4();
+      
+      // 1. Instantly save to Native SQLite
+      const channelData = {
+        id: channelId,
+        creator_id: 'pending_user_id', // Will be swapped during actual sync
+        name: params.name,
+        description: params.description,
+        avatar_url: params.mediaPath || null, // Temporarily store local path
+        age_restriction: params.ageRestriction,
+        visible_to_other_channel_members: params.membersOtherChannels,
+        visible_to_followed_users: params.membersFollowing,
+        join_method: params.joinMethod,
+        prevent_leaving: params.preventLeaving,
+        country_restrictions: params.countryRestrictions,
+        allow_commenting_by: params.allowCommentingBy,
+        allow_status_posting_by: 'all',
+        allow_invitations_by: 'all',
+        created_at: Date.now(),
+        sync_status: 'PENDING'
+      };
+      
+      await NativeDB.createChannelLocal(channelData);
+
+      // 2. Push Background Task to SyncQueue
+      await syncQueue.enqueueTask({
+        type: 'CREATE_CHANNEL',
+        payload: {
+          ...channelData,
+          localMediaPath: params.mediaPath,
+        }
+      });
+      
+      // Success (Zero-Latency UI return)
+      set({ status: ChannelCreationStatus.success });
+      
+      Toast.show({
+        type: 'chartToast',
+        text1: 'Channel Creating',
+        text2: `Syncing ${params.name} in the background`,
+        position: 'bottom',
+        bottomOffset: 100,
+      });
+
+    } catch (e: any) {
+      console.error('⛔ CONTROLLER CRITICAL ERROR:', e);
+      set({ status: ChannelCreationStatus.error, error: e.message || 'Creation failed' });
+      
+      Toast.show({
+        type: 'error',
+        text1: 'Creation Failed',
+        text2: e.message || 'Could not queue channel creation',
+        position: 'bottom',
+      });
+    }
+  },
+
+  reset: () => {
+    set({ status: ChannelCreationStatus.idle, error: null });
+  }
+}));

@@ -1,0 +1,147 @@
+import { ChannelModel } from '@/channel/models/ChannelModel';
+import ChannelListTile from '@/channel/widgets/ChannelListTile';
+import ChartAppBar from '@/components/chartappbar/ChartAppBar';
+import { useTheme } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+
+// Section Headers and Tab Widgets
+import { ProfileMiniSheet } from '@/channel/widgets/bottom_sheets/ProfileMiniSheet';
+import { ChannelSectionHeader } from '@/channel/widgets/sectionHeaders/ChannelSectionHeader';
+import { ChannelStatusMoments } from '@/channel/widgets/sectionHeaders/ChannelStatusMoments';
+import { InboxSectionHeader } from '@/channel/widgets/sectionHeaders/InboxSectionHeader';
+import { ChannelFilterChips } from '@/features/profile/widgets/charters/ChannelFilterChips';
+import { ChannelSearchBar } from '@/profile/channels/widgets/ChannelSearchBar';
+
+import { useUserChannels } from '@/channel/hooks/useChannels';
+import { useAuthStore } from '@/features/auth/application/useAuthStore';
+
+export default function ChannelsPage() {
+  const { colors } = useTheme();
+  const router = useRouter();
+  const user = useAuthStore(s => s.user);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState('Channels');
+  const [selectedChannel, setSelectedChannel] = useState<ChannelModel | null>(null);
+
+  // --- UNIFIED CHANNEL ARCHITECTURE ---
+  const { channels: ownedChannels, loadMore: loadOwned } = useUserChannels(user?.id || '', 'owned');
+  const { channels: joinedChannels, loadMore: loadJoined } = useUserChannels(user?.id || '', 'joined');
+
+  useEffect(() => {
+    // Fire the initial loads
+    if (user?.id) {
+      loadOwned(true);
+      loadJoined(true);
+      setIsLoading(false);
+    }
+  }, [user?.id]);
+
+  const displayedChannels = (() => {
+    if (activeFilter === 'Private') return ownedChannels.map(c => c.channel);
+    if (activeFilter === 'Public') return joinedChannels.map(c => c.channel);
+    // 'Channels' filter shows both, but we should deduplicate
+    const combined = [...ownedChannels.map(c => c.channel), ...joinedChannels.map(c => c.channel)];
+    const unique = new Map<string, ChannelModel>();
+    combined.forEach(c => unique.set(c.id, c));
+    return Array.from(unique.values());
+  })();
+
+  const renderHeader = () => {
+    if (activeFilter === 'Inbox') {
+      return (
+        <View style={styles.headerContainer}>
+          <InboxSectionHeader threads={[]} />
+          <View style={styles.divider} />
+          <ChannelSectionHeader title="Messages" showAction={false} />
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.headerContainer}>
+        <ChannelSectionHeader title="Moments" showAction={false} />
+        <ChannelStatusMoments displayedChannels={displayedChannels} />
+        <View style={styles.divider} />
+        <ChannelSectionHeader title="Channels" showAction={false} />
+      </View>
+    );
+  };
+
+  const renderFooter = () => {
+    if (activeFilter === 'Inbox') return <View style={{ height: 40 }} />;
+
+    return (
+      <View style={styles.footerContainer}>
+        <ChannelSectionHeader
+          title="Find channels to follow"
+          subtitle="Explore more channels to find new moments"
+          showAction={true}
+          actionText="Explore"
+          onActionPressed={() => router.push('/channel/explore' as any)}
+        />
+        <View style={{ height: 40 }} />
+      </View>
+    );
+  };
+
+  if (isLoading) return <ActivityIndicator style={{ flex: 1 }} color={colors.primary} />;
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ChartAppBar
+        title="CHANNELS"
+        showBack={false}
+        titleStyle={{ fontWeight: '900', fontSize: 16, letterSpacing: 0.5 }}
+      />
+      <ChannelSearchBar onChanged={(val) => console.log('Search:', val)} />
+      <ChannelFilterChips
+        filters={['Channels', 'Private', 'Public']}
+        activeFilter={activeFilter}
+        onFilterChanged={setActiveFilter}
+      />
+      <FlatList
+        data={displayedChannels}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={renderHeader}
+        ListFooterComponent={renderFooter}
+        renderItem={({ item }) => (
+          <ChannelListTile
+            channel={item}
+            showFollowButton={false}
+            onPress={() => router.push({ pathname: '/channel/channelpage', params: { id: item.id } } as any)}
+            onAvatarTap={(ch) => ch.momentsCount > 0 && setSelectedChannel(ch)}
+          />
+        )}
+        ListEmptyComponent={<Text style={[styles.empty, { color: colors.text }]}>No channels yet</Text>}
+        contentContainerStyle={styles.listContent}
+      />
+      <ProfileMiniSheet
+        visible={selectedChannel !== null}
+        onClose={() => setSelectedChannel(null)}
+        channel={selectedChannel}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  headerContainer: {
+    paddingBottom: 8,
+  },
+  footerContainer: {
+    paddingTop: 16,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    marginVertical: 8,
+  },
+  listContent: {
+    paddingBottom: 40,
+  },
+  empty: { textAlign: 'center', marginTop: 40, opacity: 0.5 },
+});

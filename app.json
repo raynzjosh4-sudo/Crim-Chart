@@ -7,6 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "crimchart",
     "userInterfaceStyle": "automatic",
+    "backgroundColor": "#000000",
     "ios": {
       "icon": "./assets/expo.icon"
     },
@@ -17,7 +18,8 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.anonymous.crimchart"
     },
     "web": {
       "output": "static",
@@ -34,11 +36,24 @@
             "imageWidth": 76
           }
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker",
+      "expo-image",
+      "expo-font",
+      "expo-sqlite",
+      "expo-video",
+      "expo-web-browser",
+      "./withNotifeeRepo.js"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "dfbc34f5-9353-4cdf-a993-15fd1fa60e26"
+      }
     }
   }
 }
