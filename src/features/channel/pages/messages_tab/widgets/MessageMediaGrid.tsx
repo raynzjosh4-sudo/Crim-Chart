@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { Play, Sparkles } from 'lucide-react-native';
 import { useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { MediaGalleryBottomSheet } from '../../../../../channel/pages/messages_tab/bottom_sheets/MediaGalleryBottomSheet';
 import { ShareStatusButton } from '@/components/buttons/ShareStatusButton';
 import { MessageMediaItem } from '../../../../../models/MediaModel';
@@ -24,12 +25,18 @@ export const MessageMediaGrid: React.FC<MessageMediaGridProps> = ({
 }) => {
   const [galleryVisible, setGalleryVisible] = useState(false);
   const [initialIndex, setInitialIndex] = useState(0);
+  const router = useRouter();
 
   if (items.length === 0) return null;
 
   const openGallery = (index: number) => {
-    setInitialIndex(index);
-    setGalleryVisible(true);
+    const item = items[index];
+    if (item.type === 'video') {
+      router.push(`/video-player?url=${encodeURIComponent(item.url)}`);
+    } else {
+      setInitialIndex(index);
+      setGalleryVisible(true);
+    }
   };
 
   const renderPlayIcon = (small = false) => (

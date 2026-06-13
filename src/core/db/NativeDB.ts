@@ -4,43 +4,39 @@ import { TABLES } from './schema';
 export class NativeDB {
   static async upsertDiscoveryFeed(items: any[]) {
     const db = dbService.database;
-    
-    try {
-      await db.withTransactionAsync(async () => {
-        for (const item of items) {
-          const sql = `
-            INSERT OR REPLACE INTO ${TABLES.DISCOVERY_FEED} (
-              id, author_id, author_username, author_avatar_url, 
-              channel_id, channel_name, channel_avatar_url, 
-              caption, video_url, image_urls, is_video, 
-              likes, comments, created_at, widget_type
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `;
-          
-          const params = [
-            String(item.id || ''),
-            String(item.author_id || item.authorId || ''),
-            String(item.author_username || item.authorUsername || 'member'),
-            item.author_avatar_url || item.authorAvatarUrl || null,
-            item.channel_id || item.channelId || null,
-            item.channel_name || item.channelName || null,
-            item.channel_avatar_url || item.channelAvatarUrl || null,
-            item.caption || '',
-            item.video_url || item.videoUrl || null,
-            JSON.stringify(item.image_urls || item.imageUrls || []),
-            (item.is_video || item.isVideo) ? 1 : 0,
-            Number(item.likes || 0),
-            Number(item.comments || 0),
-            item.created_at || item.createdAt || new Date().toISOString(),
-            item.widget_type || item.widgetType || 'channel_post'
-          ];
-          
-          await db.runAsync(sql, params);
-        }
-      });
-      console.log(`✅ [SQLite] Upserted ${items.length} discovery items`);
-    } catch (error) {
-      console.error('🚨 [SQLite Error] upsertDiscoveryFeed FAILED:', error);
+    for (const item of items) {
+      try {
+        const sql = `
+          INSERT OR REPLACE INTO ${TABLES.DISCOVERY_FEED} (
+            id, author_id, author_username, author_avatar_url, 
+            channel_id, channel_name, channel_avatar_url, 
+            caption, video_url, image_urls, is_video, 
+            likes, comments, created_at, widget_type
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        
+        const params = [
+          String(item.id || ''),
+          String(item.author_id || item.authorId || ''),
+          String(item.author_username || item.authorUsername || 'member'),
+          item.author_avatar_url || item.authorAvatarUrl || null,
+          item.channel_id || item.channelId || null,
+          item.channel_name || item.channelName || null,
+          item.channel_avatar_url || item.channelAvatarUrl || null,
+          item.caption || '',
+          item.video_url || item.videoUrl || null,
+          JSON.stringify(item.image_urls || item.imageUrls || []),
+          (item.is_video || item.isVideo) ? 1 : 0,
+          Number(item.likes || 0),
+          Number(item.comments || 0),
+          item.created_at || item.createdAt || new Date().toISOString(),
+          item.widget_type || item.widgetType || 'channel_post'
+        ];
+        
+        await db.runAsync(sql, params);
+      } catch (error) {
+        console.error('🚨 [SQLite Error] upsertDiscoveryFeed item FAILED:', error);
+      }
     }
   }
 
@@ -60,8 +56,9 @@ export class NativeDB {
   static async upsertUser(user: any) {
     const sql = `
       INSERT OR REPLACE INTO ${TABLES.USERS} (
-        id, username, display_name, profile_image_url, bio, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?)
+        id, username, display_name, profile_image_url, bio, created_at,
+        is_online, last_seen, has_status, status_count
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const params = [
       user.id,
@@ -69,7 +66,27 @@ export class NativeDB {
       user.display_name || user.displayName,
       user.profile_image_url || user.profileImageUrl,
       user.bio,
-      user.created_at || user.createdAt
+      user.created_at || user.createdAt,
+      user.is_online ? 1 : 0,
+      user.last_seen || user.lastSeen || null,
+      user.has_status ? 1 : 0,
+      user.status_count || user.statusCount || 0
+    ];
+    await dbService.execute(sql, params);
+  }
+
+  static async updatePresenceData(user: any) {
+    const sql = `
+      UPDATE ${TABLES.USERS} 
+      SET is_online = ?, last_seen = ?, has_status = ?, status_count = ?
+      WHERE id = ?
+    `;
+    const params = [
+      user.is_online ? 1 : 0,
+      user.last_seen || user.lastSeen || null,
+      user.has_status ? 1 : 0,
+      user.status_count || user.statusCount || 0,
+      user.id
     ];
     await dbService.execute(sql, params);
   }
@@ -145,33 +162,31 @@ export class NativeDB {
 
   static async upsertMessages(channelId: string, messages: any[]) {
     const db = dbService.database;
-    try {
-      await db.withTransactionAsync(async () => {
-        for (const msg of messages) {
-          const sql = `
-            INSERT OR REPLACE INTO ${TABLES.CHANNEL_MESSAGES} (
-              id, channel_id, sender_id, sender_name, sender_avatar_url,
-              text, media_url, media_type, reply_to_id, created_at, is_pending
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `;
-          const params = [
-            msg.id,
-            channelId,
-            msg.sender_id || msg.senderId,
-            msg.sender_name || msg.senderName,
-            msg.sender_avatar_url || msg.senderAvatarUrl,
-            msg.text || '',
-            msg.media_url || msg.mediaUrl || null,
-            msg.media_type || msg.mediaType || 'text',
-            msg.reply_to_id || msg.replyToId || null,
-            msg.created_at || msg.createdAt || new Date().toISOString(),
-            msg.is_pending ? 1 : 0
-          ];
-          await db.runAsync(sql, params);
-        }
-      });
-    } catch (error) {
-      console.error('🚨 [NativeDB] upsertMessages FAILED:', error);
+    for (const msg of messages) {
+      try {
+        const sql = `
+          INSERT OR REPLACE INTO ${TABLES.CHANNEL_MESSAGES} (
+            id, channel_id, sender_id, sender_name, sender_avatar_url,
+            text, media_url, media_type, reply_to_id, created_at, is_pending
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        const params = [
+          msg.id,
+          channelId,
+          msg.sender_id || msg.senderId,
+          msg.sender_name || msg.senderName,
+          msg.sender_avatar_url || msg.senderAvatarUrl,
+          msg.text || '',
+          msg.media_url || msg.mediaUrl || null,
+          msg.media_type || msg.mediaType || 'text',
+          msg.reply_to_id || msg.replyToId || null,
+          msg.created_at || msg.createdAt || new Date().toISOString(),
+          msg.is_pending ? 1 : 0
+        ];
+        await db.runAsync(sql, params);
+      } catch (error) {
+        console.error('🚨 [NativeDB] upsertMessages item FAILED:', error);
+      }
     }
   }
 
@@ -188,25 +203,23 @@ export class NativeDB {
 
   static async upsertMembers(channelId: string, members: any[]) {
     const db = dbService.database;
-    try {
-      await db.withTransactionAsync(async () => {
-        for (const member of members) {
-          const sql = `
-            INSERT OR REPLACE INTO ${TABLES.CHANNEL_MEMBERS} (
-              channel_id, user_id, role, joined_at
-            ) VALUES (?, ?, ?, ?)
-          `;
-          const params = [
-            channelId,
-            member.user_id || member.userId || member.id,
-            member.role || 'member',
-            member.joined_at || member.joinedAt || new Date().toISOString()
-          ];
-          await db.runAsync(sql, params);
-        }
-      });
-    } catch (error) {
-      console.error('🚨 [NativeDB] upsertMembers FAILED:', error);
+    for (const member of members) {
+      try {
+        const sql = `
+          INSERT OR REPLACE INTO ${TABLES.CHANNEL_MEMBERS} (
+            channel_id, user_id, role, joined_at
+          ) VALUES (?, ?, ?, ?)
+        `;
+        const params = [
+          channelId,
+          member.user_id || member.userId || member.id,
+          member.role || 'member',
+          member.joined_at || member.joinedAt || new Date().toISOString()
+        ];
+        await db.runAsync(sql, params);
+      } catch (error) {
+        console.error('🚨 [NativeDB] upsertMembers item FAILED:', error);
+      }
     }
   }
 
@@ -224,39 +237,37 @@ export class NativeDB {
 
   static async upsertStatuses(statuses: any[]) {
     const db = dbService.database;
-    try {
-      await db.withTransactionAsync(async () => {
-        for (const status of statuses) {
-          const sql = `
-            INSERT OR REPLACE INTO ${TABLES.STATUSES} (
-              id, author_id, username, profile_image_url, caption,
-              image_urls, video_url, thumbnail_url, audio_url,
-              is_video, is_audio, comments_count, created_at, 
-              expires_at, channel_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `;
-          const params = [
-            status.id,
-            status.author_id || status.authorId,
-            status.username || 'member',
-            status.profile_image_url || status.profileImageUrl,
-            status.caption || '',
-            JSON.stringify(status.image_urls || status.imageUrls || []),
-            status.video_url || status.videoUrl || null,
-            status.thumbnail_url || status.thumbnailUrl || null,
-            status.audio_url || status.audioUrl || null,
-            status.is_video ? 1 : 0,
-            status.is_audio ? 1 : 0,
-            status.comments_count || 0,
-            status.created_at || status.createdAt || new Date().toISOString(),
-            status.expires_at || status.expiresAt || null,
-            status.channel_id || status.channelId || null
-          ];
-          await db.runAsync(sql, params);
-        }
-      });
-    } catch (error) {
-      console.error('🚨 [NativeDB] upsertStatuses FAILED:', error);
+    for (const status of statuses) {
+      try {
+        const sql = `
+          INSERT OR REPLACE INTO ${TABLES.STATUSES} (
+            id, author_id, username, profile_image_url, caption,
+            image_urls, video_url, thumbnail_url, audio_url,
+            is_video, is_audio, comments_count, created_at, 
+            expires_at, channel_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        const params = [
+          status.id,
+          status.author_id || status.authorId,
+          status.username || 'member',
+          status.profile_image_url || status.profileImageUrl,
+          status.caption || '',
+          JSON.stringify(status.image_urls || status.imageUrls || []),
+          status.video_url || status.videoUrl || null,
+          status.thumbnail_url || status.thumbnailUrl || null,
+          status.audio_url || status.audioUrl || null,
+          status.is_video ? 1 : 0,
+          status.is_audio ? 1 : 0,
+          status.comments_count || 0,
+          status.created_at || status.createdAt || new Date().toISOString(),
+          status.expires_at || status.expiresAt || null,
+          status.channel_id || status.channelId || null
+        ];
+        await db.runAsync(sql, params);
+      } catch (error) {
+        console.error('🚨 [NativeDB] upsertStatuses item FAILED:', error);
+      }
     }
   }
 

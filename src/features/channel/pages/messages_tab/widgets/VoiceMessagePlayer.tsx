@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, PanResponder } from 'react-native';
-// import { Audio } from 'expo-av';
+import { Audio } from 'expo-av';
 import { Play, Pause } from 'lucide-react-native';
 
 interface VoiceMessagePlayerProps {
@@ -47,29 +47,29 @@ export const VoiceMessagePlayer: React.FC<VoiceMessagePlayerProps> = ({ url, dur
     let isMounted = true;
     const initSound = async () => {
       try {
-        // const { sound: newSound, status } = await Audio.Sound.createAsync(
-        //   { uri: url },
-        //   { shouldPlay: false }
-        // );
-        // if (!isMounted) {
-        //   newSound.unloadAsync();
-        //   return;
-        // }
-        // setSound(newSound);
-        // if (status.isLoaded && status.durationMillis) {
-        //   setTotalDuration(status.durationMillis);
-        // }
+        const { sound: newSound, status } = await Audio.Sound.createAsync(
+          { uri: url },
+          { shouldPlay: false }
+        );
+        if (!isMounted) {
+          newSound.unloadAsync();
+          return;
+        }
+        setSound(newSound);
+        if (status.isLoaded && status.durationMillis) {
+          setTotalDuration(status.durationMillis);
+        }
         
-        // newSound.setOnPlaybackStatusUpdate((status) => {
-        //   if (!status.isLoaded) return;
-        //   if (isMounted) {
-        //     setIsPlaying(status.isPlaying);
-        //     setPosition(status.positionMillis);
-        //     if (status.didJustFinish) {
-        //       newSound.setPositionAsync(0);
-        //     }
-        //   }
-        // });
+        newSound.setOnPlaybackStatusUpdate((status) => {
+          if (!status.isLoaded) return;
+          if (isMounted) {
+            setIsPlaying(status.isPlaying);
+            setPosition(status.positionMillis);
+            if (status.didJustFinish) {
+              newSound.setPositionAsync(0);
+            }
+          }
+        });
       } catch (err) {
         console.log('Error loading audio:', err);
       }

@@ -4,7 +4,8 @@ import { useRouter } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import React, { useEffect, useRef } from 'react';
 import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { UserAvatarImage } from '@/channel/pages/widgets2/memberimage/UserAvatarImage';
+import UserAvatar from '@/components/avatar/UserAvatar';
+import { useProfileCacheStore } from '@/core/store/useProfileCacheStore';
 
 type InboxUserMapped = {
   id: string;
@@ -58,12 +59,14 @@ export interface InboxSectionHeaderProps {
 export const InboxSectionHeader: React.FC<InboxSectionHeaderProps> = ({ threads }) => {
   const router = useRouter();
 
-  const { typingUsers, onlineUsers } = useChatStore();
+  const { typingUsers } = useChatStore();
+  const cachedProfiles = useProfileCacheStore(state => state.profiles);
 
   const sortedUsers = React.useMemo(() => {
     const mapped: InboxUserMapped[] = threads.map(t => {
       const p = t.participants[0];
       const isCurrentlyTyping = (typingUsers[t.id] || []).some((id: string) => id === p?.id);
+      const profile = cachedProfiles[p?.id || ''];
       
       return {
         id: p?.id || t.id,
@@ -71,26 +74,21 @@ export const InboxSectionHeader: React.FC<InboxSectionHeaderProps> = ({ threads 
         name: p?.displayName || 'User',
         avatarUrl: p?.profileImageUrl || '',
         isTyping: isCurrentlyTyping || t.isTyping || false,
-        isActive: p?.id ? onlineUsers[p.id] : p?.isActive || false,
-
-        hasStatus: p?.hasStatus || false,
+        isActive: profile?.isOnline || false,
+        hasStatus: profile?.hasStatus || false,
       };
     });
 
     const typingList: InboxUserMapped[] = [];
-    const activeList: InboxUserMapped[] = [];
-    const hasStatusList: InboxUserMapped[] = [];
     const rest: InboxUserMapped[] = [];
 
     mapped.forEach(user => {
       if (user.isTyping) typingList.push(user);
-      else if (user.isActive) activeList.push(user);
-      else if (user.hasStatus) hasStatusList.push(user);
       else rest.push(user);
     });
 
-    return [...typingList, ...activeList, ...hasStatusList, ...rest];
-  }, [threads, typingUsers, onlineUsers]);
+    return [...typingList, ...rest];
+  }, [threads, typingUsers, cachedProfiles]);
 
   if (sortedUsers.length === 0) return null;
 
@@ -104,12 +102,11 @@ export const InboxSectionHeader: React.FC<InboxSectionHeaderProps> = ({ threads 
             onPress={() => router.push({ pathname: '/inboxDetail', params: { threadId: user.threadId } })}
           >
             <View style={styles.avatarWrapper}>
-              <UserAvatarImage
-                imageUrl={user.avatarUrl}
-                size={68}
-                showStatusRing={user.hasStatus}
-                showActiveDot={user.isActive}
+              <UserAvatar
+                userId={user.id}
+                fallbackUrl={user.avatarUrl}
                 name={user.name}
+                size={68}
               />
 
               {user.isTyping && (

@@ -9,3 +9,5 @@ export const DateDivider = ({ date }: { date: string }) => (
         <View style={styles.dateLine} />
     </View>
 );
+
+export default function IgnoredRoute() { return null; }

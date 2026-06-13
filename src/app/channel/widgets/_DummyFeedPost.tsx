@@ -25,3 +25,5 @@ export const DummyFeedPost = () => (
         </View>
     </View>
 );
+
+export default function IgnoredRoute() { return null; }

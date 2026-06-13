@@ -1,6 +1,7 @@
 import { UserProfileBottomSheet } from '@/channel/pages/messages_tab/bottom_sheets/UserProfileBottomSheet';
 import { ChatInputField } from '@/channel/pages/messages_tab/widgets/ChatInputField';
-import { UserAvatarImage } from '@/channel/pages/widgets2/memberimage/UserAvatarImage';
+import UserAvatar from '@/components/avatar/UserAvatar';
+import { useProfileCacheStore } from '@/core/store/useProfileCacheStore';
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import CrimchartBackButton from '@/components/CrimChartBackButton/CrimChart_back_button';
 import { OverscrollStatusReveal } from '@/components/OverscrollStatusReveal/OverscrollStatusReveal';
@@ -9,7 +10,8 @@ import { ChatBubble } from '@/features/channel/pages/messages_tab/widgets/chartb
 import { DateDivider } from '@/channel/pages/messages_tab/widgets/DateDivider';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TouchableOpacity, View, Keyboard } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChatStore } from '../application/useChatStore';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
@@ -17,19 +19,23 @@ import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { LottieEmojiSheet } from '../widgets/LottieEmojiSheet';
 import { QuickEmojiToolbar } from '../widgets/QuickEmojiToolbar';
 
+import { InboxDetailShimmer } from '@/components/shimmers/inboxDetailPageshimmer/InboxDetailShimmer';
+
 export const InboxDetailPage: React.FC = () => {
   const params = useLocalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const threadId = params.threadId as string;
 
-  const { threads, messages, typingUsers, onlineUsers, fetchMessages, loadMoreMessages, sendMessage, subscribeToThread, unsubscribeFromThread, markThreadAsRead, startTyping, stopTyping } = useChatStore();
+  const { threads, messages, typingUsers, onlineUsers, isLoadingMessages, fetchMessages, loadMoreMessages, sendMessage, subscribeToThread, unsubscribeFromThread, markThreadAsRead, startTyping, stopTyping } = useChatStore();
   const currentThread = threads.find(t => t.id === threadId);
   const { user } = useAuthStore() as any;
 
   // Resolving participant: In a real app we'd get this from currentThread.participants
   const participant = currentThread?.participants?.[0];
+  const participantProfile = useProfileCacheStore(state => state.profiles[participant?.id || '']);
   const threadMessages = messages[threadId] || [];
+  const isLoading = isLoadingMessages[threadId];
   
   // Check if anyone OTHER than me is typing
   const currentlyTypingUsers = typingUsers[threadId] || [];
@@ -39,6 +45,16 @@ export const InboxDetailPage: React.FC = () => {
   const [showLottieSheet, setShowLottieSheet] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [overscroll, setOverscroll] = useState(0);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', (e) => setKeyboardHeight(e.endCoordinates.height));
+    const hideSub = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setKeyboardHeight(0));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const handleScroll = (e: any) => {
     const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
@@ -76,7 +92,7 @@ export const InboxDetailPage: React.FC = () => {
   }, [threadId]);
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, Platform.OS === 'android' && { paddingBottom: keyboardHeight > 0 ? keyboardHeight + insets.bottom : 0 }]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -93,21 +109,27 @@ export const InboxDetailPage: React.FC = () => {
                 activeOpacity={0.7}
                 onPress={() => setShowProfile(true)}
               >
-                <UserAvatarImage
-                  imageUrl={participant?.profileImageUrl}
+                <UserAvatar
+                  userId={participant?.id || ''}
+                  fallbackUrl={participant?.profileImageUrl}
+                  name={participant?.displayName}
                   size={42}
-                  showStatusRing={false}
-                  showActiveDot={participant?.id ? onlineUsers[participant.id] : false}
                 />
                 <View style={{ marginLeft: 12 }}>
                   <Text style={{ color: '#FFF', fontSize: 16, fontWeight: 'bold' }}>
                     {participant?.displayName || 'User'}
                   </Text>
-                  {isTyping && (
+                  {isTyping ? (
                     <View style={{ marginTop: 4, alignSelf: 'flex-start', transform: [{ scale: 0.85 }], transformOrigin: 'left center' }}>
                       <BouncingTypingIndicator />
                     </View>
-                  )}
+                  ) : participantProfile?.isOnline ? (
+                    <Text style={{ color: '#4CAF50', fontSize: 13, marginTop: 2 }}>Online</Text>
+                  ) : participantProfile?.lastSeen ? (
+                    <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, marginTop: 2 }}>
+                      last seen {new Date(participantProfile.lastSeen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  ) : null}
                 </View>
               </TouchableOpacity>
             </View>
@@ -124,6 +146,9 @@ export const InboxDetailPage: React.FC = () => {
               }} 
             />
           </View>
+          {isLoading && threadMessages.length === 0 ? (
+            <InboxDetailShimmer />
+          ) : (
           <FlatList
             data={threadMessages}
             keyExtractor={m => m.id}
@@ -142,10 +167,13 @@ export const InboxDetailPage: React.FC = () => {
                 try {
                   const parsed = JSON.parse(item.mediaUrl);
                   if (Array.isArray(parsed)) {
-                    mediaItems = parsed.map((url: string) => ({
-                      type: (item.type === 'gif' || item.type === 'text') ? 'image' : item.type,
-                      url: url
-                    }));
+                    mediaItems = parsed.map((itemObj: any) => {
+                      if (typeof itemObj === 'string') {
+                        return { type: (item.type === 'gif' || item.type === 'text') ? 'image' : item.type, url: itemObj };
+                      } else {
+                        return { type: itemObj.type || 'image', url: itemObj.url || itemObj.uri, thumbnail: itemObj.thumbnail };
+                      }
+                    });
                   } else {
                     throw new Error("Not an array");
                   }
@@ -196,6 +224,7 @@ export const InboxDetailPage: React.FC = () => {
             </View>
           }
         />
+          )}
         </View>
 
         {threadMessages.length === 0 && (
@@ -206,14 +235,13 @@ export const InboxDetailPage: React.FC = () => {
           />
         )}
 
-        <View style={{ paddingBottom: Math.max(insets.bottom, 8) }}>
+        <View style={{ paddingBottom: keyboardHeight > 0 ? 4 : Math.max(insets.bottom, 8) }}>
           <ChatInputField
             channelId={threadId}
             onSubmitted={(val, media) => {
-              const mediaUris = media.map(m => m.uri);
+              const mediaItems = media.map(m => ({ uri: m.uri, thumbnail: m.thumbnailUri, type: m.type }));
               const type = media.length > 0 ? media[0].type : 'text';
-              // Store multiple URLs as a JSON string
-              const mediaUrlString = mediaUris.length > 0 ? JSON.stringify(mediaUris) : undefined;
+              const mediaUrlString = mediaItems.length > 0 ? JSON.stringify(mediaItems) : undefined;
               sendMessage(threadId, val, type as any, mediaUrlString);
               stopTyping(threadId);
             }}

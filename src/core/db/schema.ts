@@ -16,7 +16,11 @@ export const SCHEMA = `
     display_name TEXT,
     profile_image_url TEXT,
     bio TEXT,
-    created_at TEXT
+    created_at TEXT,
+    is_online INTEGER DEFAULT 0,
+    last_seen TEXT,
+    has_status INTEGER DEFAULT 0,
+    status_count INTEGER DEFAULT 0
   );
 
   CREATE TABLE IF NOT EXISTS ${TABLES.CHANNELS} (

@@ -1,4 +1,5 @@
-import { AwsClient } from 'aws4fetch';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { notificationService } from '../notifications/NotificationService';
 
 const endpoint = process.env.EXPO_PUBLIC_CLOUDFLARE_R2_ENDPOINT || 'https://3d658adeecc895ef7099eec66a501902.r2.cloudflarestorage.com';
@@ -6,11 +7,13 @@ const accessKeyId = process.env.EXPO_PUBLIC_CLOUDFLARE_R2_ACCESS_KEY_ID || '';
 const secretAccessKey = process.env.EXPO_PUBLIC_CLOUDFLARE_R2_SECRET_ACCESS_KEY || '';
 const bucketName = process.env.EXPO_PUBLIC_CLOUDFLARE_R2_BUCKET_NAME || 'crown-media-bucket';
 
-const aws = new AwsClient({
-  accessKeyId,
-  secretAccessKey,
-  service: 's3',
+const s3Client = new S3Client({
   region: 'auto',
+  endpoint,
+  credentials: {
+    accessKeyId,
+    secretAccessKey,
+  },
 });
 
 export class CloudMediaService {
@@ -36,23 +39,33 @@ export class CloudMediaService {
     const objectKey = `users/${id}/${folderName}/${rawFileName}`;
 
     try {
-      // 1. Load the local file bytes
-      const response = await fetch(localUri);
-      const blob = await response.blob();
-      
       let mimeType = 'application/octet-stream';
       if (localUri.toLowerCase().endsWith('.json')) mimeType = 'application/json';
       else if (['jpg', 'jpeg'].includes(extension.toLowerCase())) mimeType = 'image/jpeg';
       else if (extension.toLowerCase() === 'png') mimeType = 'image/png';
       else if (extension.toLowerCase() === 'mp4') mimeType = 'video/mp4';
 
+      await notificationService.showUploadProgress(notificationId, title, 30);
+
+      // 1. Create a PutObjectCommand (NO Body here, just metadata for the signature)
+      const command = new PutObjectCommand({
+        Bucket: bucketName,
+        Key: objectKey,
+        ContentType: mimeType,
+      });
+
+      // 2. Generate a pre-signed URL
+      const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
       await notificationService.showUploadProgress(notificationId, title, 50);
 
-      // 2. Build the exact Cloudflare R2 bucket endpoint
-      const url = new URL(`${endpoint}/${bucketName}/${objectKey}`);
+      // 3. Load the local file bytes natively
+      const response = await fetch(localUri);
+      const blob = await response.blob();
+      
+      await notificationService.showUploadProgress(notificationId, title, 70);
 
-      // 3. Upload using AWS Signature V4 via aws4fetch
-      const uploadRes = await aws.fetch(url.toString(), {
+      // 4. Upload directly to the presigned URL using standard fetch
+      const uploadRes = await fetch(signedUrl, {
         method: 'PUT',
         body: blob,
         headers: {

@@ -8,11 +8,15 @@ import {
   Keyboard,
   Text,
   ScrollView,
+  Linking,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { Camera, Smile, Send, Mic, Square, Trash2, Play, X } from 'lucide-react-native';
+import { Audio } from 'expo-av';
+import * as VideoThumbnails from 'expo-video-thumbnails';
+import { Camera, Smile, Send, Mic, Square, Trash2, Play, Pause, X } from 'lucide-react-native';
 import { colors } from '@/core/theme/colors';
+import { PermissionDialog } from '@/components/ui/PermissionDialog';
 
 // We'll mock recording for now until we fully wire up expo-av
 enum RecordState {
@@ -23,6 +27,7 @@ enum RecordState {
 
 interface PendingMedia {
   uri: string;
+  thumbnailUri?: string;
   type: 'image' | 'video' | 'audio';
 }
 
@@ -44,6 +49,13 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
   const [pendingMedia, setPendingMedia] = useState<PendingMedia[]>([]);
   const [recordState, setRecordState] = useState<RecordState>(RecordState.none);
   const [recordSeconds, setRecordSeconds] = useState(0);
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [recordUri, setRecordUri] = useState<string | null>(null);
+  const [permissionDialogState, setPermissionDialogState] = useState<'hidden' | 'initial' | 'denied'>('hidden');
+
+  const [reviewSound, setReviewSound] = useState<Audio.Sound | null>(null);
+  const [isPlayingReview, setIsPlayingReview] = useState(false);
+  const [reviewPosition, setReviewPosition] = useState(0);
 
   const handleTextChange = (val: string) => {
     setText(val);
@@ -71,16 +83,32 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
 
   const handlePickMedia = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsMultipleSelection: true,
       quality: 0.8,
     });
 
     if (!result.canceled && result.assets.length > 0) {
-      const newMedia: PendingMedia[] = result.assets.map(a => ({
-        uri: a.uri,
-        type: 'image' as const,
-      }));
+      const newMedia: PendingMedia[] = await Promise.all(
+        result.assets.map(async (a) => {
+          let thumbnailUri: string | undefined;
+          if (a.type === 'video') {
+            try {
+              const { uri } = await VideoThumbnails.getThumbnailAsync(a.uri, {
+                time: 1000,
+              });
+              thumbnailUri = uri;
+            } catch (e) {
+              console.warn('Failed to generate video thumbnail', e);
+            }
+          }
+          return {
+            uri: a.uri,
+            thumbnailUri,
+            type: a.type === 'video' ? 'video' : 'image',
+          };
+        })
+      );
       setPendingMedia([...pendingMedia, ...newMedia]);
     }
   };
@@ -89,16 +117,106 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
     setPendingMedia(pendingMedia.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = () => {
-    if (recordState === RecordState.recording) {
+  const startRecording = async () => {
+    try {
+      const perm = await Audio.getPermissionsAsync();
+      if (perm.status !== 'granted') {
+        if (!perm.canAskAgain) {
+          setPermissionDialogState('denied');
+        } else {
+          setPermissionDialogState('initial');
+        }
+        return;
+      }
+      
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const { recording: newRecording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      setRecording(newRecording);
+      setRecordState(RecordState.recording);
+      setRecordSeconds(0);
+
+      newRecording.setOnRecordingStatusUpdate((status) => {
+        if (status.isRecording) {
+          setRecordSeconds(Math.floor(status.durationMillis / 1000));
+        }
+      });
+    } catch (err) {
+      console.error('Failed to start recording', err);
+    }
+  };
+
+  const cleanupReviewSound = async () => {
+    if (reviewSound) {
+      await reviewSound.unloadAsync().catch(() => {});
+      setReviewSound(null);
+    }
+    setIsPlayingReview(false);
+    setReviewPosition(0);
+  };
+
+  const stopRecording = async () => {
+    if (!recording) return;
+    try {
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      setRecordUri(uri);
       setRecordState(RecordState.reviewing);
+      
+      if (uri) {
+        const { sound } = await Audio.Sound.createAsync(
+          { uri },
+          { shouldPlay: false }
+        );
+        setReviewSound(sound);
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded) {
+            setIsPlayingReview(status.isPlaying);
+            setReviewPosition(Math.floor(status.positionMillis / 1000));
+            if (status.didJustFinish) {
+              setIsPlayingReview(false);
+              sound.setPositionAsync(0);
+            }
+          }
+        });
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+      });
+    } catch (err) {
+      console.error('Failed to stop recording', err);
+    }
+  };
+
+  const toggleReviewPlay = async () => {
+    if (!reviewSound) return;
+    if (isPlayingReview) {
+      await reviewSound.pauseAsync();
+    } else {
+      await reviewSound.playAsync();
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (recordState === RecordState.recording) {
+      await stopRecording();
       return;
     }
     if (recordState === RecordState.reviewing) {
-      console.log('Send audio recording');
-      onSubmitted('', [{ uri: 'dummy_audio_uri', type: 'audio' }]);
+      if (recordUri) {
+        onSubmitted('', [{ uri: recordUri, type: 'audio' }]);
+      }
+      await cleanupReviewSound();
       setRecordState(RecordState.none);
       setRecordSeconds(0);
+      setRecordUri(null);
+      setRecording(null);
       return;
     }
 
@@ -112,10 +230,16 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
     }
 
     // Empty — start recording
-    setRecordState(RecordState.recording);
+    await startRecording();
   };
 
-  const handleCancelRecording = () => {
+  const handleCancelRecording = async () => {
+    if (recording) {
+      await recording.stopAndUnloadAsync().catch(() => {});
+    }
+    await cleanupReviewSound();
+    setRecording(null);
+    setRecordUri(null);
     setRecordState(RecordState.none);
     setRecordSeconds(0);
   };
@@ -132,10 +256,15 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
         {pendingMedia.map((m, i) => (
           <View key={i} style={styles.pendingThumb}>
             <ExpoImage
-              source={{ uri: m.uri }}
+              source={{ uri: m.thumbnailUri || m.uri }}
               style={styles.pendingImage}
               contentFit="cover"
             />
+            {m.type === 'video' && (
+              <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 12 }]}>
+                <Play size={20} color="#FFF" fill="#FFF" />
+              </View>
+            )}
             <TouchableOpacity
               style={styles.removeThumbBtn}
               onPress={() => removePendingMedia(i)}
@@ -149,12 +278,18 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
     );
   };
 
+  const formatTime = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
   const renderInputField = () => {
     if (recordState === RecordState.recording) {
       return (
         <View style={styles.recordingContainer}>
           <View style={styles.recordingDot} />
-          <Text style={styles.recordingTime}>0:00</Text>
+          <Text style={styles.recordingTime}>{formatTime(recordSeconds)}</Text>
           <View style={{ flex: 1 }} />
           <Text style={styles.recordingLabel}>Recording...</Text>
           <TouchableOpacity onPress={handleCancelRecording} style={styles.trashBtn}>
@@ -170,8 +305,8 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
           <TouchableOpacity onPress={handleCancelRecording} style={styles.trashBtn}>
             <Trash2 size={16} color="#FF5252" />
           </TouchableOpacity>
-          <TouchableOpacity style={{ paddingHorizontal: 12 }}>
-            <Play size={20} color="#FFF" fill="#FFF" />
+          <TouchableOpacity style={{ paddingHorizontal: 12 }} onPress={toggleReviewPlay}>
+            {isPlayingReview ? <Pause size={20} color="#FFF" /> : <Play size={20} color="#FFF" fill="#FFF" />}
           </TouchableOpacity>
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
             {[10, 14, 20, 14, 18, 24, 18, 14, 20, 10].map((h, i) => (
@@ -179,7 +314,7 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
             ))}
           </View>
           <Text style={{ color: '#FFF', fontSize: 14, fontWeight: 'bold', paddingRight: 12, paddingLeft: 12 }}>
-            00:00
+            {formatTime(isPlayingReview || reviewPosition > 0 ? reviewPosition : recordSeconds)}
           </Text>
         </View>
       );
@@ -262,6 +397,32 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
           {getActionIcon()}
         </TouchableOpacity>
       </View>
+
+      <PermissionDialog
+        visible={permissionDialogState !== 'hidden'}
+        icon={<Mic size={32} color={colors.primary} />}
+        title="Microphone Access"
+        description={
+          permissionDialogState === 'denied'
+            ? 'You have previously denied microphone access. Please enable it in your device settings to record voice messages.'
+            : 'CrimChart needs access to your microphone so you can record and send voice messages to your friends.'
+        }
+        cancelText="Not Now"
+        confirmText={permissionDialogState === 'denied' ? 'Open Settings' : 'Continue'}
+        onCancel={() => setPermissionDialogState('hidden')}
+        onConfirm={async () => {
+          if (permissionDialogState === 'denied') {
+            Linking.openSettings();
+            setPermissionDialogState('hidden');
+          } else {
+            setPermissionDialogState('hidden');
+            const newPerm = await Audio.requestPermissionsAsync();
+            if (newPerm.status === 'granted') {
+              startRecording();
+            }
+          }
+        }}
+      />
     </View>
   );
 };

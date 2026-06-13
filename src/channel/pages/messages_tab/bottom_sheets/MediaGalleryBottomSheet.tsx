@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Dimensions, Platform, FlatList } from 'react-native';
 import { Image } from 'expo-image';
-// import { Video, ResizeMode } from 'expo-av';
-import { X, Download, Play } from 'lucide-react-native';
+import { X, Download } from 'lucide-react-native';
 import { MessageMediaItem } from '../../../../models/MediaModel';
 
 interface MediaGalleryBottomSheetProps {
@@ -14,35 +13,6 @@ interface MediaGalleryBottomSheetProps {
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-const VideoGalleryItem = ({ url }: { url: string }) => {
-  const [isPlaying, setIsPlaying] = useState(true);
-
-  return (
-    <View style={styles.page}>
-      {/* 
-      <Video
-        source={{ uri: url }}
-        style={styles.media}
-        resizeMode={ResizeMode.CONTAIN}
-        useNativeControls={false}
-        shouldPlay={isPlaying}
-        isLooping
-      />
-      */}
-      <View style={[styles.media, { justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{color: 'white'}}>Video Player Disabled</Text>
-      </View>
-      <TouchableOpacity 
-        style={styles.videoOverlay} 
-        activeOpacity={1} 
-        onPress={() => setIsPlaying(!isPlaying)}
-      >
-        {!isPlaying && <Play size={80} color="rgba(255,255,255,0.5)" fill="rgba(255,255,255,0.5)" />}
-      </TouchableOpacity>
-    </View>
-  );
-};
-
 export const MediaGalleryBottomSheet: React.FC<MediaGalleryBottomSheetProps> = ({
   visible,
   onClose,
@@ -51,13 +21,7 @@ export const MediaGalleryBottomSheet: React.FC<MediaGalleryBottomSheetProps> = (
 }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
 
-  if (!visible) return null;
-
   const renderItem = ({ item }: { item: MessageMediaItem }) => {
-    if (item.type === 'video') {
-      return <VideoGalleryItem url={item.url} />;
-    }
-
     return (
       <View style={styles.page}>
         <Image

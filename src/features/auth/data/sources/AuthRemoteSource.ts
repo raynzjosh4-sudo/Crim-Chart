@@ -119,7 +119,7 @@ export class AuthRemoteSource {
         throw new Error('Google Login failed: No session returned.');
       }
 
-      let profile = null;
+      let profile: any = null;
       for (let i = 0; i < 3; i++) {
         const { data } = await supabase
           .from('profiles')
@@ -210,9 +210,16 @@ export class AuthRemoteSource {
     if (!user) return;
 
     try {
+      const payload: any = { is_online: isOnline, active: isOnline };
+      
+      // If they are going offline, log the exact timestamp
+      if (!isOnline) {
+        payload.last_seen = new Date().toISOString();
+      }
+
       await supabase
         .from('profiles')
-        .update({ is_online: isOnline, active: isOnline })
+        .update(payload)
         .eq('id', user.id);
     } catch (e) {
       console.warn('❌ [AuthRemote] Failed to update online status:', e);

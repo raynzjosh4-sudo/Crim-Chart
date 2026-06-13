@@ -2,9 +2,12 @@ import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { useTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { User } from 'lucide-react-native';
-import React, { useRef } from 'react';
-import { Animated, Image, PanResponder, StyleSheet, useWindowDimensions } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { Animated, Image, PanResponder, StyleSheet, useWindowDimensions, View, Text, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useLiveStatusViews } from '@/hooks/useLiveStatusViews';
+import { StatusViewsMenuDialog } from '@/components/statusviews/StatusViewsMenuDialog';
+import { supabase } from '@/core/supabase/supabaseConfig';
 
 export const DraggableProfileButton = ({
   initialX = 20,
@@ -26,6 +29,14 @@ export const DraggableProfileButton = ({
 
   const clamp = (val: number, min: number, max: number) => Math.min(Math.max(val, min), max);
 
+  const { viewsCount } = useLiveStatusViews(user?.id);
+
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [menuAnchor, setMenuAnchor] = useState<{ x: number; y: number } | null>(null);
+
+  const viewsCountRef = useRef(viewsCount);
+  viewsCountRef.current = viewsCount;
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -46,7 +57,15 @@ export const DraggableProfileButton = ({
         const distance = Math.sqrt(gestureState.dx ** 2 + gestureState.dy ** 2);
         
         if (distance < 6) {
-          router.push('/profile');
+          if (viewsCountRef.current > 0) {
+            setMenuAnchor({
+              x: (pan.x as any)._value,
+              y: (pan.y as any)._value,
+            });
+            setMenuVisible(true);
+          } else {
+            router.push('/profile');
+          }
         }
 
         const centerX = (pan.x as any)._value + widgetSize / 2;
@@ -67,30 +86,53 @@ export const DraggableProfileButton = ({
   const hasImage = !!displayImageUrl;
 
   return (
-    <Animated.View
-      style={[
-        styles.container,
-        {
-          width: widgetSize,
-          height: widgetSize,
-          transform: [{ translateX: pan.x }, { translateY: pan.y }],
-          shadowColor: colors.primary,
-          elevation: hasImage ? 0 : 8,
-          backgroundColor: hasImage ? 'transparent' : colors.primary,
-        },
-      ]}
-      {...panResponder.panHandlers}
-    >
-      {hasImage ? (
-        <Image
-          source={{ uri: displayImageUrl }}
-          style={[styles.image, { width: widgetSize, height: widgetSize }]}
-          resizeMode="cover"
-        />
-      ) : (
-        <User color="#fff" size={widgetSize * 0.54} />
-      )}
-    </Animated.View>
+    <>
+      <Animated.View
+        style={[
+          styles.container,
+          {
+            width: widgetSize,
+            height: widgetSize,
+            transform: [{ translateX: pan.x }, { translateY: pan.y }],
+            shadowColor: colors.primary,
+            elevation: hasImage ? 0 : 8,
+            backgroundColor: hasImage ? 'transparent' : colors.primary,
+          },
+        ]}
+        {...panResponder.panHandlers}
+      >
+        {hasImage ? (
+          <Image
+            source={{ uri: displayImageUrl }}
+            style={[styles.image, { width: widgetSize, height: widgetSize }]}
+            resizeMode="cover"
+          />
+        ) : (
+          <User color="#fff" size={widgetSize * 0.54} />
+        )}
+
+        {viewsCount > 0 && (
+          <View style={styles.badgeContainer}>
+            <Text style={styles.badgeText}>{viewsCount}</Text>
+          </View>
+        )}
+      </Animated.View>
+
+      <StatusViewsMenuDialog
+        visible={menuVisible}
+        onClose={() => setMenuVisible(false)}
+        anchor={menuAnchor}
+        widgetSize={widgetSize}
+        onViewersPress={() => {
+          setMenuVisible(false);
+          router.push('/status-viewers');
+        }}
+        onProfilePress={() => {
+          setMenuVisible(false);
+          router.push('/profile');
+        }}
+      />
+    </>
   );
 };
 
@@ -107,5 +149,27 @@ const styles = StyleSheet.create({
   },
   image: {
     borderRadius: 100,
+  },
+  badgeContainer: {
+    position: 'absolute',
+    top: -2,
+    right: -4,
+    backgroundColor: '#FF3B30', 
+    borderRadius: 12,
+    minWidth: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });

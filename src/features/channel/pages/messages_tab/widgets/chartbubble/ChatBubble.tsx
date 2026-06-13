@@ -13,7 +13,7 @@ import {
 
 import { UserProfileBottomSheet } from '@/channel/pages/messages_tab/bottom_sheets/UserProfileBottomSheet';
 import { PollCarousel } from '../../../../../../channel/CrimChartInBox/widgets/PollCarousel';
-import { UserAvatarImage } from '../../../../../../channel/pages/widgets2/memberimage/UserAvatarImage';
+import UserAvatar from '@/components/avatar/UserAvatar';
 import { MessageMediaItem } from '../../../../../../models/MediaModel';
 import { MessageMediaGrid } from '../MessageMediaGrid';
 import { STICKER_SOURCES } from '../StickerSheet';
@@ -101,11 +101,11 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
         onLongPress={handleLongPress}
       >
         <View style={[styles.contentRow, message.isMe ? styles.rowReverse : styles.rowForward]}>
-          <UserAvatarImage
-            imageUrl={message.senderAvatarUrl}
+          <UserAvatar
+            userId={message.senderId}
+            fallbackUrl={message.senderAvatarUrl}
             size={42}
-            onImageTap={() => setShowProfile(true)}
-            showStatusRing={false}
+            onTap={() => setShowProfile(true)}
           />
 
           <View style={styles.spacer} />

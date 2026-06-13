@@ -16,6 +16,7 @@ interface ChatState {
   onlineUsers: Record<string, boolean>;
 
   fetchThreads: () => Promise<void>;
+  loadMoreThreads: () => Promise<void>;
   fetchMessages: (threadId: string, limit?: number) => Promise<void>;
   loadMoreMessages: (threadId: string, limit?: number) => Promise<void>;
   sendMessage: (threadId: string, text: string, type?: string, mediaUrl?: string) => Promise<void>;
@@ -47,7 +48,8 @@ export const useChatStore = create<ChatState>()(
             .from('inbox')
             .select('*')
             .eq('user_id', user.id)
-            .order('last_message_at', { ascending: false });
+            .order('last_message_at', { ascending: false })
+            .limit(10);
 
           if (error) throw error;
 
@@ -67,6 +69,8 @@ export const useChatStore = create<ChatState>()(
 
           const newThreads: ThreadEntity[] = (data || []).map((row: any) => {
             const pData = profilesMap[row.participant_id] || {};
+            console.log(`[DEBUG INBOX] Thread ${row.id} - DB text: "${row.last_message}", DB type: "${row.last_message_type}"`);
+            
             return {
               id: String(row.id),
               participants: [
@@ -86,7 +90,7 @@ export const useChatStore = create<ChatState>()(
                 author: { id: row.participant_id } as any,
                 createdAt: new Date(row.last_message_at),
                 text: row.last_message,
-                type: 'text' as any,
+                type: (row.last_message_type || 'text') as any,
                 status: 'sent' as any,
                 isEncrypted: false,
               } : undefined,
@@ -96,10 +100,83 @@ export const useChatStore = create<ChatState>()(
           });
 
           set({ threads: newThreads });
+
+          // Background prefetch for the top 10 recent threads to ensure zero wait time
+          newThreads.slice(0, 10).forEach(thread => {
+            get().fetchMessages(thread.id, 10);
+          });
         } catch (e) {
           console.error('[ChatStore] fetchThreads error:', e);
         } finally {
           set({ isLoadingThreads: false });
+        }
+      },
+
+      loadMoreThreads: async () => {
+        const currentThreads = get().threads;
+        if (currentThreads.length === 0) return;
+        const offset = currentThreads.length;
+
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) throw new Error('Not logged in');
+
+          const { data, error } = await supabase
+            .from('inbox')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('last_message_at', { ascending: false })
+            .range(offset, offset + 9);
+
+          if (error) throw error;
+          if (!data || data.length === 0) return;
+
+          const participantIds = data.map((r: any) => r.participant_id).filter(Boolean);
+          let profilesMap: Record<string, any> = {};
+          if (participantIds.length > 0) {
+            const { data: profilesData } = await supabase
+              .from('profiles')
+              .select('id, display_name, profile_image_url')
+              .in('id', participantIds);
+
+            if (profilesData) {
+              profilesMap = profilesData.reduce((acc, p) => ({ ...acc, [p.id]: p }), {});
+            }
+          }
+
+          const newThreads: ThreadEntity[] = data.map((row: any) => {
+            const pData = profilesMap[row.participant_id] || {};
+            return {
+              id: String(row.id),
+              participants: [
+                {
+                  id: row.participant_id,
+                  displayName: pData.display_name || 'User',
+                  profileImageUrl: pData.profile_image_url,
+                  followersCount: 0, followingCount: 0, isActive: false,
+                  statusCount: 0, channelsCreatedCount: 0, channelCount: 0,
+                  giftsEarned: 0, coinsEarned: 0, username: 'user', role: '',
+                  isVerified: false, hasStatus: false, isFollowing: false, isMe: false
+                } as any
+              ],
+              lastMessage: row.last_message ? {
+                id: `last_${row.id}`,
+                threadId: String(row.id),
+                author: { id: row.participant_id } as any,
+                createdAt: new Date(row.last_message_at),
+                text: row.last_message,
+                type: (row.last_message_type || 'text') as any,
+                status: 'sent' as any,
+                isEncrypted: false,
+              } : undefined,
+              unreadCount: row.unread_count || 0,
+              updatedAt: new Date(row.last_message_at || new Date()),
+            };
+          });
+
+          set({ threads: [...currentThreads, ...newThreads] });
+        } catch (e) {
+          console.error('[ChatStore] loadMoreThreads error:', e);
         }
       },
 
@@ -283,12 +360,26 @@ export const useChatStore = create<ChatState>()(
           // Update state optimistically
           set(state => {
             const threadMsgs = state.messages[threadId] || [];
+            const updatedThreads = state.threads.map(t => {
+              if (t.id === threadId) {
+                return {
+                  ...t,
+                  lastMessage: optimisticMsg,
+                  updatedAt: new Date(),
+                };
+              }
+              return t;
+            });
+            
+            // Sort threads so the most recently updated is at the top
+            updatedThreads.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+
             return {
-              messages: { ...state.messages, [threadId]: [optimisticMsg, ...threadMsgs] }
+              messages: { ...state.messages, [threadId]: [optimisticMsg, ...threadMsgs] },
+              threads: updatedThreads
             };
           });
 
-          // Process media uploads
           let finalMediaUrl = mediaUrl;
 
           if (mediaUrl && type !== 'lottie') {
@@ -296,13 +387,24 @@ export const useChatStore = create<ChatState>()(
               // Check if it's a JSON array
               const parsed = JSON.parse(mediaUrl);
               if (Array.isArray(parsed)) {
-                const uploadedUrls: string[] = [];
+                const uploadedUrls: any[] = [];
                 for (const p of parsed) {
-                  if (p.startsWith('file://') || p.startsWith('/')) {
-                    const url = await cloudMediaService.uploadMedia(p, 'inbox_media', user.id);
-                    uploadedUrls.push(url);
+                  let urlStr = typeof p === 'string' ? p : p.uri;
+                  let thumbStr = typeof p === 'string' ? undefined : p.thumbnail;
+                  let itemType = typeof p === 'string' ? 'image' : p.type;
+
+                  if (urlStr.startsWith('file://') || urlStr.startsWith('/')) {
+                    urlStr = await cloudMediaService.uploadMedia(urlStr, 'inbox_media', user.id);
+                  }
+
+                  if (thumbStr && (thumbStr.startsWith('file://') || thumbStr.startsWith('/'))) {
+                    thumbStr = await cloudMediaService.uploadMedia(thumbStr, 'inbox_media', user.id);
+                  }
+
+                  if (typeof p === 'string') {
+                    uploadedUrls.push(urlStr);
                   } else {
-                    uploadedUrls.push(p);
+                    uploadedUrls.push({ url: urlStr, thumbnail: thumbStr, type: itemType });
                   }
                 }
                 finalMediaUrl = JSON.stringify(uploadedUrls);
@@ -310,9 +412,27 @@ export const useChatStore = create<ChatState>()(
             } catch (e) {
               // Not a JSON array, check if single file path
               if (mediaUrl.startsWith('file://') || mediaUrl.startsWith('/')) {
-                finalMediaUrl = await cloudMediaService.uploadMedia(mediaUrl, 'inbox_media', user.id);
+                try {
+                  finalMediaUrl = await cloudMediaService.uploadMedia(mediaUrl, 'inbox_media', user.id);
+                } catch (uploadError) {
+                  console.error('[ChatStore] Media upload failed:', uploadError);
+                  // Update optimistic message to failed status
+                  set(state => {
+                    const threadMsgs = state.messages[threadId] || [];
+                    return {
+                      messages: { ...state.messages, [threadId]: threadMsgs.map(m => m.id === messageId ? { ...m, status: 'error' } as any : m) }
+                    };
+                  });
+                  return; // Don't insert into DB if upload fails
+                }
               }
             }
+          }
+
+          // Extra safety check: never insert local URIs to remote DB
+          if (finalMediaUrl && finalMediaUrl.includes('file:///data')) {
+            console.error('[ChatStore] Safety check failed: finalMediaUrl contains local file paths. Aborting.');
+            return;
           }
 
           const { data, error } = await supabase
@@ -378,7 +498,26 @@ export const useChatStore = create<ChatState>()(
               set(state => {
                 const currentMsgs = state.messages[threadId] || [];
                 if (currentMsgs.some(m => m.id === newMsg.id)) return state;
-                return { messages: { ...state.messages, [threadId]: [newMsg, ...currentMsgs] } };
+
+                const updatedThreads = state.threads.map(t => {
+                  if (t.id === threadId) {
+                    return {
+                      ...t,
+                      lastMessage: newMsg,
+                      updatedAt: new Date(newMsg.createdAt),
+                      unreadCount: isMe ? t.unreadCount : t.unreadCount + 1
+                    };
+                  }
+                  return t;
+                });
+                
+                // Sort threads so the most recently updated is at the top
+                updatedThreads.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+
+                return { 
+                  messages: { ...state.messages, [threadId]: [newMsg, ...currentMsgs] },
+                  threads: updatedThreads
+                };
               });
             }
           )
@@ -427,48 +566,33 @@ export const useChatStore = create<ChatState>()(
 
       markThreadAsRead: async (threadId: string) => {
         try {
-          const { error } = await supabase
-            .from('inbox')
-            .update({ unread_count: 0 })
-            .eq('id', threadId);
-
-          if (error) throw error;
-
+          // Optimistically update local state immediately so it vanishes
           set(state => ({
             threads: state.threads.map(t =>
               t.id === threadId ? { ...t, unreadCount: 0 } : t
             )
           }));
+
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+
+          const { error } = await supabase
+            .from('inbox')
+            .update({ unread_count: 0 })
+            .eq('id', threadId)
+            .eq('user_id', user.id);
+
+          if (error) {
+            console.error('[ChatStore] Supabase markThreadAsRead error:', error);
+          }
         } catch (e) {
           console.error('[ChatStore] markThreadAsRead error:', e);
         }
       },
 
       subscribeToGlobalPresence: async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const presenceChannel = supabase.channel('global_presence');
-        presenceChannel
-          .on('presence', { event: 'sync' }, () => {
-            const state = presenceChannel.presenceState();
-            const onlineUsersMap: Record<string, boolean> = {};
-            for (const key in state) {
-              const userPresences = state[key] as any[];
-              if (userPresences && userPresences.length > 0) {
-                onlineUsersMap[userPresences[0].userId] = true;
-              }
-            }
-            set({ onlineUsers: onlineUsersMap });
-          })
-          .subscribe(async (status) => {
-            if (status === 'SUBSCRIBED') {
-              await presenceChannel.track({
-                userId: user.id,
-                onlineAt: new Date().toISOString(),
-              });
-            }
-          });
+        // Deprecated: We now use PresenceSyncWorker for offline-first, scalable presence.
+        // Relying on global realtime subscriptions causes app crashes at scale.
       }
     })
     ,

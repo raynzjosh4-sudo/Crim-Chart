@@ -1,3 +1,18 @@
+import 'react-native-get-random-values';
+import 'react-native-url-polyfill/auto';
+import { Buffer } from 'buffer';
+import { TouchableOpacity } from 'react-native';
+
+if (typeof (globalThis as any).Buffer === 'undefined') {
+  (globalThis as any).Buffer = Buffer;
+}
+
+// Global touch feedback fix
+if (TouchableOpacity.defaultProps) {
+  TouchableOpacity.defaultProps.activeOpacity = 1;
+} else {
+  (TouchableOpacity as any).defaultProps = { activeOpacity: 1 };
+}
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { dbService } from '@/core/db/database';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
@@ -9,6 +24,9 @@ import Toast from 'react-native-toast-message';
 import { chartToastConfig } from '@/components/showcase/CrimChart_toast';
 import { useProtectedRoute } from '@/core/router/useProtectedRoute';
 import { LocalizationProvider } from '@/core/localization/LocalizationProvider';
+
+import { useAppPresence } from '@/core/hooks/useAppPresence';
+import { usePresenceSyncWorker } from '@/core/sync/usePresenceSyncWorker';
 
 const customDarkTheme = {
   ...DarkTheme,
@@ -23,6 +41,8 @@ const customDarkTheme = {
 
 export default function RootLayout() {
   useProtectedRoute();
+  useAppPresence();
+  usePresenceSyncWorker();
 
   useEffect(() => {
     dbService.init().catch(error => {

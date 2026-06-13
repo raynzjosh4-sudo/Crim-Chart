@@ -1,6 +1,8 @@
 import { supabase } from '@/core/supabase/client';
 import { cloudMediaService } from '@/core/network/cloudMediaService';
 import { create } from 'zustand';
+import { useProfileCacheStore } from '@/core/store/useProfileCacheStore';
+import { NativeDB } from '@/core/db/NativeDB';
 
 export enum MediaType {
   photo = 'photo',
@@ -68,6 +70,19 @@ export const usePostingStore = create<PostingState>((set) => ({
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
+
+      const markHasStatusLocally = () => {
+        const currentProfile = useProfileCacheStore.getState().profiles[user.id];
+        const newCount = (currentProfile?.statusCount || 0) + 1;
+        useProfileCacheStore.getState().updateProfile(user.id, { hasStatus: true, statusCount: newCount });
+        NativeDB.updatePresenceData({
+          id: user.id,
+          is_online: currentProfile?.isOnline ?? true,
+          last_seen: currentProfile?.lastSeen ?? new Date().toISOString(),
+          has_status: true,
+          status_count: newCount,
+        }).catch(console.warn);
+      };
 
       const visualMedia = params.media.filter(
         (m) => m.type === MediaType.photo || m.type === MediaType.video
@@ -141,6 +156,7 @@ export const usePostingStore = create<PostingState>((set) => ({
         };
         const { error } = await supabase.from('statuses').insert(statusPayload);
         if (error) throw error;
+        markHasStatusLocally();
       }
       // 3. If it's a CHANNEL POST
       else if (params.postType === PostType.channel) {
@@ -197,7 +213,11 @@ export const usePostingStore = create<PostingState>((set) => ({
           expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         };
         const { error: statusError } = await supabase.from('statuses').insert(statusPayload);
-        if (statusError) console.warn('Failed to insert into statuses table:', statusError);
+        if (statusError) {
+          console.warn('Failed to insert into statuses table:', statusError);
+        } else {
+          markHasStatusLocally();
+        }
       }
 
       set({ isPosting: false });

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { supabase } from '@/core/supabase/supabaseConfig';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { useProfileCacheStore } from '@/core/store/useProfileCacheStore';
+import { NativeDB } from '@/core/db/NativeDB';
 
 interface CreateStatusParams {
   caption?: string;
@@ -41,6 +43,21 @@ export const useCreateStatus = () => {
       });
 
       if (insertError) throw insertError;
+
+      // Instantly reflect the ring globally
+      const currentProfile = useProfileCacheStore.getState().profiles[user.id];
+      const newCount = (currentProfile?.statusCount || 0) + 1;
+      useProfileCacheStore.getState().updateProfile(user.id, {
+        hasStatus: true,
+        statusCount: newCount,
+      });
+      NativeDB.updatePresenceData({
+        id: user.id,
+        is_online: currentProfile?.isOnline ?? true,
+        last_seen: currentProfile?.lastSeen ?? new Date().toISOString(),
+        has_status: true,
+        status_count: newCount,
+      }).catch(console.warn);
 
       return true;
     } catch (e) {

@@ -2,10 +2,49 @@ import AppAvatar from '@/components/avatar/AppAvatar';
 import { Image as ExpoImage } from 'expo-image';
 import { MoreHorizontal, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Dimensions, Modal, Platform, SafeAreaView, StyleSheet, Text, TouchableWithoutFeedback, View } from 'react-native';
+import { Dimensions, Modal, Platform, SafeAreaView, StyleSheet, Text, TouchableWithoutFeedback, View, StatusBar, ActivityIndicator } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withSpring, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusProgressBar } from './StatusProgressBar';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import { GlassShimmer } from '@/components/shimmers/statusViewerShimmer/GlassShimmer';
+import { useMediaViewTracker } from '@/hooks/useMediaViewTracker';
+
+// --- StatusVideo Component ---
+const StatusVideo = ({ url, isPaused, onLoad, isPlaying }: { url: string, isPaused: boolean, onLoad: (dur: number) => void, isPlaying: boolean }) => {
+  const player = useVideoPlayer(url, player => {
+    player.loop = false;
+  });
+
+  useEffect(() => {
+    if (isPlaying && !isPaused) {
+      player.play();
+    } else {
+      player.pause();
+    }
+  }, [isPlaying, isPaused, player]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (player.status === 'readyToPlay') {
+        const dur = player.duration;
+        onLoad(dur ? dur * 1000 : 5000);
+        clearInterval(interval);
+      }
+    }, 100);
+    return () => clearInterval(interval);
+  }, [player, onLoad]);
+
+  return (
+    <VideoView
+      style={StyleSheet.absoluteFillObject}
+      player={player}
+      contentFit="contain"
+      nativeControls={false}
+    />
+  );
+};
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -13,9 +52,11 @@ import { ChartOptionsDialog } from '@/components/chartdialog/ChartOptionsDialog'
 
 // Extended type to support multiple media items
 export type MediaItem = {
+  id: string;
   url: string;
   type: 'image' | 'video';
   caption?: string;
+  thumbnail?: string;
 };
 
 export type StatusGroup = {
@@ -30,6 +71,8 @@ interface StatusViewerProps {
   onClose: () => void;
   statusGroups: StatusGroup[];
   initialGroupIndex?: number;
+  isLoadingData?: boolean;
+  skeletonUser?: { name: string; avatar: string };
 }
 
 export const StatusViewer: React.FC<StatusViewerProps> = ({
@@ -37,11 +80,16 @@ export const StatusViewer: React.FC<StatusViewerProps> = ({
   onClose,
   statusGroups,
   initialGroupIndex = 0,
+  isLoadingData = false,
+  skeletonUser,
 }) => {
   const [groupIndex, setGroupIndex] = useState(initialGroupIndex);
   const [mediaIndex, setMediaIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
+  const [isMediaLoaded, setIsMediaLoaded] = useState(false);
+  const [mediaDuration, setMediaDuration] = useState(5000);
+  const insets = useSafeAreaInsets();
 
   // Reset state when visible changes
   useEffect(() => {
@@ -50,10 +98,16 @@ export const StatusViewer: React.FC<StatusViewerProps> = ({
       setMediaIndex(0);
       setIsPaused(false);
       setShowOptions(false);
+      setIsMediaLoaded(false);
       translateY.value = 0;
       scale.value = 1;
     }
   }, [visible, initialGroupIndex]);
+
+  useEffect(() => {
+    setIsMediaLoaded(false);
+    setMediaDuration(5000);
+  }, [groupIndex, mediaIndex]);
 
   // Gestures for swipe down to close
   const translateY = useSharedValue(0);
@@ -83,12 +137,21 @@ export const StatusViewer: React.FC<StatusViewerProps> = ({
     transform: [{ translateY: translateY.value }, { scale: scale.value }],
   }));
 
-  if (!visible || statusGroups.length === 0) return null;
-
   const currentGroup = statusGroups[groupIndex];
-  if (!currentGroup) return null;
+  const currentMedia = currentGroup?.media?.[mediaIndex];
 
-  const currentMedia = currentGroup.media[mediaIndex];
+  // Track the view automatically
+  useMediaViewTracker({
+    mediaId: visible ? currentMedia?.id : undefined,
+    tableName: 'status_views',
+    idColumn: 'status_id',
+    authorId: currentGroup?.id,
+  });
+
+  if (!visible) return null;
+  if (!isLoadingData && statusGroups.length === 0) return null;
+
+  const nextMedia = currentGroup?.media?.[mediaIndex + 1];
 
   const goNext = () => {
     if (showOptions) return; // Don't advance if options are open
@@ -140,47 +203,96 @@ export const StatusViewer: React.FC<StatusViewerProps> = ({
                 onPressOut={() => setIsPaused(false)}
               >
                 <View style={StyleSheet.absoluteFillObject}>
-                  {currentMedia?.type === 'image' && (
+                  {isLoadingData && statusGroups.length === 0 ? (
+                    <GlassShimmer skeletonUser={skeletonUser} />
+                  ) : currentMedia?.type === 'image' ? (
                     <ExpoImage
                       source={{ uri: currentMedia.url }}
                       style={StyleSheet.absoluteFillObject}
-                      contentFit="cover"
+                      contentFit="contain"
+                      onLoadStart={() => setIsMediaLoaded(false)}
+                      onLoad={() => setIsMediaLoaded(true)}
+                    />
+                  ) : currentMedia?.type === 'video' ? (
+                    <>
+                      {!isMediaLoaded && currentMedia.thumbnail && (
+                        <ExpoImage
+                          source={{ uri: currentMedia.thumbnail }}
+                          style={StyleSheet.absoluteFillObject}
+                          contentFit="contain"
+                          blurRadius={10}
+                        />
+                      )}
+                      <StatusVideo 
+                        url={currentMedia.url} 
+                        isPaused={isPaused || showOptions} 
+                        isPlaying={true}
+                        onLoad={(dur) => {
+                          if (dur && !isNaN(dur)) setMediaDuration(dur);
+                          setIsMediaLoaded(true);
+                        }} 
+                      />
+                    </>
+                  ) : null}
+
+                  {/* Prefetch Next Media */}
+                  {nextMedia?.type === 'image' && (
+                    <ExpoImage
+                      source={{ uri: nextMedia.url }}
+                      style={{ width: 1, height: 1, opacity: 0, position: 'absolute' }}
+                      contentFit="contain"
                     />
                   )}
-                  {/* TODO: Add expo-video support here if type === 'video' */}
+                  {nextMedia?.type === 'video' && (
+                     <View style={{ width: 1, height: 1, opacity: 0, position: 'absolute' }}>
+                       <StatusVideo 
+                         url={nextMedia.url} 
+                         isPaused={true} 
+                         isPlaying={false}
+                         onLoad={() => {}} 
+                       />
+                     </View>
+                  )}
                 </View>
               </TouchableWithoutFeedback>
 
               {/* Gradient Overlay for Header */}
-              <View style={styles.topGradient} />
+              {(!isLoadingData || statusGroups.length > 0) && <View style={styles.topGradient} />}
 
               {/* UI Layer */}
-              <SafeAreaView style={styles.safeArea}>
-                <StatusProgressBar
-                  count={currentGroup.media.length}
-                  currentIndex={mediaIndex}
-                  isPaused={isPaused || showOptions}
-                  onComplete={goNext}
-                />
+              {(!isLoadingData || statusGroups.length > 0) && (
+                <View style={[styles.safeArea, { paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || insets.top) + 16 : Math.max(insets.top, 16) }]}>
+                  {currentGroup && (
+                    <>
+                      <StatusProgressBar
+                        count={currentGroup.media.length}
+                        currentIndex={mediaIndex}
+                        duration={mediaDuration}
+                        isPaused={isPaused || showOptions || !isMediaLoaded}
+                        onComplete={goNext}
+                      />
 
-                <View style={styles.header}>
-                  <AppAvatar imageUrl={currentGroup.avatarUrl} size={40} />
-                  <View style={styles.headerTextContainer}>
-                    <Text style={styles.username}>{currentGroup.channelName}</Text>
-                    <Text style={styles.counter}>{`${mediaIndex + 1} of ${currentGroup.media.length}`}</Text>
-                  </View>
-                  <TouchableWithoutFeedback onPress={() => setShowOptions(true)}>
-                    <View style={styles.iconButton}>
-                      <MoreHorizontal color="#FFF" size={24} />
+                    <View style={styles.header}>
+                      <AppAvatar imageUrl={currentGroup.avatarUrl} size={40} />
+                      <View style={styles.headerTextContainer}>
+                        <Text style={styles.username}>{currentGroup.channelName}</Text>
+                        <Text style={styles.counter}>{`${mediaIndex + 1} of ${currentGroup.media.length}`}</Text>
+                      </View>
+                      <TouchableWithoutFeedback onPress={() => setShowOptions(true)}>
+                        <View style={styles.iconButton}>
+                          <MoreHorizontal color="#FFF" size={24} />
+                        </View>
+                      </TouchableWithoutFeedback>
+                      <TouchableWithoutFeedback onPress={onClose}>
+                        <View style={styles.iconButton}>
+                          <X color="#FFF" size={24} />
+                        </View>
+                      </TouchableWithoutFeedback>
                     </View>
-                  </TouchableWithoutFeedback>
-                  <TouchableWithoutFeedback onPress={onClose}>
-                    <View style={styles.iconButton}>
-                      <X color="#FFF" size={24} />
-                    </View>
-                  </TouchableWithoutFeedback>
-                </View>
-              </SafeAreaView>
+                  </>
+                )}
+              </View>
+              )}
 
               {/* Caption Layer */}
               {currentMedia?.caption && (
@@ -194,17 +306,19 @@ export const StatusViewer: React.FC<StatusViewerProps> = ({
         </GestureDetector>
       </GestureHandlerRootView>
 
-      <ChartOptionsDialog
-        visible={showOptions}
-        onClose={() => setShowOptions(false)}
-        username={currentGroup.channelName}
-        userProfileImageUrl={currentGroup.avatarUrl}
-        statusImageUrl={currentMedia?.url}
-        isChartable={true}
-        themeColor="#FFB800"
-        onChartTap={() => { }}
-        onProfileTap={() => { }}
-      />
+      {currentGroup && (
+        <ChartOptionsDialog
+          visible={showOptions}
+          onClose={() => setShowOptions(false)}
+          username={currentGroup.channelName}
+          userProfileImageUrl={currentGroup.avatarUrl}
+          statusImageUrl={currentMedia?.url}
+          isChartable={true}
+          themeColor="#FFB800"
+          onChartTap={() => { }}
+          onProfileTap={() => { }}
+        />
+      )}
     </Modal>
   );
 };
@@ -229,7 +343,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.3)', // Simulating a simple gradient
   },
   safeArea: {
-    paddingTop: Platform.OS === 'android' ? 24 : 0,
+    paddingTop: 0,
   },
   header: {
     flexDirection: 'row',

@@ -4,6 +4,7 @@ import { authRepository } from '../data/repositories/AuthRepository';
 import { SignUpParams, LoginParams } from '../types/AuthTypes';
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
 import * as SecureStore from 'expo-secure-store';
+import { useProfileCacheStore } from '@/core/store/useProfileCacheStore';
 
 export enum AuthStatus {
   UNKNOWN = 'unknown',
@@ -228,6 +229,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
       await authRepository.updateOnlineStatus(false);
       await authRepository.signOut();
     } catch {} finally {
+      useProfileCacheStore.getState().clearAll();
       set({ status: AuthStatus.UNAUTHENTICATED, isLoading: false, user: null });
     }
   },

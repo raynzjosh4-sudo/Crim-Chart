@@ -107,10 +107,6 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: 8,
     paddingTop: 12,
-    position: 'absolute',
-    top: 0,
-    zIndex: 10,
-    elevation: 10,
   },
   segmentContainer: {
     flex: 1,

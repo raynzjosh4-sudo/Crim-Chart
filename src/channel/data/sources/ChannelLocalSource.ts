@@ -7,8 +7,8 @@ export class ChannelLocalSource {
     if (channels.length === 0) return;
     const db = dbService.database;
 
-    await db.withTransactionAsync(async () => {
-      for (const channel of channels) {
+    for (const channel of channels) {
+      try {
         await db.runAsync(
           `INSERT OR REPLACE INTO ${TABLES.CHANNELS} (
             id, creator_id, name, description, avatar_url, age_restriction, 
@@ -30,8 +30,10 @@ export class ChannelLocalSource {
             channel.likesCount, channel.unreadCount, 0, channel.createdAt.getTime(), 'SYNCED'
           ]
         );
+      } catch (err) {
+        console.error('Failed to save channel silently', err);
       }
-    });
+    }
   }
 
   async getUserChannels(userId: string, filterType: 'owned' | 'joined', limit: number, offset: number): Promise<any[]> {
@@ -58,8 +60,8 @@ export class ChannelLocalSource {
     if (!moments || moments.length === 0) return;
     const db = dbService.database;
 
-    await db.withTransactionAsync(async () => {
-      for (const m of moments) {
+    for (const m of moments) {
+      try {
         await db.runAsync(
           `INSERT OR REPLACE INTO ${TABLES.CHANNEL_MOMENTS} (
             id, channel_id, author_id, media_url, thumbnail_url, caption, media_type, created_at
@@ -69,8 +71,10 @@ export class ChannelLocalSource {
             m.caption || null, m.media_type, m.created_at
           ]
         );
+      } catch (err) {
+        console.error('Failed to save moment silently', err);
       }
-    });
+    }
   }
 
   async getChannelMoments(channelIds: string[]): Promise<any[]> {

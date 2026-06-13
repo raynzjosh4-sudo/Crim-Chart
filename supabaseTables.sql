@@ -13,10 +13,12 @@ CREATE TABLE public.profiles (
   following_count integer DEFAULT 0,
   created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
   youtube_channel_id text,
-  active boolean DEFAULT false,
   status_count integer DEFAULT 0,
   channels_created_count integer DEFAULT 0,
   is_online boolean DEFAULT false,
+  last_seen timestamp with time zone DEFAULT now(),
+  has_status boolean DEFAULT false,
+  active_status_views_count integer DEFAULT 0,
   CONSTRAINT profiles_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.channels (
