@@ -1,21 +1,21 @@
 import React from 'react';
 import { TouchableOpacity, Image, StyleSheet, View } from 'react-native';
 
-interface MediaGridItemProps {
-  imageUrl: string;
+interface ProfileImageItemProps {
+  imageUrl: string | null;
   size: number;
   onPress?: () => void;
 }
 
-export const MediaGridItem: React.FC<MediaGridItemProps> = ({ imageUrl, size, onPress }) => {
+export const ProfileImageItem: React.FC<ProfileImageItemProps> = ({ imageUrl, size, onPress }) => {
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.85}
-      style={[styles.container, { width: size, height: size }]}
+      style={[styles.container, { width: size, height: size * 1.5 }]}
     >
       <Image
-        source={{ uri: imageUrl }}
+        source={{ uri: imageUrl || 'https://via.placeholder.com/150/1A1A1A/FFFFFF?text=Photo' }}
         style={StyleSheet.absoluteFillObject}
         resizeMode="cover"
       />

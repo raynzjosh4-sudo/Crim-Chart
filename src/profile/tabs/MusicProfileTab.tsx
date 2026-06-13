@@ -1,13 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { FlatList, View, Text, TouchableOpacity, Image, StyleSheet, Dimensions } from 'react-native';
+import { FlatList, View, Text, StyleSheet, Dimensions } from 'react-native';
 import { Music } from 'lucide-react-native';
 import { supabase } from '@/core/supabase/client';
 import { SkeletonChartCard } from '../widgets/SkeletonChartCard';
+import { NativeDB } from '@/core/db/NativeDB';
+import { ProfileMusicItem } from '@/components/profileTabsWidgets/ProfileMusicItem';
+import { useRouter } from 'expo-router';
 
 interface MusicItem {
   id: string;
   thumbnailUrl: string;
   audioUrl: string;
+  title?: string;
+  artist?: string;
+  lyrics?: string;
 }
 
 interface MusicProfileTabProps {
@@ -23,8 +29,13 @@ export const MusicProfileTab: React.FC<MusicProfileTabProps> = ({
   userId,
   onMusicPress,
 }) => {
+  const router = useRouter();
   const [musicPosts, setMusicPosts] = useState<MusicItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const LIMIT = 10;
 
   useEffect(() => {
     if (!userId) {
@@ -32,30 +43,54 @@ export const MusicProfileTab: React.FC<MusicProfileTabProps> = ({
       return;
     }
 
-    const fetchMusic = async () => {
-      try {
+    const loadData = async () => {
+      // 1. Instantly load from local SQLite
+      const localData = await NativeDB.getProfileMedia(userId, 'audio');
+      if (localData.length > 0) {
+        setMusicPosts(localData.map((p: any) => ({
+          id: p.id,
+          audioUrl: p.audio_url,
+          thumbnailUrl: (p.thumbnail_urls && p.thumbnail_urls.length > 0) 
+            ? p.thumbnail_urls[0] 
+            : 'https://via.placeholder.com/150/1A1A1A/FFFFFF?text=Music',
+          title: p.metadata?.title,
+          artist: p.metadata?.artist,
+        })));
+        setIsLoading(false);
+      } else {
         setIsLoading(true);
-        const { data, error } = await supabase
-          .from('posts')
-          .select('id, audio_url, thumbnail_urls')
-          .eq('author_id', userId)
-          .eq('is_audio', true)
-          .order('created_at', { ascending: false });
+      }
+
+      // 2. Background fetch fresh from Supabase
+      try {
+        const { data, error } = await supabase.rpc('get_user_profile_media', {
+          p_user_id: userId,
+          p_media_type: 'audio',
+          p_limit: LIMIT,
+          p_offset: 0,
+        });
 
         if (error) {
           console.error('Error fetching music posts:', error);
           return;
         }
 
-        const items: MusicItem[] = (data || []).map(post => ({
-          id: post.id,
-          audioUrl: post.audio_url,
-          thumbnailUrl: (post.thumbnail_urls && post.thumbnail_urls.length > 0) 
-            ? post.thumbnail_urls[0] 
-            : 'https://via.placeholder.com/150/1A1A1A/FFFFFF?text=Music',
-        }));
-
-        setMusicPosts(items);
+        if (data) {
+          await NativeDB.upsertProfileMedia(data, 'audio');
+          const items: MusicItem[] = data.map((post: any) => ({
+            id: post.id,
+            audioUrl: post.audio_url,
+            thumbnailUrl: (post.thumbnail_urls && post.thumbnail_urls.length > 0) 
+              ? post.thumbnail_urls[0] 
+              : 'https://via.placeholder.com/150/1A1A1A/FFFFFF?text=Music',
+            title: post.metadata?.title,
+            artist: post.metadata?.artist,
+            lyrics: post.metadata?.lyrics,
+          }));
+          setMusicPosts(items);
+          setOffset(LIMIT);
+          setHasMore(data.length === LIMIT);
+        }
       } catch (err) {
         console.error('Unexpected error fetching music posts:', err);
       } finally {
@@ -63,8 +98,51 @@ export const MusicProfileTab: React.FC<MusicProfileTabProps> = ({
       }
     };
 
-    fetchMusic();
+    loadData();
   }, [userId]);
+
+  const loadMore = async () => {
+    if (!userId || isFetchingMore || !hasMore) return;
+    setIsFetchingMore(true);
+    try {
+      const { data, error } = await supabase.rpc('get_user_profile_media', {
+        p_user_id: userId,
+        p_media_type: 'audio',
+        p_limit: LIMIT,
+        p_offset: offset,
+      });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        await NativeDB.upsertProfileMedia(data, 'audio');
+        const newItems: MusicItem[] = data.map((post: any) => ({
+          id: post.id,
+          audioUrl: post.audio_url,
+          thumbnailUrl: (post.thumbnail_urls && post.thumbnail_urls.length > 0) 
+            ? post.thumbnail_urls[0] 
+            : 'https://via.placeholder.com/150/1A1A1A/FFFFFF?text=Music',
+          title: post.metadata?.title,
+          artist: post.metadata?.artist,
+          lyrics: post.metadata?.lyrics,
+        }));
+        
+        setMusicPosts(((prev: MusicItem[]) => {
+          const newMap = new Map([...prev, ...newItems].map(m => [m.id, m]));
+          return Array.from(newMap.values());
+        }) as any);
+        
+        setOffset(((prev: number) => prev + LIMIT) as any);
+        setHasMore(data.length === LIMIT);
+      } else {
+        setHasMore(false);
+      }
+    } catch (err) {
+      console.error('Error paginating music:', err);
+    } finally {
+      setIsFetchingMore(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -91,37 +169,38 @@ export const MusicProfileTab: React.FC<MusicProfileTabProps> = ({
       numColumns={COLS}
       keyExtractor={item => item.id}
       renderItem={({ item }) => (
-        <TouchableOpacity
-          style={[styles.musicItem, { width: ITEM_SIZE - 2, height: ITEM_SIZE - 2 }]}
-          onPress={() => onMusicPress?.(item)}
-          activeOpacity={0.85}
-        >
-          <Image source={{ uri: item.thumbnailUrl }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
-          <View style={styles.playOverlay}>
-            <Music color="#FFF" size={24} />
-          </View>
-        </TouchableOpacity>
+        <ProfileMusicItem
+          thumbnailUrl={item.thumbnailUrl}
+          title={item.title}
+          artist={item.artist}
+          size={ITEM_SIZE - 2}
+          onPress={() => {
+            if (onMusicPress) {
+              onMusicPress(item);
+            }
+            router.push({
+              pathname: '/now-playing',
+              params: {
+                title: item.title,
+                artist: item.artist,
+                coverUrl: item.thumbnailUrl,
+                audioUrl: item.audioUrl,
+                lyrics: item.lyrics,
+              }
+            });
+          }}
+        />
       )}
       contentContainerStyle={{ padding: 1, gap: 2 }}
       showsVerticalScrollIndicator={false}
+      onEndReached={loadMore}
+      onEndReachedThreshold={0.5}
     />
   );
 };
 
 const styles = StyleSheet.create({
   skeletonGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 2, padding: 1 },
-  musicItem: {
-    overflow: 'hidden',
-    borderRadius: 4,
-    backgroundColor: '#1A1A1A',
-    position: 'relative',
-  },
-  playOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
   emptyContainer: {
     paddingTop: 60,
     alignItems: 'center',

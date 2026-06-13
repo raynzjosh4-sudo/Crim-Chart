@@ -9,6 +9,10 @@ import { PhotosTab } from '../tabs/PhotosTab';
 import { VideosTab } from '../tabs/VideosTab';
 import { MusicTab } from '../tabs/MusicTab';
 import CrimchartBackButton from '@/components/CrimChartBackButton/CrimChart_back_button';
+import { PermissionDialog } from '@/components/ui/PermissionDialog';
+import * as MediaLibrary from 'expo-media-library';
+import { Linking, AppState } from 'react-native';
+import { Image as ImageIcon } from 'lucide-react-native';
 
 export const FirstPostMainPage: React.FC = () => {
   const router = useRouter();
@@ -18,6 +22,7 @@ export const FirstPostMainPage: React.FC = () => {
 
   const layout = useWindowDimensions();
 
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
   const [index, setIndex] = useState(0);
   const [routes] = useState([
     { key: 'photos', title: 'Photos' },
@@ -37,6 +42,33 @@ export const FirstPostMainPage: React.FC = () => {
     }
     setSelectedItems(newItems);
   }, [selectedItems]);
+
+  React.useEffect(() => {
+    const checkPermissions = async () => {
+      const { status, canAskAgain } = await MediaLibrary.getPermissionsAsync();
+      if (status !== 'granted') {
+        if (canAskAgain) {
+          const newStatus = await MediaLibrary.requestPermissionsAsync();
+          if (newStatus.status !== 'granted') {
+            setShowPermissionDialog(true);
+          }
+        } else {
+          setShowPermissionDialog(true);
+        }
+      } else {
+        setShowPermissionDialog(false);
+      }
+    };
+    
+    checkPermissions();
+
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        checkPermissions();
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   const handleNext = () => {
     router.push({
@@ -109,6 +141,26 @@ export const FirstPostMainPage: React.FC = () => {
         }}
         initialLayout={{ width: layout.width }}
         style={{ flex: 1 }}
+      />
+
+      <PermissionDialog
+        visible={showPermissionDialog}
+        title="Media Access Needed"
+        description="CrimChart needs access to your media library to let you select photos, videos, and music for your posts."
+        icon={<ImageIcon color="#FACD11" size={24} />}
+        confirmText="Open Settings"
+        cancelText="Go Back"
+        onConfirm={() => {
+          Linking.openSettings();
+        }}
+        onCancel={() => {
+          setShowPermissionDialog(false);
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.replace('/');
+          }
+        }}
       />
     </View>
   );

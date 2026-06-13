@@ -3,6 +3,7 @@ import { cloudMediaService } from '@/core/network/cloudMediaService';
 import { create } from 'zustand';
 import { useProfileCacheStore } from '@/core/store/useProfileCacheStore';
 import { NativeDB } from '@/core/db/NativeDB';
+import * as VideoThumbnails from 'expo-video-thumbnails';
 
 export enum MediaType {
   photo = 'photo',
@@ -31,6 +32,9 @@ export interface MediaItem {
   thumbnailUrl?: string;
   linkedPostId?: string;
   aspectRatio?: number;
+  title?: string;
+  artist?: string;
+  lyrics?: string;
 }
 
 export interface CreatePostParams {
@@ -95,15 +99,28 @@ export const usePostingStore = create<PostingState>((set) => ({
       let finalAudioUrl: string | null = null;
 
       for (const m of visualMedia) {
+        let uploadedMainUrl = m.path;
         if (m.path.startsWith('file://') || m.path.startsWith('/')) {
-           const url = await cloudMediaService.uploadMedia(m.path, 'posts_media', user.id);
-           galleryUrls.push(url);
+           uploadedMainUrl = await cloudMediaService.uploadMedia(m.path, 'posts_media', user.id);
+           galleryUrls.push(uploadedMainUrl);
         } else {
            galleryUrls.push(m.path);
         }
         
-        if (m.thumbnailUrl) {
-           if (m.thumbnailUrl.startsWith('file://') || m.thumbnailUrl.startsWith('/')) {
+        if (m.type === MediaType.video && (m.path.startsWith('file://') || m.path.startsWith('/'))) {
+           // It's a video, let's generate a REAL image thumbnail locally!
+           try {
+             const { uri } = await VideoThumbnails.getThumbnailAsync(m.path, { time: 1000 });
+             const thumbUrl = await cloudMediaService.uploadMedia(uri, 'posts_media_thumbs', user.id);
+             galleryThumbs.push(thumbUrl);
+           } catch (err) {
+             console.warn('Failed to generate real video thumbnail, falling back to video url', err);
+             galleryThumbs.push(uploadedMainUrl);
+           }
+        } else if (m.thumbnailUrl) {
+           if (m.thumbnailUrl === m.path) {
+             galleryThumbs.push(uploadedMainUrl);
+           } else if (m.thumbnailUrl.startsWith('file://') || m.thumbnailUrl.startsWith('/')) {
              const thumbUrl = await cloudMediaService.uploadMedia(m.thumbnailUrl, 'posts_media_thumbs', user.id);
              galleryThumbs.push(thumbUrl);
            } else {
@@ -112,6 +129,8 @@ export const usePostingStore = create<PostingState>((set) => ({
         }
       }
 
+      const metadata: Record<string, any> = {};
+
       if (audioMedia) {
         if (audioMedia.path.startsWith('file://') || audioMedia.path.startsWith('/')) {
            const url = await cloudMediaService.uploadMedia(audioMedia.path, 'posts_audio', user.id);
@@ -119,6 +138,21 @@ export const usePostingStore = create<PostingState>((set) => ({
         } else {
            finalAudioUrl = audioMedia.path;
         }
+
+        // Upload the audio cover image (thumbnail)
+        if (audioMedia.thumbnailUrl) {
+           if (audioMedia.thumbnailUrl.startsWith('file://') || audioMedia.thumbnailUrl.startsWith('/')) {
+             const thumbUrl = await cloudMediaService.uploadMedia(audioMedia.thumbnailUrl, 'posts_media_thumbs', user.id);
+             galleryThumbs.push(thumbUrl);
+           } else {
+             galleryThumbs.push(audioMedia.thumbnailUrl);
+           }
+        }
+
+        // Build metadata JSON
+        if (audioMedia.title) metadata.title = audioMedia.title;
+        if (audioMedia.artist) metadata.artist = audioMedia.artist;
+        if (audioMedia.lyrics) metadata.lyrics = audioMedia.lyrics;
       }
 
       let mainInsertSuccess = true;
@@ -174,6 +208,7 @@ export const usePostingStore = create<PostingState>((set) => ({
           thumbnail_urls: galleryThumbs,
           audio_url: finalAudioUrl,
           is_audio: !!finalAudioUrl,
+          metadata,
         };
         const { error } = await supabase.from('channel_posts').insert(cPostPayload);
         if (error) throw error;
@@ -183,7 +218,6 @@ export const usePostingStore = create<PostingState>((set) => ({
         const postPayload = {
           author_id: user.id,
           caption: params.caption,
-          channel_id: params.channelId ?? 'general',
           privacy: params.isPublicFeed ? 'public' : 'private',
           allow_comments: params.allowComments ?? true,
           aspect_ratio: params.aspectRatio,
@@ -192,37 +226,17 @@ export const usePostingStore = create<PostingState>((set) => ({
           thumbnail_urls: galleryThumbs,
           audio_url: finalAudioUrl,
           is_audio: !!finalAudioUrl,
+          metadata,
         };
         const { error } = await supabase.from('posts').insert(postPayload);
         if (error) throw error;
       }
 
-      // Also insert into statuses table if it's a regular post but shareToStatus is true
-      if (params.shareToStatus && params.postType !== PostType.status) {
-        const statusPayload = {
-          author_id: user.id,
-          caption: params.caption || null,
-          image_urls: galleryUrls || [],
-          video_url: isVideo ? galleryUrls[0] : null,
-          audio_url: finalAudioUrl,
-          is_video: isVideo,
-          is_audio: !!finalAudioUrl,
-          privacy: params.isPublicFeed ? 'public' : 'private',
-          allow_comments: params.allowComments ?? true,
-          thumbnail_url: galleryThumbs.length > 0 ? galleryThumbs[0] : null,
-          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        };
-        const { error: statusError } = await supabase.from('statuses').insert(statusPayload);
-        if (statusError) {
-          console.warn('Failed to insert into statuses table:', statusError);
-        } else {
-          markHasStatusLocally();
-        }
-      }
-
+      // Status posting is now explicitly handled by the UI calling createPost with PostType.status
       set({ isPosting: false });
       return true;
     } catch (e: any) {
+      console.error('[usePostingStore] createPost caught error:', e);
       set({ isPosting: false, errorMessage: e.message });
       return false;
     }

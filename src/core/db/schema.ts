@@ -7,6 +7,7 @@ export const TABLES = {
   DISCOVERY_FEED: 'discovery_feed',
   STATUSES: 'statuses',
   CHANNEL_MOMENTS: 'channel_moments',
+  PROFILE_MEDIA: 'profile_media',
 };
 
 export const SCHEMA = `
@@ -138,5 +139,20 @@ export const SCHEMA = `
     username TEXT,
     profile_image_url TEXT,
     channel_id TEXT -- Added to support channel-specific moments
+  );
+
+  CREATE TABLE IF NOT EXISTS ${TABLES.PROFILE_MEDIA} (
+    id TEXT PRIMARY KEY,
+    author_id TEXT,
+    media_type TEXT,
+    caption TEXT,
+    video_url TEXT,
+    audio_url TEXT,
+    image_urls TEXT,
+    thumbnail_urls TEXT,
+    likes_count INTEGER DEFAULT 0,
+    comments_count INTEGER DEFAULT 0,
+    created_at TEXT,
+    metadata TEXT
   );
 `;

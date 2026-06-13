@@ -53,6 +53,7 @@ export interface MediaItem {
   thumbnailUrl?: string;
   thumbnailBytes?: Uint8Array;
   aspectRatio?: number;
+  lyrics?: string;
   overlays?: any[];
 
   linkedPostId?: string;

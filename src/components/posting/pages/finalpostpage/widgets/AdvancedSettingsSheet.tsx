@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, Modal, Switch, TouchableWithoutFeedback, Platform } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, Modal, Switch, TouchableWithoutFeedback, Platform, Animated, PanResponder } from 'react-native';
 import { Eye, MessageSquare } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -22,6 +22,34 @@ export const AdvancedSettingsSheet: React.FC<AdvancedSettingsSheetProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
 
+  const pan = useRef(new Animated.ValueXY()).current;
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderMove: (e, gestureState) => {
+        if (gestureState.dy > 0) {
+          pan.setValue({ x: 0, y: gestureState.dy });
+        }
+      },
+      onPanResponderRelease: (e, gestureState) => {
+        if (gestureState.dy > 100) {
+          onClose();
+        } else {
+          Animated.spring(pan, {
+            toValue: { x: 0, y: 0 },
+            useNativeDriver: false,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  useEffect(() => {
+    if (visible) {
+      pan.setValue({ x: 0, y: 0 });
+    }
+  }, [visible]);
+
   return (
     <Modal
       visible={visible}
@@ -32,12 +60,14 @@ export const AdvancedSettingsSheet: React.FC<AdvancedSettingsSheetProps> = ({
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
-            <View style={[styles.sheetContainer, { paddingBottom: Math.max(20, insets.bottom + 20) }]}>
-              <View style={styles.handle} />
+            <Animated.View style={[styles.sheetContainer, { paddingBottom: Math.max(20, insets.bottom + 20), transform: [{ translateY: pan.y }] }]}>
               
-              <Text style={styles.title}>Advanced Settings</Text>
-              
-              <View style={styles.spacing} />
+              {/* Drag Handle Area */}
+              <View {...panResponder.panHandlers} style={{ width: '100%', alignItems: 'center', backgroundColor: 'transparent' }}>
+                <View style={styles.handle} />
+                <Text style={styles.title}>Advanced Settings</Text>
+                <View style={styles.spacing} />
+              </View>
 
               <View style={styles.tile}>
                 <View style={styles.iconContainer}>
@@ -76,7 +106,7 @@ export const AdvancedSettingsSheet: React.FC<AdvancedSettingsSheetProps> = ({
               <Text style={styles.description}>
                 Advanced settings allow you to control the visibility of your post on the global feed and manage interactions like comments.
               </Text>
-            </View>
+            </Animated.View>
           </TouchableWithoutFeedback>
         </View>
       </TouchableWithoutFeedback>

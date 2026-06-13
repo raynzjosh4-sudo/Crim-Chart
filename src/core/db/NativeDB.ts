@@ -285,4 +285,52 @@ export class NativeDB {
       is_audio: !!row.is_audio
     }));
   }
+
+  // ─── Profile Media (Photos, Videos, Music) ─────────────────────────────────
+
+  static async upsertProfileMedia(items: any[], mediaType: string) {
+    const db = dbService.database;
+    for (const item of items) {
+      try {
+        const sql = `
+          INSERT OR REPLACE INTO ${TABLES.PROFILE_MEDIA} (
+            id, author_id, media_type, caption, video_url, audio_url,
+            image_urls, thumbnail_urls, likes_count, comments_count, created_at, metadata
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        const params = [
+          String(item.id),
+          String(item.author_id),
+          mediaType,
+          item.caption || '',
+          item.video_url || null,
+          item.audio_url || null,
+          JSON.stringify(item.image_urls || []),
+          JSON.stringify(item.thumbnail_urls || []),
+          Number(item.likes_count || 0),
+          Number(item.comments_count || 0),
+          item.created_at || new Date().toISOString(),
+          JSON.stringify(item.metadata || {})
+        ];
+        await db.runAsync(sql, params);
+      } catch (error) {
+        console.error('🚨 [NativeDB] upsertProfileMedia item FAILED:', error);
+      }
+    }
+  }
+
+  static async getProfileMedia(authorId: string, mediaType: string) {
+    const sql = `
+      SELECT * FROM ${TABLES.PROFILE_MEDIA} 
+      WHERE author_id = ? AND media_type = ?
+      ORDER BY created_at DESC
+    `;
+    const rows = await dbService.query<any>(sql, [authorId, mediaType]);
+    return rows.map(row => ({
+      ...row,
+      image_urls: JSON.parse(row.image_urls || '[]'),
+      thumbnail_urls: JSON.parse(row.thumbnail_urls || '[]'),
+      metadata: JSON.parse(row.metadata || '{}')
+    }));
+  }
 }

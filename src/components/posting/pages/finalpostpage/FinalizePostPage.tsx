@@ -8,17 +8,12 @@ import { FinalizeCaptionSection } from './widgets/FinalizeCaptionSection';
 import { FinalizeMediaPreview } from './widgets/FinalizeMediaPreview';
 import { FinalizeShareButton } from './widgets/FinalizeShareButton';
 import { FinalizeListTile, FinalizeSwitchTile } from './widgets/FinalizeTiles';
-import { ChannelTags, ChannelData } from './widgets/ChannelTags';
+import { ChannelData } from './widgets/ChannelTags'; // keep data structure
+import { SelectChannelBottomSheet } from './widgets/SelectChannelBottomSheet';
 import { AdvancedSettingsSheet } from './widgets/AdvancedSettingsSheet';
 import { usePostingStore, PostType } from '@/core/store/usePostingStore';
 
-// Dummy channels to match UI layout
-const DUMMY_CHANNELS: ChannelData[] = [
-  { id: '1', name: 'General', avatarUrl: '' },
-  { id: '2', name: 'Crime Updates', avatarUrl: 'https://picsum.photos/id/101/200/200' },
-  { id: '3', name: 'Community', avatarUrl: '' },
-];
-
+// Removed dummy channels as they are now fetched internally
 // We mock the posting controller state for the UI translation
 export const FinalizePostPage: React.FC = () => {
   const router = useRouter();
@@ -33,7 +28,7 @@ export const FinalizePostPage: React.FC = () => {
 
   const [caption, setCaption] = useState('');
   const [shareToStatus, setShareToStatus] = useState(false);
-  const [isChannelExpanded, setIsChannelExpanded] = useState(false);
+  const [isChannelSheetVisible, setIsChannelSheetVisible] = useState(false);
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
   
   const [isAdvancedSettingsVisible, setIsAdvancedSettingsVisible] = useState(false);
@@ -52,27 +47,65 @@ export const FinalizePostPage: React.FC = () => {
   };
 
   const handlePost = async () => {
+    console.log('[FinalizePostPage] Starting handlePost...');
+    console.log('[FinalizePostPage] Inputs:', { caption, targetChannelId, isDirectChannelPost, shareToStatus, allowComments, isPublic, selectedChannelsLength: selectedChannels.length });
+    
     setIsPosting(true);
     
+    // 1. Submit the main post to the `posts` table (or manifesto)
+    // We intentionally do not use PostType.channel here for the feed post,
+    // so it falls back to the default `posts` table insert.
+    console.log('[FinalizePostPage] Step 1: Submitting main post...');
     const success = await createPost({
       media: selectedMedia,
       caption,
-      channelId: targetChannelId,
-      postType: isDirectChannelPost ? PostType.manifesto : PostType.channel,
-      shareToStatus,
+      channelId: targetChannelId, // Only relevant if isDirectChannelPost
+      postType: isDirectChannelPost ? PostType.manifesto : 'feed',
+      shareToStatus: false, // We handle this explicitly below
       allowComments,
       isPublicFeed: isPublic,
+      aspectRatio: selectedMedia.length > 0 ? selectedMedia[0].aspectRatio : undefined,
     });
+    console.log('[FinalizePostPage] Main post success?', success);
+    if (!success) {
+      console.error('[FinalizePostPage] Post insertion failed! Reason:', usePostingStore.getState().errorMessage);
+    }
 
-    setIsPosting(false);
-    
     if (success) {
+      // 2. Reuse the existing status insertion wrapper logic if switch is on
+      if (shareToStatus && !isDirectChannelPost) {
+        console.log('[FinalizePostPage] Step 2: Submitting post to status because shareToStatus is ON...');
+        const statusSuccess = await createPost({
+          media: selectedMedia,
+          caption,
+          postType: PostType.status,
+          shareToStatus: true,
+          allowComments,
+          isPublicFeed: isPublic,
+        });
+        console.log('[FinalizePostPage] Status post success?', statusSuccess);
+      } else {
+        console.log('[FinalizePostPage] Step 2 Skipped: shareToStatus is', shareToStatus);
+      }
+
+      // 3. Defer channel posts logic as per the architecture plan
+      if (selectedChannels.length > 0) {
+        // TODO: In the future, we will call a hook from src/channel here 
+        // e.g., await broadcastToChannels(postId, selectedChannels);
+        console.log(`[FinalizePostPage] Step 3: Deferred broadcasting to channels:`, selectedChannels);
+      } else {
+        console.log(`[FinalizePostPage] Step 3 Skipped: No channels selected.`);
+      }
+
+      console.log('[FinalizePostPage] All tasks completed successfully, navigating home.');
+      setIsPosting(false);
       Alert.alert('Success', 'Post created successfully!', [
         { text: 'OK', onPress: () => {
             router.push('/(tabs)');
         }}
       ]);
     } else {
+      setIsPosting(false);
       Alert.alert('Error', 'Failed to create post');
     }
   };
@@ -109,16 +142,8 @@ export const FinalizePostPage: React.FC = () => {
               <FinalizeListTile
                 icon={<Hash color="rgba(255,255,255,0.7)" size={22} />}
                 title={selectedChannels.length === 0 ? 'Tag in Channel' : `Tag in Channel (${selectedChannels.length} selected)`}
-                onTap={() => setIsChannelExpanded(!isChannelExpanded)}
+                onTap={() => setIsChannelSheetVisible(true)}
               />
-
-              {isChannelExpanded && (
-                <ChannelTags 
-                  channels={DUMMY_CHANNELS} 
-                  selectedChannels={selectedChannels} 
-                  onChannelSelected={handleChannelSelect} 
-                />
-              )}
             </>
           )}
 
@@ -147,6 +172,13 @@ export const FinalizePostPage: React.FC = () => {
         allowComments={allowComments}
         onPublicChanged={setIsPublic}
         onAllowCommentsChanged={setAllowComments}
+      />
+
+      <SelectChannelBottomSheet
+        visible={isChannelSheetVisible}
+        onClose={() => setIsChannelSheetVisible(false)}
+        selectedChannels={selectedChannels}
+        onToggleChannel={handleChannelSelect}
       />
     </View>
   );

@@ -149,6 +149,7 @@ CREATE TABLE public.status_views (
   status_id uuid NOT NULL,
   viewer_id uuid NOT NULL,
   viewed_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
+  created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT status_views_pkey PRIMARY KEY (status_id, viewer_id),
   CONSTRAINT status_views_status_id_fkey FOREIGN KEY (status_id) REFERENCES public.statuses(id),
   CONSTRAINT status_views_viewer_id_fkey FOREIGN KEY (viewer_id) REFERENCES public.profiles(id)
@@ -338,6 +339,7 @@ CREATE TABLE public.inbox (
   chat_type text DEFAULT 'private'::text,
   metadata jsonb,
   unread_count integer DEFAULT 0,
+  last_message_type text DEFAULT 'text'::text,
   CONSTRAINT inbox_pkey PRIMARY KEY (id, user_id),
   CONSTRAINT inbox_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
@@ -376,7 +378,6 @@ CREATE TABLE public.posts (
   comments_count integer DEFAULT 0,
   shares_count integer DEFAULT 0,
   tags_count integer DEFAULT 0,
-  channel_id text,
   CONSTRAINT posts_pkey PRIMARY KEY (id),
   CONSTRAINT posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.profiles(id),
   CONSTRAINT posts_parent_post_id_fkey FOREIGN KEY (parent_post_id) REFERENCES public.posts(id)
