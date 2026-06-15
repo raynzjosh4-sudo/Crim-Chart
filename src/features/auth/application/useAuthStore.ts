@@ -194,6 +194,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
       set({ isLoading: false, user });
       return true;
     } catch (e: any) {
+      console.error('[useAuthStore] Error updating profile:', e);
       set({ isLoading: false, errorMessage: e.message });
       return false;
     }

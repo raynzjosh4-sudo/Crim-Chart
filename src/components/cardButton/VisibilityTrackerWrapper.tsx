@@ -1,14 +1,14 @@
 import React, { useEffect } from 'react';
 
-interface VisibilityTrackerProps {
+interface VisibilityTrackerWrapperProps {
     children: React.ReactNode;
     onVisibilityChanged: (isVisible: boolean) => void;
 }
 
-export default function VisibilityTracker({
+export default function VisibilityTrackerWrapper({
     children,
     onVisibilityChanged,
-}: VisibilityTrackerProps) {
+}: VisibilityTrackerWrapperProps) {
 
     useEffect(() => {
         // 1. Equivalent to initState + addPostFrameCallback((_) => callback(true))

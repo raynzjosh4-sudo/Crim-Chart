@@ -8,6 +8,9 @@ export const TABLES = {
   STATUSES: 'statuses',
   CHANNEL_MOMENTS: 'channel_moments',
   PROFILE_MEDIA: 'profile_media',
+  BOXES: 'boxes',
+  BOX_ITEMS: 'box_items',
+  COMMENTS: 'comments',
 };
 
 export const SCHEMA = `
@@ -17,6 +20,7 @@ export const SCHEMA = `
     display_name TEXT,
     profile_image_url TEXT,
     bio TEXT,
+    crown_title TEXT,
     created_at TEXT,
     is_online INTEGER DEFAULT 0,
     last_seen TEXT,
@@ -61,7 +65,8 @@ export const SCHEMA = `
     thumbnail_url TEXT,
     caption TEXT,
     media_type TEXT,
-    created_at TEXT
+    created_at TEXT,
+    views_count INTEGER DEFAULT 0
   );
 
   CREATE TABLE IF NOT EXISTS ${TABLES.CHANNEL_MEMBERS} (
@@ -87,7 +92,8 @@ export const SCHEMA = `
     media_type TEXT, -- 'text', 'image', 'video', 'audio', 'lottie'
     reply_to_id TEXT,
     created_at TEXT,
-    is_pending INTEGER DEFAULT 0
+    is_pending INTEGER DEFAULT 0,
+    views_count INTEGER DEFAULT 0
   );
 
   CREATE TABLE IF NOT EXISTS ${TABLES.CHANNEL_POSTS} (
@@ -102,7 +108,9 @@ export const SCHEMA = `
     comments INTEGER DEFAULT 0,
     created_at TEXT,
     is_pending INTEGER DEFAULT 0,
-    is_liked INTEGER DEFAULT 0
+    is_liked INTEGER DEFAULT 0,
+    views_count INTEGER DEFAULT 0,
+    downloads_count INTEGER DEFAULT 0
   );
 
   CREATE TABLE IF NOT EXISTS ${TABLES.DISCOVERY_FEED} (
@@ -120,7 +128,9 @@ export const SCHEMA = `
     likes INTEGER DEFAULT 0,
     comments INTEGER DEFAULT 0,
     created_at TEXT,
-    widget_type TEXT
+    widget_type TEXT,
+    views_count INTEGER DEFAULT 0,
+    downloads_count INTEGER DEFAULT 0
   );
 
   CREATE TABLE IF NOT EXISTS ${TABLES.STATUSES} (
@@ -138,7 +148,8 @@ export const SCHEMA = `
     expires_at TEXT,
     username TEXT,
     profile_image_url TEXT,
-    channel_id TEXT -- Added to support channel-specific moments
+    channel_id TEXT, -- Added to support channel-specific moments
+    views_count INTEGER DEFAULT 0
   );
 
   CREATE TABLE IF NOT EXISTS ${TABLES.PROFILE_MEDIA} (
@@ -153,6 +164,58 @@ export const SCHEMA = `
     likes_count INTEGER DEFAULT 0,
     comments_count INTEGER DEFAULT 0,
     created_at TEXT,
-    metadata TEXT
+    metadata TEXT,
+    views_count INTEGER DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS ${TABLES.BOXES} (
+    id TEXT PRIMARY KEY,
+    owner_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    box_type TEXT NOT NULL,
+    metadata TEXT DEFAULT '{}',
+    is_public INTEGER DEFAULT 1,
+    allow_submissions INTEGER DEFAULT 1,
+    age_restriction TEXT DEFAULT 'All Ages',
+    country_restrictions TEXT DEFAULT '["Global"]',
+    visible_to_followed_users INTEGER DEFAULT 1,
+    created_at TEXT,
+    views_count INTEGER DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS ${TABLES.COMMENTS} (
+    id TEXT PRIMARY KEY,
+    post_id TEXT NOT NULL,
+    author_id TEXT NOT NULL,
+    author_username TEXT,
+    author_avatar_url TEXT,
+    text TEXT,
+    media_url TEXT,
+    media_type TEXT,
+    reply_to_id TEXT,
+    created_at TEXT,
+    likes_count INTEGER DEFAULT 0,
+    is_pending INTEGER DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS ${TABLES.BOX_ITEMS} (
+    id TEXT PRIMARY KEY,
+    box_id TEXT NOT NULL,
+    post_id TEXT NOT NULL,
+    likes_count INTEGER DEFAULT 0,
+    dislikes_count INTEGER DEFAULT 0,
+    added_at TEXT,
+    added_by_id TEXT,
+    added_by_name TEXT,
+    added_by_avatar TEXT,
+    caption TEXT,
+    media_url TEXT,
+    thumbnail_url TEXT,
+    is_video INTEGER DEFAULT 0,
+    author_id TEXT,
+    author_name TEXT,
+    author_avatar TEXT,
+    UNIQUE(box_id, post_id)
   );
 `;

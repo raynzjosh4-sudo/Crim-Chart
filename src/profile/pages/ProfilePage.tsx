@@ -1,10 +1,10 @@
-import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import CrimchartBackButton from '@/components/CrimChartBackButton/CrimChart_back_button';
+import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { UserBoxesWidget } from '@/features/boxes/components/UserBoxesWidget';
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
 import { useRouter } from 'expo-router';
-import { LayoutGrid, Play, Settings } from 'lucide-react-native';
-import { DiscoverChannelWidget } from '@/channel/ChannelComponents/DiscoverChannelCard/discoverchannelWidget/DiscoverChannelWidget';
-import React, { useState } from 'react';
+import { LayoutGrid, Music, Play, Settings } from 'lucide-react-native';
+import { useState } from 'react';
 import {
   Image,
   ScrollView,
@@ -14,16 +14,17 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { MusicProfileTab } from '../tabs/MusicProfileTab';
 import { PhotosProfileTab } from '../tabs/PhotosProfileTab';
 import { VideosProfileTab } from '../tabs/VideosProfileTab';
-import { MusicProfileTab } from '../tabs/MusicProfileTab';
-import { Music } from 'lucide-react-native';
 
 interface ProfilePageProps {
   userId?: string;
   userData?: CrimChartUserModel;
   showBack?: boolean;
   customActions?: React.ReactNode;
+  isLoading?: boolean;
 }
 
 type TabId = 'photos' | 'videos' | 'music';
@@ -33,6 +34,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   userData,
   showBack = true,
   customActions,
+  isLoading = false,
 }) => {
   const router = useRouter();
   const currentUser = useAuthStore(s => s.user);
@@ -58,7 +60,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   );
 
   return (
-    <View style={styles.root}>
+    <SafeAreaView style={styles.root}>
       <StatusBar barStyle="light-content" />
 
       {/* App Bar */}
@@ -68,7 +70,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         ) : <View style={styles.appBarBtn} />}
 
         <Text style={styles.appBarTitle} numberOfLines={1}>
-          {user?.username ?? 'Profile'}
+
         </Text>
 
         <TouchableOpacity onPress={goToSettings} style={styles.appBarBtn}>
@@ -83,7 +85,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             <View style={{ flex: 1 }}>
               <Text style={styles.displayName}>{user?.username ?? ''}</Text>
               {user?.crownTitle ? (
-                <Text style={styles.crownTitle}>👑 {user.crownTitle}</Text>
+                <Text style={styles.crownTitle}>{user.crownTitle}</Text>
               ) : null}
             </View>
             <TouchableOpacity
@@ -104,9 +106,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
           {/* Stats Row */}
           <View style={styles.statsRow}>
-            {statBadge('Charts', user?.followersCount ?? 0, true)}
-            {statBadge('Posts', user?.followingCount ?? 0)}
-            {statBadge('Chart', user?.channelCount ?? 0)}
+            {statBadge('Channels', isLoading ? '-' : (user?.channelCount ?? '-'), true)}
+            {statBadge('Posts', isLoading ? '-' : (user?.postsCount ?? '-'))}
+            {statBadge('Boxes', isLoading ? '-' : (user?.boxesCount ?? '-'))}
           </View>
 
           {/* Bio */}
@@ -120,10 +122,18 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           ) : null}
         </View>
 
-        <DiscoverChannelWidget 
-          userId={userId ?? user?.id}
-          channelCount={user?.channelCount ?? 0}
-        />
+        <View style={{ paddingHorizontal: 20, paddingBottom: 16 }}>
+          <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>
+            {isLoading ? '-' : (user?.followersCount ?? '-')} followers • {isLoading ? '-' : (user?.followingCount ?? '-')} following • {isLoading ? '-' : (user?.inboxCount ?? '-')} inboxes
+          </Text>
+        </View>
+
+        {(isCurrentUser || (user?.boxesCount ?? 0) > 0) && (
+          <UserBoxesWidget
+            userId={userId ?? user?.id}
+            isCurrentUser={isCurrentUser}
+          />
+        )}
 
         {/* Sticky Tab Bar */}
         <View style={styles.tabBar}>
@@ -154,7 +164,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           {activeTab === 'music' && <MusicProfileTab userId={userId} />}
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -165,7 +175,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 12,
-    paddingTop: 48,
   },
   appBarBtn: { width: 36, alignItems: 'center' },
   backArrow: { color: '#FFF', fontSize: 22 },
@@ -185,7 +194,7 @@ const styles = StyleSheet.create({
   },
   headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   displayName: { color: '#FFF', fontWeight: '900', fontSize: 22, letterSpacing: -0.8 },
-  crownTitle: { color: '#FACD11', fontSize: 13, fontWeight: '600', marginTop: 4 },
+  crownTitle: { color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: '500', marginTop: 2 },
   avatar: {
     width: 90,
     height: 90,

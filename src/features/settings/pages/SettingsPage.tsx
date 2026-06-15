@@ -43,9 +43,14 @@ export default function SettingsPage() {
         {renderSectionHeader(t('who_can_see_content'))}
         <SettingsItem
           icon={Lock}
-          title={t('account_privacy')}
+          title={t('account_privacy', { defaultValue: 'Account Privacy' })}
           trailingText={t('public')}
           onTap={() => router.push('/settings/privacy' as any)}
+        />
+        <SettingsItem
+          icon={EyeOff}
+          title={t('box_visibility', { defaultValue: 'Box Visibility' })}
+          onTap={() => router.push('/settings/box-visibility' as any)}
         />
         <SettingsItem
           icon={Ban}

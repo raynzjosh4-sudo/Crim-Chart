@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
+import { NativeDB } from '@/core/db/NativeDB';
 
 export class AuthLocalSource {
   async saveUser(user: CrimChartUserModel, accessToken?: string, refreshToken?: string) {
@@ -7,6 +8,7 @@ export class AuthLocalSource {
     // We store the active user id to match the Native C++ DB logic in your Flutter app.
     await SecureStore.setItemAsync('active_user_id', user.id);
     await SecureStore.setItemAsync(`user_data_${user.id}`, JSON.stringify(user));
+    await NativeDB.upsertUser(user);
   }
 
   async getUser(): Promise<CrimChartUserModel | null> {

@@ -2,6 +2,7 @@ export class CrimChartUserModel {
   public id: string;
   public displayName: string;
   public username?: string;
+  public email?: string;
   public profileImageUrl?: string | null;
   public bio?: string;
   public crownTitle?: string;
@@ -14,6 +15,10 @@ export class CrimChartUserModel {
   public followingCount?: number;
   public channelsCreatedCount?: number;
   public channelCount?: number;
+  public boxesCount?: number;
+  public boxSubmissionsCount?: number;
+  public postsCount?: number;
+  public inboxCount?: number;
   public giftsEarned?: number;
   public coinsEarned?: number;
   public isActive?: boolean;
@@ -26,6 +31,7 @@ export class CrimChartUserModel {
     id: string;
     displayName: string;
     username?: string;
+    email?: string;
     profileImageUrl?: string | null;
     bio?: string;
     crownTitle?: string;
@@ -38,6 +44,10 @@ export class CrimChartUserModel {
     followingCount?: number;
     channelsCreatedCount?: number;
     channelCount?: number;
+    boxesCount?: number;
+    boxSubmissionsCount?: number;
+    postsCount?: number;
+    inboxCount?: number;
     giftsEarned?: number;
     coinsEarned?: number;
     isActive?: boolean;
@@ -49,6 +59,7 @@ export class CrimChartUserModel {
     this.id = params.id;
     this.displayName = params.displayName;
     this.username = params.username;
+    this.email = params.email;
     this.profileImageUrl = params.profileImageUrl;
     this.bio = params.bio;
     this.crownTitle = params.crownTitle;
@@ -61,6 +72,10 @@ export class CrimChartUserModel {
     this.followingCount = params.followingCount ?? 0;
     this.channelsCreatedCount = params.channelsCreatedCount ?? 0;
     this.channelCount = params.channelCount ?? 0;
+    this.boxesCount = params.boxesCount ?? 0;
+    this.boxSubmissionsCount = params.boxSubmissionsCount ?? 0;
+    this.postsCount = params.postsCount ?? 0;
+    this.inboxCount = params.inboxCount ?? 0;
     this.giftsEarned = params.giftsEarned ?? 0;
     this.coinsEarned = params.coinsEarned ?? 0;
     this.isActive = params.isActive;
@@ -71,7 +86,7 @@ export class CrimChartUserModel {
   }
 
   static empty(): CrimChartUserModel {
-    return new CrimChartUserModel({ id: '', displayName: '' });
+    return new CrimChartUserModel({ id: '', displayName: '', username: '', email: '', profileImageUrl: null });
   }
 
   static fromMap(map: any): CrimChartUserModel {
@@ -79,6 +94,7 @@ export class CrimChartUserModel {
       id: String(map.id ?? map.user_id ?? ''),
       displayName: String(map.username ?? map.displayName ?? map.display_name ?? ''),
       username: map.username ?? map.displayName ?? map.display_name,
+      email: map.email,
       profileImageUrl: CrimChartUserModel.correctImageUrl(
         map.profile_image_url ?? map.profileImageUrl ?? map.avatar_url ?? ''
       ),
@@ -93,6 +109,10 @@ export class CrimChartUserModel {
       followingCount: Number(map.following_count ?? map.followingCount ?? 0),
       channelsCreatedCount: Number(map.charts_count ?? map.channels_created_count ?? map.channelsCreatedCount ?? 0),
       channelCount: Number(map.channel_count ?? map.channelCount ?? 0),
+      boxesCount: Number(map.boxes_count ?? map.boxesCount ?? 0),
+      boxSubmissionsCount: Number(map.box_submissions_count ?? map.boxSubmissionsCount ?? 0),
+      postsCount: Number(map.posts_count ?? map.postsCount ?? 0),
+      inboxCount: Number(map.inbox_count ?? map.inboxCount ?? 0),
       giftsEarned: Number(map.gifts_earned ?? map.giftsEarned ?? 0),
       coinsEarned: Number(map.coins_earned ?? map.coinsEarned ?? 0),
       isActive: Boolean(map.is_active ?? map.isActive ?? true),

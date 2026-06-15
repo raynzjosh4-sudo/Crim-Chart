@@ -15,6 +15,17 @@ class DatabaseService {
       } catch (e) {
         // Ignore if column already exists
       }
+      try {
+        await this.db.execAsync(`ALTER TABLE users ADD COLUMN crown_title TEXT`);
+      } catch (e) {}
+
+      // Migrations for new views/downloads columns
+      try { await this.db.execAsync(`ALTER TABLE profile_media ADD COLUMN views_count INTEGER DEFAULT 0`); } catch (e) {}
+      try { await this.db.execAsync(`ALTER TABLE discovery_feed ADD COLUMN views_count INTEGER DEFAULT 0`); } catch (e) {}
+      try { await this.db.execAsync(`ALTER TABLE discovery_feed ADD COLUMN downloads_count INTEGER DEFAULT 0`); } catch (e) {}
+      try { await this.db.execAsync(`ALTER TABLE boxes ADD COLUMN views_count INTEGER DEFAULT 0`); } catch (e) {}
+      try { await this.db.execAsync(`ALTER TABLE channel_moments ADD COLUMN views_count INTEGER DEFAULT 0`); } catch (e) {}
+
       console.log('✅ [SQLite] Database initialized successfully');
     } catch (error) {
       console.error('🚨 [SQLite Error] Initialization failed:', error);

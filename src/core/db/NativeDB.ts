@@ -11,10 +11,10 @@ export class NativeDB {
             id, author_id, author_username, author_avatar_url, 
             channel_id, channel_name, channel_avatar_url, 
             caption, video_url, image_urls, is_video, 
-            likes, comments, created_at, widget_type
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            likes, comments, created_at, widget_type, views_count
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-        
+
         const params = [
           String(item.id || ''),
           String(item.author_id || item.authorId || ''),
@@ -30,9 +30,10 @@ export class NativeDB {
           Number(item.likes || 0),
           Number(item.comments || 0),
           item.created_at || item.createdAt || new Date().toISOString(),
-          item.widget_type || item.widgetType || 'channel_post'
+          item.widget_type || item.widgetType || 'channel_post',
+          Number(item.views_count || item.viewsCount || 0)
         ];
-        
+
         await db.runAsync(sql, params);
       } catch (error) {
         console.error('🚨 [SQLite Error] upsertDiscoveryFeed item FAILED:', error);
@@ -53,22 +54,76 @@ export class NativeDB {
     }));
   }
 
+  static async saveBoxItems(boxId: string, items: any[]) {
+    const db = dbService.database;
+    try {
+      // First, clear the existing cache for this box to easily refresh the top 10
+      await db.runAsync(`DELETE FROM ${TABLES.BOX_ITEMS} WHERE box_id = ?`, [boxId]);
+
+      for (const item of items) {
+        const sql = `
+          INSERT INTO ${TABLES.BOX_ITEMS} (
+            id, box_id, post_id, likes_count, dislikes_count, added_at,
+            added_by_id, added_by_name, added_by_avatar,
+            caption, media_url, thumbnail_url, is_video,
+            author_id, author_name, author_avatar
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        const params = [
+          item.id,
+          item.box_id,
+          item.post_id,
+          item.likes,
+          item.dislikes,
+          item.addedAt,
+          item.addedBy?.id || null,
+          item.addedBy?.name || null,
+          item.addedBy?.avatarUrl || null,
+          item.post?.caption || null,
+          item.post?.mediaUrl || null,
+          item.post?.thumbnailUrl || null,
+          item.post?.isVideo ? 1 : 0,
+          item.post?.authorId || null,
+          item.post?.authorName || null,
+          item.post?.authorAvatar || null
+        ];
+        await db.runAsync(sql, params);
+      }
+    } catch (error) {
+      console.error('🚨 [SQLite Error] saveBoxItems FAILED:', error);
+    }
+  }
+
+  static async getBoxItems(boxId: string) {
+    const sql = `
+      SELECT * FROM ${TABLES.BOX_ITEMS} 
+      WHERE box_id = ?
+      ORDER BY added_at DESC
+    `;
+    const rows = await dbService.query<any>(sql, [boxId]);
+    return rows;
+  }
+
   static async upsertUser(user: any) {
     const sql = `
       INSERT OR REPLACE INTO ${TABLES.USERS} (
-        id, username, display_name, profile_image_url, bio, created_at,
+        id, username, display_name, profile_image_url, bio, crown_title, created_at,
         is_online, last_seen, has_status, status_count
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
+    const createdAtVal = user.created_at || user.createdAt;
+    const lastSeenVal = user.last_seen || user.lastSeen;
+
     const params = [
-      user.id,
-      user.username,
-      user.display_name || user.displayName,
-      user.profile_image_url || user.profileImageUrl,
-      user.bio,
-      user.created_at || user.createdAt,
+      user.id || null,
+      user.username || null,
+      user.display_name || user.displayName || null,
+      user.profile_image_url || user.profileImageUrl || null,
+      user.bio || null,
+      user.crown_title || user.crownTitle || null,
+      createdAtVal instanceof Date ? createdAtVal.toISOString() : (createdAtVal || null),
       user.is_online ? 1 : 0,
-      user.last_seen || user.lastSeen || null,
+      lastSeenVal instanceof Date ? lastSeenVal.toISOString() : (lastSeenVal || null),
       user.has_status ? 1 : 0,
       user.status_count || user.statusCount || 0
     ];
@@ -167,8 +222,8 @@ export class NativeDB {
         const sql = `
           INSERT OR REPLACE INTO ${TABLES.CHANNEL_MESSAGES} (
             id, channel_id, sender_id, sender_name, sender_avatar_url,
-            text, media_url, media_type, reply_to_id, created_at, is_pending
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            text, media_url, media_type, reply_to_id, created_at, is_pending, views_count
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         const params = [
           msg.id,
@@ -181,7 +236,8 @@ export class NativeDB {
           msg.media_type || msg.mediaType || 'text',
           msg.reply_to_id || msg.replyToId || null,
           msg.created_at || msg.createdAt || new Date().toISOString(),
-          msg.is_pending ? 1 : 0
+          msg.is_pending ? 1 : 0,
+          msg.views_count || msg.viewsCount || 0
         ];
         await db.runAsync(sql, params);
       } catch (error) {
@@ -244,8 +300,8 @@ export class NativeDB {
             id, author_id, username, profile_image_url, caption,
             image_urls, video_url, thumbnail_url, audio_url,
             is_video, is_audio, comments_count, created_at, 
-            expires_at, channel_id
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            expires_at, channel_id, views_count
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         const params = [
           status.id,
@@ -262,7 +318,8 @@ export class NativeDB {
           status.comments_count || 0,
           status.created_at || status.createdAt || new Date().toISOString(),
           status.expires_at || status.expiresAt || null,
-          status.channel_id || status.channelId || null
+          status.channel_id || status.channelId || null,
+          status.views_count || status.viewsCount || 0
         ];
         await db.runAsync(sql, params);
       } catch (error) {
@@ -295,8 +352,8 @@ export class NativeDB {
         const sql = `
           INSERT OR REPLACE INTO ${TABLES.PROFILE_MEDIA} (
             id, author_id, media_type, caption, video_url, audio_url,
-            image_urls, thumbnail_urls, likes_count, comments_count, created_at, metadata
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            image_urls, thumbnail_urls, likes_count, comments_count, created_at, metadata, views_count
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         const params = [
           String(item.id),
@@ -310,7 +367,8 @@ export class NativeDB {
           Number(item.likes_count || 0),
           Number(item.comments_count || 0),
           item.created_at || new Date().toISOString(),
-          JSON.stringify(item.metadata || {})
+          JSON.stringify(item.metadata || {}),
+          Number(item.views_count || item.viewsCount || 0)
         ];
         await db.runAsync(sql, params);
       } catch (error) {
@@ -332,5 +390,180 @@ export class NativeDB {
       thumbnail_urls: JSON.parse(row.thumbnail_urls || '[]'),
       metadata: JSON.parse(row.metadata || '{}')
     }));
+  }
+
+  // ─── Boxes ─────────────────────────────────────────────────────────────────
+
+  static async upsertBoxes(boxes: any[]) {
+    const db = dbService.database;
+    for (const box of boxes) {
+      try {
+        const sql = `
+          INSERT OR REPLACE INTO ${TABLES.BOXES} (
+            id, owner_id, title, description, box_type, metadata,
+            is_public, allow_submissions, age_restriction, country_restrictions,
+            visible_to_followed_users, created_at, views_count
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        const params = [
+          box.id,
+          box.owner_id || box.ownerId,
+          box.title,
+          box.description || null,
+          box.box_type || box.boxType || 'voting',
+          typeof box.metadata === 'string' ? box.metadata : JSON.stringify(box.metadata || {}),
+          (box.is_public ?? true) ? 1 : 0,
+          (box.allow_submissions ?? true) ? 1 : 0,
+          box.age_restriction || 'All Ages',
+          JSON.stringify(box.country_restrictions || ['Global']),
+          (box.visible_to_followed_users ?? true) ? 1 : 0,
+          box.created_at || box.createdAt || new Date().toISOString(),
+          box.views_count || box.viewsCount || 0
+        ];
+        await db.runAsync(sql, params);
+      } catch (error) {
+        console.error('🚨 [NativeDB] upsertBoxes item FAILED:', error);
+      }
+    }
+  }
+
+  static async getBoxes(ownerId: string) {
+    const sql = `
+      SELECT * FROM ${TABLES.BOXES} 
+      WHERE owner_id = ?
+      ORDER BY created_at DESC
+    `;
+    const rows = await dbService.query<any>(sql, [ownerId]);
+    return rows.map(row => ({
+      ...row,
+      metadata: typeof row.metadata === 'string' ? JSON.parse(row.metadata || '{}') : row.metadata,
+      country_restrictions: typeof row.country_restrictions === 'string' ? JSON.parse(row.country_restrictions || '["Global"]') : row.country_restrictions,
+      is_public: !!row.is_public,
+      allow_submissions: !!row.allow_submissions,
+      visible_to_followed_users: !!row.visible_to_followed_users
+    }));
+  }
+
+  static async deleteBox(boxId: string) {
+    const db = dbService.database;
+    try {
+      const sql = `DELETE FROM ${TABLES.BOXES} WHERE id = ?`;
+      await db.runAsync(sql, [boxId]);
+    } catch (error) {
+      console.error('🚨 [NativeDB] deleteBox FAILED:', error);
+    }
+  }
+
+  static async updatePostInteraction(postId: string, updates: { isLiked?: boolean; likesCount?: number; viewsCount?: number; downloadsCount?: number }) {
+    const db = dbService.database;
+    
+    // Build dynamic SQL
+    const sets: string[] = [];
+    const values: any[] = [];
+    
+    // Note: Local DISCOVERY_FEED schema does not have 'is_liked' right now.
+    // We only update 'likes' and 'views_count'.
+    if (updates.likesCount !== undefined) {
+      sets.push('likes = ?');
+      values.push(updates.likesCount);
+    }
+    if (updates.viewsCount !== undefined) {
+      sets.push('views_count = ?');
+      values.push(updates.viewsCount);
+    }
+    if (updates.downloadsCount !== undefined) {
+      sets.push('downloads_count = ?');
+      values.push(updates.downloadsCount);
+    }
+
+    if (sets.length === 0) return;
+
+    values.push(postId);
+    const sql = `UPDATE ${TABLES.DISCOVERY_FEED} SET ${sets.join(', ')} WHERE id = ?`;
+
+    try {
+      await db.runAsync(sql, values);
+    } catch (e) {
+      console.error('Error updating NativeDB post interaction:', e);
+    }
+  }
+
+  static async upsertComments(comments: any[]) {
+    const db = dbService.database;
+    const sql = `
+      INSERT OR REPLACE INTO ${TABLES.COMMENTS} (
+        id, post_id, author_id, author_username, author_avatar_url,
+        text, media_url, media_type, reply_to_id, created_at, likes_count, is_pending
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    for (const comment of comments) {
+      try {
+        const params = [
+          comment.id,
+          comment.post_id || comment.postId,
+          comment.author_id || comment.authorId,
+          comment.author_username || comment.authorUsername || 'User',
+          comment.author_avatar_url || comment.authorAvatarUrl || null,
+          comment.text || '',
+          comment.media_url || comment.mediaUrl || null,
+          comment.media_type || comment.mediaType || 'text',
+          comment.reply_to_id || comment.replyToId || null,
+          comment.created_at || comment.createdAt || new Date().toISOString(),
+          Number(comment.likes_count || comment.likesCount || 0),
+          comment.is_pending ? 1 : 0
+        ];
+        await db.runAsync(sql, params);
+      } catch (err) {
+        console.error('🚨 [NativeDB] upsertComment FAILED:', err);
+      }
+    }
+  }
+
+  static async getComments(postId: string) {
+    try {
+      const db = dbService.database;
+      const rows = await db.getAllAsync(`
+      SELECT * FROM ${TABLES.COMMENTS} 
+      WHERE post_id = ? 
+      ORDER BY created_at DESC
+      `, [postId]) as any[];
+      return rows.map(r => ({ ...r, is_pending: r.is_pending === 1 }));
+    } catch (err) {
+      console.error('🚨 [NativeDB] getComments FAILED:', err);
+      return [];
+    }
+  }
+
+  static async getPendingComments() {
+    try {
+      const db = dbService.database;
+      const rows = await db.getAllAsync(`
+      SELECT * FROM ${TABLES.COMMENTS} 
+      WHERE is_pending = 1 
+      ORDER BY created_at ASC
+      `) as any[];
+      return rows.map(r => ({ ...r, is_pending: r.is_pending === 1 }));
+    } catch (err) {
+      console.error('🚨 [NativeDB] getPendingComments FAILED:', err);
+      return [];
+    }
+  }
+
+  static async markCommentSynced(commentId: string) {
+    try {
+      const db = dbService.database;
+      await db.runAsync(`UPDATE ${TABLES.COMMENTS} SET is_pending = 0 WHERE id = ?`, [commentId]);
+    } catch (err) {
+      console.error('🚨 [NativeDB] markCommentSynced FAILED:', err);
+    }
+  }
+
+  static async deleteComment(commentId: string) {
+    const db = dbService.database;
+    try {
+      await db.runAsync(`DELETE FROM ${TABLES.COMMENTS} WHERE id = ?`, [commentId]);
+    } catch (err) {
+      console.error('🚨 [NativeDB] deleteComment FAILED:', err);
+    }
   }
 }

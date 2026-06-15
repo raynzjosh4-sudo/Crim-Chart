@@ -1,7 +1,8 @@
 import { supabase } from '@/core/supabase/supabaseConfig';
+import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
+import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { PostEntity } from '../../domain/entities/PostEntity';
 import { SocialFeedItem } from '../../domain/entities/SocialFeedItem';
-import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
 
 export class FeedRemoteSource {
   static async getDiscoveryFeed(limit = 20, offset = 0): Promise<SocialFeedItem[]> {
@@ -22,11 +23,16 @@ export class FeedRemoteSource {
       });
 
       if (error) throw error;
-      
+
       const list = data as any[];
       if (!list || list.length === 0) return [];
 
-      return list.map(row => SocialFeedItem.fromMap(row));
+      const items = list.map(row => SocialFeedItem.fromMap(row));
+      
+      // Fire-and-forget sync of likes and tags for these posts
+      useInteractionStore.getState().syncPostInteractions(items.map(item => item.id));
+
+      return items;
     } catch (e) {
       console.error('❌ [SocialFeed Remote] EXCEPTION in getDiscoveryFeed:', e);
       return [];
@@ -51,7 +57,7 @@ export class FeedRemoteSource {
       const list = data as any[];
       if (!list || list.length === 0) return [];
 
-      return list.map((m: any) => 
+      return list.map((m: any) =>
         CrimChartUserModel.empty().copyWith({
           id: String(m.id || ''),
           displayName: String(m.name || 'Channel'),
@@ -81,7 +87,12 @@ export class FeedRemoteSource {
       if (error) throw error;
       if (!data) return [];
 
-      return data.map(row => PostEntity.fromMap(row));
+      const posts = data.map(row => PostEntity.fromMap(row));
+      
+      // Fire-and-forget sync of likes and tags
+      useInteractionStore.getState().syncPostInteractions(posts.map(p => p.id));
+
+      return posts;
     } catch (e) {
       console.error('🚨 [FeedRemoteSource] getFeed FAILED:', e);
       throw new Error(`Failed to get main feed: ${e}`);
@@ -106,10 +117,41 @@ export class FeedRemoteSource {
       if (error) throw error;
       if (!data) return [];
 
-      return data.map(row => PostEntity.fromMap(row));
+      const posts = data.map(row => PostEntity.fromMap(row));
+      useInteractionStore.getState().syncPostInteractions(posts.map(p => p.id));
+      return posts;
     } catch (e) {
       console.error('❌ [FeedRemoteSource] Fetch Failed:', e);
       throw new Error(`Failed to get channel posts: ${e}`);
+    }
+  }
+
+  static async getMusicFeed(page = 1, limit = 10): Promise<PostEntity[]> {
+    const offset = (page - 1) * limit;
+
+    try {
+      const { data, error } = await supabase.rpc('get_music_feed', {
+        p_limit: limit,
+        p_offset: offset
+      });
+
+      if (error) throw error;
+      if (!data) return [];
+
+      // Map the RPC row directly to PostEntity. 
+      // The RPC returns { source_table, post_data, author }
+      // console.log('raw music feed data sample:', data.length > 0 ? data[0] : 'empty');
+      return (data as any[]).map(row =>
+        PostEntity.fromMap({
+          ...(row.post_data || {}),
+          author: row.author,
+          source_table: row.source_table,
+          is_audio: true
+        })
+      );
+    } catch (e) {
+      console.error('🚨 [FeedRemoteSource] getMusicFeed FAILED:', e);
+      throw new Error(`Failed to get music feed: ${e}`);
     }
   }
 }

@@ -1,8 +1,7 @@
-import React from 'react';
-import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
-import { InvitePostCard } from '@/components/inviteCard/InvitePostCard';
 import { ChannelPostCard } from '@/channel/ChannelComponents/ChnnelMainPostCard/ChannelPostCard';
 import { RegularPostCard } from '@/channel/ChannelComponents/ChnnelMainPostCard/RegularPostCard'; // TS Server: please refresh!
+import { InvitePostCard } from '@/components/inviteCard/InvitePostCard';
+import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
 
 export interface ChannelAndFeedPostModelProps {
   content: string;
@@ -10,9 +9,11 @@ export interface ChannelAndFeedPostModelProps {
   imageUrl?: string | null;
   imageUrls?: string[] | null;
   videoUrl?: string | null;
+  audioUrl?: string | null;
   aspectRatio?: number | null;
   type?: string | null;
   isVideo?: boolean | null;
+  isAudio?: boolean | null;
   likesCount?: number;
   commentsCount?: number;
   tagsCount?: number;
@@ -40,6 +41,8 @@ export interface ChannelAndFeedPostModelProps {
   linkChain?: string[] | null;
   widgetType?: string | null;
   channelDescription?: string | null;
+  metadata?: any;
+  isActive?: boolean;
 }
 
 export const ChannelAndFeedPostModel: React.FC<ChannelAndFeedPostModelProps> = (props) => {
@@ -59,7 +62,9 @@ export const ChannelAndFeedPostModel: React.FC<ChannelAndFeedPostModelProps> = (
   }
 
   // 2. Check for Channel Post
-  if (props.widgetType === 'channel_post' || (props.channelId && props.channelId.length > 0)) {
+  const isActuallyChannelPost = props.widgetType === 'channel_post' || (props.channelId && props.channelId.length > 0 && props.channelId !== 'user_feed');
+  
+  if (isActuallyChannelPost) {
     return (
       <ChannelPostCard
         {...props}
@@ -72,6 +77,8 @@ export const ChannelAndFeedPostModel: React.FC<ChannelAndFeedPostModelProps> = (
     <RegularPostCard
       {...props}
       author={props.authorData}
+      metadata={props.metadata}
+      isActive={props.isActive}
     />
   );
 };

@@ -43,6 +43,20 @@
       "expo-sqlite",
       "expo-video",
       "expo-web-browser",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Crimchart to access your camera."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow Crimchart to access your photos.",
+          "savePhotosPermission": "Allow Crimchart to save photos.",
+          "isAccessMediaLocationEnabled": true
+        }
+      ],
       "./withNotifeeRepo.js"
     ],
     "experiments": {

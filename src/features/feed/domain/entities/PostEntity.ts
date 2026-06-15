@@ -32,6 +32,8 @@ export class PostEntity extends ContentEntity {
   public likesCount: number;
   public commentsCount: number;
   public tagsCount: number;
+  public viewsCount: number;
+  public downloadsCount: number;
 
   constructor(params: {
     id: string;
@@ -67,6 +69,8 @@ export class PostEntity extends ContentEntity {
     likesCount?: number;
     commentsCount?: number;
     tagsCount?: number;
+    viewsCount?: number;
+    downloadsCount?: number;
   }) {
     super(params.id, params.author, params.createdAt, params.thumbnailLink);
     this.caption = params.caption ?? '';
@@ -98,6 +102,8 @@ export class PostEntity extends ContentEntity {
     this.likesCount = params.likesCount ?? 0;
     this.commentsCount = params.commentsCount ?? 0;
     this.tagsCount = params.tagsCount ?? 0;
+    this.viewsCount = params.viewsCount ?? 0;
+    this.downloadsCount = params.downloadsCount ?? 0;
   }
 
   static original(params: {
@@ -133,6 +139,8 @@ export class PostEntity extends ContentEntity {
     likesCount?: number;
     commentsCount?: number;
     tagsCount?: number;
+    viewsCount?: number;
+    downloadsCount?: number;
   }): PostEntity {
     const thumbnailLink = ThumbnailLink.original(
       params.id,
@@ -205,6 +213,8 @@ export class PostEntity extends ContentEntity {
       likesCount: Number(map.likes_count || (Array.isArray(map.likes) ? map.likes.length : map.likes) || 0),
       commentsCount: Number(map.comments_count || (Array.isArray(map.comments) ? map.comments.length : map.comments) || 0),
       tagsCount: Number(map.tags_count || (Array.isArray(map.tags) ? map.tags.length : map.tags) || 0),
+      viewsCount: Number(map.views_count || map.viewsCount || 0),
+      downloadsCount: Number(map.downloads_count || map.downloadsCount || 0),
       isLiked: map.is_liked === true || map.isLiked === true,
       isPublic: map.is_public == null ? true : (map.is_public === true || map.is_public === 1),
       timeAgo: String(map.time_ago || map.timeAgo || ''),

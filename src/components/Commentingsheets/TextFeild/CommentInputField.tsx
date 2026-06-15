@@ -57,90 +57,40 @@ export default function CommentInputField({
         <View
             style={[
                 styles.outerContainer,
-                {
-                    backgroundColor: theme.colors.background, // theme.scaffoldBackgroundColor
-                    paddingBottom: insets.bottom + h(16),   // Dynamic safe inset padding tracking
-                },
+                { paddingBottom: Math.max(insets.bottom, 12) },
             ]}
         >
-            <View style={styles.innerRow}>
-                {showTextField ? (
-                    <View
-                        style={[
-                            styles.inputWrapper,
-                            {
-                                minHeight: isTikTokStyle ? h(42) : h(48),
-                                maxHeight: h(120),
-                                borderRadius: isTikTokStyle ? r(24) : r(28),
-                                backgroundColor: isTikTokStyle
-                                    ? 'rgba(255, 255, 255, 0.1)'
-                                    : `${theme.colors.text}14`, // Replicates onSurface with 8% alpha
-                            },
-                        ]}
-                    >
-                        {/* Main Multi-line TextInput Field */}
-                        <TextInput
-                            value={value}
-                            onChangeText={onChangeText}
-                            autoFocus={autoFocus}
-                            editable={!onTap}
-                            onTouchStart={onTap}
-                            multiline
-                            placeholder={isTikTokStyle ? 'Add comment...' : t('message')}
-                            placeholderTextColor="rgba(255, 255, 255, 0.38)"
-                            style={[styles.textInput, { fontSize: sp(15) }]}
-                        />
+            {showTextField ? (
+                <>
+                    <TextInput
+                        value={value}
+                        onChangeText={onChangeText}
+                        autoFocus={autoFocus}
+                        editable={!onTap}
+                        onTouchStart={onTap}
+                        multiline
+                        placeholder={isTikTokStyle ? 'Add comment...' : t('message')}
+                        placeholderTextColor="rgba(255, 255, 255, 0.4)"
+                        style={styles.textInput}
+                    />
 
-                        {isTikTokStyle && (
-                            <Pressable onPress={onImageTap} style={styles.iconPadding}>
-                                <Camera size={sp(22)} color="#FFFFFF" />
-                            </Pressable>
-                        )}
-                    </View>
-                ) : (
-                    <View style={styles.spacer} />
-                )}
+                    {isTikTokStyle && (
+                        <Pressable onPress={onImageTap} style={styles.iconPadding}>
+                            <Camera size={20} color="rgba(255, 255, 255, 0.6)" />
+                        </Pressable>
+                    )}
+                </>
+            ) : (
+                <View style={{ flex: 1 }} />
+            )}
 
-                <View style={{ width: w(8) }} />
-
-                {/* Dynamic Send Actions Section */}
-                {isTikTokStyle ? (
-                    <Pressable
-                        onPress={showSend ? () => onSend(value) : undefined}
-                        style={styles.tikTokSendPadding}
-                    >
-                        <Send
-                            size={sp(28)}
-                            color={showSend ? theme.colors.primary : 'rgba(255, 255, 255, 0.24)'}
-                        />
-                    </Pressable>
-                ) : (
-                    <View
-                        style={[
-                            styles.standardSendCircle,
-                            {
-                                width: r(48),
-                                height: r(48),
-                                borderRadius: r(48) / 2,
-                                backgroundColor: showSend
-                                    ? theme.colors.primary
-                                    : theme.colors.surfaceVariant, // surfaceContainerHighest
-                            },
-                            showSend && {
-                                // Glow effect styling matching colorScheme.primary.withValues(alpha: 0.3)
-                                shadowColor: theme.colors.primary,
-                                shadowOpacity: 0.3,
-                                shadowRadius: 8,
-                                shadowOffset: { width: 0, height: 4 },
-                                elevation: 4,
-                            },
-                        ]}
-                    >
-                        <Pressable onPress={showSend ? () => onSend(value) : () => {}}
-                            ><Send size={sp(22)} color={showSend ? '#FFFFFF' : `${theme.colors.text}80`} /></Pressable>
-                    </View>
-                )}
-            </View>
+            <Pressable 
+                style={[styles.sendBtn, !showSend && { opacity: 0.5 }]} 
+                onPress={showSend ? () => onSend(value) : undefined}
+                disabled={!showSend}
+            >
+                <Send size={20} color={showSend ? theme.colors.primary : '#FFF'} />
+            </Pressable>
         </View>
     );
 }
@@ -149,55 +99,35 @@ export default function CommentInputField({
 
 const styles = StyleSheet.create({
     outerContainer: {
-        paddingLeft: w(20),
-        paddingRight: w(20),
-        paddingTop: h(16),
-        ...Platform.select({
-            ios: {
-                shadowColor: '#000000',
-                shadowOpacity: 0.05,
-                shadowRadius: 10,
-                shadowOffset: { width: 0, height: -5 },
-            },
-            android: {
-                elevation: 5,
-            },
-        }),
-    },
-    innerRow: {
         flexDirection: 'row',
         alignItems: 'flex-end',
-    },
-    inputWrapper: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: w(14),
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: '#0A0A0A',
     },
     textInput: {
         flex: 1,
-        color: '#FFFFFF',
-        fontWeight: '400',
-        paddingVertical: h(10),
-        textAlignVertical: 'center',
-        ...Platform.select({
-            android: { padding: 0 }, // Strip Android native container padding artifacts
-        }),
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderRadius: 20,
+        paddingHorizontal: 16,
+        paddingTop: 10,
+        paddingBottom: 10,
+        color: '#FFF',
+        fontSize: 14,
+        maxHeight: 100,
+        minHeight: 40,
     },
     iconPadding: {
-        paddingLeft: w(8),
+        paddingLeft: 8,
+        paddingBottom: 10,
     },
-    spacer: {
-        flex: 1,
-    },
-    tikTokSendPadding: {
-        paddingHorizontal: w(4),
-        paddingVertical: h(8),
+    sendBtn: {
+        width: 40,
+        height: 40,
         justifyContent: 'center',
         alignItems: 'center',
-    },
-    standardSendCircle: {
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
+        marginLeft: 8,
+    }
 });

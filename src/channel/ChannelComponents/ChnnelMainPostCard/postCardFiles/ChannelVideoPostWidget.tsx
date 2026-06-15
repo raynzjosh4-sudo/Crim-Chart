@@ -45,12 +45,12 @@ export const ChannelVideoPostWidget: React.FC<ChannelVideoPostWidgetProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
     marginBottom: 12,
   },
   videoContainer: {
     width: '100%',
-    borderRadius: 12,
+    borderRadius: 0,
     overflow: 'hidden',
     position: 'relative',
     backgroundColor: '#1A1A1A',

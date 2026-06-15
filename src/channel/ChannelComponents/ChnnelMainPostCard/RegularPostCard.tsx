@@ -8,6 +8,7 @@ import AppAvatar from '@/components/avatar/AppAvatar';
 import { PostContent } from './postCardFiles/PostContent';
 import { ChannelImagePostWidget } from './postCardFiles/ChannelImagePostWidget';
 import { ChannelVideoPostWidget } from './postCardFiles/ChannelVideoPostWidget';
+import { ChannelAudioPostWidget } from './postCardFiles/ChannelAudioPostWidget';
 import { LikeAction } from '@/channel/CRimChartMassageBubble/comment_action/like/LikeAction';
 import { CommentActionWidget } from '@/channel/CRimChartMassageBubble/comments/CommentActionWidget';
 import { TagOverlay } from '@/channel/pages/tag/TagOverlay';
@@ -19,6 +20,7 @@ export interface RegularPostCardProps {
   imageUrl?: string | null;
   imageUrls?: string[] | null;
   videoUrl?: string | null;
+  audioUrl?: string | null;
   aspectRatio?: number | null;
   likesCount?: number;
   commentsCount?: number;
@@ -27,6 +29,9 @@ export interface RegularPostCardProps {
   postId?: string | null;
   onTagTap?: () => void;
   thumbnailUrl?: string | null;
+  metadata?: any;
+  isActive?: boolean;
+  widgetType?: string | null;
 }
 
 export const RegularPostCard: React.FC<RegularPostCardProps> = ({
@@ -36,6 +41,7 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
   imageUrl,
   imageUrls,
   videoUrl,
+  audioUrl,
   aspectRatio,
   likesCount = 0,
   commentsCount = 0,
@@ -44,6 +50,9 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
   postId,
   onTagTap,
   thumbnailUrl,
+  metadata,
+  isActive,
+  widgetType,
 }) => {
   const navigation = useNavigation() as any;
   const [tagOverlayVisible, setTagOverlayVisible] = useState(false);
@@ -61,12 +70,14 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
     }
   };
 
+  const isPersonalPost = widgetType === 'regular_post';
+
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, isPersonalPost && { flexDirection: 'row-reverse' }]}>
         <TouchableOpacity onPress={goToProfile}>
-          <View style={styles.avatarContainer}>
+          <View style={[styles.avatarContainer, isPersonalPost ? { marginRight: 0, marginLeft: 12 } : { marginRight: 12 }]}>
             <AppAvatar
               imageUrl={author.profileImageUrl}
               size={44}
@@ -75,7 +86,7 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
             />
           </View>
         </TouchableOpacity>
-        <Text style={styles.displayName} numberOfLines={1}>
+        <Text style={[styles.displayName, isPersonalPost && { textAlign: 'right' }]} numberOfLines={1}>
           {author.displayName || 'Unknown User'}
         </Text>
         <TouchableOpacity style={styles.moreButton}>
@@ -87,7 +98,9 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
       <PostContent content={content} />
 
       {/* Media */}
-      {videoUrl ? (
+      {audioUrl ? (
+        <ChannelAudioPostWidget audioUrl={audioUrl} thumbnailUrl={thumbnailUrl ?? undefined} metadata={metadata} isActive={isActive} />
+      ) : videoUrl ? (
         <ChannelVideoPostWidget videoUrl={videoUrl} aspectRatio={aspectRatio} thumbnail={thumbnailUrl} />
       ) : allImages.length > 0 ? (
         <ChannelImagePostWidget images={allImages} />
@@ -100,7 +113,7 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
         <View style={styles.actionsRight}>
           <LikeAction initialLikesCount={likesCount} initialIsLiked={isLiked} />
           <View style={{ width: 16 }} />
-          <CommentActionWidget commentsCount={commentsCount} />
+          <CommentActionWidget commentsCount={commentsCount} postId={postId || ''} />
           <View style={{ width: 16 }} />
           <TouchableOpacity
             style={styles.actionButton}

@@ -30,7 +30,7 @@ export default function AnimatedSendButton({
     const [isLongPressed, setIsLongPressed] = useState(false);
     const isInteracting = useRef(false);
     const step = useRef(0);
-    const cycleTimer = useRef<NodeJS.Timeout | null>(null);
+    const cycleTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // Reanimating Shared Layout Values
     const translateX = useSharedValue(0);

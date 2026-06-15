@@ -33,7 +33,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 48,
     height: 48,
-    borderRadius: 8, // Dart code likely uses a rounded rect for channels
+    borderRadius: 24,
     backgroundColor: '#333',
   },
 });

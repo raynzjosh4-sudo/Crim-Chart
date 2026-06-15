@@ -32,7 +32,7 @@ interface PendingMedia {
 }
 
 interface ChatInputFieldProps {
-  channelId: string;
+  channelId?: string;
   /** Called with text when sending text-only or text+media together */
   onSubmitted: (text: string, media: PendingMedia[]) => void;
   onEmojiPressed?: () => void;

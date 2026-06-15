@@ -1,17 +1,18 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
-import { Tag, MoreHorizontal } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
+import { MoreHorizontal, Tag } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { AvatarWithStatus } from './postCardFiles/AvatarWithStatus';
-import { TaggerRow } from './postCardFiles/TaggerRow';
-import { PostContent } from './postCardFiles/PostContent';
-import { ChannelImagePostWidget } from './postCardFiles/ChannelImagePostWidget';
-import { ChannelVideoPostWidget } from './postCardFiles/ChannelVideoPostWidget';
 import { LikeAction } from '@/channel/CRimChartMassageBubble/comment_action/like/LikeAction';
 import { CommentActionWidget } from '@/channel/CRimChartMassageBubble/comments/CommentActionWidget';
 import { TagOverlay } from '@/channel/pages/tag/TagOverlay';
+import { AvatarWithStatus } from './postCardFiles/AvatarWithStatus';
+import { ChannelAudioPostWidget } from './postCardFiles/ChannelAudioPostWidget';
+import { ChannelImagePostWidget } from './postCardFiles/ChannelImagePostWidget';
+import { ChannelVideoPostWidget } from './postCardFiles/ChannelVideoPostWidget';
+import { PostContent } from './postCardFiles/PostContent';
+import { TaggerRow } from './postCardFiles/TaggerRow';
 
 export interface ChannelPostCardProps {
   authorData: CrimChartUserModel;
@@ -20,6 +21,7 @@ export interface ChannelPostCardProps {
   imageUrl?: string | null;
   imageUrls?: string[] | null;
   videoUrl?: string | null;
+  audioUrl?: string | null;
   aspectRatio?: number | null;
   likesCount?: number;
   commentsCount?: number;
@@ -36,6 +38,7 @@ export interface ChannelPostCardProps {
   taggerAvatar?: string | null;
   showCreatorBadge?: boolean;
   thumbnailUrl?: string | null;
+  metadata?: any;
 }
 
 export const ChannelPostCard: React.FC<ChannelPostCardProps> = ({
@@ -45,6 +48,7 @@ export const ChannelPostCard: React.FC<ChannelPostCardProps> = ({
   imageUrl,
   imageUrls,
   videoUrl,
+  audioUrl,
   aspectRatio,
   likesCount = 0,
   commentsCount = 0,
@@ -61,6 +65,7 @@ export const ChannelPostCard: React.FC<ChannelPostCardProps> = ({
   taggerAvatar,
   showCreatorBadge,
   thumbnailUrl,
+  metadata,
 }) => {
   const navigation = useNavigation() as any;
   const [tagOverlayVisible, setTagOverlayVisible] = useState(false);
@@ -105,7 +110,9 @@ export const ChannelPostCard: React.FC<ChannelPostCardProps> = ({
       <PostContent content={content} />
 
       {/* Media */}
-      {videoUrl ? (
+      {audioUrl ? (
+        <ChannelAudioPostWidget audioUrl={audioUrl} thumbnailUrl={thumbnailUrl ?? undefined} metadata={metadata} />
+      ) : videoUrl ? (
         <ChannelVideoPostWidget videoUrl={videoUrl} aspectRatio={aspectRatio} thumbnail={thumbnailUrl} />
       ) : allImages.length > 0 ? (
         <ChannelImagePostWidget images={allImages} />
@@ -120,7 +127,7 @@ export const ChannelPostCard: React.FC<ChannelPostCardProps> = ({
         <View style={{ flex: 1 }} />
 
         <LikeAction initialLikesCount={likesCount} initialIsLiked={isLiked} />
-        <CommentActionWidget commentsCount={commentsCount} />
+        <CommentActionWidget commentsCount={commentsCount} postId={postId || ''} />
 
         <TouchableOpacity
           style={[styles.actionButton, { marginLeft: 24 }]}

@@ -1,0 +1,107 @@
+import React from 'react';
+import { Modal, StyleSheet, View, SafeAreaView, Text, TouchableOpacity, ScrollView } from 'react-native';
+import ChartAppBar from '@/components/chartappbar/ChartAppBar';
+import { colors } from '@/core/theme/colors';
+import { Check } from 'lucide-react-native';
+
+export type AgeRestrictionType = 'All Ages' | '13+' | '16+' | '18+' | '21+';
+
+interface AppAgeRestrictionPickerProps {
+  visible: boolean;
+  onClose: () => void;
+  selectedAge: AgeRestrictionType;
+  onSelect: (age: AgeRestrictionType) => void;
+}
+
+const AGE_OPTIONS: AgeRestrictionType[] = ['All Ages', '13+', '16+', '18+', '21+'];
+
+export const AppAgeRestrictionPicker: React.FC<AppAgeRestrictionPickerProps> = ({ 
+  visible, 
+  onClose, 
+  selectedAge,
+  onSelect 
+}) => {
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet">
+      <SafeAreaView style={styles.container}>
+        <ChartAppBar 
+          title="Age Restriction" 
+          showBack 
+          onBack={onClose} 
+        />
+        <ScrollView style={styles.content}>
+          <Text style={styles.description}>
+            Select the minimum age required to view this content.
+          </Text>
+          
+          <View style={styles.optionsContainer}>
+            {AGE_OPTIONS.map((age) => {
+              const isSelected = selectedAge === age;
+              return (
+                <TouchableOpacity
+                  key={age}
+                  style={[styles.optionRow, isSelected && styles.optionRowSelected]}
+                  onPress={() => {
+                    onSelect(age);
+                    onClose();
+                  }}
+                >
+                  <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+                    {age}
+                  </Text>
+                  {isSelected && <Check size={20} color={colors.primary} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  description: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 14,
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  optionsContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  optionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  optionRowSelected: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  optionText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  optionTextSelected: {
+    color: colors.primary,
+    fontWeight: 'bold',
+  },
+});

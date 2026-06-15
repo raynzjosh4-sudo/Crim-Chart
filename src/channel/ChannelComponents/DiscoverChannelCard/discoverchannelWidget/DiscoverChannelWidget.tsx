@@ -1,12 +1,11 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { Image } from 'expo-image';
-import { colors } from '@/core/theme/colors';
 import { useExploreChannels } from '@/channel/hooks/useExploreChannels';
-import { useRouter } from 'expo-router';
-import { X, CheckCircle2 } from 'lucide-react-native';
 import { ChannelEngagementWrapper } from '@/components/wrappers/ChannelEngagementWrapper';
+import { colors } from '@/core/theme/colors';
+import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
+import { X } from 'lucide-react-native';
 import { useEffect } from 'react';
+import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface DiscoverChannelWidgetProps {
   userId?: string;
@@ -56,7 +55,7 @@ export const DiscoverChannelWidget: React.FC<DiscoverChannelWidgetProps> = ({ us
               <X size={16} color="rgba(255,255,255,0.6)" />
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.cardContent}
               onPress={() => router.push(`/channel/${item.id}` as any)}
             >
@@ -68,12 +67,12 @@ export const DiscoverChannelWidget: React.FC<DiscoverChannelWidgetProps> = ({ us
                 {item.description || 'No description available'}
               </Text>
             </TouchableOpacity>
-            
+
             <View style={{ width: '100%', alignItems: 'center', marginTop: 12 }}>
-              <ChannelEngagementWrapper 
-                channelId={item.id} 
-                joinMethod={item.joinMethod || 'public'} 
-                creatorId={item.creatorId || ''} 
+              <ChannelEngagementWrapper
+                channelId={item.id}
+                joinMethod={item.joinMethod || 'public'}
+                creatorId={item.creatorId || ''}
               />
             </View>
           </View>
@@ -113,17 +112,16 @@ const styles = StyleSheet.create({
   },
   listPadding: {
     paddingHorizontal: 16,
-    gap: 12,
   },
   card: {
     width: 220,
-    minHeight: 260,
+    minHeight: 200,
     backgroundColor: '#0D0D0D', // Scaffold bg color
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 18,
     alignItems: 'center',
-    marginHorizontal: 4,
+    marginRight: 5,
   },
   closeButton: {
     position: 'absolute',

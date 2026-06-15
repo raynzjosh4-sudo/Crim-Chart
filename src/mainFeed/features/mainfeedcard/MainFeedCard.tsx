@@ -12,9 +12,10 @@ import { EliteCardWidget } from '@/components/hiness/EliteCardWidget';
 
 interface MainFeedCardProps {
   card: MainFeedCardModel;
+  isActive?: boolean;
 }
 
-export const MainFeedCard: React.FC<MainFeedCardProps> = ({ card }) => {
+export const MainFeedCard: React.FC<MainFeedCardProps> = ({ card, isActive }) => {
   switch (card.cardType) {
     case MainFeedCardType.commonChart:
       return <Mainfeedcard data={card.itemData as CrimChartUserModel} />;
@@ -35,6 +36,10 @@ export const MainFeedCard: React.FC<MainFeedCardProps> = ({ card }) => {
           imageUrls={data.imageUrls}
           videoUrl={data.videoUrl}
           isVideo={data.isVideo}
+          audioUrl={data.audioUrl}
+          isAudio={data.isAudio}
+          thumbnailUrl={data.thumbnailLinkUrl}
+          metadata={data.metadata}
           likesCount={data.likesCount}
           commentsCount={data.commentsCount}
           tagsCount={data.tagsCount}
@@ -44,6 +49,7 @@ export const MainFeedCard: React.FC<MainFeedCardProps> = ({ card }) => {
           channelId={data.channel?.id}
           channelName={data.channel?.title}
           widgetType={data.widgetType ?? (card.cardType === MainFeedCardType.socialPost ? 'regular_post' : 'channel_post')}
+          isActive={isActive}
         />
       );
     }

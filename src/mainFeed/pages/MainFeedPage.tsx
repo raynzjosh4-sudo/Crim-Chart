@@ -1,24 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 
 import { supabase } from '@/core/supabase/supabaseConfig';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
-import { InboxFullPage } from '@/features/messaging/pages/InboxFullPage';
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
 import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { MainBottomAppBar } from '../features/bottomappbar/widgets/MainBottomAppBar';
 import { MainFeedCardModel, MainFeedCardType, ScrollViewType } from '../models/MainFeedCardTypeModel';
 import { MainFeedAppBar } from './main_page_widgets/MainFeedAppBar';
 import { MainFeedBody } from './main_page_widgets/MainFeedBody';
 
-const VidsPlaceholder = () => (
-  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-    {/* Minimal placeholder for the Vids/Shorts tab */}
-    <Text style={{ color: 'rgba(255,255,255,0.6)' }}>Shorts / Vids coming soon</Text>
-  </View>
-);
+
 
 const PAGE_SIZE = 15;
 const NUKE_KEY = 'db_nuke_v1_done';
@@ -28,10 +21,10 @@ export const MainFeedPage = () => {
   const router = useRouter();
   const user = useAuthStore(s => s.user);
 
-  const [selectedIndex, setSelectedIndex] = useState(0);
   const [cards, setCards] = useState<MainFeedCardModel[]>([]);
   const [discoveredChannels, setDiscoveredChannels] = useState<CrimChartUserModel[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPaginating, setIsPaginating] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [newItemCount, setNewItemCount] = useState(0);
   const [page, setPage] = useState(0);
@@ -53,6 +46,7 @@ export const MainFeedPage = () => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     if (reset) setIsLoading(true);
+    else setIsPaginating(true);
 
     try {
       const currentPage = reset ? 0 : page;
@@ -64,7 +58,7 @@ export const MainFeedPage = () => {
 
       if (error) throw error;
 
-      const newCards: MainFeedCardModel[] = (data ?? []).map((row: any) => {
+      const newCards: MainFeedCardModel[] = (data ?? []).map((row: any, index: number) => {
         // Map the image urls safely
         let images: string[] = [];
         if (Array.isArray(row.image_urls)) {
@@ -73,9 +67,21 @@ export const MainFeedPage = () => {
           try {
             const parsed = JSON.parse(row.image_urls);
             if (Array.isArray(parsed)) images = parsed;
-          } catch (e) {
-            // ignore JSON parse error
-          }
+          } catch (e) {}
+        }
+        
+        let metadata = row.metadata;
+        if (typeof metadata === 'string') {
+          try { metadata = JSON.parse(metadata); } catch(e) {}
+        }
+        
+        let thumbUrl = undefined;
+        if (row.thumbnail_urls) {
+           let thumbs = row.thumbnail_urls;
+           if (typeof thumbs === 'string') {
+              try { thumbs = JSON.parse(thumbs); } catch(e){}
+           }
+           if (Array.isArray(thumbs) && thumbs.length > 0) thumbUrl = thumbs[0];
         }
 
         return {
@@ -93,17 +99,20 @@ export const MainFeedPage = () => {
               followersCount: 0, followingCount: 0,
               isActive: false, statusCount: 0, channelsCreatedCount: 0,
             },
-            channel: { 
-              id: String(row.channel_id ?? 'user_feed'), 
+            channel: {
+              id: String(row.channel_id ?? 'user_feed'),
               title: String(row.channel_name ?? 'Personal Post'),
               imageUrl: row.channel_avatar_url,
             },
             imageUrls: images,
             caption: String(row.caption ?? ''),
             videoUrl: row.video_url,
+            audioUrl: row.audio_url,
             isVideo: Boolean(row.is_video ?? false),
-            videoUrls: [], isAudio: false, isGif: false, isText: false,
+            videoUrls: [], isAudio: Boolean(row.is_audio ?? false), isGif: false, isText: false,
             thumbnailLinkType: 'image',
+            thumbnailLinkUrl: thumbUrl,
+            metadata: metadata,
             tagsCount: 0, likesCount: Number(row.likes ?? 0),
             commentsCount: Number(row.comments ?? 0),
             timeAgo: new Date(row.created_at || Date.now()).toLocaleDateString(),
@@ -126,6 +135,7 @@ export const MainFeedPage = () => {
       console.error('[MainFeedPage] loadFeed error:', e);
     } finally {
       setIsLoading(false);
+      setIsPaginating(false);
       setIsRefreshing(false);
       isFetchingRef.current = false;
     }
@@ -174,19 +184,7 @@ export const MainFeedPage = () => {
     if (hasMore && !isFetchingRef.current) loadFeed(false);
   };
 
-  const onItemTapped = (index: number) => {
-    if (index === 0 && selectedIndex === 0) {
-      handleRefresh();
-      setNewItemCount(0);
-      return;
-    }
-    if (index === 2) {
-      router.push('/first-post');
-      return;
-    }
-    setSelectedIndex(index);
-    if (index === 0) setNewItemCount(0);
-  };
+
 
   return (
     <View style={styles.root}>
@@ -196,30 +194,18 @@ export const MainFeedPage = () => {
         onBellPress={() => { }}
       />
 
-      {selectedIndex === 0 && (
-        <MainFeedBody
-          cards={cards}
-          discoveredChannels={discoveredChannels}
-          isLoading={isLoading}
-          isRefreshing={isRefreshing}
-          newItemCount={newItemCount}
-          onRefresh={handleRefresh}
-          onLoadMore={handleLoadMore}
-          onNewItemsBannerPress={() => {
-            setNewItemCount(0);
-            handleRefresh();
-          }}
-        />
-      )}
-
-      {selectedIndex === 1 && <VidsPlaceholder />}
-      {selectedIndex === 3 && <InboxFullPage />}
-
-
-      <MainBottomAppBar
-        selectedIndex={selectedIndex}
-        onItemTapped={onItemTapped}
-        homeBadgeCount={newItemCount}
+      <MainFeedBody
+        cards={cards}
+        discoveredChannels={discoveredChannels}
+        isLoading={isLoading || isPaginating}
+        isRefreshing={isRefreshing}
+        newItemCount={newItemCount}
+        onRefresh={handleRefresh}
+        onLoadMore={handleLoadMore}
+        onNewItemsBannerPress={() => {
+          setNewItemCount(0);
+          handleRefresh();
+        }}
       />
     </View>
   );

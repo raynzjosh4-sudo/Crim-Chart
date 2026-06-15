@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, StyleSheet, TouchableOpacity, Text } from 'react-native';
-import { supabase } from '@/core/supabase/client';
-import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
-import { useAuthStore } from '@/features/auth/application/useAuthStore';
-import { ProfilePage } from '@/profile/pages/ProfilePage';
 import { FollowUserButton } from '@/components/FollowUserButton';
 import { InboxUserButton } from '@/components/InboxUserButton';
-import { useRouter } from 'expo-router';
+import { supabase } from '@/core/supabase/client';
+import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
+import { ProfilePage } from '@/profile/pages/ProfilePage';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ProfilePageShimmer } from '@/components/shimmers/ProfilePageShimmer';
 
 interface ProfilePageWrapperProps {
   targetUserId?: string;
@@ -15,63 +16,64 @@ interface ProfilePageWrapperProps {
 export const ProfilePageWrapper: React.FC<ProfilePageWrapperProps> = ({ targetUserId }) => {
   const currentUser = useAuthStore(s => s.user);
   const router = useRouter();
-  
+
   const [userData, setUserData] = useState<CrimChartUserModel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const isCurrentUser = !targetUserId || targetUserId === currentUser?.id;
   const activeUserId = targetUserId || currentUser?.id;
 
-  useEffect(() => {
-    if (!activeUserId) {
-      setIsLoading(false);
-      return;
-    }
-
-    if (isCurrentUser && currentUser) {
-      // It's the current user, we already have their data in the auth store
-      setUserData(currentUser);
-      setIsLoading(false);
-      return;
-    }
-
-    const fetchUser = async () => {
-      try {
-        setIsLoading(true);
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', activeUserId)
-          .single();
-
-        if (data) {
-          setUserData({
-            id: data.id,
-            username: data.display_name,
-            profileImageUrl: data.profile_image_url,
-            bio: data.bio,
-            followersCount: data.followers_count || 0,
-            followingCount: data.following_count || 0,
-            channelCount: data.channels_created_count || 0,
-            crownTitle: data.crown_title,
-          } as CrimChartUserModel);
-        }
-      } catch (err) {
-        console.error('Error fetching profile:', err);
-      } finally {
+  useFocusEffect(
+    useCallback(() => {
+      if (!activeUserId) {
         setIsLoading(false);
+        return;
       }
-    };
 
-    fetchUser();
-  }, [activeUserId, isCurrentUser, currentUser]);
+      const fetchUser = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', activeUserId)
+            .single();
+
+          if (data) {
+            setUserData({
+              id: data.id,
+              username: data.display_name,
+              profileImageUrl: data.profile_image_url,
+              bio: data.bio,
+              followersCount: data.followers_count || 0,
+              followingCount: data.following_count || 0,
+              channelCount: data.channels_created_count || 0,
+              boxesCount: data.boxes_count || 0,
+              boxSubmissionsCount: data.box_submissions_count || 0,
+              postsCount: data.posts_count || 0,
+              inboxCount: data.inbox_count || 0,
+              crownTitle: data.crown_title,
+            } as CrimChartUserModel);
+          }
+        } catch (err) {
+          console.error('Error fetching profile:', err);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      if (isCurrentUser && currentUser) {
+        setUserData(currentUser);
+        setIsLoading(false);
+        fetchUser(); // still fetch to update stats in background
+      } else {
+        setIsLoading(true);
+        fetchUser();
+      }
+    }, [activeUserId, isCurrentUser, currentUser])
+  );
 
   if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FFC400" />
-      </View>
-    );
+    return <ProfilePageShimmer />;
   }
 
   // Define the actions dynamically based on the wrapper logic rather than inside ProfilePage
@@ -87,9 +89,9 @@ export const ProfilePageWrapper: React.FC<ProfilePageWrapperProps> = ({ targetUs
             <Text style={styles.primaryBtnText}>Edit Profile</Text>
           </TouchableOpacity>
           <View style={{ width: 10 }} />
-          <TouchableOpacity 
-            onPress={() => router.push('/inbox')} 
-            style={[styles.actionBtn, styles.secondaryBtn]} 
+          <TouchableOpacity
+            onPress={() => router.push('/inbox')}
+            style={[styles.actionBtn, styles.secondaryBtn]}
             activeOpacity={0.85}
           >
             <Text style={styles.secondaryBtnText}>Inbox</Text>
@@ -102,8 +104,8 @@ export const ProfilePageWrapper: React.FC<ProfilePageWrapperProps> = ({ targetUs
       <View style={styles.actionRow}>
         <FollowUserButton targetUserId={activeUserId!} size="medium" style={styles.actionBtn} />
         <View style={{ width: 10 }} />
-        <InboxUserButton 
-          targetUserId={activeUserId!} 
+        <InboxUserButton
+          targetUserId={activeUserId!}
           style={[styles.actionBtn, styles.secondaryBtn]}
           textStyle={styles.secondaryBtnText}
         />
@@ -112,10 +114,11 @@ export const ProfilePageWrapper: React.FC<ProfilePageWrapperProps> = ({ targetUs
   };
 
   return (
-    <ProfilePage 
-      userId={activeUserId} 
-      userData={userData || undefined} 
-      customActions={renderActions()} 
+    <ProfilePage
+      userId={activeUserId}
+      userData={userData || undefined}
+      customActions={renderActions()}
+      isLoading={isLoading}
     />
   );
 };
@@ -127,8 +130,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  actionRow: { 
-    flexDirection: 'row' 
+  actionRow: {
+    flexDirection: 'row'
   },
   actionBtn: {
     flex: 1,
@@ -137,22 +140,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  primaryBtn: { 
-    backgroundColor: '#FACD11', 
-    flex: 2 
+  primaryBtn: {
+    backgroundColor: '#FACD11',
+    flex: 2
   },
-  secondaryBtn: { 
-    backgroundColor: 'rgba(255,255,255,0.08)', 
-    flex: 1 
+  secondaryBtn: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    flex: 1
   },
-  primaryBtnText: { 
-    color: '#000', 
-    fontWeight: '800', 
-    fontSize: 13 
+  primaryBtnText: {
+    color: '#000',
+    fontWeight: '800',
+    fontSize: 13
   },
-  secondaryBtnText: { 
-    color: '#FFF', 
-    fontWeight: '700', 
-    fontSize: 13 
+  secondaryBtnText: {
+    color: '#FFF',
+    fontWeight: '700',
+    fontSize: 13
   },
 });

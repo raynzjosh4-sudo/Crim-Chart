@@ -1,45 +1,63 @@
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
+import { ChartLinearLoader } from '@/components/CrimchartLoader/ChartLinearLoader';
+import CrimchartBackButton from '@/components/CrimChartBackButton/CrimChart_back_button';
+import { supabase } from '@/core/supabase/supabaseConfig';
 import { colors } from '@/core/theme/colors';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { ChartToast } from '@/components/showcase/CrimChart_toast';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { ChevronRight, EyeOff, Plus, Star } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { Alert, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform, TextInput } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import CrimchartBackButton from '@/components/CrimChartBackButton/CrimChart_back_button';
+import { Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, TextInput } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export const PersonalInformationPage = () => {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const email = useAuthStore((s) => s.pendingSignUp?.email) || 'user@example.com'; // fallback for demo
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const isLoading = useAuthStore((s) => s.isLoading);
+  const insets = useSafeAreaInsets();
 
   // We should initialize with user's birthday/gender if available
   // but let's assume they might be in `user` object depending on CrimChartUserModel
-  const [birthday, setBirthday] = useState<Date | undefined>(undefined); 
-  const [gender, setGender] = useState<string | undefined>(undefined);
-  
+  const [birthday, setBirthday] = useState<Date | undefined>(
+    user?.birthday ? new Date(user.birthday) : undefined
+  );
+  const [gender, setGender] = useState<string | undefined>(user?.gender || undefined);
+  const [email, setEmail] = useState<string>(user?.email || 'Loading...');
+  const [crownTitle, setCrownTitle] = useState(user?.crownTitle || '');
+  const [bio, setBio] = useState(user?.bio || '');
+
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showGenderModal, setShowGenderModal] = useState(false);
 
+  React.useEffect(() => {
+    const fetchEmail = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        setEmail(user.email);
+      } else {
+        setEmail('No email found');
+      }
+    };
+    fetchEmail();
+  }, []);
+
   const handleSave = async () => {
     if (isLoading) return;
-    
-    const updates: any = {};
-    if (birthday) updates.birthday = birthday.toISOString();
-    if (gender) updates.gender = gender;
-    
-    if (Object.keys(updates).length > 0) {
-      const success = await updateProfile(updates);
-      if (success) {
-        Alert.alert('Success', 'Profile updated successfully!');
-        router.back();
-      } else {
-        Alert.alert('Error', 'Failed to update profile.');
-      }
-    } else {
+    const success = await updateProfile({ birthday, gender, crown_title: crownTitle, bio });
+    if (success) {
+      ChartToast.showSuccess(null, {
+        title: 'Success',
+        message: 'Personal information updated successfully!',
+      });
       router.back();
+    } else {
+      ChartToast.showError(null, {
+        title: 'Error',
+        message: 'Failed to update profile.',
+      });
     }
   };
 
@@ -73,9 +91,11 @@ export const PersonalInformationPage = () => {
         ]}
       />
 
+      <ChartLinearLoader isLoading={isLoading} />
+
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.sectionHeader}>BASIC DETAILS</Text>
-        
+
         {/* Birthday Field */}
         <TouchableOpacity style={styles.capsuleField} onPress={() => setShowDatePicker(true)}>
           <Text style={styles.capsuleLabel} numberOfLines={1}>Birthday</Text>
@@ -87,7 +107,7 @@ export const PersonalInformationPage = () => {
           <DateTimePicker
             value={birthday || new Date(1995, 0, 1)}
             mode="date"
-            display="default"
+            display="spinner"
             maximumDate={new Date()}
             onChange={handleDateChange}
           />
@@ -111,15 +131,15 @@ export const PersonalInformationPage = () => {
               <Text style={styles.primaryBadgeText}>PRIMARY</Text>
             </View>
           </View>
-          
+
           <View style={styles.emailActionsRow}>
             <TouchableOpacity style={styles.smallAction}>
               <EyeOff size={14} color="rgba(255, 255, 255, 0.3)" />
               <Text style={styles.smallActionText}>Hidden</Text>
             </TouchableOpacity>
-            
+
             <View style={{ width: 20 }} />
-            
+
             <TouchableOpacity style={styles.smallAction}>
               <Star size={14} color={colors.primary} />
               <Text style={[styles.smallActionText, { color: colors.primary }]}>Primary</Text>
@@ -127,17 +147,37 @@ export const PersonalInformationPage = () => {
           </View>
         </View>
 
-        {/* Add Email Button */}
-        <TouchableOpacity style={styles.addButton} onPress={() => Alert.alert('Coming Soon', 'Add email functionality is under development.')}>
-          <Plus size={16} color={colors.primary} />
-          <Text style={styles.addButtonText}>Add email</Text>
-        </TouchableOpacity>
+        <View style={styles.spacer} />
+        <Text style={styles.sectionHeader}>CROWN TITLE</Text>
+        <View style={styles.inputFieldContainer}>
+          <TextInput
+            style={styles.blockInput}
+            value={crownTitle}
+            onChangeText={setCrownTitle}
+            placeholder="Enter your crown title..."
+            placeholderTextColor="rgba(255,255,255,0.3)"
+          />
+        </View>
+
+        <View style={styles.spacer} />
+        <Text style={styles.sectionHeader}>BIO</Text>
+        <View style={styles.inputFieldContainer}>
+          <TextInput
+            style={[styles.blockInput, { minHeight: 80, textAlignVertical: 'top' }]}
+            value={bio}
+            onChangeText={setBio}
+            placeholder="Tell us about yourself..."
+            placeholderTextColor="rgba(255,255,255,0.3)"
+            multiline
+          />
+        </View>
+
       </ScrollView>
 
       {/* Gender Selection Modal */}
       <Modal visible={showGenderModal} transparent animationType="slide">
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowGenderModal(false)}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, 24) }]}>
             <Text style={styles.modalTitle}>SELECT GENDER</Text>
             {['Male', 'Female', 'Non-binary', 'Prefer not to say'].map((g) => (
               <TouchableOpacity key={g} style={styles.modalItem} onPress={() => selectGender(g)}>
@@ -147,6 +187,8 @@ export const PersonalInformationPage = () => {
           </View>
         </TouchableOpacity>
       </Modal>
+
+
 
     </View>
   );
@@ -190,10 +232,28 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   capsuleLabel: {
-    flex: 1,
     color: colors.text,
     fontWeight: '700',
     fontSize: 14,
+    marginRight: 12,
+  },
+  inputFieldContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderRadius: 14,
+    borderWidth: 0.8,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginHorizontal: 24,
+    marginBottom: 12,
+  },
+  blockInput: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+    textAlign: 'left',
+    padding: 0,
+    margin: 0,
   },
   capsuleValue: {
     color: 'rgba(255, 255, 255, 0.5)',
@@ -271,7 +331,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E1E1E',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    paddingVertical: 24,
+    paddingTop: 24,
   },
   modalTitle: {
     color: 'rgba(255, 255, 255, 0.5)',
@@ -280,6 +340,29 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     textAlign: 'center',
     marginBottom: 16,
+  },
+  inputWrapper: {
+    paddingHorizontal: 24,
+    marginBottom: 24,
+  },
+  input: {
+    backgroundColor: '#333',
+    color: '#fff',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+  },
+  saveModalButton: {
+    backgroundColor: colors.primary,
+    marginHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  saveModalButtonText: {
+    color: '#000',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   modalItem: {
     paddingVertical: 16,

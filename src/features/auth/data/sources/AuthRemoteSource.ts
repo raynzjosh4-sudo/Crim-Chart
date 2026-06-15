@@ -41,6 +41,8 @@ export class AuthRemoteSource {
         user: CrimChartUserModel.empty().copyWith({
           id: authUser.id,
           displayName: params.username,
+          username: params.username,
+          email: authUser.email,
           birthday: params.birthday,
           gender: params.gender,
           createdAt: new Date(),
@@ -83,6 +85,8 @@ export class AuthRemoteSource {
         user: CrimChartUserModel.empty().copyWith({
           id: authUser.id,
           displayName: profile?.username ?? params.identifier.split('@')[0],
+          username: profile?.username,
+          email: authUser.email,
           profileImageUrl: CrimChartUserModel.correctImageUrl(profile?.profile_image_url ?? ''),
           birthday: profile?.birthday ? new Date(profile.birthday) : undefined,
           gender: profile?.gender,
@@ -142,6 +146,8 @@ export class AuthRemoteSource {
         user: CrimChartUserModel.empty().copyWith({
           id: authUser.id,
           displayName: profile.username ?? authUser.email?.split('@')[0] ?? 'User',
+          username: profile.username,
+          email: authUser.email,
           profileImageUrl: CrimChartUserModel.correctImageUrl(
             profile.profile_image_url ?? authUser.user_metadata?.avatar_url ?? ''
           ),

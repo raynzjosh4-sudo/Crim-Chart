@@ -1,21 +1,47 @@
-import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { MessageSquare } from 'lucide-react-native';
+import { CommentSheet } from '@/components/comments/CommentSheet';
+import { MessageCircle } from 'lucide-react-native';
+import { useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 
 interface CommentActionWidgetProps {
   commentsCount: number;
+  postId?: string;
   onCommentTap?: () => void;
 }
 
 export const CommentActionWidget: React.FC<CommentActionWidgetProps> = ({
-  commentsCount,
+  commentsCount: initialCount,
+  postId,
   onCommentTap,
 }) => {
+  const [isSheetVisible, setIsSheetVisible] = useState(false);
+  const [commentsCount, setCommentsCount] = useState(initialCount);
+
+  const handlePress = () => {
+    if (postId) {
+      setIsSheetVisible(true);
+    }
+    if (onCommentTap) {
+      onCommentTap();
+    }
+  };
+
   return (
-    <TouchableOpacity style={styles.container} onPress={onCommentTap} activeOpacity={0.7}>
-      <MessageSquare size={24} color="#FACD11" />
-      <Text style={styles.text}>{commentsCount}</Text>
-    </TouchableOpacity>
+    <>
+      <TouchableOpacity style={styles.container} onPress={handlePress} activeOpacity={0.7}>
+        <MessageCircle size={24} color="#FACD11" />
+        <Text style={styles.text}>{commentsCount}</Text>
+      </TouchableOpacity>
+
+      {postId && (
+        <CommentSheet
+          postId={postId}
+          visible={isSheetVisible}
+          onClose={() => setIsSheetVisible(false)}
+          onCommentAdded={() => setCommentsCount(commentsCount + 1)}
+        />
+      )}
+    </>
   );
 };
 

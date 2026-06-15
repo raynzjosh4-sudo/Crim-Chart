@@ -19,6 +19,11 @@ CREATE TABLE public.profiles (
   last_seen timestamp with time zone DEFAULT now(),
   has_status boolean DEFAULT false,
   active_status_views_count integer DEFAULT 0,
+  boxes_count integer DEFAULT 0,
+  box_submissions_count integer DEFAULT 0,
+  posts_count integer DEFAULT 0,
+  inbox_count integer DEFAULT 0,
+  unread_interactions_count integer DEFAULT 0,
   CONSTRAINT profiles_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.channels (
@@ -181,6 +186,7 @@ CREATE TABLE public.channel_messages (
   metadata jsonb,
   thumbnail_url text,
   message_type text,
+  views_count integer DEFAULT 0,
   CONSTRAINT channel_messages_pkey PRIMARY KEY (id),
   CONSTRAINT channel_messages_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id),
   CONSTRAINT channel_messages_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.profiles(id)
@@ -226,6 +232,8 @@ CREATE TABLE public.channel_posts (
   likes_count integer DEFAULT 0,
   comments_count integer DEFAULT 0,
   shares_count integer DEFAULT 0,
+  views_count integer DEFAULT 0,
+  downloads_count integer DEFAULT 0,
   CONSTRAINT channel_posts_pkey PRIMARY KEY (id),
   CONSTRAINT channel_posts_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id),
   CONSTRAINT channel_posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.profiles(id)
@@ -249,6 +257,7 @@ CREATE TABLE public.channel_moments (
   expires_at timestamp with time zone,
   media_type text NOT NULL DEFAULT 'photo'::text,
   thumbnail_url text,
+  views_count integer DEFAULT 0,
   CONSTRAINT channel_moments_pkey PRIMARY KEY (id),
   CONSTRAINT channel_moments_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id),
   CONSTRAINT channel_moments_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.profiles(id)
@@ -378,6 +387,9 @@ CREATE TABLE public.posts (
   comments_count integer DEFAULT 0,
   shares_count integer DEFAULT 0,
   tags_count integer DEFAULT 0,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  views_count integer DEFAULT 0,
+  downloads_count integer DEFAULT 0,
   CONSTRAINT posts_pkey PRIMARY KEY (id),
   CONSTRAINT posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.profiles(id),
   CONSTRAINT posts_parent_post_id_fkey FOREIGN KEY (parent_post_id) REFERENCES public.posts(id)
@@ -399,4 +411,100 @@ CREATE TABLE public.follows (
   CONSTRAINT follows_pkey PRIMARY KEY (follower_id, following_id),
   CONSTRAINT follows_follower_id_fkey FOREIGN KEY (follower_id) REFERENCES public.profiles(id),
   CONSTRAINT follows_following_id_fkey FOREIGN KEY (following_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.boxes (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  owner_id uuid NOT NULL,
+  title text NOT NULL,
+  description text,
+  box_type text NOT NULL,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone DEFAULT now(),
+  allow_submissions boolean DEFAULT true,
+  is_public boolean DEFAULT true,
+  age_restriction text DEFAULT 'All Ages'::text,
+  country_restrictions jsonb DEFAULT '["Global"]'::jsonb,
+  visible_to_followed_users boolean DEFAULT true,
+  views_count integer DEFAULT 0,
+  CONSTRAINT boxes_pkey PRIMARY KEY (id),
+  CONSTRAINT boxes_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.box_items (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  box_id uuid NOT NULL,
+  post_id uuid NOT NULL,
+  likes_count integer DEFAULT 0,
+  dislikes_count integer DEFAULT 0,
+  is_viral_pushed boolean DEFAULT false,
+  added_at timestamp with time zone DEFAULT now(),
+  views_count integer DEFAULT 0,
+  downloads_count integer DEFAULT 0,
+  user_id uuid,
+  CONSTRAINT box_items_pkey PRIMARY KEY (id),
+  CONSTRAINT box_items_box_id_fkey FOREIGN KEY (box_id) REFERENCES public.boxes(id),
+  CONSTRAINT box_items_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.box_item_reactions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  box_item_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  reaction_type text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT box_item_reactions_pkey PRIMARY KEY (id),
+  CONSTRAINT box_item_reactions_box_item_id_fkey FOREIGN KEY (box_item_id) REFERENCES public.box_items(id),
+  CONSTRAINT box_item_reactions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.box_members (
+  box_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  last_interaction_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
+  interaction_type text NOT NULL DEFAULT 'view'::text,
+  CONSTRAINT box_members_pkey PRIMARY KEY (box_id, user_id),
+  CONSTRAINT box_members_box_id_fkey FOREIGN KEY (box_id) REFERENCES public.boxes(id),
+  CONSTRAINT box_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.post_likes (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  post_id uuid NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT post_likes_pkey PRIMARY KEY (id),
+  CONSTRAINT post_likes_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.posts(id)
+);
+CREATE TABLE public.box_item_likes (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  box_item_id uuid NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT box_item_likes_pkey PRIMARY KEY (id),
+  CONSTRAINT box_item_likes_box_item_id_fkey FOREIGN KEY (box_item_id) REFERENCES public.box_items(id)
+);
+CREATE TABLE public.comments (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  post_id text NOT NULL,
+  author_id text NOT NULL,
+  author_username text,
+  author_avatar_url text,
+  text text,
+  media_url text,
+  media_type text,
+  reply_to_id text,
+  created_at timestamp with time zone DEFAULT now(),
+  likes_count integer DEFAULT 0,
+  CONSTRAINT comments_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.comment_likes (
+  user_id uuid NOT NULL,
+  comment_id uuid NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT comment_likes_pkey PRIMARY KEY (user_id, comment_id),
+  CONSTRAINT comment_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT comment_likes_comment_id_fkey FOREIGN KEY (comment_id) REFERENCES public.comments(id)
+);
+CREATE TABLE public.post_views (
+  user_id uuid NOT NULL,
+  post_id text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT post_views_pkey PRIMARY KEY (user_id, post_id),
+  CONSTRAINT post_views_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
