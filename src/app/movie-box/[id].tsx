@@ -1,20 +1,18 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, SafeAreaView } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft } from 'lucide-react-native';
+import ChartAppBar from '@/components/chartappbar/ChartAppBar';
+import { useBoxDetail } from '@/features/boxes/application/useBoxDetail';
+import { RecentContributorsWidget } from '@/features/boxes/components/contributors/RecentContributorsWidget';
+import { MovieBoxDetailVideoTile } from '@/features/boxes/components/details/MovieBoxDetailVideoTile';
 import { dummyMovieBoxPost } from '@/features/boxes/data/dummyMovieBoxData';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { RecentContributorsWidget } from '@/features/boxes/components/contributors/RecentContributorsWidget';
-import { MovieBoxDetailVideoTile } from '@/features/boxes/components/details/MovieBoxDetailVideoTile';
-import ChartAppBar from '@/components/chartappbar/ChartAppBar';
-import { useBoxDetail } from '@/features/boxes/application/useBoxDetail';
-import { ActivityIndicator } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
 export default function MovieBoxDetailPage() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  
+
   const { box: fetchedBox, isLoading } = useBoxDetail(id as string);
 
   const post = React.useMemo(() => {
@@ -66,18 +64,19 @@ export default function MovieBoxDetailPage() {
     <View style={styles.headerContainer}>
       {/* Members / Filter Widget */}
       <View style={[styles.contributorsSection, { marginBottom: 24, paddingTop: 16 }]}>
-        <RecentContributorsWidget 
+        <RecentContributorsWidget
           contributors={uniqueMembers}
           selectedMemberId={selectedMemberId}
           onSelectMember={setSelectedMemberId}
+          onAddPress={() => router.push(`/movie-box/post/${id}`)}
         />
       </View>
 
       {/* Box Info */}
       <View style={styles.boxInfoSection}>
         <Image source={{ uri: post.box.coverImageUrl }} style={styles.coverImage} contentFit="cover" />
-        <LinearGradient 
-          colors={['transparent', 'rgba(0,0,0,0.8)', '#000']} 
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.8)', '#000']}
           style={styles.gradientOverlay}
         />
         <View style={styles.boxDetailsOverlay}>
@@ -101,26 +100,26 @@ export default function MovieBoxDetailPage() {
         ) : (
           <FlatList
             data={filteredVideos}
-          keyExtractor={(item) => item.id}
-          extraData={selectedMemberId}
-          ListHeaderComponent={renderHeader}
-          contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => (
-            <View>
-              <MovieBoxDetailVideoTile 
-                video={item} 
-                isPlaying={activeVideoId === item.id} 
-              />
-              <View style={styles.divider} />
-            </View>
-          )}
-          viewabilityConfig={viewabilityConfig}
-          onViewableItemsChanged={onViewableItemsChanged}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No videos found for this member.</Text>
-            </View>
+            keyExtractor={(item) => item.id}
+            extraData={selectedMemberId}
+            ListHeaderComponent={renderHeader}
+            contentContainerStyle={styles.listContent}
+            renderItem={({ item }) => (
+              <View>
+                <MovieBoxDetailVideoTile
+                  video={item}
+                  isPlaying={activeVideoId === item.id}
+                />
+                <View style={styles.divider} />
+              </View>
+            )}
+            viewabilityConfig={viewabilityConfig}
+            onViewableItemsChanged={onViewableItemsChanged}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No videos found for this member.</Text>
+              </View>
             }
           />
         )}

@@ -1,11 +1,14 @@
 import { AnimatedDisk } from '@/components/AnimatedDisk';
 import UserAvatar from '@/components/avatar/UserAvatar';
 import { DownloadButton } from '@/components/buttons/DownloadButton';
+import { BoxReactionRecorderWrapper } from '@/components/wrappers/BoxReactionRecorderWrapper';
 import { MediaDownloadWrapper } from '@/components/wrappers/MediaDownloadWrapper';
+import { FollowUserButton } from '@/components/FollowUserButton';
+import { PostInteractionWrapper } from '@/components/wrappers/PostInteractionWrapper';
 import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
-import { MessageCircle, ThumbsDown, ThumbsUp } from 'lucide-react-native';
+import { Eye, Heart, MessageCircle } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -36,14 +39,16 @@ export interface MusicBoxDetailTrackTileProps {
     likes: number;
     dislikes: number;
     commentsCount: number;
+    viewsCount?: number;
     addedBy: AddedBy;
     linkedFrom?: AddedBy;
     recentComments?: CommentPreview[];
   };
   isPlaying?: boolean;
+  onCommentPress?: (postId: string) => void;
 }
 
-export const MusicBoxDetailTrackTile = ({ song, isPlaying }: MusicBoxDetailTrackTileProps) => {
+export const MusicBoxDetailTrackTile = ({ song, isPlaying, onCommentPress }: MusicBoxDetailTrackTileProps) => {
   const router = useRouter();
   const soundRef = useRef<Audio.Sound | null>(null);
   const loadingPromiseRef = useRef<Promise<Audio.Sound | null> | null>(null);
@@ -163,40 +168,19 @@ export const MusicBoxDetailTrackTile = ({ song, isPlaying }: MusicBoxDetailTrack
               name={song.addedBy.name}
               size={36}
             />
-            <View style={styles.postHeaderText}>
-              <Text style={styles.postHeaderName}>{song.addedBy.name}</Text>
-              <Text style={styles.postHeaderSub}>Added a track</Text>
+            <View style={[styles.postHeaderText, { flex: 1 }]}>
+              <Text style={styles.postHeaderName} numberOfLines={1} ellipsizeMode="tail">{song.addedBy.name}</Text>
+              <Text style={styles.postHeaderSub} numberOfLines={1}>Added a track</Text>
             </View>
-            <TouchableOpacity style={styles.followBtn}>
-              <Text style={styles.followBtnText}>Follow</Text>
-            </TouchableOpacity>
+            <FollowUserButton 
+              targetUserId={song.addedBy.id} 
+              size="small" 
+              style={{ flex: undefined, alignSelf: 'center', marginLeft: 12, paddingHorizontal: 12, height: 28, borderRadius: 14, minWidth: 80 }} 
+            />
           </View>
         ) : (
           <View style={styles.headerLeft} />
         )}
-
-        <MediaDownloadWrapper
-          mediaUrl={song.audioUrl || ''}
-          title={song.title}
-          coverUrl={song.thumbnailUrl || ''}
-          mediaType="audio"
-          onDownloadSuccess={() => {
-            if (song.postId) {
-              const incrementDownload = useInteractionStore.getState().incrementDownload;
-              incrementDownload(song.postId, song.boxId);
-            }
-          }}
-        >
-          {({ download, isDownloading }) => (
-            <DownloadButton
-              onPress={download}
-              isDownloading={isDownloading}
-              color="rgba(255,255,255,0.8)"
-              size={20}
-              count={currentDownloads}
-            />
-          )}
-        </MediaDownloadWrapper>
       </View>
 
       {/* Track Info Header */}
@@ -269,23 +253,103 @@ export const MusicBoxDetailTrackTile = ({ song, isPlaying }: MusicBoxDetailTrack
         </View>
       )}
 
-      {/* Facebook-style Action Bar */}
-      <View style={styles.actionBar}>
-        <TouchableOpacity style={styles.actionBtn}>
-          <ThumbsUp size={24} color="#FFF" />
-          <Text style={styles.actionText}>{song.likes > 0 ? song.likes : 'Like'}</Text>
-        </TouchableOpacity>
+      {/* Action Bar */}
+      {song.postId ? (
+        <PostInteractionWrapper postId={song.postId} boxId={song.boxId} initialViewsCount={song.viewsCount}>
+          {(state) => (
+            <View style={styles.actionBar}>
+              <BoxReactionRecorderWrapper postId={song.postId!} boxId={song.boxId} reactionType="like">
+                {({ recordReaction }) => (
+                  <TouchableOpacity
+                    style={styles.actionBtn}
+                    onPress={() => {
+                      if (!state.isLiked) {
+                        recordReaction();
+                      }
+                      useInteractionStore.getState().toggleLike(song.postId!, song.boxId);
+                    }}
+                  >
+                    <Heart size={24} color={state.isLiked ? "#E21" : "#FFF"} fill={state.isLiked ? "#E21" : "transparent"} />
+                    <Text style={styles.actionText}>{state.likesCount}</Text>
+                  </TouchableOpacity>
+                )}
+              </BoxReactionRecorderWrapper>
 
-        <TouchableOpacity style={styles.actionBtn}>
-          <ThumbsDown size={24} color="#FFF" />
-          <Text style={styles.actionText}>{song.dislikes > 0 ? song.dislikes : 'Dislike'}</Text>
-        </TouchableOpacity>
+              <BoxReactionRecorderWrapper postId={song.postId!} boxId={song.boxId} reactionType="comment">
+                {({ recordReaction }) => (
+                  <TouchableOpacity 
+                    style={styles.actionBtn}
+                    onPress={() => {
+                      recordReaction();
+                      if (onCommentPress && song.postId) {
+                        onCommentPress(song.postId);
+                      }
+                    }}
+                  >
+                    <MessageCircle size={24} color="#FFF" />
+                    <Text style={styles.actionText}>{song.commentsCount || 0}</Text>
+                  </TouchableOpacity>
+                )}
+              </BoxReactionRecorderWrapper>
 
-        <TouchableOpacity style={styles.actionBtn}>
-          <MessageCircle size={24} color="#FFF" />
-          <Text style={styles.actionText}>{song.commentsCount ? `${song.commentsCount} Comments` : 'Comment'}</Text>
-        </TouchableOpacity>
-      </View>
+              <TouchableOpacity style={styles.actionBtn}>
+                <Eye size={24} color="#FFF" />
+                <Text style={styles.actionText}>{state.viewsCount}</Text>
+              </TouchableOpacity>
+
+              {/* Spacer to push download button to the right */}
+              <View style={{ flex: 1 }} />
+
+              <MediaDownloadWrapper
+                mediaUrl={song.audioUrl || ''}
+                title={song.title}
+                coverUrl={song.thumbnailUrl || ''}
+                mediaType="audio"
+                onDownloadSuccess={() => {
+                  if (song.postId) {
+                    const incrementDownload = useInteractionStore.getState().incrementDownload;
+                    incrementDownload(song.postId, song.boxId);
+                  }
+                }}
+              >
+                {({ download, isDownloading }) => (
+                  <DownloadButton
+                    onPress={download}
+                    isDownloading={isDownloading}
+                    color="rgba(255,255,255,0.8)"
+                    size={20}
+                    count={currentDownloads}
+                  />
+                )}
+              </MediaDownloadWrapper>
+            </View>
+          )}
+        </PostInteractionWrapper>
+      ) : (
+        <View style={styles.actionBar}>
+          <TouchableOpacity style={styles.actionBtn}>
+            <Heart size={24} color="#FFF" />
+            <Text style={styles.actionText}>{song.likes || 0}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.actionBtn}
+            onPress={() => {
+              if (onCommentPress && song.postId) {
+                onCommentPress(song.postId);
+              }
+            }}
+          >
+            <MessageCircle size={24} color="#FFF" />
+            <Text style={styles.actionText}>{song.commentsCount || 0}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionBtn}>
+            <Eye size={24} color="#FFF" />
+            <Text style={styles.actionText}>0</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };
@@ -331,14 +395,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 12,
+    width: '100%',
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    flexShrink: 1,
   },
   postHeaderText: {
     marginLeft: 10,
     justifyContent: 'center',
+    flex: 1,
+    flexShrink: 1,
+    marginRight: 8,
   },
   postHeaderName: {
     color: '#FFF',

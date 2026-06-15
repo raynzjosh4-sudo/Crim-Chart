@@ -1,7 +1,6 @@
-import CommentInputField from '@/commentingsheets/widgets/CommentInputField';
 import { LinearGradient } from 'expo-linear-gradient';
 import { VideoView, useVideoPlayer } from 'expo-video';
-import { Bookmark, Heart, MessageCircle, Pause, Play, Tag } from 'lucide-react-native';
+import { Eye, MessageCircle, Pause, Play, Tag } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -13,7 +12,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { VideoPost } from '../models/VideoPost';
 import { LikeButton } from './LikeButton';
 
@@ -28,6 +26,7 @@ interface VideoFeedCardProps {
   onAuthorPress?: () => void;
   onShrunkenTap?: () => void;
   hideBottomInput?: boolean;
+  disableInteractions?: boolean;
 }
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
@@ -43,6 +42,7 @@ export const VideoFeedCard = ({
   onAuthorPress,
   onShrunkenTap,
   hideBottomInput = false,
+  disableInteractions = false,
 }: VideoFeedCardProps) => {
   const [liked, setLiked] = useState<boolean>(video.isLiked);
   const [likesCount, setLikesCount] = useState<number>(video.likesCount);
@@ -113,59 +113,85 @@ export const VideoFeedCard = ({
     <Pressable style={[styles.container, isShrunken && styles.shrunken]} onPress={togglePlayPause}>
       <VideoView
         player={player}
-        style={StyleSheet.absoluteFillObject}
+        style={[
+          StyleSheet.absoluteFillObject,
+          !hideBottomInput && { bottom: 61 } // End exactly where the progress bar starts (58px bar + 3px progress bar)
+        ]}
         contentFit="cover"
         nativeControls={false}
       />
 
       {/* Overlay gradient */}
       {!isShrunken && (
-        <LinearGradient 
-          colors={['transparent', 'rgba(0,0,0,0.8)']}
-          style={styles.gradient} 
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.95)']}
+          style={styles.gradient}
         />
       )}
 
       {!isShrunken && (
         <>
           {/* Bottom info */}
-          <View style={[styles.bottomInfo, hideBottomInput && { bottom: 20 }]}>
-            <TouchableOpacity style={styles.authorRow} onPress={onAuthorPress}>
-              <Text style={styles.authorName}>@{video.authorName}</Text>
-            </TouchableOpacity>
-            {video.caption ? (
-              <Text style={styles.caption} numberOfLines={2}>{video.caption}</Text>
-            ) : null}
+          <View style={[styles.bottomInfo, hideBottomInput ? { bottom: 30 } : { bottom: 70 }]}>
+            <Text style={styles.caption} numberOfLines={2}>
+              {video.caption || 'A stunning cinematic short video captured straight from your device.'}
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+              <Image
+                source={{ uri: video.authorAvatarUrl || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100&h=100&fit=crop' }}
+                style={{ width: 18, height: 18, borderRadius: 9, marginRight: 6 }}
+              />
+              <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '500', textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 4 }}>
+                Original audio - {video.authorName}
+              </Text>
+            </View>
           </View>
 
           {/* Right-side action buttons */}
-          <View style={[styles.actions, hideBottomInput && { bottom: 20 }]}>
+          <View
+            style={[styles.actions, hideBottomInput ? { bottom: 30 } : { bottom: 70 }, { paddingBottom: 16 }]}
+            pointerEvents={disableInteractions ? 'none' : 'auto'}
+          >
             <ActionBtn
               icon={<Image source={{ uri: video.authorAvatarUrl ?? '' }} style={styles.actionsAvatar} />}
-              onPress={() => {}} // Handle author press if needed
+              onPress={() => { }} // Handle author press if needed
+              noBackground
             />
-            <LikeButton 
-              initialLikes={video.likesCount}
-              isLiked={video.isLiked}
-            />
+            <View style={[styles.actionPill, { marginTop: -16 }]}>
+              <LikeButton
+                initialLikes={video.likesCount}
+                isLiked={video.isLiked}
+              />
+            </View>
             <ActionBtn
-              icon={<MessageCircle color="#FFF" size={38} />}
+              icon={<MessageCircle color="#FFF" size={32} />}
               count={video.commentsCount}
               onPress={onComment}
             />
             <ActionBtn
-              icon={<Tag color="#4A90E2" size={38} />}
+              icon={<Tag color="#FFF" size={32} />}
               count={video.tagsCount ?? 0}
             />
             <ActionBtn
-              icon={<Bookmark color="#FFF" size={38} />}
-              count={58}
+              icon={<Eye color="#FFF" size={32} />}
+              count={video.viewsCount ?? 0}
             />
+            <View style={{ marginTop: 4 }}>
+              <Image
+                source={{ uri: video.authorAvatarUrl || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100&h=100&fit=crop' }}
+                style={styles.smallAudioAvatar}
+              />
+            </View>
+          </View>
+
+          {/* Sleek Progress Bar */}
+          <View style={[styles.progressBarContainer, !hideBottomInput && { bottom: 58 }]}>
+            <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
           </View>
 
           {/* Bottom Input Area */}
           {!hideBottomInput && (
-            <View style={styles.inputContainerWrapper}>
+            <View style={styles.inputContainerWrapper} pointerEvents={disableInteractions ? 'none' : 'auto'}>
               <TouchableOpacity style={styles.commentButton} onPress={onComment} activeOpacity={0.8}>
                 <Text style={styles.commentButtonText}>Add comment...</Text>
               </TouchableOpacity>
@@ -193,14 +219,33 @@ interface ActionBtnProps {
   count?: number;
   label?: string;
   onPress?: () => void;
+  noBackground?: boolean;
 }
 
-const ActionBtn = ({ icon, count, label, onPress }: ActionBtnProps) => (
-  <TouchableOpacity style={styles.actionBtn} onPress={onPress} activeOpacity={0.75}>
-    {icon}
-    <Text style={styles.actionCount}>{label ?? (count != null ? count : '')}</Text>
-  </TouchableOpacity>
-);
+const ActionBtn = ({ icon, count, label, onPress, noBackground }: ActionBtnProps) => {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scale, { toValue: 0.9, useNativeDriver: true }).start();
+  };
+  const handlePressOut = () => {
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
+  };
+
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <Pressable
+        style={[styles.actionBtn, !noBackground && styles.actionPill]}
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+      >
+        {icon}
+        <Text style={styles.actionCount}>{label ?? (count != null ? count : '')}</Text>
+      </Pressable>
+    </Animated.View>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -244,60 +289,87 @@ const styles = StyleSheet.create({
     borderColor: '#FFF',
     marginBottom: 8,
   },
+  smallAudioAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: '#FFF',
+  },
   authorName: { color: '#FFF', fontWeight: 'bold', fontSize: 18, textShadowColor: '#000', textShadowRadius: 4 },
   channelName: { color: 'rgba(255,255,255,0.7)', fontSize: 12 },
   caption: {
-    color: '#FFF',
-    fontSize: 13,
-    lineHeight: 17,
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 14,
+    lineHeight: 18,
     textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowRadius: 4,
+    textShadowRadius: 6,
   },
   actions: {
     position: 'absolute',
-    right: 4,
-    bottom: 70,
+    right: 8,
+    bottom: 80,
     alignItems: 'center',
     gap: 16,
     paddingHorizontal: 4,
   },
   actionBtn: { alignItems: 'center', gap: 4 },
+  actionPill: {
+    alignItems: 'center',
+    minWidth: 50,
+  },
   actionCount: {
     color: '#FFF',
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '800',
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowRadius: 4,
+    marginTop: 2,
   },
   inputContainerWrapper: {
     position: 'absolute',
-    bottom: 24, // Enough padding for bottom tabs / safe area
-    left: 12,
-    right: 80,
-    paddingHorizontal: 12,
+    bottom: 0, // Sit at the absolute bottom
+    left: 0,
+    right: 0, // Span full width edge-to-edge
+    backgroundColor: '#1C1C1E', // Solid dark theme background (blocks video)
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingBottom: 16, // Extra padding for the bottom
   },
   commentButton: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.08)', // Slight contrast against the solid bar
     borderRadius: 20,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 8,
     flexDirection: 'row',
     alignItems: 'center',
+    width: '100%',
   },
   commentButtonText: {
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(255,255,255,0.8)',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
+  },
+  progressBarContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#FFF',
   },
   playPauseOverlay: {
     position: 'absolute',
     top: '50%',
     left: '50%',
-    transform: [{ translateX: -35 }, { translateY: -35 }],
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    transform: [{ translateX: -40 }, { translateY: -40 }],
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
   },

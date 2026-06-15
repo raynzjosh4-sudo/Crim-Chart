@@ -24,21 +24,22 @@ export const LikeButton = ({ initialLikes, isLiked = false, onTap }: LikeButtonP
     
     if (newLiked) {
       setLikes(likes + 1);
-      Animated.sequence([
-        Animated.timing(scaleAnim, {
-          toValue: 1.4,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 1.0,
-          duration: 100,
-          useNativeDriver: true,
-        })
-      ]).start();
     } else {
       setLikes(Math.max(0, likes - 1));
     }
+
+    Animated.sequence([
+      Animated.timing(scaleAnim, {
+        toValue: 1.4,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1.0,
+        duration: 100,
+        useNativeDriver: true,
+      })
+    ]).start();
     
     if (onTap) onTap();
   };

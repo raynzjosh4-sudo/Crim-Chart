@@ -99,6 +99,10 @@ export const useInteractionStore = create<InteractionState>((set) => ({
         newGlobalIsLiked = true;
         newGlobalLikes += 1;
         console.log(`[InteractionStore] Optimistically liking global post too. Global count: ${newGlobalLikes}`);
+      } else if (boxId && !newIsLiked && globalIsLiked) {
+        newGlobalIsLiked = false;
+        newGlobalLikes = Math.max(0, newGlobalLikes - 1);
+        console.log(`[InteractionStore] Optimistically unliking global post too. Global count: ${newGlobalLikes}`);
       }
 
       // Sync to backend via RPC (fire-and-forget for speed, but ideally we await this in the component, or just trust the backend)
@@ -127,10 +131,13 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   },
 
   incrementView: (postId, boxId, channelId) => {
-    // We intentionally DO NOT optimistically increment views locally.
-    // Since the backend now enforces "one view per user", blindly adding +1 
-    // locally will inflate the count incorrectly on the screen.
-    // The backend will handle the true count, which will be fetched on next reload.
+    // Optimistically update the view count so it reflects immediately in the UI
+    set((state) => {
+      const key = boxId ? `${boxId}_${postId}` : postId;
+      return {
+        viewsCount: { ...state.viewsCount, [key]: (state.viewsCount[key] || 0) + 1 },
+      };
+    });
 
     // Sync to backend via RPC
     import('@/core/supabase/supabaseConfig').then(({ supabase }) => {
@@ -145,6 +152,17 @@ export const useInteractionStore = create<InteractionState>((set) => ({
       }).then(({ data, error }) => {
         console.log(`[InteractionStore] 👁️ increment_view RPC fired for post ${postId}. Error:`, error);
       });
+
+      // Also record the reaction in box_item_reactions if inside a box
+      if (boxId) {
+        supabase.rpc('record_box_item_reaction', {
+          p_post_id: postId,
+          p_box_id: boxId,
+          p_reaction_type: 'view'
+        }).then(({ error }) => {
+          if (error) console.error('[InteractionStore] Failed to record view reaction:', error);
+        });
+      }
     });
   },
 

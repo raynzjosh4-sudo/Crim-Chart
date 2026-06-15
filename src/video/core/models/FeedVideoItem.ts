@@ -15,6 +15,7 @@ export interface FeedVideoItem {
   aspectRatio?: number;
   durationSeconds?: number;
   createdAt: Date;
+  viewsCount?: number;
 }
 
 export function feedVideoFromMap(map: Record<string, unknown>): FeedVideoItem {
@@ -35,5 +36,6 @@ export function feedVideoFromMap(map: Record<string, unknown>): FeedVideoItem {
     aspectRatio: map['aspect_ratio'] as number | undefined,
     durationSeconds: map['duration_seconds'] as number | undefined,
     createdAt: map['created_at'] ? new Date(String(map['created_at'])) : new Date(),
+    viewsCount: Number(map['views_count'] ?? map['viewsCount'] ?? 0),
   };
 }

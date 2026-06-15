@@ -7,12 +7,17 @@ export function usePresenceSyncWorker() {
   useEffect(() => {
     const syncInterval = setInterval(async () => {
       const state = useProfileCacheStore.getState();
-      const idsToSync = Array.from(state.requestedUserIds);
+      const allIds = Array.from(state.requestedUserIds);
+      
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const idsToSync = allIds.filter(id => uuidRegex.test(id));
 
-      if (idsToSync.length === 0) return;
+      if (allIds.length === 0) return;
 
       // Clear the queue so we don't double fetch the same IDs
-      state.clearRequestedSyncs(idsToSync);
+      state.clearRequestedSyncs(allIds);
+
+      if (idsToSync.length === 0) return;
 
       try {
         // Chunk requests to avoid hitting URL query length limits

@@ -7,9 +7,11 @@ interface LikeActionProps {
   initialLikes: number;
   initialIsLiked: boolean;
   onPress?: () => void;
+  size?: number;
+  direction?: 'row' | 'column';
 }
 
-export const LikeAction: React.FC<LikeActionProps> = ({ initialLikes, initialIsLiked, onPress }) => {
+export const LikeAction: React.FC<LikeActionProps> = ({ initialLikes, initialIsLiked, onPress, size = 38, direction = 'column' }) => {
   const [isLiked, setIsLiked] = useState(initialIsLiked);
   const [likes, setLikes] = useState(initialLikes);
   const scale = useSharedValue(1);
@@ -21,7 +23,7 @@ export const LikeAction: React.FC<LikeActionProps> = ({ initialLikes, initialIsL
   const handlePress = () => {
     const newLiked = !isLiked;
     setIsLiked(newLiked);
-    setLikes(prev => newLiked ? prev + 1 : prev - 1);
+    setLikes(likes + (newLiked ? 1 : -1));
     
     scale.value = withSequence(
       withSpring(1.4),
@@ -32,15 +34,15 @@ export const LikeAction: React.FC<LikeActionProps> = ({ initialLikes, initialIsL
   };
 
   return (
-    <TouchableOpacity style={styles.container} onPress={handlePress} activeOpacity={0.8}>
+    <TouchableOpacity style={[styles.container, { flexDirection: direction }]} onPress={handlePress} activeOpacity={0.8}>
       <Animated.View style={animatedStyle}>
         <Heart 
-          size={38} 
+          size={size} 
           color={isLiked ? '#FF4B4B' : '#FFF'} 
           fill={isLiked ? '#FF4B4B' : 'transparent'} 
         />
       </Animated.View>
-      <Text style={styles.count}>{likes}</Text>
+      <Text style={[styles.count, direction === 'row' && styles.countRow]}>{likes}</Text>
     </TouchableOpacity>
   );
 };
@@ -57,5 +59,9 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.54)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
+  },
+  countRow: {
+    marginLeft: 6,
+    textShadowColor: 'transparent',
   },
 });

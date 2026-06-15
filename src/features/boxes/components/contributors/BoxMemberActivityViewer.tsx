@@ -1,10 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { X } from 'lucide-react-native';
-import { supabase } from '@/core/supabase/supabaseConfig';
 import UserAvatar from '@/components/avatar/UserAvatar';
 import { InteractionItemWidget } from '@/components/widgets/InteractionItemWidget';
+import { supabase } from '@/core/supabase/supabaseConfig';
+import { X } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import { FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityShimmer, PaginationShimmer } from '@/components/shimmers/ActivityShimmer';
+
+// Simple module-level cache to keep data in memory
+const activityCache: Record<string, InteractionRecord[]> = {};
 
 interface BoxMemberActivityViewerProps {
   userId: string;
@@ -21,13 +25,13 @@ interface InteractionRecord {
   created_at: string;
 }
 
-export const BoxMemberActivityViewer: React.FC<BoxMemberActivityViewerProps> = ({ 
-  userId, 
-  userName, 
-  userAvatarUrl, 
+export const BoxMemberActivityViewer: React.FC<BoxMemberActivityViewerProps> = ({
+  userId,
+  userName,
+  userAvatarUrl,
   boxId,
-  visible, 
-  onClose 
+  visible,
+  onClose
 }) => {
   const [interactions, setInteractions] = useState<InteractionRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -35,8 +39,17 @@ export const BoxMemberActivityViewer: React.FC<BoxMemberActivityViewerProps> = (
   useEffect(() => {
     if (!visible || !userId || !boxId) return;
 
+    const cacheKey = `${boxId}-${userId}`;
+
     const fetchInteractions = async () => {
-      setLoading(true);
+      // If we don't have cache, show loading shimmer
+      if (!activityCache[cacheKey]) {
+        setLoading(true);
+      } else {
+        // Load from memory instantly
+        setInteractions(activityCache[cacheKey]);
+      }
+
       try {
         // Query box_item_reactions joined with box_items to only get reactions for THIS specific box
         const { data, error } = await supabase
@@ -45,6 +58,7 @@ export const BoxMemberActivityViewer: React.FC<BoxMemberActivityViewerProps> = (
             id,
             reaction_type,
             created_at,
+            box_item_id,
             box_items!inner(box_id)
           `)
           .eq('user_id', userId)
@@ -57,7 +71,15 @@ export const BoxMemberActivityViewer: React.FC<BoxMemberActivityViewerProps> = (
           return;
         }
 
-        setInteractions(data || []);
+        if (!data || data.length === 0) {
+          setInteractions([]);
+          activityCache[cacheKey] = [];
+          return;
+        }
+
+        // Cache the fresh data and update UI
+        activityCache[cacheKey] = data;
+        setInteractions(data);
       } catch (err) {
         console.error(err);
       } finally {
@@ -77,50 +99,56 @@ export const BoxMemberActivityViewer: React.FC<BoxMemberActivityViewerProps> = (
     >
       <View style={styles.modalBackground}>
         <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-          
-          {/* Header - Looks like a Status Viewer Header */}
-        <View style={styles.header}>
-          <View style={styles.userInfo}>
-            <UserAvatar 
-              userId={userId}
-              fallbackUrl={userAvatarUrl}
-              name={userName}
-              size={40}
-            />
-            <View style={styles.nameContainer}>
-              <Text style={styles.userName}>{userName}</Text>
-              <Text style={styles.subtitle}>Recent Activity in Box</Text>
-            </View>
-          </View>
-          
-          <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-            <X size={28} color="#FFF" />
-          </TouchableOpacity>
-        </View>
 
-        {/* Body - List of Interactions */}
-        {loading ? (
-          <View style={styles.centerContent}>
-            <ActivityIndicator size="large" color="#FFC400" />
-          </View>
-        ) : interactions.length === 0 ? (
-          <View style={styles.centerContent}>
-            <Text style={styles.emptyText}>No recent activity</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={interactions}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContent}
-            renderItem={({ item }) => (
-              <InteractionItemWidget
-                interactionType={item.reaction_type}
-                timestamp={item.created_at}
-                details={`Performed a ${item.reaction_type} action`}
+          {/* Header - Looks like a Status Viewer Header */}
+          <View style={styles.header}>
+            <View style={styles.userInfo}>
+              <UserAvatar
+                userId={userId}
+                fallbackUrl={userAvatarUrl}
+                name={userName}
+                size={40}
               />
-            )}
-          />
-        )}
+              <View style={styles.nameContainer}>
+                <Text style={styles.userName}>{userName}</Text>
+                <Text style={styles.subtitle}>Recent Reactions</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+              <X size={28} color="#FFF" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Body - List of Interactions */}
+          {loading ? (
+            <ActivityShimmer />
+          ) : interactions.length === 0 ? (
+            <View style={styles.centerContent}>
+              <Text style={styles.emptyText}>No recent activity</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={interactions}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.listContent}
+              renderItem={({ item }) => {
+                let detailsText = `Performed a ${item.reaction_type} action`;
+                if (item.reaction_type === 'like') detailsText = 'Reacted with a like';
+                if (item.reaction_type === 'comment') detailsText = 'Reacted with a comment';
+                if (item.reaction_type === 'tag') detailsText = 'Reacted with a tag';
+                if (item.reaction_type === 'view') detailsText = 'Viewed some posts';
+
+                return (
+                  <InteractionItemWidget
+                    interactionType={item.reaction_type}
+                    timestamp={item.created_at}
+                    details={item.details || detailsText}
+                  />
+                );
+              }}
+            />
+          )}
         </SafeAreaView>
       </View>
     </Modal>

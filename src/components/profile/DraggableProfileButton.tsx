@@ -1,5 +1,5 @@
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
-import { useTheme } from '@react-navigation/native';
+import { colors } from '@/core/theme/colors';
 import { useRouter } from 'expo-router';
 import { User } from 'lucide-react-native';
 import React, { useRef, useState } from 'react';
@@ -12,11 +12,10 @@ import { supabase } from '@/core/supabase/supabaseConfig';
 export const DraggableProfileButton = ({
   initialX = 20,
   initialY = 80,
-  widgetSize = 50,
+  widgetSize = 64,
 }) => {
   const user = useAuthStore(s => s.user);
   const router = useRouter();
-  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
@@ -94,9 +93,14 @@ export const DraggableProfileButton = ({
             width: widgetSize,
             height: widgetSize,
             transform: [{ translateX: pan.x }, { translateY: pan.y }],
-            shadowColor: colors.primary,
-            elevation: hasImage ? 0 : 8,
-            backgroundColor: hasImage ? 'transparent' : colors.primary,
+            shadowColor: '#000',
+            elevation: 8,
+            backgroundColor: colors.primary,
+            borderWidth: 4,
+            borderTopColor: 'rgba(255, 255, 255, 0.6)',
+            borderLeftColor: 'rgba(255, 255, 255, 0.6)',
+            borderBottomColor: 'rgba(0, 0, 0, 0.4)',
+            borderRightColor: 'rgba(0, 0, 0, 0.4)',
           },
         ]}
         {...panResponder.panHandlers}
@@ -104,11 +108,11 @@ export const DraggableProfileButton = ({
         {hasImage ? (
           <Image
             source={{ uri: displayImageUrl }}
-            style={[styles.image, { width: widgetSize, height: widgetSize }]}
+            style={[styles.image, { width: widgetSize - 8, height: widgetSize - 8 }]}
             resizeMode="cover"
           />
         ) : (
-          <User color="#fff" size={widgetSize * 0.54} />
+          <User color="#fff" size={(widgetSize - 8) * 0.54} />
         )}
 
         {viewsCount > 0 && (

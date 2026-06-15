@@ -1,7 +1,9 @@
 import UserAvatar from '@/components/avatar/UserAvatar';
 import { BoxMemberInteractionBadge } from '@/components/widgets/BoxMemberInteractionBadge';
 import { Plus } from 'lucide-react-native';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ContributorShimmer } from '@/components/shimmers/WidgetShimmers';
+import { PaginationShimmer } from '@/components/shimmers/ActivityShimmer';
 
 export interface Contributor {
   id: string;
@@ -11,6 +13,9 @@ export interface Contributor {
 
 interface RecentContributorsWidgetProps {
   contributors: Contributor[];
+  isLoading?: boolean;
+  isPaginating?: boolean;
+  onLoadMore?: () => void;
   boxId?: string;
   label?: string;
   selectedMemberId?: string | null;
@@ -20,33 +25,54 @@ interface RecentContributorsWidgetProps {
 
 export const RecentContributorsWidget: React.FC<RecentContributorsWidgetProps> = ({
   contributors,
+  isLoading,
+  isPaginating,
+  onLoadMore,
   boxId,
   label = "Members",
   selectedMemberId,
   onSelectMember,
   onAddPress
 }) => {
-  if (!contributors) return null;
-
-  return (
-    <View style={styles.container}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
+  if (isLoading && contributors.length === 0) {
+    return (
+      <View style={styles.container}>
         <View style={styles.avatarWrapper}>
           <TouchableOpacity style={styles.addBtn} onPress={onAddPress}>
             <Plus size={24} color="#FFF" />
           </TouchableOpacity>
           <Text style={styles.name} numberOfLines={1}>Add</Text>
         </View>
+        <ContributorShimmer />
+      </View>
+    );
+  }
 
-        {contributors.map((user) => {
+  if (!contributors) return null;
+
+  return (
+    <View style={styles.container}>
+      <FlatList
+        horizontal
+        data={contributors}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        keyExtractor={(item) => item.id}
+        onEndReached={onLoadMore}
+        onEndReachedThreshold={0.5}
+        ListHeaderComponent={
+          <View style={styles.avatarWrapper}>
+            <TouchableOpacity style={styles.addBtn} onPress={onAddPress}>
+              <Plus size={24} color="#FFF" />
+            </TouchableOpacity>
+            <Text style={styles.name} numberOfLines={1}>Add</Text>
+          </View>
+        }
+        ListFooterComponent={isPaginating ? <PaginationShimmer /> : null}
+        renderItem={({ item: user }) => {
           const isSelected = selectedMemberId === user.id;
           return (
             <TouchableOpacity
-              key={user.id}
               style={[styles.avatarWrapper]}
               onPress={() => onSelectMember?.(isSelected ? null : user.id)}
             >
@@ -62,8 +88,8 @@ export const RecentContributorsWidget: React.FC<RecentContributorsWidgetProps> =
               <Text style={[styles.name, isSelected && styles.selectedName]} numberOfLines={1}>{user.name.split(' ')[0]}</Text>
             </TouchableOpacity>
           );
-        })}
-      </ScrollView>
+        }}
+      />
     </View>
   );
 };
@@ -74,6 +100,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.05)',
     marginBottom: 8,
+    flexDirection: 'row',
   },
   label: {
     color: 'rgba(255,255,255,0.6)',
@@ -90,7 +117,7 @@ const styles = StyleSheet.create({
   avatarWrapper: {
     alignItems: 'center',
     marginRight: 16,
-    width: 110, // Fixed width prevents jumpiness and keeps text centered
+    width: 110,
   },
   avatarRing: {
     padding: 2,
@@ -124,4 +151,3 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.05)',
   }
 });
-// Touch for Metro bundler

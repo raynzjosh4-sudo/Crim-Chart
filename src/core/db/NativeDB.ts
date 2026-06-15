@@ -444,6 +444,23 @@ export class NativeDB {
     }));
   }
 
+  static async getBox(boxId: string) {
+    const sql = `
+      SELECT * FROM ${TABLES.BOXES} 
+      WHERE id = ?
+    `;
+    const row = await dbService.querySingle<any>(sql, [boxId]);
+    if (!row) return null;
+    return {
+      ...row,
+      metadata: typeof row.metadata === 'string' ? JSON.parse(row.metadata || '{}') : row.metadata,
+      country_restrictions: typeof row.country_restrictions === 'string' ? JSON.parse(row.country_restrictions || '["Global"]') : row.country_restrictions,
+      is_public: !!row.is_public,
+      allow_submissions: !!row.allow_submissions,
+      visible_to_followed_users: !!row.visible_to_followed_users
+    };
+  }
+
   static async deleteBox(boxId: string) {
     const db = dbService.database;
     try {
@@ -565,5 +582,91 @@ export class NativeDB {
     } catch (err) {
       console.error('🚨 [NativeDB] deleteComment FAILED:', err);
     }
+  }
+
+  // ─── Box Offline Support ───────────────────────────────────────────────────
+
+  static async saveBoxMembers(boxId: string, members: any[]) {
+    const db = dbService.database;
+    try {
+      await db.runAsync(`DELETE FROM ${TABLES.BOX_MEMBERS} WHERE box_id = ?`, [boxId]);
+      for (const member of members) {
+        const sql = `
+          INSERT INTO ${TABLES.BOX_MEMBERS} (
+            box_id, user_id, name, avatar_url, interaction_type, last_interaction_at
+          ) VALUES (?, ?, ?, ?, ?, ?)
+        `;
+        const params = [
+          boxId,
+          member.id,
+          member.name || null,
+          member.avatarUrl || null,
+          member.interactionType || null,
+          member.lastInteractionAt || null
+        ];
+        await db.runAsync(sql, params);
+      }
+    } catch (error) {
+      console.error('🚨 [SQLite Error] saveBoxMembers FAILED:', error);
+    }
+  }
+
+  static async getBoxMembers(boxId: string) {
+    const sql = `
+      SELECT * FROM ${TABLES.BOX_MEMBERS} 
+      WHERE box_id = ?
+      ORDER BY last_interaction_at DESC
+    `;
+    const rows = await dbService.query<any>(sql, [boxId]);
+    return rows.map(row => ({
+      id: row.user_id,
+      name: row.name,
+      avatarUrl: row.avatar_url,
+      interactionType: row.interaction_type,
+      lastInteractionAt: row.last_interaction_at
+    }));
+  }
+
+  static async saveTrendingBoxItems(boxId: string, items: any[]) {
+    const db = dbService.database;
+    try {
+      await db.runAsync(`DELETE FROM ${TABLES.TRENDING_BOX_ITEMS} WHERE box_id = ?`, [boxId]);
+      for (const item of items) {
+        const sql = `
+          INSERT INTO ${TABLES.TRENDING_BOX_ITEMS} (
+            id, box_id, title, artist, thumbnail_url, audio_url, likes
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        `;
+        const params = [
+          item.id,
+          boxId,
+          item.title || null,
+          item.artist || null,
+          item.thumbnailUrl || null,
+          item.audioUrl || null,
+          item.likes || 0
+        ];
+        await db.runAsync(sql, params);
+      }
+    } catch (error) {
+      console.error('🚨 [SQLite Error] saveTrendingBoxItems FAILED:', error);
+    }
+  }
+
+  static async getTrendingBoxItems(boxId: string) {
+    const sql = `
+      SELECT * FROM ${TABLES.TRENDING_BOX_ITEMS} 
+      WHERE box_id = ?
+      ORDER BY likes DESC
+    `;
+    const rows = await dbService.query<any>(sql, [boxId]);
+    return rows.map(row => ({
+      id: row.id,
+      title: row.title,
+      artist: row.artist,
+      thumbnailUrl: row.thumbnail_url,
+      audioUrl: row.audio_url,
+      likes: row.likes
+    }));
   }
 }

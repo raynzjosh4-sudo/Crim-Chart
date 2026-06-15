@@ -1,37 +1,30 @@
+import { colors } from '@/core/theme/colors';
+import { Image as ExpoImage } from 'expo-image';
+import { User } from 'lucide-react-native';
 import React from 'react';
 import {
-  View,
   StyleSheet,
   TouchableOpacity,
+  View,
   ViewStyle,
 } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Path } from 'react-native-svg';
-import { User } from 'lucide-react-native';
-import { colors } from '@/core/theme/colors';
-import ThemeShimmer from '@/components/ui/ThemeShimmer';
 
 interface AppAvatarProps {
   imageUrl?: string | null;
-  url?: string | null;          // alias used by some callers
+  url?: string | null;
   size?: number;
-  // Status ring (new names)
   hasStatus?: boolean;
   isStatusRead?: boolean;
   statusSegmentCount?: number;
   ringColor?: string;
-  // Legacy prop aliases from Flutter port
   showStatusRing?: boolean;
   showActiveDot?: boolean;
   useHexagon?: boolean;
   onImageTap?: () => void;
-  // Online indicator
   isOnline?: boolean;
-  // Interactions
   onTap?: () => void;
   onLongPress?: () => void;
-  // Visuals
   fallbackIcon?: React.ReactNode;
   style?: ViewStyle;
 }
@@ -62,7 +55,7 @@ export default function AppAvatar({
   const totalSize = resolvedHasStatus ? size + RING_THICKNESS * 2 + RING_SPACING : size;
 
   const ringColorResolved = isStatusRead
-    ? 'rgba(150,150,150,0.5)'
+    ? 'rgba(150, 150, 150, 0.48)'
     : ringColor || colors.primary;
 
   const onlineDotSize = size * 0.28;
@@ -189,7 +182,7 @@ export default function AppAvatar({
             source={{ uri: resolvedUrl }}
             contentFit="cover"
             style={{ width: size, height: size, borderRadius: size / 2 }}
-            placeholder={'LGF5]+Yk^6#M@-5c,1Ex@@or[Q6.'}  
+            placeholder={'LGF5]+Yk^6#M@-5c,1Ex@@or[Q6.'}
           />
         ) : (
           Fallback

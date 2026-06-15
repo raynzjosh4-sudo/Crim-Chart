@@ -22,6 +22,11 @@ export const VisibilityBoxTrackerWrapper: React.FC<VisibilityBoxTrackerWrapperPr
   children 
 }) => {
   
+  // If box is not loaded yet, allow rendering so children can show loading states
+  if (!box) {
+    return <>{children}</>;
+  }
+
   // Rule 1: The creator of the box can ALWAYS see their box and upload to it.
   if (isCurrentUser) {
     return <>{children}</>;

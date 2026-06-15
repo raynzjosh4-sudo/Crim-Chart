@@ -1,8 +1,10 @@
 import { ChartToast } from '@/components/showcase/CrimChart_toast';
+import { PermissionDialog } from '@/components/ui/PermissionDialog';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
+import { DownloadCloud } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert } from 'react-native';
+import { Linking } from 'react-native';
 import Toast from 'react-native-toast-message';
 
 export interface MediaDownloadWrapperProps {
@@ -23,6 +25,7 @@ export const MediaDownloadWrapper: React.FC<MediaDownloadWrapperProps> = ({
   children,
 }) => {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
 
   const getFileExtension = (url: string, defaultExt: string) => {
     try {
@@ -84,10 +87,7 @@ export const MediaDownloadWrapper: React.FC<MediaDownloadWrapperProps> = ({
       // 1. Request Permissions
       const { status } = await MediaLibrary.requestPermissionsAsync(true);
       if (status !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'We need permission to save media to your gallery.'
-        );
+        setShowPermissionDialog(true);
         return;
       }
 
@@ -134,5 +134,23 @@ export const MediaDownloadWrapper: React.FC<MediaDownloadWrapperProps> = ({
     }
   };
 
-  return <>{children({ download: handleDownload, isDownloading })}</>;
+  const handleOpenSettings = () => {
+    setShowPermissionDialog(false);
+    Linking.openSettings();
+  };
+
+  return (
+    <>
+      {children({ download: handleDownload, isDownloading })}
+      <PermissionDialog
+        visible={showPermissionDialog}
+        title="Storage Permission Required"
+        description="We need permission to save media to your gallery. Please enable it in your device settings."
+        confirmText="Open Settings"
+        icon={<DownloadCloud size={24} color="#FFC400" />}
+        onCancel={() => setShowPermissionDialog(false)}
+        onConfirm={handleOpenSettings}
+      />
+    </>
+  );
 };

@@ -34,6 +34,8 @@ interface VideoFeedPageProps {
   showBack?: boolean;
   channelId?: string;
   initialTab?: VideoFeedTab;
+  onBack?: () => void;
+  disableInteractions?: boolean;
 }
 
 export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
@@ -42,6 +44,8 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
   showBack = true,
   channelId,
   initialTab = VideoFeedTab.explore,
+  onBack,
+  disableInteractions = false,
 }) => {
   const router = useRouter();
   const navigation = useNavigation();
@@ -193,6 +197,7 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
               isPlaying={index === currentIndex && !isCommentsOpen}
               isShrunken={isCommentsOpen && index === currentIndex}
               hideBottomInput={!showBack}
+              disableInteractions={disableInteractions}
               onComment={() => setIsCommentsOpen(true)}
               onShrunkenTap={() => setIsInputModalOpen(true)}
             />
@@ -215,6 +220,10 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
             <TouchableOpacity
               style={styles.backBtn}
               onPress={() => {
+                if (onBack) {
+                  onBack();
+                  return;
+                }
                 if (navigation.canGoBack()) {
                   navigation.goBack();
                 } else {

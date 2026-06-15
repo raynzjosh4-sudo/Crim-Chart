@@ -7,13 +7,15 @@ interface CommentActionProps {
   label: string;
   color?: string;
   onPress?: () => void;
+  size?: number;
+  direction?: 'row' | 'column';
 }
 
-export const CommentAction: React.FC<CommentActionProps> = ({ icon: Icon, label, color = '#FFF', onPress }) => {
+export const CommentAction: React.FC<CommentActionProps> = ({ icon: Icon, label, color = '#FFF', onPress, size = 38, direction = 'column' }) => {
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.8}>
-      <Icon size={38} color={color} />
-      <Text style={styles.count}>{label}</Text>
+    <TouchableOpacity style={[styles.container, { flexDirection: direction }]} onPress={onPress} activeOpacity={0.8}>
+      <Icon size={size} color={color} />
+      <Text style={[styles.count, direction === 'row' && styles.countRow]}>{label}</Text>
     </TouchableOpacity>
   );
 };
@@ -30,5 +32,9 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.54)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
+  },
+  countRow: {
+    marginLeft: 6,
+    textShadowColor: 'transparent',
   },
 });

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/core/supabase/supabaseConfig';
 import { BoxModel } from '../components/BoxCard';
+import { NativeDB } from '@/core/db/NativeDB';
 
 export function useBoxDetail(id: string) {
   const [box, setBox] = useState<BoxModel | null>(null);
@@ -12,8 +13,30 @@ export function useBoxDetail(id: string) {
 
     let isMounted = true;
 
+    const loadFromCache = async () => {
+      try {
+        const cached = await NativeDB.getBox(id);
+        if (isMounted && cached) {
+          setBox({
+            id: cached.id,
+            title: cached.title,
+            description: cached.description || '',
+            boxType: cached.box_type as any,
+            coverImageUrl: cached.metadata?.coverImageUrl,
+            itemCount: 0,
+            owner_id: cached.owner_id,
+            raw: cached,
+          } as any);
+          setIsLoading(false);
+        }
+      } catch (err) {
+        console.error('[useBoxDetail] Error loading cache:', err);
+      }
+    };
+
     const fetchBox = async () => {
-      setIsLoading(true);
+      // Don't set loading to true if we already have cache
+      if (!box) setIsLoading(true);
       setError(null);
       try {
         const { data, error } = await supabase
@@ -25,15 +48,17 @@ export function useBoxDetail(id: string) {
         if (error) throw error;
 
         if (isMounted && data) {
+          // Cache it locally
+          await NativeDB.upsertBoxes([data]);
+
           setBox({
             id: data.id,
             title: data.title,
-            description: data.description || '', // We might need to extend BoxModel to include description, but for detail page we need it
+            description: data.description || '',
             boxType: data.box_type as any,
             coverImageUrl: data.metadata?.coverImageUrl,
-            itemCount: 0, // Placeholder until items are loaded
+            itemCount: 0,
             owner_id: data.owner_id,
-            // Let's attach the raw data for detail pages
             raw: data,
           } as any);
         }
@@ -45,7 +70,7 @@ export function useBoxDetail(id: string) {
       }
     };
 
-    fetchBox();
+    loadFromCache().then(() => fetchBox());
 
     return () => {
       isMounted = false;

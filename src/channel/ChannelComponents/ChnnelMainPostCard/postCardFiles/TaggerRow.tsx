@@ -1,6 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
-import { User, Plus } from 'lucide-react-native';
+import { Plus, User } from 'lucide-react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 
 interface TaggerRowProps {
   taggerName?: string | null;

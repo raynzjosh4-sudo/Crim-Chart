@@ -1,42 +1,50 @@
 import { Image } from 'expo-image';
 import { Play } from 'lucide-react-native';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-
-interface TrendingTrack {
-  id: string;
-  title: string;
-  artist: string;
-  thumbnailUrl: string;
-  likes: number;
-}
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTrendingBoxItems, TrendingTrack } from '../../application/useTrendingBoxItems';
+import { TrendingShimmer } from '@/components/shimmers/WidgetShimmers';
+import { PaginationShimmer } from '@/components/shimmers/ActivityShimmer';
 
 interface TrendingInBoxWidgetProps {
-  items: TrendingTrack[];
-  onTrackPress?: (trackId: string) => void;
+  boxId: string;
+  onTrackPress?: (track: TrendingTrack) => void;
 }
 
-export const TrendingInBoxWidget = ({ items, onTrackPress }: TrendingInBoxWidgetProps) => {
-  // Sort items by likes descending, then pick top 5
-  const trendingItems = React.useMemo(() => {
-    return [...items].sort((a, b) => b.likes - a.likes).slice(0, 5);
-  }, [items]);
+export const TrendingInBoxWidget = ({ boxId, onTrackPress }: TrendingInBoxWidgetProps) => {
+  const { items, isLoading, isPaginating, loadMore } = useTrendingBoxItems(boxId);
 
-  if (trendingItems.length === 0) return null;
+  if (isLoading && items.length === 0) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Trending in this box</Text>
+        <TrendingShimmer />
+      </View>
+    );
+  }
+
+  if (items.length === 0) return null;
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Trending in this box</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {trendingItems.map((track, index) => (
+      <FlatList
+        horizontal
+        data={items}
+        keyExtractor={(item) => item.id}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={isPaginating ? <PaginationShimmer /> : null}
+        renderItem={({ item, index }) => (
           <TouchableOpacity 
-            key={track.id} 
             style={styles.card} 
             activeOpacity={0.8}
-            onPress={() => onTrackPress?.(track.id)}
+            onPress={() => onTrackPress?.(item)}
           >
             <View style={styles.imageContainer}>
-              <Image source={{ uri: track.thumbnailUrl }} style={styles.image} contentFit="cover" />
+              <Image source={{ uri: item.thumbnailUrl }} style={styles.image} contentFit="cover" />
               <View style={styles.rankBadge}>
                 <Text style={styles.rankText}>#{index + 1}</Text>
               </View>
@@ -44,11 +52,11 @@ export const TrendingInBoxWidget = ({ items, onTrackPress }: TrendingInBoxWidget
                 <Play fill="#FFF" color="#FFF" size={16} style={{ marginLeft: 2 }} />
               </View>
             </View>
-            <Text style={styles.trackTitle} numberOfLines={1}>{track.title}</Text>
-            <Text style={styles.trackArtist} numberOfLines={1}>{track.artist}</Text>
+            <Text style={styles.trackTitle} numberOfLines={1}>{item.title}</Text>
+            <Text style={styles.trackArtist} numberOfLines={1}>{item.artist}</Text>
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+        )}
+      />
     </View>
   );
 };
@@ -59,64 +67,60 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#FFF',
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 12,
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 16,
     paddingHorizontal: 16,
   },
   scrollContent: {
     paddingHorizontal: 16,
-    gap: 12,
   },
   card: {
-    width: 120,
+    width: 130,
+    marginRight: 16,
   },
   imageContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 12,
-    backgroundColor: '#1A1A1A',
+    width: 130,
+    height: 130,
+    borderRadius: 16,
     overflow: 'hidden',
-    marginBottom: 8,
+    position: 'relative',
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
   image: {
     width: '100%',
     height: '100%',
   },
-  rankBadge: {
-    position: 'absolute',
-    top: 6,
-    left: 6,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  rankText: {
-    color: '#FACD11',
-    fontSize: 10,
-    fontWeight: '800',
-  },
   playOverlay: {
-    position: 'absolute',
-    bottom: 6,
-    right: 6,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.3)',
     justifyContent: 'center',
     alignItems: 'center',
   },
+  rankBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    zIndex: 10,
+  },
+  rankText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '800',
+  },
   trackTitle: {
     color: '#FFF',
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 2,
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 8,
   },
   trackArtist: {
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(255,255,255,0.6)',
     fontSize: 12,
-    fontWeight: '500',
+    marginTop: 2,
   },
 });

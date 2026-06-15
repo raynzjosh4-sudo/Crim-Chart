@@ -10,6 +10,8 @@ export const TABLES = {
   PROFILE_MEDIA: 'profile_media',
   BOXES: 'boxes',
   BOX_ITEMS: 'box_items',
+  BOX_MEMBERS: 'box_members',
+  TRENDING_BOX_ITEMS: 'trending_box_items',
   COMMENTS: 'comments',
 };
 
@@ -217,5 +219,25 @@ export const SCHEMA = `
     author_name TEXT,
     author_avatar TEXT,
     UNIQUE(box_id, post_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS ${TABLES.BOX_MEMBERS} (
+    box_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    name TEXT,
+    avatar_url TEXT,
+    interaction_type TEXT,
+    last_interaction_at TEXT,
+    PRIMARY KEY (box_id, user_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS ${TABLES.TRENDING_BOX_ITEMS} (
+    id TEXT PRIMARY KEY,
+    box_id TEXT NOT NULL,
+    title TEXT,
+    artist TEXT,
+    thumbnail_url TEXT,
+    audio_url TEXT,
+    likes INTEGER
   );
 `;

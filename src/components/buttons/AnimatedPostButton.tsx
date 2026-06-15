@@ -64,7 +64,6 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   button: {
-    flex: 1,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
