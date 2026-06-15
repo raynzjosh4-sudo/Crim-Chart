@@ -5,7 +5,7 @@ import { useLocalVideos } from '@/features/boxes/application/useLocalVideos';
 import { dummyMovieBoxPost } from '@/features/boxes/data/dummyMovieBoxData';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Film, Search } from 'lucide-react-native';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -23,6 +23,9 @@ import { CreateShortVideoPage } from '@/components/short/CreateShortVideoPage';
 import { PhoneMusicWidget } from '../music_posting/widgets/PhoneMusicWidget';
 import { MovieListTile } from './tiles/MovieListTile';
 import { VideoFeedPage } from '@/video/pages/VideoFeedPage';
+import { useVideoFeedStore } from './store/useVideoFeedStore';
+import { supabase } from '@/core/supabase/supabaseConfig';
+import { useInteractionStore } from '@/core/store/useInteractionStore';
 
 export const MoviePostingPage = ({ boxId }: { boxId: string }) => {
   const router = useRouter();
@@ -32,8 +35,10 @@ export const MoviePostingPage = ({ boxId }: { boxId: string }) => {
   const [currentlyPlayingId, setCurrentlyPlayingId] = useState<string | null>(null);
   const [selectedVideoParams, setSelectedVideoParams] = useState<any>(null);
 
-  // Using dummy data as requested
-  const globalVideos = dummyMovieBoxPost.videos;
+  const tags = useInteractionStore(state => state.tags);
+
+  const { globalVideos, isLoadingGlobal, hasMoreGlobal, isInitialLoad, loadGlobalVideos } = useVideoFeedStore();
+
   const {
     localVideos,
     loadLocalVideo,
@@ -46,8 +51,80 @@ export const MoviePostingPage = ({ boxId }: { boxId: string }) => {
     selectedAlbum,
     setSelectedAlbum
   } = useLocalVideos();
-  const tracks = [...globalVideos, ...localVideos];
+  const tracks = [...globalVideos, ...localVideos.map(v => ({
+    id: v.id,
+    title: v.title || 'Local Video',
+    director: 'You',
+    thumbnailUrl: v.thumbnailUrl || '',
+    videoUrl: v.videoUrl,
+    isShort: true, // Local videos from camera roll can be played as shorts
+    description: v.title || '',
+    duration: v.duration,
+    likes: 0,
+    dislikes: 0,
+    commentsCount: 0,
+    viewsCount: 0,
+    addedBy: {
+      id: 'local_user',
+      name: 'You',
+      avatarUrl: ''
+    }
+  }))];
+
   const [expandedWidgets, setExpandedWidgets] = useState<number[]>([]);
+
+  // 1. Fetch existing tags for this box
+  useEffect(() => {
+    const fetchExistingTags = async () => {
+      if (!boxId) return;
+      try {
+        const { data, error } = await supabase
+          .from('box_items')
+          .select('post_id')
+          .eq('box_id', boxId);
+
+        if (!error && data) {
+          const newTags = new Set(useInteractionStore.getState().tags[boxId] || []);
+          data.forEach(item => newTags.add(item.post_id));
+          useInteractionStore.setState(prev => ({
+            tags: {
+              ...prev.tags,
+              [boxId]: Array.from(newTags)
+            }
+          }));
+        }
+        setSearchQuery('');
+      } catch (e: any) {
+        console.error("[MoviePostingPage] Failed to toggle tag for box (Exception):", e);
+      }
+    };
+    fetchExistingTags();
+  }, [boxId]);
+
+  useEffect(() => {
+    if (boxId) {
+      useVideoFeedStore.getState().resetFeed();
+      loadGlobalVideos(boxId);
+    }
+  }, [boxId]);
+
+  const handleToggleTag = async (track: any) => {
+    if (!boxId || !track?.id) return;
+    
+    useInteractionStore.getState().toggleTag(track.id, boxId);
+
+    try {
+      const { data, error } = await supabase.rpc('tag_post_to_box', {
+        p_post_id: track.id,
+        p_box_id: boxId
+      });
+
+      if (error) throw error;
+    } catch (e: any) {
+      console.error("[MoviePostingPage] Failed to toggle tag for box:", e);
+      useInteractionStore.getState().toggleTag(track.id, boxId); // Revert UI on error
+    }
+  };
 
   const filteredTracks = tracks.filter(t => {
     const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -60,16 +137,9 @@ export const MoviePostingPage = ({ boxId }: { boxId: string }) => {
     viewAreaCoveragePercentThreshold: 50
   }).current;
 
-  // Ref that always reflects the current modal state.
-  // The onViewableItemsChanged callback is created once (ref), so it can't
-  // read React state directly — we use a ref to bridge that gap.
   const isModalOpenRef = useRef(false);
 
   const onViewableItemsChanged = React.useRef(({ viewableItems }: any) => {
-    // When the player modal is open, stop updating currentlyPlayingId.
-    // Without this guard, the background FlatList fires viewability events
-    // behind the Modal, causing MoviePostingPage to re-render and passing
-    // a new renderItem reference to the modal — making it jump/scroll.
     if (isModalOpenRef.current) return;
     const visibleItem = viewableItems.find((v: any) => v.isViewable && v.item);
     if (visibleItem) {
@@ -79,27 +149,21 @@ export const MoviePostingPage = ({ boxId }: { boxId: string }) => {
     }
   }).current;
 
-  // Stable renderItem for the modal feed. useCallback with empty deps so the
-  // FlatList inside LongVideoPlayerLayout never sees a new renderItem reference
-  // and never triggers a visual jump.
   const renderModalItem = useCallback(({ item }: { item: any }) => (
     <MovieListTile
       video={item}
-      onAddPress={() => console.log('Add pressed for', item.id)}
+      onAddPress={() => handleToggleTag(item)}
       onVideoPress={(params) => setSelectedVideoParams(params)}
-      isAdded={false}
+      isAdded={tags[boxId]?.includes(item.id)}
       disableVideoPlayer
       isCurrentlyPlaying={false}
     />
-  ), []);
+  ), [tags, boxId]);
 
-  // Keep the ref in sync with state (runs synchronously before render children)
   isModalOpenRef.current = selectedVideoParams !== null;
-
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <ArrowLeft size={24} color="#FFF" />
@@ -116,7 +180,6 @@ export const MoviePostingPage = ({ boxId }: { boxId: string }) => {
         </View>
       </View>
 
-      {/* Filter Options & Create Button */}
       <View style={styles.filterContainer}>
         <TouchableOpacity
           style={styles.filterToggle}
@@ -132,10 +195,9 @@ export const MoviePostingPage = ({ boxId }: { boxId: string }) => {
         <CreateShortVideoButton onPress={() => setIsCreateShortOpen(true)} />
       </View>
 
-      {/* Media Chips for Folders */}
       {showLocalOnly && (
         <MediaChips
-          activeTabIndex={1} // 1 = videos
+          activeTabIndex={1}
           selectedAlbum={selectedAlbum}
           onAlbumSelected={(albumId) => {
             setSelectedAlbum(albumId);
@@ -145,58 +207,68 @@ export const MoviePostingPage = ({ boxId }: { boxId: string }) => {
         />
       )}
 
-      {/* Results List */}
-      <FlatList
-        data={filteredTracks}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.listContent}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig}
-        renderItem={({ item, index }) => (
-          <View>
-            <MovieListTile
-              video={item}
-              onAddPress={() => console.log('Add pressed for', item.id)}
-              onVideoPress={(params) => {
-                setSelectedVideoParams(params);
-              }}
-              isAdded={false}
-              isCurrentlyPlaying={selectedVideoParams ? false : item.id === currentlyPlayingId}
-            />
-            {((index + 1) % 10 === 0 || (index === filteredTracks.length - 1 && filteredTracks.length < 10)) && hasMoreLocalVideos && (
-              <View style={{ marginBottom: 24 }}>
-                <PhoneMusicWidget
-                  isExpanded={expandedWidgets.includes(index)}
-                  onPress={() => {
-                    if (!expandedWidgets.includes(index)) {
-                      setExpandedWidgets([...expandedWidgets, index]);
-                      loadLocalVideo();
-                    }
-                  }}
-                />
-              </View>
-            )}
-          </View>
-        )}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No videos found</Text>
-            {hasMoreLocalVideos && (
-              <View style={{ marginTop: 24, width: '100%' }}>
-                <PhoneMusicWidget
-                  isExpanded={expandedWidgets.includes(-2)}
-                  onPress={() => {
-                    if (!expandedWidgets.includes(-2)) {
-                      setExpandedWidgets([...expandedWidgets, -2]);
-                      loadLocalVideo();
-                    }
-                  }}
-                />
-              </View>
-            )}
-          </View>
-        }
-      />
+      {isInitialLoad && tracks.length === 0 ? (
+        <ActivityIndicator style={{ marginTop: 40 }} size="large" color="#E50914" />
+      ) : (
+        <FlatList
+          data={filteredTracks}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.listContent}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
+          renderItem={({ item, index }) => (
+            <View>
+              <MovieListTile
+                video={item}
+                onAddPress={() => handleToggleTag(item)}
+                onVideoPress={(params) => {
+                  setSelectedVideoParams(params);
+                }}
+                isAdded={tags[boxId]?.includes(item.id)}
+                isCurrentlyPlaying={selectedVideoParams ? false : item.id === currentlyPlayingId}
+              />
+              {((index + 1) % 10 === 0 || (index === filteredTracks.length - 1 && filteredTracks.length < 10)) && hasMoreLocalVideos && (
+                <View style={{ marginBottom: 24 }}>
+                  <PhoneMusicWidget
+                    isExpanded={expandedWidgets.includes(index)}
+                    onPress={() => {
+                      if (!expandedWidgets.includes(index)) {
+                        setExpandedWidgets([...expandedWidgets, index]);
+                        loadLocalVideo();
+                      }
+                    }}
+                  />
+                </View>
+              )}
+            </View>
+          )}
+          onEndReached={() => {
+            if (!showLocalOnly && hasMoreGlobal) {
+              loadGlobalVideos(boxId);
+            }
+          }}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={() => isLoadingGlobal ? <ActivityIndicator size="small" color="#FFF" style={{ margin: 20 }} /> : null}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No videos found</Text>
+              {hasMoreLocalVideos && (
+                <View style={{ marginTop: 24, width: '100%' }}>
+                  <PhoneMusicWidget
+                    isExpanded={expandedWidgets.includes(-2)}
+                    onPress={() => {
+                      if (!expandedWidgets.includes(-2)) {
+                        setExpandedWidgets([...expandedWidgets, -2]);
+                        loadLocalVideo();
+                      }
+                    }}
+                  />
+                </View>
+              )}
+            </View>
+          }
+        />
+      )}
 
       {selectedVideoParams && (
         <React.Fragment key={selectedVideoParams.videoUrl}>
