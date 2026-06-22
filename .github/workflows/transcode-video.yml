@@ -56,9 +56,23 @@ jobs:
         run: |
           DEST="s3://crimchart-media-bucket/processed/$USER_ID/videos/$CLEAN_NAME/hls"
           echo "Uploading HLS files to: $DEST"
+          
+          # Upload .m3u8 playlist with correct content type
           aws s3 sync \
             --endpoint-url https://${{ secrets.CF_ACCOUNT_ID }}.r2.cloudflarestorage.com \
-            --content-type-from-file \
+            --exclude "*" \
+            --include "*.m3u8" \
+            --content-type "application/vnd.apple.mpegurl" \
             ./hls_output/ \
             $DEST/
+          
+          # Upload .ts segments with correct content type
+          aws s3 sync \
+            --endpoint-url https://${{ secrets.CF_ACCOUNT_ID }}.r2.cloudflarestorage.com \
+            --exclude "*" \
+            --include "*.ts" \
+            --content-type "video/mp2t" \
+            ./hls_output/ \
+            $DEST/
+          
           echo "Upload complete!"
