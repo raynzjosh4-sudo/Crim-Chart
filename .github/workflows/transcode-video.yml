@@ -1,0 +1,64 @@
+name: Transcode Video to HLS
+
+on:
+  repository_dispatch:
+    types: [transcode-video]
+
+jobs:
+  transcode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Install FFmpeg
+        run: sudo apt-get install -y ffmpeg
+
+      - name: Download raw video from R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.CF_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.CF_SECRET_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          VIDEO_FILENAME="${{ github.event.client_payload.videoFilename }}"
+          USER_ID="${{ github.event.client_payload.userId }}"
+          echo "VIDEO_FILENAME=$VIDEO_FILENAME" >> $GITHUB_ENV
+          echo "USER_ID=$USER_ID" >> $GITHUB_ENV
+          echo "Downloading raw video: $VIDEO_FILENAME"
+          aws s3 cp \
+            --endpoint-url https://${{ secrets.CF_ACCOUNT_ID }}.r2.cloudflarestorage.com \
+            s3://crimchart-media-bucket/raw/$VIDEO_FILENAME \
+            ./input.mp4
+
+      - name: Transcode to HLS with FFmpeg
+        run: |
+          mkdir -p ./hls_output
+          CLEAN_NAME="${VIDEO_FILENAME%.mp4}"
+          ffmpeg -i ./input.mp4 \
+            -c:v libx264 \
+            -c:a aac \
+            -b:v 1500k \
+            -b:a 128k \
+            -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" \
+            -f hls \
+            -hls_time 4 \
+            -hls_list_size 0 \
+            -hls_segment_filename "./hls_output/segment%03d.ts" \
+            ./hls_output/playlist.m3u8
+          echo "CLEAN_NAME=$CLEAN_NAME" >> $GITHUB_ENV
+          echo "FFmpeg done. Files:"
+          ls -la ./hls_output/
+
+      - name: Upload HLS files to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.CF_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.CF_SECRET_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          DEST="s3://crimchart-media-bucket/processed/$USER_ID/videos/$CLEAN_NAME/hls"
+          echo "Uploading HLS files to: $DEST"
+          aws s3 sync \
+            --endpoint-url https://${{ secrets.CF_ACCOUNT_ID }}.r2.cloudflarestorage.com \
+            --content-type-from-file \
+            ./hls_output/ \
+            $DEST/
+          echo "Upload complete!"
