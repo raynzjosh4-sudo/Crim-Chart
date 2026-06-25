@@ -17,14 +17,14 @@ export function useAppPresence() {
         nextAppState === 'active'
       ) {
         // App has come to the foreground!
-        console.log('[Presence] App foregrounded. Setting is_online = true');
+        // console.log('[Presence] App foregrounded. Setting is_online = true');
         await AuthRemoteSource.updateOnlineStatus(true);
       } else if (
         appState.current === 'active' &&
         nextAppState.match(/inactive|background/)
       ) {
         // App has gone to the background!
-        console.log('[Presence] App backgrounded. Setting is_online = false');
+        // console.log('[Presence] App backgrounded. Setting is_online = false');
         await AuthRemoteSource.updateOnlineStatus(false);
       }
 

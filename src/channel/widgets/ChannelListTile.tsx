@@ -52,7 +52,7 @@ export default function ChannelListTile({ channel, onPress, onAvatarTap, showFol
 }
 
 const styles = StyleSheet.create({
-  container: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10 },
+  container: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 4 },
   contentTouchable: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   info: { flex: 1, marginLeft: 13, justifyContent: 'center' },
   actionContainer: { marginLeft: 12, justifyContent: 'center' },

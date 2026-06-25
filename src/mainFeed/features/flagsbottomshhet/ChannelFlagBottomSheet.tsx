@@ -24,7 +24,7 @@ export const ChannelFlagBottomSheet: React.FC<ChannelFlagBottomSheetProps> = ({ 
           <Text style={styles.title}>CHALLENGE RANTop</Text>
           <Text style={styles.subtitle}>Think you or someone else belongs here? Flag to compete!</Text>
         </View>
-        <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+        <TouchableOpacity activeOpacity={1} onPress={onClose} style={styles.closeBtn}>
           <X color="rgba(255,255,255,0.54)" size={24} />
         </TouchableOpacity>
       </View>

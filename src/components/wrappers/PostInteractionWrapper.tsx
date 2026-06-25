@@ -24,6 +24,11 @@ interface PostInteractionWrapperProps {
    * If provided, the wrapper will track if this post is tagged to this specific box.
    */
   boxId?: string;
+
+  /**
+   * Identifies if the post is from 'posts' or 'channel_posts' for DB routing.
+   */
+  sourceTable?: string;
   
   /**
    * Initial tag state for the specific box.
@@ -43,6 +48,7 @@ export const PostInteractionWrapper: React.FC<PostInteractionWrapperProps> = ({
   initialDownloadsCount = 0,
   initialIsLiked = false,
   boxId,
+  sourceTable,
   initialIsTagged = false,
   children
 }) => {
@@ -67,11 +73,11 @@ export const PostInteractionWrapper: React.FC<PostInteractionWrapperProps> = ({
         
         // Delay slightly to ensure it's actually an intentional view
         setTimeout(() => {
-          store.incrementView(postId, boxId);
+          store.incrementView(postId, boxId, sourceTable);
         }, 1000);
       }
     }
-  }, [postId, boxId, store]);
+  }, [postId, boxId, sourceTable, store]);
 
   // 2. Select the current state from the store based on context key
   const contextKey = boxId ? `${boxId}_${postId}` : postId;

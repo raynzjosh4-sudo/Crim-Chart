@@ -79,7 +79,7 @@ export const ProfileMiniSheet: React.FC<ProfileMiniSheetProps> = ({
 
               {/* Action Buttons */}
               <View style={styles.actionsContainer}>
-                <TouchableOpacity style={styles.followButton}>
+                <TouchableOpacity activeOpacity={1} style={styles.followButton}>
                   <Text style={styles.followButtonText}>Follow</Text>
                 </TouchableOpacity>
                 <View style={styles.followersContainer}>
@@ -93,7 +93,7 @@ export const ProfileMiniSheet: React.FC<ProfileMiniSheetProps> = ({
                 <Text style={styles.momentsTitle}>Moments</Text>
                 <View style={styles.momentsGrid}>
                   {MOCK_MOMENTS.map((url, index) => (
-                    <TouchableOpacity
+                    <TouchableOpacity activeOpacity={1}
                       key={index}
                       style={[styles.momentItem, { height: index === 0 ? 200 : 120 }]}
                       onPress={() => setSelectedMomentIndex(index)}

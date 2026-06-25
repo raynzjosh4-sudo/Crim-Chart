@@ -73,7 +73,7 @@ export default function SportsBoxDetailPage() {
         onSelectMember={setSelectedMember}
       />
 
-      <TouchableOpacity style={styles.addHighlightBtn}>
+      <TouchableOpacity activeOpacity={1} style={styles.addHighlightBtn}>
         <View style={styles.addHighlightIcon}>
           <Text style={{color: '#000', fontWeight: '900', fontSize: 16}}>+</Text>
         </View>
@@ -86,7 +86,7 @@ export default function SportsBoxDetailPage() {
     <View style={styles.container}>
       {/* Top Nav Bar */}
       <View style={styles.appBar}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity activeOpacity={1} onPress={() => router.back()} style={styles.backBtn}>
           <ChevronLeft color="#FFF" size={28} />
         </TouchableOpacity>
         <Text style={styles.appBarTitle}>Live Sports Box</Text>

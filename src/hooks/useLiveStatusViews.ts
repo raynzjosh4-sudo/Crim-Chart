@@ -31,24 +31,35 @@ export function useLiveStatusViews(userId?: string) {
       }
 
       // 2. Subscribe to realtime updates for this user
-      channel = supabase
-        .channel(`profile-views-${userId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'profiles',
-            filter: `id=eq.${userId}`,
-          },
-          (payload) => {
-            if (isMounted && payload.new) {
-              const newCount = payload.new.active_status_views_count;
-              setViewsCount(newCount || 0);
-            }
+      // Only subscribe if component is still mounted after the async await above
+      if (isMounted) {
+        const channelName = `profile-views-${userId}`;
+        // Ensure any leaked channel with the same name is removed first
+        supabase.getChannels().forEach((c) => {
+          if (c.topic === `realtime:${channelName}`) {
+            supabase.removeChannel(c);
           }
-        )
-        .subscribe();
+        });
+
+        channel = supabase
+          .channel(channelName)
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'profiles',
+              filter: `id=eq.${userId}`,
+            },
+            (payload) => {
+              if (isMounted && payload.new) {
+                const newCount = payload.new.active_status_views_count;
+                setViewsCount(newCount || 0);
+              }
+            }
+          )
+          .subscribe();
+      }
     };
 
     init();

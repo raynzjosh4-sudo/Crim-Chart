@@ -102,14 +102,14 @@ export const StatusViewsMenuDialog: React.FC<StatusViewsMenuDialogProps> = ({
             height: menuHeight,
             width: menuWidth,
           }]}>
-            <TouchableOpacity style={styles.menuItem} onPress={onViewersPress}>
+            <TouchableOpacity activeOpacity={1} style={styles.menuItem} onPress={onViewersPress}>
               <Eye size={18} color="#FFD700" style={styles.icon} />
               <Text style={[styles.menuText, { color: '#FFD700' }]}>Viewers</Text>
             </TouchableOpacity>
             
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
             
-            <TouchableOpacity style={styles.menuItem} onPress={onProfilePress}>
+            <TouchableOpacity activeOpacity={1} style={styles.menuItem} onPress={onProfilePress}>
               <User size={18} color="#00E5FF" style={styles.icon} />
               <Text style={[styles.menuText, { color: '#00E5FF' }]}>Profile</Text>
             </TouchableOpacity>

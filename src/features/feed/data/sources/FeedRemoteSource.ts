@@ -182,4 +182,32 @@ export class FeedRemoteSource {
       throw new Error(`Failed to get video feed: ${e}`);
     }
   }
+
+  static async getStoreFeed(page = 1, limit = 10): Promise<PostEntity[]> {
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit - 1;
+
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*, author:profiles!posts_author_id_fkey(*)')
+        .eq('privacy', 'public')
+        .eq('type', 'store_item')
+        .order('created_at', { ascending: false })
+        .range(startIndex, endIndex);
+
+      if (error) throw error;
+      if (!data) return [];
+
+      const posts = data.map(row => PostEntity.fromMap(row));
+      
+      // Fire-and-forget sync of likes and tags
+      useInteractionStore.getState().syncPostInteractions(posts.map(p => p.id));
+
+      return posts;
+    } catch (e) {
+      console.error('🚨 [FeedRemoteSource] getStoreFeed FAILED:', e);
+      throw new Error(`Failed to get store feed: ${e}`);
+    }
+  }
 }

@@ -265,7 +265,7 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
                 <Play size={20} color="#FFF" fill="#FFF" />
               </View>
             )}
-            <TouchableOpacity
+            <TouchableOpacity activeOpacity={1}
               style={styles.removeThumbBtn}
               onPress={() => removePendingMedia(i)}
               hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
@@ -292,7 +292,7 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
           <Text style={styles.recordingTime}>{formatTime(recordSeconds)}</Text>
           <View style={{ flex: 1 }} />
           <Text style={styles.recordingLabel}>Recording...</Text>
-          <TouchableOpacity onPress={handleCancelRecording} style={styles.trashBtn}>
+          <TouchableOpacity activeOpacity={1} onPress={handleCancelRecording} style={styles.trashBtn}>
             <Trash2 size={16} color="#FF5252" />
           </TouchableOpacity>
         </View>
@@ -302,10 +302,10 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
     if (recordState === RecordState.reviewing) {
       return (
         <View style={styles.reviewingContainer}>
-          <TouchableOpacity onPress={handleCancelRecording} style={styles.trashBtn}>
+          <TouchableOpacity activeOpacity={1} onPress={handleCancelRecording} style={styles.trashBtn}>
             <Trash2 size={16} color="#FF5252" />
           </TouchableOpacity>
-          <TouchableOpacity style={{ paddingHorizontal: 12 }} onPress={toggleReviewPlay}>
+          <TouchableOpacity activeOpacity={1} style={{ paddingHorizontal: 12 }} onPress={toggleReviewPlay}>
             {isPlayingReview ? <Pause size={20} color="#FFF" /> : <Play size={20} color="#FFF" fill="#FFF" />}
           </TouchableOpacity>
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
@@ -330,7 +330,7 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
           onChangeText={handleTextChange}
           multiline
         />
-        <TouchableOpacity onPress={onEmojiPressed} style={styles.emojiBtn}>
+        <TouchableOpacity activeOpacity={1} onPress={onEmojiPressed} style={styles.emojiBtn}>
           <Smile size={20} color="rgba(255,255,255,0.4)" />
         </TouchableOpacity>
       </View>
@@ -353,7 +353,7 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
 
       <View style={styles.container}>
         {/* Camera/Media Button */}
-        <TouchableOpacity onPress={handlePickMedia} style={styles.cameraBtn}>
+        <TouchableOpacity activeOpacity={1} onPress={handlePickMedia} style={styles.cameraBtn}>
           <Animated.View
             style={{
               transform: [
@@ -390,7 +390,7 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
         <View style={{ width: 12 }} />
 
         {/* Action Button (Mic/Send/Stop) */}
-        <TouchableOpacity
+        <TouchableOpacity activeOpacity={1}
           onPress={handleSubmit}
           style={[styles.actionBtn, { backgroundColor: buttonColor }]}
         >

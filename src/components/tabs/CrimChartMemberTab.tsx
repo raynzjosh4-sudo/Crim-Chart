@@ -92,7 +92,7 @@ export default function CrimChartMemberTab() {
       <View style={styles.container}>
         {/* Back Header */}
         <View style={styles.memberHeader}>
-          <TouchableOpacity
+          <TouchableOpacity activeOpacity={1}
             onPress={() => {
               setSelectedMember(null);
               setSelectedDataIndices([]);
@@ -127,7 +127,7 @@ export default function CrimChartMemberTab() {
       keyExtractor={item => item.id}
       contentContainerStyle={styles.list}
       renderItem={({ item }) => (
-        <TouchableOpacity
+        <TouchableOpacity activeOpacity={1}
           style={styles.memberRow}
           onPress={() => {
             setSelectedMember(item);

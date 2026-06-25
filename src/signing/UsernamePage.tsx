@@ -54,7 +54,11 @@ export default function UsernamePage() {
         setIsLoading(false);
 
         if (available) {
-            router.push('/password' as any);
+            if (authStore.pendingGoogleOnboarding) {
+                router.push('/birthday' as any);
+            } else {
+                router.push('/password' as any);
+            }
         } else {
             ChartToast.showError(null, {
                 title: tr('error_title'),
@@ -100,7 +104,7 @@ export default function UsernamePage() {
 
                     <View style={styles.spacer} />
 
-                    <TouchableOpacity 
+                    <TouchableOpacity activeOpacity={1} 
                         style={[styles.nextButton, { backgroundColor: colors.primary }]}
                         onPress={handleNext}
                         disabled={isLoading}

@@ -1,14 +1,13 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
-import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Sun, Moon } from 'lucide-react-native';
-import { MaterialIcons } from '@expo/vector-icons';
-import { useThemeSettings } from '@/core/theme/theme_provider';
+import { ChartToast } from '@/components/showcase/CrimChart_toast';
 import { useLocalization } from '@/core/localization/LocalizationProvider';
 import { colors } from '@/core/theme/colors';
-import { ChartToast } from '@/components/showcase/CrimChart_toast';
+import { useThemeSettings } from '@/core/theme/theme_provider';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { Moon, Sun } from 'lucide-react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LandingPage() {
     const router = useRouter();
@@ -19,15 +18,27 @@ export default function LandingPage() {
     const isDark = themeMode === 'dark';
 
     const handleGoogleLogin = async () => {
-        // Simple mock since loginWithGoogle isn't in our useAuthStore mock yet
         try {
-            await new Promise(resolve => setTimeout(resolve, 800));
-            // success
-            router.push('/(tabs)' as any);
-        } catch (error) {
+            const success = await authStore.loginWithGoogle();
+            if (success) {
+                if (useAuthStore.getState().pendingGoogleOnboarding) {
+                    router.push('/username' as any);
+                } else {
+                    router.push('/(tabs)' as any);
+                }
+            } else {
+                const errorMsg = useAuthStore.getState().errorMessage;
+                console.error('Google Login Error (authStore):', errorMsg);
+                ChartToast.showError(null, {
+                    title: tr('error_title') || 'Error',
+                    message: errorMsg || tr('google_error_reading') || 'Google login failed',
+                });
+            }
+        } catch (error: any) {
+            console.error('Google Login Error (catch):', error);
             ChartToast.showError(null, {
-                title: tr('error_title'),
-                message: tr('google_error_reading'),
+                title: tr('error_title') || 'Error',
+                message: error.message || tr('google_error_reading') || 'Google login failed',
             });
         }
     };
@@ -40,7 +51,7 @@ export default function LandingPage() {
                     <View style={styles.topBar}>
                         <View style={styles.spacer} />
                         <View style={styles.topRightActions}>
-                            <TouchableOpacity 
+                            <TouchableOpacity activeOpacity={1}
                                 onPress={() => updateThemeMode(isDark ? 'light' : 'dark')}
                                 style={styles.iconButton}
                             >
@@ -50,7 +61,7 @@ export default function LandingPage() {
                                     <Moon color="rgba(255, 255, 255, 0.7)" size={20} />
                                 )}
                             </TouchableOpacity>
-                            <TouchableOpacity 
+                            <TouchableOpacity activeOpacity={1}
                                 onPress={() => router.push('/accountSelector' as any)}
                             >
                                 <Text style={[styles.loginText, { color: colors.primary }]}>
@@ -64,9 +75,9 @@ export default function LandingPage() {
 
                     {/* Logo */}
                     <View style={styles.logoContainer}>
-                        <Image 
+                        <Image
                             // TODO: Replace with require('@/assets/icons/playstore.png') when added
-                            source={require('../../../assets/images/react-logo.png')} 
+                            source={require('../../../assets/images/react-logo.png')}
                             style={styles.logo}
                             resizeMode="contain"
                         />
@@ -75,17 +86,17 @@ export default function LandingPage() {
                     <View style={styles.space32} />
 
                     {/* Language Selector */}
-                    <TouchableOpacity 
+                    <TouchableOpacity activeOpacity={1}
                         style={styles.languageSelector}
                         onPress={() => router.push('/language' as any)}
                     >
                         <Text style={[styles.languageText, { color: 'rgba(255, 255, 255, 0.5)' }]}>
                             {tr('language')}
                         </Text>
-                        <MaterialIcons 
-                            name="keyboard-arrow-down" 
-                            size={20} 
-                            color="rgba(255, 255, 255, 0.5)" 
+                        <MaterialIcons
+                            name="keyboard-arrow-down"
+                            size={20}
+                            color="rgba(255, 255, 255, 0.5)"
                         />
                     </TouchableOpacity>
 
@@ -93,10 +104,9 @@ export default function LandingPage() {
 
                     {/* Main Buttons */}
                     <View style={styles.buttonContainer}>
-                        <TouchableOpacity 
+                        <TouchableOpacity activeOpacity={0.8}
                             style={[styles.signupButton, { backgroundColor: colors.primary }]}
                             onPress={() => router.push('/signupCountry' as any)}
-                            activeOpacity={0.8}
                         >
                             <Text style={[styles.signupText, { color: colors.surface }]}>
                                 {tr('sign_up')}
@@ -119,14 +129,14 @@ export default function LandingPage() {
 
                     {/* Try with Google */}
                     <View style={styles.googleButtonContainer}>
-                        <TouchableOpacity 
+                        <TouchableOpacity activeOpacity={1}
                             style={styles.googleButton}
                             onPress={handleGoogleLogin}
                         >
-                            <Image 
-                                source={{ uri: 'https://www.gstatic.com/images/branding/product/2x/googleg_96dp.png' }} 
-                                style={styles.googleIcon} 
-                                resizeMode="contain" 
+                            <Image
+                                source={{ uri: 'https://www.gstatic.com/images/branding/product/2x/googleg_96dp.png' }}
+                                style={styles.googleIcon}
+                                resizeMode="contain"
                             />
                             <Text style={[styles.googleText, { color: colors.text }]}>
                                 {tr('try_with_google')}

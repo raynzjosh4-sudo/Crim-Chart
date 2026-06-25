@@ -33,12 +33,14 @@ export const useCreateStatus = () => {
         caption: params.caption || null,
         image_urls: params.imageUrls || [],
         video_url: params.videoUrl || null,
+        video_urls: params.videoUrl ? [params.videoUrl] : [],
         audio_url: params.audioUrl || null,
         is_video: params.isVideo || false,
         is_audio: params.isAudio || false,
         privacy: params.privacy || 'public',
         allow_comments: params.allowComments ?? true,
         thumbnail_url: params.thumbnailUrl || null,
+        thumbnail_urls: params.thumbnailUrl ? [params.thumbnailUrl] : [],
         expires_at: params.expiresAt ? params.expiresAt.toISOString() : null,
       });
 

@@ -80,7 +80,7 @@ const ChartToastWidget = ({ title, message, type, onClose }: any) => {
           <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
           <Text style={[styles.message, { color: colors.text, opacity: 0.6 }]}>{message}</Text>
         </View>
-        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+        <TouchableOpacity activeOpacity={1} onPress={onClose} style={styles.closeButton}>
           <X color="rgba(255, 255, 255, 0.3)" size={16} />
         </TouchableOpacity>
       </View>

@@ -1,18 +1,19 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { colors } from '@/core/theme/colors';
+import { Audio } from 'expo-av';
+import * as ImagePicker from 'expo-image-picker';
+import { Camera, Mic, Pause, Play, Send, Smile, Square, Trash2 } from 'lucide-react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  View,
-  TextInput,
-  StyleSheet,
-  TouchableOpacity,
-  Text,
   Animated,
   Easing,
-  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Camera, Smile, Mic, Send, Square, Trash2, Play, Pause } from 'lucide-react-native';
-import { colors } from '@/core/theme/colors';
-import CommentingSheet from '@/commentingsheets/widgets/CommentingSheet';
 import { StickerSheet } from './StickerSheet';
+import { PermissionDialog } from '@/components/ui/PermissionDialog';
 
 // ─── Recording State Machine ──────────────────────────────────────────────────
 enum RecordState { None, Recording, Reviewing }
@@ -43,8 +44,44 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
   const playSecondsRef = useRef(0);
   const playTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const [isMediaSheetVisible, setIsMediaSheetVisible] = useState(false);
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [recordingUri, setRecordingUri] = useState<string | null>(null);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+
   const [isStickerSheetVisible, setIsStickerSheetVisible] = useState(false);
+  const [showCameraPermission, setShowCameraPermission] = useState(false);
+  const [showMicPermission, setShowMicPermission] = useState(false);
+
+  const handlePickMedia = useCallback(async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        setShowCameraPermission(true);
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images', 'videos'],
+        allowsMultipleSelection: true,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        // Map ImagePicker assets to our media format
+        const mediaItems = result.assets.map(asset => ({
+          uri: asset.uri,
+          type: asset.type === 'video' ? 'video' : 'image',
+          width: asset.width,
+          height: asset.height,
+        }));
+
+        onMediaSubmitted?.(mediaItems, text.trim());
+        setText('');
+      }
+    } catch (e) {
+      console.log('Image picker error', e);
+    }
+  }, [text, onMediaSubmitted]);
 
   // ─── Typing Indicator Logic ───
   const [isTyping, setIsTyping] = useState(false);
@@ -56,9 +93,9 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
       setIsTyping(true);
       onTypingChange?.(true);
     }
-    
+
     if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-    
+
     typingTimerRef.current = setTimeout(() => {
       setIsTyping(false);
       onTypingChange?.(false);
@@ -154,7 +191,7 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
   }, [recordState]);
 
   // ─── Playback simulation timer ───────────────────────────────────────────
-  const stopPlayback = useCallback(() => {
+  const stopPlayback = useCallback(async () => {
     if (playTimerRef.current) {
       clearInterval(playTimerRef.current);
       playTimerRef.current = null;
@@ -162,29 +199,54 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
     setIsPlaying(false);
     playSecondsRef.current = 0;
     setPlaySeconds(0);
-  }, []);
+    
+    if (sound) {
+      try {
+        await sound.stopAsync();
+        await sound.unloadAsync();
+      } catch (e) {}
+      setSound(null);
+    }
+  }, [sound]);
 
-  const togglePlayback = useCallback(() => {
+  const togglePlayback = useCallback(async () => {
     if (isPlaying) {
+      if (sound) {
+        try { await sound.pauseAsync(); } catch (e) {}
+      }
       if (playTimerRef.current) clearInterval(playTimerRef.current);
       playTimerRef.current = null;
       setIsPlaying(false);
     } else {
+      if (!sound && recordingUri) {
+        try {
+          const { sound: newSound } = await Audio.Sound.createAsync(
+            { uri: recordingUri },
+            { shouldPlay: true }
+          );
+          setSound(newSound);
+          newSound.setOnPlaybackStatusUpdate((status) => {
+            if (status.isLoaded && status.didJustFinish) {
+              stopPlayback();
+            }
+          });
+        } catch (e) {
+          console.error('Failed to load sound', e);
+        }
+      } else if (sound) {
+        try { await sound.playAsync(); } catch (e) {}
+      }
+
       setIsPlaying(true);
       playTimerRef.current = setInterval(() => {
         playSecondsRef.current += 1;
         setPlaySeconds(playSecondsRef.current);
-        // Stop at recordSeconds duration
         if (playSecondsRef.current >= recordSecondsRef.current) {
-          if (playTimerRef.current) clearInterval(playTimerRef.current);
-          playTimerRef.current = null;
-          setIsPlaying(false);
-          playSecondsRef.current = 0;
-          setPlaySeconds(0);
+          stopPlayback();
         }
       }, 1000);
     }
-  }, [isPlaying, recordSeconds]);
+  }, [isPlaying, recordingUri, sound, stopPlayback, recordSeconds]);
 
   const fmtTime = (s: number) => {
     const m = Math.floor(s / 60);
@@ -193,33 +255,75 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
   };
 
   // ─── Recording handlers ──────────────────────────────────────────────────
-  const startRecording = useCallback(() => {
-    setRecordState(RecordState.Recording);
+  const startRecording = useCallback(async () => {
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+      if (permission.status === 'granted') {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+        });
+        const { recording: newRecording } = await Audio.Recording.createAsync(
+          Audio.RecordingOptionsPresets.HIGH_QUALITY
+        );
+        setRecording(newRecording);
+        setRecordState(RecordState.Recording);
+      } else {
+        setShowMicPermission(true);
+      }
+    } catch (err) {
+      console.error('Failed to start recording', err);
+    }
   }, []);
 
-  const stopRecordingForReview = useCallback(() => {
+  const stopRecordingForReview = useCallback(async () => {
     setRecordState(RecordState.Reviewing);
     stopPlayback();
-  }, [stopPlayback]);
+    if (recording) {
+      try {
+        await recording.stopAndUnloadAsync();
+        const uri = recording.getURI();
+        setRecordingUri(uri);
+      } catch (e) {
+        console.error('Failed to stop recording', e);
+      }
+    }
+  }, [stopPlayback, recording]);
 
-  const cancelRecording = useCallback(() => {
+  const cancelRecording = useCallback(async () => {
     stopPlayback();
     setRecordState(RecordState.None);
     setRecordSeconds(0);
     recordSecondsRef.current = 0;
-  }, [stopPlayback]);
+    if (recording) {
+      try {
+        await recording.stopAndUnloadAsync();
+      } catch (e) {
+        // ignore
+      }
+      setRecording(null);
+    }
+    setRecordingUri(null);
+  }, [stopPlayback, recording]);
 
-  const sendRecording = useCallback(() => {
+  const sendRecording = useCallback(async () => {
     stopPlayback();
     setRecordState(RecordState.None);
     setRecordSeconds(0);
     recordSecondsRef.current = 0;
-    onVoiceSubmitted?.('dummy-audio.mp4', playSecondsRef.current * 1000);
-  }, [stopPlayback, onVoiceSubmitted]);
+
+    if (recordingUri) {
+      // Pass the actual recorded URI
+      onVoiceSubmitted?.(recordingUri, playSecondsRef.current * 1000);
+      setRecordingUri(null);
+    }
+    setRecording(null);
+  }, [stopPlayback, onVoiceSubmitted, recordingUri]);
 
 
   // ─── Main submit logic ───────────────────────────────────────────────────
   const handleSubmit = useCallback(() => {
+    console.log('[ChatInputField] Submit button PRESSED! Current text:', text, 'RecordState:', recordState);
     if (recordState === RecordState.Recording) {
       stopRecordingForReview();
       return;
@@ -229,12 +333,14 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
       return;
     }
     if (text.trim().length === 0) {
+      console.log('[ChatInputField] Text is empty, starting recording instead.');
       startRecording();
       return;
     }
+    console.log('[ChatInputField] Text is valid. Firing onSubmitted prop...');
     onSubmitted?.(text.trim());
     setText('');
-  }, [recordState, text, onSubmitted]);
+  }, [recordState, text, onSubmitted, startRecording, stopRecordingForReview, sendRecording]);
 
   // ─── Derived send button ─────────────────────────────────────────────────
   const SendIcon = () => {
@@ -260,7 +366,7 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
         {/* ── Camera / Folder Icon ── */}
         <TouchableOpacity
           style={styles.cameraButton}
-          onPress={() => setIsMediaSheetVisible(true)}
+          onPress={handlePickMedia}
           activeOpacity={0.7}
         >
           <Animated.View style={{ transform: [{ translateY: cameraTranslateY }] }}>
@@ -278,7 +384,7 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
               </Animated.View>
               <Text style={styles.recordTime}>{fmtTime(recordSeconds)}</Text>
               <Text style={styles.recordingLabel}>Recording...</Text>
-              <TouchableOpacity onPress={cancelRecording} style={styles.trashBtn}>
+              <TouchableOpacity activeOpacity={1} onPress={cancelRecording} style={styles.trashBtn}>
                 <Trash2 size={16} color="#E41E3F" />
               </TouchableOpacity>
             </View>
@@ -286,12 +392,12 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
             /* ── REVIEWING PILL (with waveform + playback) ── */
             <View style={styles.reviewingPill}>
               {/* Trash */}
-              <TouchableOpacity onPress={cancelRecording} style={styles.trashBtn}>
+              <TouchableOpacity activeOpacity={1} onPress={cancelRecording} style={styles.trashBtn}>
                 <Trash2 size={16} color="#E41E3F" />
               </TouchableOpacity>
 
               {/* Play/Pause */}
-              <TouchableOpacity onPress={togglePlayback} style={styles.playBtn}>
+              <TouchableOpacity activeOpacity={1} onPress={togglePlayback} style={styles.playBtn}>
                 {isPlaying
                   ? <Pause size={16} color="#FFF" />
                   : <Play size={16} color="#FFF" />
@@ -355,21 +461,6 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
         </TouchableOpacity>
       </View>
 
-      {/* ── Select Media Sheet ── */}
-      <CommentingSheet
-        visible={isMediaSheetVisible}
-        onClose={() => setIsMediaSheetVisible(false)}
-        channelId={channelId}
-        showInputField={true}
-        onCommentPosted={(data) => {
-          if (data && data.media && data.media.length > 0) {
-            onMediaSubmitted?.(data.media, data.caption || '');
-          } else if (data && data.caption) {
-            onSubmitted?.(data.caption);
-          }
-        }}
-      />
-
       {/* ── Sticker / Emoji Sheet ── */}
       <StickerSheet
         visible={isStickerSheetVisible}
@@ -378,6 +469,25 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
           setIsStickerSheetVisible(false);
           onLottieSubmitted?.(index);
         }}
+      />
+
+      {/* ── Permission Dialogs ── */}
+      <PermissionDialog
+        visible={showCameraPermission}
+        title="Camera Roll Permission"
+        description="We need access to your photos so you can share images and videos in the chat."
+        icon={<Camera size={24} color={colors.primary} />}
+        onCancel={() => setShowCameraPermission(false)}
+        onConfirm={() => setShowCameraPermission(false)}
+      />
+
+      <PermissionDialog
+        visible={showMicPermission}
+        title="Microphone Permission"
+        description="Crown needs access to your microphone so you can record and send voice messages directly to the channel."
+        icon={<Mic size={24} color={colors.primary} />}
+        onCancel={() => setShowMicPermission(false)}
+        onConfirm={() => setShowMicPermission(false)}
       />
     </>
   );

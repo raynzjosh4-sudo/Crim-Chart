@@ -11,6 +11,7 @@ interface InteractionState {
 
   // Mapping of postId -> list of boxIds it has been tagged in
   tags: Record<string, string[]>;
+  channelTagsCount: Record<string, number>;
 
   // Comment Interactions
   commentLikes: Record<string, boolean>;
@@ -19,16 +20,18 @@ interface InteractionState {
   // Actions to seed initial state
   seedPost: (postId: string, initialLikesCount: number, initialViewsCount: number, initialIsLiked: boolean, initialDownloadsCount?: number, boxId?: string) => void;
   seedTag: (postId: string, boxId: string, isTagged: boolean) => void;
+  seedChannelTagCount: (postId: string, count: number) => void;
 
   // Actions to interact
-  toggleLike: (postId: string, boxId?: string) => void;
-  incrementView: (postId: string, boxId?: string, channelId?: string) => void;
+  toggleLike: (postId: string, boxId?: string, sourceTable?: string) => void;
+  incrementView: (postId: string, boxId?: string, sourceTable?: string) => void;
   incrementDownload: (postId: string, boxId?: string, channelId?: string) => void;
   toggleTag: (postId: string, boxId: string) => void;
+  incrementChannelTagCount: (postId: string) => void;
 
   // Actions for Comments
   seedCommentInteraction: (commentId: string, initialLikesCount: number, initialIsLiked: boolean) => void;
-  toggleCommentLike: (commentId: string) => void;
+  toggleCommentLike: (commentId: string, isPending?: boolean) => void;
   syncPostInteractions: (postIds: string[], boxId?: string) => Promise<void>;
 }
 
@@ -38,6 +41,7 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   viewsCount: {},
   downloadsCount: {},
   tags: {},
+  channelTagsCount: {},
   commentLikes: {},
   commentLikesCount: {},
 
@@ -68,6 +72,12 @@ export const useInteractionStore = create<InteractionState>((set) => ({
       return state;
     }),
 
+  seedChannelTagCount: (postId, count) =>
+    set((state) => {
+      if (state.channelTagsCount[postId] !== undefined) return state;
+      return { channelTagsCount: { ...state.channelTagsCount, [postId]: count } };
+    }),
+
   seedCommentInteraction: (commentId, initialLikesCount, initialIsLiked) =>
     set((state) => {
       // Only seed if not already present in the store (preserves optimistic updates)
@@ -78,7 +88,7 @@ export const useInteractionStore = create<InteractionState>((set) => ({
       };
     }),
 
-  toggleLike: (postId, boxId) => {
+  toggleLike: (postId, boxId, sourceTable) => {
     const key = boxId ? `${boxId}_${postId}` : postId;
 
     set((state) => {
@@ -106,14 +116,19 @@ export const useInteractionStore = create<InteractionState>((set) => ({
       }
 
       // Sync to backend via RPC (fire-and-forget for speed, but ideally we await this in the component, or just trust the backend)
-      console.log(`[InteractionStore] 🔄 Sending toggle_like RPC to Supabase. postId=${postId}, boxId=${boxId || null}`);
+      console.log(`[InteractionStore] 🔄 Sending toggle_like RPC to Supabase. postId=${postId}, boxId=${boxId || null}, sourceTable=${sourceTable}`);
       import('@/core/supabase/supabaseConfig').then(({ supabase }) => {
-        supabase.rpc('toggle_like', { p_post_id: postId, p_box_id: boxId || null })
+        const rpcName = sourceTable === 'channel_posts' ? 'toggle_channel_post_like' : 'toggle_like';
+        const rpcParams = sourceTable === 'channel_posts' 
+          ? { p_post_id: postId } 
+          : { p_post_id: postId, p_box_id: boxId || null };
+
+        supabase.rpc(rpcName as any, rpcParams)
           .then(({ data, error }) => {
             if (error) {
-              console.error("[InteractionStore] ❌ Failed to toggle_like in DB:", error);
+              console.error(`[InteractionStore] ❌ Failed to ${rpcName} in DB:`, error);
             } else {
-              console.log("[InteractionStore] ✅ DB RPC toggle_like returned:", data);
+              console.log(`[InteractionStore] ✅ DB RPC ${rpcName} returned:`, data);
             }
           });
       });
@@ -124,33 +139,37 @@ export const useInteractionStore = create<InteractionState>((set) => ({
       }
 
       return {
-        likes: { ...state.likes, [key]: newIsLiked, [postId]: newGlobalIsLiked },
-        likesCount: { ...state.likesCount, [key]: newCount, [postId]: newGlobalLikes },
+        likes: { 
+          ...state.likes, 
+          [key]: newIsLiked, 
+          ...(boxId ? { [postId]: newGlobalIsLiked } : {}) 
+        },
+        likesCount: { 
+          ...state.likesCount, 
+          [key]: newCount, 
+          ...(boxId ? { [postId]: newGlobalLikes } : {}) 
+        },
       };
     });
   },
 
-  incrementView: (postId, boxId, channelId) => {
-    // Optimistically update the view count so it reflects immediately in the UI
-    set((state) => {
-      const key = boxId ? `${boxId}_${postId}` : postId;
-      return {
-        viewsCount: { ...state.viewsCount, [key]: (state.viewsCount[key] || 0) + 1 },
-      };
-    });
+  incrementView: (postId, boxId, sourceTable) => {
+    // Sync to backend via RPC. 
+    // We intentionally do NOT optimistically increment the local state because 
+    // the backend may reject duplicate views from the same user, causing the UI to falsely show +1.
 
     // Sync to backend via RPC
     import('@/core/supabase/supabaseConfig').then(({ supabase }) => {
       let tableType = 'posts';
       if (boxId) tableType = 'box_items';
-      else if (channelId) tableType = 'channel_posts';
+      else if (sourceTable === 'channel_posts') tableType = 'channel_posts';
 
       supabase.rpc('increment_view', {
         p_post_id: postId,
         p_table_type: tableType,
         p_box_id: boxId || null
       }).then(({ data, error }) => {
-        console.log(`[InteractionStore] 👁️ increment_view RPC fired for post ${postId}. Error:`, error);
+        // console.log(`[InteractionStore] 👁️ increment_view RPC fired for post ${postId}. Error:`, error);
       });
 
       // Also record the reaction in box_item_reactions if inside a box
@@ -228,6 +247,14 @@ export const useInteractionStore = create<InteractionState>((set) => ({
       }
     }),
 
+  incrementChannelTagCount: (postId) =>
+    set((state) => {
+      const count = state.channelTagsCount[postId] || 0;
+      return {
+        channelTagsCount: { ...state.channelTagsCount, [postId]: count + 1 }
+      };
+    }),
+
   syncPostInteractions: async (postIds: string[], boxId?: string) => {
     if (!postIds || postIds.length === 0) return;
 
@@ -249,7 +276,18 @@ export const useInteractionStore = create<InteractionState>((set) => ({
 
       if (likedError) console.error("[InteractionStore] ❌ syncPostInteractions post_likes error:", likedError);
 
-      const globalLikedSet = new Set(likedData?.map(d => d.post_id) || []);
+      const { data: channelLikedData, error: channelLikedError } = await supabase
+        .from('channel_post_likes')
+        .select('post_id')
+        .in('post_id', postIds)
+        .eq('user_id', userId);
+
+      if (channelLikedError) console.error("[InteractionStore] ❌ syncPostInteractions channel_post_likes error:", channelLikedError);
+
+      const globalLikedSet = new Set([
+        ...(likedData?.map(d => d.post_id) || []),
+        ...(channelLikedData?.map(d => d.post_id) || [])
+      ]);
       console.log(`[InteractionStore] 📊 Global Likes found:`, Array.from(globalLikedSet));
 
       // 2. Fetch Box Tags (is it in this specific box?)
@@ -334,20 +372,25 @@ export const useInteractionStore = create<InteractionState>((set) => ({
     }
   },
 
-  toggleCommentLike: (commentId) =>
+  toggleCommentLike: (commentId, isPending) =>
     set((state) => {
       const isLiked = state.commentLikes[commentId] || false;
       const count = state.commentLikesCount[commentId] || 0;
       const newIsLiked = !isLiked;
       const newCount = newIsLiked ? count + 1 : Math.max(0, count - 1);
 
-      // Async RPC call
-      import('@/core/supabase/supabaseConfig').then(({ supabase }) => {
-        supabase.rpc('toggle_comment_like', { p_comment_id: commentId })
-          .then(({ error }) => {
-            if (error) console.error("[InteractionStore] ❌ Failed to toggle comment like:", error);
-          });
-      });
+      if (!isPending) {
+        // Async RPC call
+        import('@/core/supabase/supabaseConfig').then(({ supabase }) => {
+          supabase.rpc('toggle_comment_like', { p_comment_id: commentId })
+            .then(({ error }) => {
+              if (error && error.code !== '23503') {
+                if (typeof window !== 'undefined' && window.alert) window.alert('Supabase Like Error: ' + error.message);
+                console.error("[InteractionStore] ❌ Failed to toggle comment like:", error);
+              }
+            });
+        });
+      }
 
       return {
         commentLikes: { ...state.commentLikes, [commentId]: newIsLiked },

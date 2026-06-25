@@ -32,7 +32,7 @@ export const CrimChartFooter: React.FC<CrimChartFooterProps> = ({
     <View style={styles.container}>
       {/* Engagement counters */}
       <View style={styles.engagementRow}>
-        <TouchableOpacity style={styles.engBtn} onPress={onLikeTap}>
+        <TouchableOpacity activeOpacity={1} style={styles.engBtn} onPress={onLikeTap}>
           <Heart
             color={isLiked ? '#FF5252' : 'rgba(255,255,255,0.6)'}
             size={20}

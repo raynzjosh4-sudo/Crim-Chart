@@ -57,6 +57,15 @@ export class NativeDB {
   static async saveBoxItems(boxId: string, items: any[]) {
     const db = dbService.database;
     try {
+      try {
+        await db.runAsync(`ALTER TABLE ${TABLES.BOX_ITEMS} ADD COLUMN comments_count INTEGER DEFAULT 0`);
+        await db.runAsync(`ALTER TABLE ${TABLES.BOX_ITEMS} ADD COLUMN views_count INTEGER DEFAULT 0`);
+        await db.runAsync(`ALTER TABLE ${TABLES.BOX_ITEMS} ADD COLUMN post_type TEXT`);
+        await db.runAsync(`ALTER TABLE ${TABLES.BOX_ITEMS} ADD COLUMN aspect_ratio REAL`);
+      } catch (e) {
+        // columns likely already exist
+      }
+
       // First, clear the existing cache for this box to easily refresh the top 10
       await db.runAsync(`DELETE FROM ${TABLES.BOX_ITEMS} WHERE box_id = ?`, [boxId]);
 
@@ -66,8 +75,8 @@ export class NativeDB {
             id, box_id, post_id, likes_count, dislikes_count, added_at,
             added_by_id, added_by_name, added_by_avatar,
             caption, media_url, thumbnail_url, is_video,
-            author_id, author_name, author_avatar
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            author_id, author_name, author_avatar, comments_count, views_count, post_type, aspect_ratio
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         const params = [
           item.id,
@@ -85,7 +94,11 @@ export class NativeDB {
           item.post?.isVideo ? 1 : 0,
           item.post?.authorId || null,
           item.post?.authorName || null,
-          item.post?.authorAvatar || null
+          item.post?.authorAvatar || null,
+          item.post?.commentsCount || 0,
+          item.post?.viewsCount || 0,
+          item.post?.postType || null,
+          item.post?.aspectRatio || null
         ];
         await db.runAsync(sql, params);
       }
@@ -149,6 +162,34 @@ export class NativeDB {
   static async getUser(id: string) {
     const sql = `SELECT * FROM ${TABLES.USERS} WHERE id = ?`;
     return await dbService.querySingle(sql, [id]);
+  }
+
+  static async upsertUserConnectionStats(stats: any) {
+    const sql = `
+      INSERT OR REPLACE INTO ${TABLES.USER_CONNECTION_STATS} (
+        user_id, rel_sent_count, rel_accepted_count, relationship_status,
+        preferred_countries, preferred_age_ranges, show_status_circle,
+        show_status_text, show_country_pref, show_age_pref
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    const params = [
+      stats.user_id || stats.userId,
+      stats.rel_sent_count || stats.relSentCount || 0,
+      stats.rel_accepted_count || stats.relAcceptedCount || 0,
+      stats.relationship_status || stats.relationshipStatus || 'Unknown',
+      typeof stats.preferred_countries === 'string' ? stats.preferred_countries : JSON.stringify(stats.preferred_countries || stats.preferredCountries || []),
+      typeof stats.preferred_age_ranges === 'string' ? stats.preferred_age_ranges : JSON.stringify(stats.preferred_age_ranges || stats.preferredAgeRanges || []),
+      stats.show_status_circle !== false ? 1 : 0,
+      stats.show_status_text !== false ? 1 : 0,
+      stats.show_country_pref !== false ? 1 : 0,
+      stats.show_age_pref !== false ? 1 : 0
+    ];
+    await dbService.execute(sql, params);
+  }
+
+  static async getUserConnectionStats(userId: string) {
+    const sql = `SELECT * FROM ${TABLES.USER_CONNECTION_STATS} WHERE user_id = ?`;
+    return await dbService.querySingle<any>(sql, [userId]);
   }
 
   // ─── Channels ──────────────────────────────────────────────────────────────
@@ -630,12 +671,20 @@ export class NativeDB {
   static async saveTrendingBoxItems(boxId: string, items: any[]) {
     const db = dbService.database;
     try {
+      try {
+        await db.runAsync(`ALTER TABLE ${TABLES.TRENDING_BOX_ITEMS} ADD COLUMN video_url TEXT`);
+        await db.runAsync(`ALTER TABLE ${TABLES.TRENDING_BOX_ITEMS} ADD COLUMN is_audio INTEGER DEFAULT 0`);
+        await db.runAsync(`ALTER TABLE ${TABLES.TRENDING_BOX_ITEMS} ADD COLUMN is_short INTEGER DEFAULT 0`);
+      } catch (e) {
+        // columns likely already exist
+      }
+
       await db.runAsync(`DELETE FROM ${TABLES.TRENDING_BOX_ITEMS} WHERE box_id = ?`, [boxId]);
       for (const item of items) {
         const sql = `
-          INSERT INTO ${TABLES.TRENDING_BOX_ITEMS} (
-            id, box_id, title, artist, thumbnail_url, audio_url, likes
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+          INSERT OR REPLACE INTO ${TABLES.TRENDING_BOX_ITEMS} (
+            id, box_id, title, artist, thumbnail_url, audio_url, video_url, is_audio, is_short, likes
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         const params = [
           item.id,
@@ -644,6 +693,9 @@ export class NativeDB {
           item.artist || null,
           item.thumbnailUrl || null,
           item.audioUrl || null,
+          item.videoUrl || null,
+          item.isAudio ? 1 : 0,
+          item.isShort ? 1 : 0,
           item.likes || 0
         ];
         await db.runAsync(sql, params);
@@ -666,6 +718,9 @@ export class NativeDB {
       artist: row.artist,
       thumbnailUrl: row.thumbnail_url,
       audioUrl: row.audio_url,
+      videoUrl: row.video_url || '',
+      isAudio: !!row.is_audio,
+      isShort: !!row.is_short,
       likes: row.likes
     }));
   }

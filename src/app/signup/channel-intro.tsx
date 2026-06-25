@@ -3,7 +3,8 @@ import { colors } from '@/core/theme/colors';
 import { useRouter } from 'expo-router';
 import { Hash, Plus } from 'lucide-react-native';
 import React from 'react';
-import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ChannelIntroPage() {
   const router = useRouter();
@@ -14,7 +15,7 @@ export default function ChannelIntroPage() {
         title=""
         showBorder={false}
         actions={[
-          <TouchableOpacity
+          <TouchableOpacity activeOpacity={1}
             key="skip"
             onPress={() => router.push('/signup/channel-suggestions' as any)}
           >
@@ -37,7 +38,7 @@ export default function ChannelIntroPage() {
 
         <View style={styles.spacerExtraLarge} />
 
-        <TouchableOpacity
+        <TouchableOpacity activeOpacity={1}
           style={styles.nextButton}
           onPress={() => router.push('/signup/channel-suggestions' as any)}
         >
@@ -45,7 +46,7 @@ export default function ChannelIntroPage() {
           <Text style={styles.nextButtonText}>Find Channels</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
+        <TouchableOpacity activeOpacity={1}
           style={styles.laterButton}
           onPress={() => router.push('/signup/channel-suggestions' as any)}
         >

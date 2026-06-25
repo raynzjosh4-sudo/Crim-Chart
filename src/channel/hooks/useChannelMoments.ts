@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/core/supabase/supabaseConfig';
 
 export interface ChannelMoment {
@@ -70,6 +70,11 @@ export const useChannelMoments = (userId: string, channelId?: string) => {
       setLoading(false);
     }
   }, [userId, channelId, offset, loading, hasMore, momentGroups]);
+
+  useEffect(() => {
+    fetchMoments(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, channelId]);
 
   return { momentGroups, fetchMoments, loading, error, hasMore };
 };

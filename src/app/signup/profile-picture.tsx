@@ -1,13 +1,18 @@
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
+import { ChartToast } from '@/components/showcase/CrimChart_toast';
+import { cloudMediaService } from '@/core/network/cloudMediaService';
 import { colors } from '@/core/theme/colors';
+import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { Camera, User } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ProfilePicturePage() {
   const router = useRouter();
+  const { user, updateProfile } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [image, setImage] = useState<string | null>(null);
 
@@ -26,10 +31,18 @@ export default function ProfilePicturePage() {
 
   const handleNext = async () => {
     setIsLoading(true);
-    // Upload logic would go here
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsLoading(false);
-    router.push('/signup/channel-intro' as any);
+    try {
+      if (image && user?.id) {
+        const publicUrl = await cloudMediaService.uploadMedia(image, 'profile_images', user.id);
+        await updateProfile({ profile_image_url: publicUrl });
+      }
+      router.push('/signup/user-suggestions' as any);
+    } catch (error: any) {
+      console.error('Profile picture upload error:', error);
+      ChartToast.showErrorSimple('Upload Failed', error.message || 'Could not upload profile picture.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -39,7 +52,7 @@ export default function ProfilePicturePage() {
         showBorder
         isLoading={isLoading}
         actions={[
-          <TouchableOpacity
+          <TouchableOpacity activeOpacity={1}
             key="skip"
             onPress={() => router.push('/signup/channel-intro' as any)}
             disabled={isLoading}
@@ -61,12 +74,12 @@ export default function ProfilePicturePage() {
           <View style={styles.avatarContainer}>
             <View style={styles.avatarCircle}>
               {image ? (
-                <View style={styles.imagePlaceholder} /> // Would use Image here
+                <Image source={{ uri: image }} style={styles.imagePlaceholder} />
               ) : (
                 <User size={80} color="rgba(255, 255, 255, 0.1)" />
               )}
             </View>
-            <TouchableOpacity
+            <TouchableOpacity activeOpacity={1}
               style={styles.cameraButton}
               onPress={pickImage}
               disabled={isLoading}
@@ -77,7 +90,7 @@ export default function ProfilePicturePage() {
 
           <View style={styles.spacerExtraLarge} />
 
-          <TouchableOpacity
+          <TouchableOpacity activeOpacity={1}
             style={styles.nextButton}
             onPress={image ? handleNext : pickImage}
             disabled={isLoading}

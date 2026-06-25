@@ -1,7 +1,7 @@
-import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, TouchableWithoutFeedback, Animated, PanResponder } from 'react-native';
-import { Music, Play, ShoppingBag, Trophy, FolderHeart, ChevronRight } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { ChevronRight, Music, Play, ShoppingBag } from 'lucide-react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, Modal, PanResponder, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 
 export type BoxCategory = 'audio' | 'video' | 'marketplace' | 'sports' | 'contest';
 
@@ -69,20 +69,20 @@ export const CreateBoxSheet: React.FC<CreateBoxSheetProps> = ({ visible, onClose
       icon: <ShoppingBag size={18} color="#FF9900" />,
       color: '#FF9900'
     },
-    {
-      id: 'sports',
-      title: 'Sports & Highlights',
-      subtitle: 'Matches, Scores, and Brackets',
-      icon: <Trophy size={18} color="#00529B" />,
-      color: '#00529B'
-    },
-    {
-      id: 'contest',
-      title: 'Contests & Voting',
-      subtitle: 'Competitions, Polls, and Ratings',
-      icon: <FolderHeart size={18} color="#9C27B0" />,
-      color: '#9C27B0'
-    }
+    // {
+    //   id: 'sports',
+    //   title: 'Sports & Highlights',
+    //   subtitle: 'Matches, Scores, and Brackets',
+    //   icon: <Trophy size={18} color="#00529B" />,
+    //   color: '#00529B'
+    // },
+    // {
+    //   id: 'contest',
+    //   title: 'Contests & Voting',
+    //   subtitle: 'Competitions, Polls, and Ratings',
+    //   icon: <FolderHeart size={18} color="#9C27B0" />,
+    //   color: '#9C27B0'
+    // }
   ] as const;
 
   return (
@@ -91,7 +91,7 @@ export const CreateBoxSheet: React.FC<CreateBoxSheetProps> = ({ visible, onClose
         <TouchableWithoutFeedback onPress={onClose}>
           <View style={styles.backdrop} />
         </TouchableWithoutFeedback>
-        
+
         <Animated.View style={[styles.container, { transform: [{ translateY: pan.y }] }]}>
           <View {...panResponder.panHandlers} style={{ width: '100%', alignItems: 'center' }}>
             <View style={styles.dragHandle} />
@@ -99,10 +99,10 @@ export const CreateBoxSheet: React.FC<CreateBoxSheetProps> = ({ visible, onClose
               <Text style={styles.headerTitle}>What kind of box are you building?</Text>
             </View>
           </View>
-          
+
           <View style={styles.listContainer}>
             {categories.map((cat) => (
-              <TouchableOpacity 
+              <TouchableOpacity
                 key={cat.id}
                 style={styles.optionRow}
                 activeOpacity={0.7}

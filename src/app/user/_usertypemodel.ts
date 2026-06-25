@@ -8,6 +8,10 @@ export interface CrimChatUser {
     isTyping?: boolean;
     followers?: number;
     channelCount?: number;
+    hasStatus?: boolean;
+    statusCount?: number;
+    lastSeen?: string;
+    lastReplied?: number;
 }
 
 export default function UserTypeModel(): null {

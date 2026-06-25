@@ -36,7 +36,7 @@ export const ChartOptionsDialog: React.FC<ChartOptionsDialogProps> = ({
   const { colors } = useTheme();
 
   const ActionButton = ({ title, isDestructive, onTap }: any) => (
-    <TouchableOpacity
+    <TouchableOpacity activeOpacity={1}
       style={[styles.actionButton, { backgroundColor: 'rgba(255, 255, 255, 0.05)' }]}
       onPress={() => {
         onClose();
@@ -87,7 +87,7 @@ export const ChartOptionsDialog: React.FC<ChartOptionsDialogProps> = ({
                   <View style={{ width: 42 }} />
                   <Image source={{ uri: statusImageUrl }} style={styles.statusThumbnail} contentFit="cover" />
                   <View style={styles.expansionToggle}>
-                    <TouchableOpacity
+                    <TouchableOpacity activeOpacity={1}
                       style={[
                         styles.toggleButton,
                         { backgroundColor: showChannels ? 'rgba(255, 184, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)' }

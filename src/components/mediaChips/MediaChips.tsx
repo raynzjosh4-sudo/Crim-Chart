@@ -43,7 +43,7 @@ export const MediaChips: React.FC<MediaChipsProps> = ({ activeTabIndex, selected
         {albums.map((album, index) => {
           const isSelected = selectedAlbum === album.id || (!selectedAlbum && album.id === 'all');
           return (
-            <TouchableOpacity
+            <TouchableOpacity activeOpacity={1}
               key={album.id}
               style={[styles.chip, isSelected ? styles.chipSelected : styles.chipUnselected]}
               onPress={() => onAlbumSelected(album.id === 'all' ? null : album.id)}

@@ -21,22 +21,7 @@ const calculateAge = (birthDate: Date) => {
     return age;
 };
 
-// Mock Auth Update Hook (Replace with actual controller method later)
-const useUpdateProfile = () => {
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-    const updateProfile = async (data: { birthday: string; gender: string }): Promise<boolean> => {
-        try {
-            await new Promise(resolve => setTimeout(resolve, 800)); // Simulate network request
-            return true;
-        } catch (e: any) {
-            setErrorMessage('Failed to update profile');
-            return false;
-        }
-    };
-
-    return { updateProfile, errorMessage };
-};
+// Removed mock hook
 
 export default function BirthdayPage() {
     const router = useRouter();
@@ -58,8 +43,6 @@ export default function BirthdayPage() {
     const [selectedGender, setSelectedGender] = useState<string | null>(savedGender || null);
     const [isLoading, setIsLoading] = useState(false);
 
-    const { updateProfile, errorMessage } = useUpdateProfile();
-
     const genders = [
         { id: 'male', label: tr('male'), icon: 'male' },
         { id: 'female', label: tr('female'), icon: 'female' },
@@ -79,19 +62,39 @@ export default function BirthdayPage() {
         if (!selectedGender) return;
 
         setIsLoading(true);
-        const success = await updateProfile({
-            birthday: selectedDate.toISOString(),
-            gender: selectedGender,
-        });
-        setIsLoading(false);
 
-        if (success) {
-            router.push('/profilePicture' as any); // Assuming AppRoutes.profilePicture -> /profilePicture
+        if (authStore.pendingGoogleOnboarding) {
+            authStore.setBirthday(selectedDate);
+            authStore.setGender(selectedGender);
+            
+            const success = await authStore.completeGoogleOnboarding();
+            setIsLoading(false);
+            
+            if (success) {
+                router.push('/profilePicture' as any);
+            } else {
+                ChartToast.showError(null, {
+                    title: tr('birthday_error_update_title') || 'Error',
+                    message: authStore.errorMessage || tr('birthday_error_update_message') || 'Failed to create profile',
+                });
+            }
         } else {
-            ChartToast.showError(null, {
-                title: tr('birthday_error_update_title'),
-                message: errorMessage || tr('birthday_error_update_message'),
+            // For email signup flow, the profile was already created in OtpVerificationPage.
+            // We just need to update it now.
+            const success = await authStore.updateProfile({
+                birthday: selectedDate.toISOString(),
+                gender: selectedGender,
             });
+            setIsLoading(false);
+
+            if (success) {
+                router.push('/profilePicture' as any);
+            } else {
+                ChartToast.showError(null, {
+                    title: tr('birthday_error_update_title') || 'Error',
+                    message: authStore.errorMessage || tr('birthday_error_update_message') || 'Failed to update profile',
+                });
+            }
         }
     };
 
@@ -137,7 +140,7 @@ export default function BirthdayPage() {
                     {genders.map((gender) => {
                         const isSelected = selectedGender === gender.id;
                         return (
-                            <TouchableOpacity
+                            <TouchableOpacity activeOpacity={1}
                                 key={gender.id}
                                 style={styles.genderWrapper}
                                 onPress={() => setSelectedGender(gender.id)}
@@ -176,7 +179,7 @@ export default function BirthdayPage() {
 
                 <View style={styles.spacer} />
 
-                <TouchableOpacity
+                <TouchableOpacity activeOpacity={1}
                     style={[
                         styles.nextButton,
                         { backgroundColor: isNextDisabled ? 'rgba(255, 255, 255, 0.1)' : colors.primary }

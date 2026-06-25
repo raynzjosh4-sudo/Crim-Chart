@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { FlatList, View, Text, StyleSheet, Dimensions } from 'react-native';
 import { Music } from 'lucide-react-native';
 import { supabase } from '@/core/supabase/client';
-import { SkeletonChartCard } from '../widgets/SkeletonChartCard';
+import { SkeletonBox } from '@/components/skeletons/SkeletonBox';
 import { NativeDB } from '@/core/db/NativeDB';
 import { ProfileMusicItem } from '@/components/profileTabsWidgets/ProfileMusicItem';
 import { useRouter } from 'expo-router';
@@ -148,7 +148,9 @@ export const MusicProfileTab: React.FC<MusicProfileTabProps> = ({
     return (
       <View style={styles.skeletonGrid}>
         {Array.from({ length: 9 }).map((_, i) => (
-          <SkeletonChartCard key={i} width={ITEM_SIZE - 2} height={ITEM_SIZE - 2} />
+          <View key={i} style={{ width: '33.33%', aspectRatio: 0.6, padding: 1 }}>
+            <SkeletonBox width="100%" height="100%" />
+          </View>
         ))}
       </View>
     );
@@ -166,32 +168,35 @@ export const MusicProfileTab: React.FC<MusicProfileTabProps> = ({
   return (
     <FlatList
       data={musicPosts}
+      scrollEnabled={false}
       numColumns={COLS}
       keyExtractor={item => item.id}
       renderItem={({ item }) => (
-        <ProfileMusicItem
-          thumbnailUrl={item.thumbnailUrl}
-          title={item.title}
-          artist={item.artist}
-          size={ITEM_SIZE - 2}
-          onPress={() => {
-            if (onMusicPress) {
-              onMusicPress(item);
-            }
-            router.push({
-              pathname: '/now-playing',
-              params: {
-                title: item.title,
-                artist: item.artist,
-                coverUrl: item.thumbnailUrl,
-                audioUrl: item.audioUrl,
-                lyrics: item.lyrics,
+        <View style={{ flex: 1/3, padding: 1 }}>
+          <ProfileMusicItem
+            thumbnailUrl={item.thumbnailUrl}
+            title={item.title}
+            artist={item.artist}
+            size="100%"
+            onPress={() => {
+              if (onMusicPress) {
+                onMusicPress(item);
               }
-            });
-          }}
-        />
+              router.push({
+                pathname: '/now-playing',
+                params: {
+                  title: item.title,
+                  artist: item.artist,
+                  coverUrl: item.thumbnailUrl,
+                  audioUrl: item.audioUrl,
+                  lyrics: item.lyrics,
+                }
+              });
+            }}
+          />
+        </View>
       )}
-      contentContainerStyle={{ padding: 1, gap: 2 }}
+      contentContainerStyle={styles.grid}
       showsVerticalScrollIndicator={false}
       onEndReached={loadMore}
       onEndReachedThreshold={0.5}
@@ -200,7 +205,8 @@ export const MusicProfileTab: React.FC<MusicProfileTabProps> = ({
 };
 
 const styles = StyleSheet.create({
-  skeletonGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 2, padding: 1 },
+  grid: { padding: 1, gap: 2 },
+  skeletonGrid: { flexDirection: 'row', flexWrap: 'wrap', padding: 1 },
   emptyContainer: {
     paddingTop: 60,
     alignItems: 'center',

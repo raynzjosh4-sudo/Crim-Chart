@@ -42,14 +42,19 @@ export default function SettingsPage() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {renderSectionHeader(t('who_can_see_content'))}
         <SettingsItem
+          icon={UserCheck}
+          title={t('connection_privacy' as any, { defaultValue: 'Connection Privacy' })}
+          onTap={() => router.push('/settings/connection-privacy' as any)}
+        />
+        <SettingsItem
           icon={Lock}
-          title={t('account_privacy', { defaultValue: 'Account Privacy' })}
+          title={t('account_privacy' as any, { defaultValue: 'Account Privacy' })}
           trailingText={t('public')}
           onTap={() => router.push('/settings/privacy' as any)}
         />
         <SettingsItem
           icon={EyeOff}
-          title={t('box_visibility', { defaultValue: 'Box Visibility' })}
+          title={t('box_visibility' as any, { defaultValue: 'Box Visibility' })}
           onTap={() => router.push('/settings/box-visibility' as any)}
         />
         <SettingsItem
@@ -117,8 +122,8 @@ export default function SettingsPage() {
         />
         <SettingsItem
           icon={Maximize}
-          title={t('display_text_size')}
-          onTap={() => { }}
+          title={t('display_text_size' as any, { defaultValue: 'Text Size' })}
+          onTap={() => router.push('/settings/display' as any)}
         />
         <SettingsItem
           icon={Globe}
@@ -153,13 +158,13 @@ export default function SettingsPage() {
         {renderDivider()}
 
         {renderSectionHeader(t('login'))}
-        <TouchableOpacity style={styles.textButton}>
+        <TouchableOpacity activeOpacity={1} style={styles.textButton}>
           <Text style={[styles.textButtonLabel, { color: colors.primary }]}>{t('add_account')}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.textButton}>
+        <TouchableOpacity activeOpacity={1} style={styles.textButton}>
           <Text style={[styles.textButtonLabel, { color: colors.primary }]}>{t('switch_account')}</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity activeOpacity={1} 
           style={styles.textButton}
           onPress={() => {
             Alert.alert(

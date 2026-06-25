@@ -102,7 +102,7 @@ export const CustomCamera = () => {
         enableTorch={flash === 'on'}
       >
         <View style={[styles.topBar, { paddingTop: Math.max(insets.top, 16) }]}>
-          <TouchableOpacity style={styles.iconButton} onPress={() => router.back()}>
+          <TouchableOpacity activeOpacity={1} style={styles.iconButton} onPress={() => router.back()}>
             <X color="white" size={28} />
           </TouchableOpacity>
           {isRecording && (
@@ -111,7 +111,7 @@ export const CustomCamera = () => {
               <Text style={styles.timerText}>{formatTime(recordingTime)}</Text>
             </View>
           )}
-          <TouchableOpacity style={styles.iconButton} onPress={toggleFlash}>
+          <TouchableOpacity activeOpacity={1} style={styles.iconButton} onPress={toggleFlash}>
             <Flashlight color={flash === 'on' ? '#FFB300' : 'white'} size={24} />
           </TouchableOpacity>
         </View>
@@ -119,7 +119,7 @@ export const CustomCamera = () => {
         <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 32) }]}>
           <View style={styles.sideButtonContainer} />
 
-          <TouchableOpacity
+          <TouchableOpacity activeOpacity={1}
             style={[styles.captureRing, isRecording && { borderColor: '#E50914' }]}
             onPress={takePicture}
             onLongPress={startRecording}
@@ -131,7 +131,7 @@ export const CustomCamera = () => {
           </TouchableOpacity>
 
           <View style={styles.sideButtonContainer}>
-            <TouchableOpacity style={styles.iconButton} onPress={toggleCameraFacing}>
+            <TouchableOpacity activeOpacity={1} style={styles.iconButton} onPress={toggleCameraFacing}>
               <RefreshCcw color="white" size={24} />
             </TouchableOpacity>
           </View>

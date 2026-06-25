@@ -3,7 +3,7 @@ import { ChannelModel } from '@/channel/models/ChannelModel';
 import { channelRepository } from '@/channel/data/channelRepository';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 
-const PAGE_LIMIT = 10;
+const PAGE_LIMIT = 20;
 
 export const useExploreChannels = (targetUserId?: string) => {
   const user = useAuthStore(state => state.user);

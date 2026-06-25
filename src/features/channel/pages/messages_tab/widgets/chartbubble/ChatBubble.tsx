@@ -105,6 +105,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
             userId={message.senderId}
             fallbackUrl={message.senderAvatarUrl}
             size={42}
+            forceOnline={message.isMe ? true : undefined}
             onTap={() => setShowProfile(true)}
           />
 
@@ -119,7 +120,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
               {message.time ? <Text style={styles.timeText}>{message.time}</Text> : null}
 
               {message.isMe && (
-                <TouchableOpacity style={styles.moreButton} onPress={handleMorePress}>
+                <TouchableOpacity activeOpacity={1} style={styles.moreButton} onPress={handleMorePress}>
                   <MoreHorizontal size={16} color="rgba(255,255,255,0.5)" />
                 </TouchableOpacity>
               )}
@@ -137,7 +138,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
               )}
 
               {/* Text Message */}
-              {message.text && message.text.length > 0 && (
+              {Boolean(message.text && message.text.length > 0) && (
                 <Text style={styles.messageText}>{message.text}</Text>
               )}
 
@@ -162,7 +163,11 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
               {lottieItem && LottieView && (
                 <View style={{ width: 140, height: 140, marginVertical: 8 }}>
                   <LottieView
-                    source={STICKER_SOURCES[Number(lottieItem.url)] ?? lottieItem.url}
+                    source={
+                      Platform.OS === 'web'
+                        ? { uri: `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(STICKER_SOURCES[Number(lottieItem.url)] ?? lottieItem.url))}` }
+                        : (STICKER_SOURCES[Number(lottieItem.url)] ?? lottieItem.url)
+                    }
                     autoPlay
                     loop
                     style={{ width: '100%', height: '100%' }}
@@ -211,7 +216,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
             onPress={() => setShowDeleteMenu(false)}
           >
             <View style={styles.deleteMenu}>
-              <TouchableOpacity
+              <TouchableOpacity activeOpacity={1}
                 style={styles.deleteMenuItem}
                 onPress={() => {
                   setShowDeleteMenu(false);

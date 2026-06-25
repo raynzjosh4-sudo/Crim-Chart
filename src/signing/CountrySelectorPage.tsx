@@ -80,7 +80,7 @@ export default function CountrySelectorPage() {
                     data={filteredCountries}
                     keyExtractor={(item) => item.code}
                     renderItem={({ item }) => (
-                        <TouchableOpacity 
+                        <TouchableOpacity activeOpacity={1} 
                             style={styles.countryRow} 
                             onPress={() => handleSelectCountry(item)}
                             disabled={isLoading}

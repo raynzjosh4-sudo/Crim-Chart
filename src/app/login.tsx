@@ -22,6 +22,21 @@ export default function LoginPage() {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    try {
+      const success = await useAuthStore.getState().loginWithGoogle();
+      if (success) {
+        if (useAuthStore.getState().pendingGoogleOnboarding) {
+          router.push('/signup/username' as any);
+        } else {
+          router.replace('/(tabs)/channels' as any);
+        }
+      }
+    } catch (error) {
+      console.error('Google Login Error:', error);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ChartAppBar title="" showBorder={false} />
@@ -63,7 +78,7 @@ export default function LoginPage() {
               value={password}
               onChangeText={setPassword}
             />
-            <TouchableOpacity onPress={() => setObscureText(!obscureText)}>
+            <TouchableOpacity activeOpacity={1} onPress={() => setObscureText(!obscureText)}>
               {obscureText ? <Eye size={18} color="rgba(255, 255, 255, 0.3)" /> : <EyeOff size={18} color="rgba(255, 255, 255, 0.3)" />}
             </TouchableOpacity>
           </View>
@@ -75,7 +90,7 @@ export default function LoginPage() {
           <View style={styles.spacerLarge} />
 
           {/* Login Button */}
-          <TouchableOpacity
+          <TouchableOpacity activeOpacity={1}
             style={[styles.loginButton, (!identifier || !password) ? styles.loginButtonDisabled : null]}
             onPress={handleLogin}
             disabled={!identifier || !password || isLoading}
@@ -85,7 +100,7 @@ export default function LoginPage() {
 
           <View style={styles.spacerLarge} />
 
-          <TouchableOpacity>
+          <TouchableOpacity activeOpacity={1}>
             <Text style={styles.forgotText}>Forgot password?</Text>
           </TouchableOpacity>
 
@@ -101,7 +116,7 @@ export default function LoginPage() {
           <View style={styles.spacerExtraLarge} />
 
           {/* Google Login */}
-          <TouchableOpacity style={styles.googleButton}>
+          <TouchableOpacity activeOpacity={1} style={styles.googleButton} onPress={handleGoogleLogin}>
             <Image
               source={{ uri: 'https://www.gstatic.com/images/branding/product/2x/googleg_96dp.png' }}
               style={styles.googleIcon}
@@ -114,7 +129,7 @@ export default function LoginPage() {
       {/* Footer */}
       <View style={styles.footer}>
         <Text style={styles.footerText}>Don't have an account? </Text>
-        <TouchableOpacity onPress={() => router.push('/landing' as any)}>
+        <TouchableOpacity activeOpacity={1} onPress={() => router.push('/landing' as any)}>
           <Text style={styles.signUpText}>Sign up</Text>
         </TouchableOpacity>
       </View>

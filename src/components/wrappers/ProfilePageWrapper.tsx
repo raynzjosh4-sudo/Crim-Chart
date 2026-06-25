@@ -134,7 +134,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row'
   },
   actionBtn: {
-    flex: 1,
+    minWidth: 100,
+    paddingHorizontal: 16,
     height: 36,
     borderRadius: 10,
     justifyContent: 'center',
@@ -142,11 +143,11 @@ const styles = StyleSheet.create({
   },
   primaryBtn: {
     backgroundColor: '#FACD11',
-    flex: 2
+    flexGrow: 2
   },
   secondaryBtn: {
     backgroundColor: 'rgba(255,255,255,0.08)',
-    flex: 1
+    flexGrow: 1
   },
   primaryBtnText: {
     color: '#000',

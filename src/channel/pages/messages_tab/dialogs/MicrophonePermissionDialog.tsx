@@ -26,13 +26,13 @@ export const MicrophonePermissionDialog: React.FC<MicrophonePermissionDialogProp
         </Text>
 
         <View style={styles.buttonRow}>
-          <TouchableOpacity onPress={onDeny} style={styles.notNowBtn}>
+          <TouchableOpacity activeOpacity={1} onPress={onDeny} style={styles.notNowBtn}>
             <Text style={styles.notNowText}>Not Now</Text>
           </TouchableOpacity>
 
           <View style={{ width: 12 }} />
 
-          <TouchableOpacity onPress={onAllow} style={styles.allowBtn}>
+          <TouchableOpacity activeOpacity={1} onPress={onAllow} style={styles.allowBtn}>
             <Text style={styles.allowText}>Allow</Text>
           </TouchableOpacity>
         </View>

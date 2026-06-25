@@ -9,6 +9,7 @@ import { ThumbnailLinkCard } from './ThumbnailLinkCard';
 import { ChannelAndFeedPostModel } from '@/channel/ChannelComponents/ChnnelMainPostCard/ChannelAndFeedPostModel';
 import { StoryListWidget } from '@/components/statuspagesAndWidgets/StoryListWidget';
 import { EliteCardWidget } from '@/components/hiness/EliteCardWidget';
+import { UserRecommendationCarousel } from '../../pages/main_page_widgets/UserRecommendationCarousel';
 
 interface MainFeedCardProps {
   card: MainFeedCardModel;
@@ -66,6 +67,9 @@ export const MainFeedCard: React.FC<MainFeedCardProps> = ({ card, isActive }) =>
 
     case MainFeedCardType.Elite:
       return <EliteCardWidget data={card.itemData as any} />;
+
+    case MainFeedCardType.user_recommendation_carousel:
+      return <UserRecommendationCarousel />;
 
     default:
       return <View style={styles.empty} />;

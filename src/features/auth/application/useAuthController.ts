@@ -16,6 +16,7 @@ interface AuthState {
   isLoading: boolean;
   errorMessage: string | null;
   pendingSignUp: Partial<SignUpParams> | null;
+  pendingGoogleOnboarding: boolean;
 
   checkSession: () => Promise<void>;
   
@@ -32,6 +33,7 @@ interface AuthState {
   // Login Flow
   login: (params: LoginParams) => Promise<boolean>;
   loginWithGoogle: (idToken: string, accessToken: string) => Promise<boolean>;
+  completeGoogleOnboarding: () => Promise<boolean>;
   
   // Signout
   signOut: () => Promise<void>;
@@ -45,6 +47,7 @@ export const useAuthController = create<AuthState>((set, get) => ({
   isLoading: false,
   errorMessage: null,
   pendingSignUp: null,
+  pendingGoogleOnboarding: false,
 
   checkSession: async () => {
     try {
@@ -169,16 +172,54 @@ export const useAuthController = create<AuthState>((set, get) => ({
   loginWithGoogle: async (idToken: string, accessToken: string) => {
     set({ isLoading: true, errorMessage: null });
     try {
-      const { user } = await AuthRemoteSource.loginWithGoogle(idToken, accessToken);
+      const result = await AuthRemoteSource.loginWithGoogle(idToken, accessToken);
+      if (result.isNewUser) {
+        set({ 
+          isLoading: false, 
+          status: AuthStatus.unauthenticated, 
+          user: result.user, 
+          pendingGoogleOnboarding: true 
+        });
+        return true;
+      }
+
       set({
         isLoading: false,
         status: AuthStatus.authenticated,
-        user
+        user: result.user,
+        pendingGoogleOnboarding: false
       });
       AuthRemoteSource.updateOnlineStatus(true);
       return true;
     } catch (e: any) {
       set({ isLoading: false, errorMessage: e.message || 'Google Login failed' });
+      return false;
+    }
+  },
+
+  completeGoogleOnboarding: async () => {
+    const { user, pendingSignUp } = get();
+    if (!user) {
+      set({ errorMessage: 'No user available for onboarding.' });
+      return false;
+    }
+    set({ isLoading: true, errorMessage: null });
+    try {
+      await AuthRemoteSource.createGoogleUserProfile({
+        username: pendingSignUp?.username,
+        birthday: pendingSignUp?.birthday?.toISOString(),
+        gender: pendingSignUp?.gender
+      });
+      set({
+        isLoading: false,
+        status: AuthStatus.authenticated,
+        user,
+        pendingGoogleOnboarding: false
+      });
+      AuthRemoteSource.updateOnlineStatus(true);
+      return true;
+    } catch (e: any) {
+      set({ isLoading: false, errorMessage: e.message || 'Failed to complete profile' });
       return false;
     }
   },
@@ -195,7 +236,8 @@ export const useAuthController = create<AuthState>((set, get) => ({
         isLoading: false,
         status: AuthStatus.unauthenticated,
         user: null,
-        pendingSignUp: null
+        pendingSignUp: null,
+        pendingGoogleOnboarding: false
       });
     }
   },

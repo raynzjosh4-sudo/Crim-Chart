@@ -5,7 +5,7 @@ export const SelectMediaBottomSheet: React.FC = () => {
   return (
     <View style={styles.container}>
       <Text style={styles.text}>SelectMediaBottomSheet Placeholder</Text>
-      <TouchableOpacity style={styles.btn}>
+      <TouchableOpacity activeOpacity={1} style={styles.btn}>
         <Text style={styles.btnText}>Open Image Picker</Text>
       </TouchableOpacity>
     </View>

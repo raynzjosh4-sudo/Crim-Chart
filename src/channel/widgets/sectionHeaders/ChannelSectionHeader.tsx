@@ -25,7 +25,7 @@ export const ChannelSectionHeader: React.FC<ChannelSectionHeaderProps> = ({
       </View>
       
       {showAction && (
-        <TouchableOpacity style={styles.actionBtn} onPress={onActionPressed}>
+        <TouchableOpacity activeOpacity={1} style={styles.actionBtn} onPress={onActionPressed}>
           <Text style={styles.actionText}>{actionText}</Text>
         </TouchableOpacity>
       )}

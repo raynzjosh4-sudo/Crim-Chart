@@ -18,12 +18,14 @@ import {
   Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View
+  View,
+  useWindowDimensions
 } from 'react-native';
 import 'react-native-get-random-values';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { v4 as uuidv4 } from 'uuid';
 import { CommentItem, CommentModel } from './CommentItem';
+import { CreateReplyModal } from './CreateReplyModal/CreateReplyModal';
 
 interface CommentSheetProps {
   postId: string;
@@ -35,6 +37,7 @@ interface CommentSheetProps {
 export const CommentSheet: React.FC<CommentSheetProps> = ({ postId, visible, onClose, onCommentAdded }) => {
   const currentUser = useAuthStore(state => state.user);
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
 
   const [comments, _setComments] = useState<CommentModel[]>([]);
   const commentsRef = useRef<CommentModel[]>([]);
@@ -100,11 +103,15 @@ export const CommentSheet: React.FC<CommentSheetProps> = ({ postId, visible, onC
 
         // 3. Upsert remote comments to local DB to update cache
         const remoteComments = data.map(c => ({ ...c, is_pending: false }));
-        await NativeDB.upsertComments(remoteComments);
-
-        // 4. Reload local to include any pending offline ones + new remote ones
-        localComments = await NativeDB.getComments(postId);
-        setComments(localComments);
+        
+        if (Platform.OS === 'web') {
+          setComments(remoteComments);
+        } else {
+          await NativeDB.upsertComments(remoteComments);
+          // 4. Reload local to include any pending offline ones + new remote ones
+          localComments = await NativeDB.getComments(postId);
+          setComments(localComments);
+        }
       }
     } catch (e) {
       console.error('Failed to load comments', e);
@@ -150,7 +157,11 @@ export const CommentSheet: React.FC<CommentSheetProps> = ({ postId, visible, onC
       await NativeDB.upsertComments([newComment]);
 
       // Trigger background sync for this (and any other) pending comment
-      commentSyncManager.syncPendingComments();
+      if (Platform.OS === 'web') {
+        commentSyncManager.syncPendingComments([newComment]);
+      } else {
+        commentSyncManager.syncPendingComments();
+      }
 
       if (onCommentAdded) onCommentAdded();
     } catch (e) {
@@ -172,6 +183,19 @@ export const CommentSheet: React.FC<CommentSheetProps> = ({ postId, visible, onC
   const handleReply = (commentId: string, username: string) => {
     setInputText(`@${username} `);
   };
+
+  const isDesktop = Platform.OS === 'web' && width >= 768;
+
+  if (isDesktop) {
+    return (
+      <CreateReplyModal
+        postId={postId}
+        visible={visible}
+        onClose={onClose}
+        onCommentAdded={onCommentAdded}
+      />
+    );
+  }
 
   return (
     <Modal

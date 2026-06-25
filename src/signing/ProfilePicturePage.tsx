@@ -36,7 +36,7 @@ export default function ProfilePicturePage() {
                 isLoading={isLoading}
                 backgroundColor={colors.background}
                 actions={[
-                    <TouchableOpacity key="skip" onPress={handleSkip} disabled={isLoading} style={styles.actionButton}>
+                    <TouchableOpacity activeOpacity={1} key="skip" onPress={handleSkip} disabled={isLoading} style={styles.actionButton}>
                         <Text style={[styles.skipText, { color: colors.primary }]}>
                             {tr('skip') || 'Skip'}
                         </Text>
@@ -93,7 +93,7 @@ export default function ProfilePicturePage() {
 
                     <View style={styles.space80} />
 
-                    <TouchableOpacity 
+                    <TouchableOpacity activeOpacity={1} 
                         style={[styles.addButton, { backgroundColor: colors.primary }]}
                         onPress={() => router.push('/channelIntro' as any)}
                         disabled={isLoading}

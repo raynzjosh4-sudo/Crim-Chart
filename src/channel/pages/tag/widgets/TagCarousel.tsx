@@ -1,19 +1,21 @@
-import React from 'react';
+import { useTheme } from '@react-navigation/native';
 import {
-  View,
-  Text,
-  ScrollView,
   ActivityIndicator,
+  ScrollView,
   StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { TagCard } from './TagCard';
+import { ActiveChannelCircle } from '@/channel/widgets/ActiveChannelCircle';
+import { ChannelTagWrapper } from '@/components/wrappers/ChannelTagWrapper';
 
 export interface TagCarouselItem {
   id: string;
   title: string;
   description?: string | null;
   imageUrl?: string | null;
-  onTap: () => void;
+  onTap?: () => void;
 }
 
 interface TagCarouselProps {
@@ -22,6 +24,10 @@ interface TagCarouselProps {
   trailingText?: string | null;
   isLoadingMore?: boolean;
   onEndReached?: () => void;
+  postId: string;
+  sourceChannelId: string;
+  linkChain?: string[];
+  onTagSuccess?: () => void;
 }
 
 export const TagCarousel: React.FC<TagCarouselProps> = ({
@@ -30,7 +36,13 @@ export const TagCarousel: React.FC<TagCarouselProps> = ({
   trailingText,
   isLoadingMore = false,
   onEndReached,
+  postId,
+  sourceChannelId,
+  linkChain = [],
+  onTagSuccess,
 }) => {
+  const { colors, dark } = useTheme();
+
   const handleScroll = (e: any) => {
     if (!onEndReached) return;
     const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent;
@@ -43,8 +55,8 @@ export const TagCarousel: React.FC<TagCarouselProps> = ({
     <View>
       {title && (
         <View style={styles.header}>
-          <Text style={styles.title}>{title}</Text>
-          {trailingText && <Text style={styles.trailing}>{trailingText}</Text>}
+          <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+          {trailingText && <Text style={[styles.trailing, { color: colors.text, opacity: 0.5 }]}>{trailingText}</Text>}
         </View>
       )}
       <ScrollView
@@ -54,17 +66,36 @@ export const TagCarousel: React.FC<TagCarouselProps> = ({
         onScroll={handleScroll}
         scrollEventThrottle={100}
         decelerationRate="fast"
-        // ← no fixed height, let content define it
+      // ← no fixed height, let content define it
       >
         {cards.map((item) => (
-          <View key={item.id} style={{ marginRight: 10 }}>
-            <TagCard
-              title={item.title}
-              description={item.description}
+          <View key={item.id} style={{ marginRight: 18, alignItems: 'center' }}>
+            <ActiveChannelCircle
+              name={item.title}
               imageUrl={item.imageUrl}
-              buttonText="Tag"
               onTap={item.onTap}
             />
+            <View style={{ height: 6 }} />
+            <ChannelTagWrapper
+              postId={postId}
+              sourceChannelId={sourceChannelId}
+              targetChannelId={item.id}
+              linkChain={linkChain}
+              onTagSuccess={onTagSuccess}
+            >
+              <TouchableOpacity
+                style={[
+                  styles.tagButton,
+                  {
+                    backgroundColor: dark ? '#2A2A2A' : colors.background,
+                    borderColor: dark ? 'rgba(255,255,255,0.12)' : colors.border,
+                  },
+                ]}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.tagButtonText, { color: colors.text, opacity: 0.9 }]}>Tag</Text>
+              </TouchableOpacity>
+            </ChannelTagWrapper>
           </View>
         ))}
         {isLoadingMore && (
@@ -104,5 +135,15 @@ const styles = StyleSheet.create({
     width: 48,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  tagButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  tagButtonText: {
+    fontSize: 11,
+    fontWeight: '800',
   },
 });

@@ -41,7 +41,7 @@ export const MembersStoryBar: React.FC<MembersStoryBarProps> = ({
         contentContainerStyle={styles.scrollContent}
       >
         {canPostStatus && (
-          <TouchableOpacity style={styles.addCard} onPress={onAddStory}>
+          <TouchableOpacity activeOpacity={1} style={styles.addCard} onPress={onAddStory}>
             <View style={styles.addCardOverlay} />
             <View style={styles.addIconContainer}>
               <View style={styles.avatarPlaceholder}>
@@ -59,7 +59,7 @@ export const MembersStoryBar: React.FC<MembersStoryBarProps> = ({
         )}
 
         {statuses.map((status, index) => (
-          <TouchableOpacity key={status.id} style={styles.statusCard}>
+          <TouchableOpacity activeOpacity={1} key={status.id} style={styles.statusCard}>
             <Image 
               source={{ uri: status.primaryImageUrl || status.authorAvatarUrl }} 
               style={StyleSheet.absoluteFill}
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   },
   addCardOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 184, 0, 0.10)',
+    backgroundColor: 'transparent',
   },
   statusGradient: {
     ...StyleSheet.absoluteFillObject,

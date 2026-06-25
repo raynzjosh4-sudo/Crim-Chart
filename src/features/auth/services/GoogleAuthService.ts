@@ -29,6 +29,15 @@ export class GoogleAuthService {
   }
 
   static async signOut() {
-    await GoogleSignin.signOut();
+    try {
+      await GoogleSignin.revokeAccess();
+    } catch (e) {
+      // Ignore revoke errors (might already be revoked)
+    }
+    try {
+      await GoogleSignin.signOut();
+    } catch (e) {
+      // Ignore sign out errors
+    }
   }
 }

@@ -41,16 +41,16 @@ export function VotingLeaderboardTile({ item, rank }: Props) {
         {/* Voting Actions */}
         <View style={styles.kingActionsRow}>
           <View style={styles.voteBox}>
-            <TouchableOpacity style={styles.voteBtn}>
+            <TouchableOpacity activeOpacity={1} style={styles.voteBtn}>
               <ChevronUp size={32} color="#4ADE80" />
             </TouchableOpacity>
             <Text style={styles.kingScore}>{item.score.toLocaleString()}</Text>
-            <TouchableOpacity style={styles.voteBtn}>
+            <TouchableOpacity activeOpacity={1} style={styles.voteBtn}>
               <ChevronDown size={32} color="#F87171" />
             </TouchableOpacity>
           </View>
           
-          <TouchableOpacity style={styles.commentBtn}>
+          <TouchableOpacity activeOpacity={1} style={styles.commentBtn}>
             <MessageCircle size={24} color="#FFF" />
             <Text style={styles.commentCount}>{item.commentsCount}</Text>
           </TouchableOpacity>
@@ -79,11 +79,11 @@ export function VotingLeaderboardTile({ item, rank }: Props) {
       </View>
 
       <View style={styles.challengerVotes}>
-        <TouchableOpacity style={styles.voteBtnSmall}>
+        <TouchableOpacity activeOpacity={1} style={styles.voteBtnSmall}>
           <ChevronUp size={24} color="#4ADE80" />
         </TouchableOpacity>
         <Text style={styles.challengerScore}>{item.score.toLocaleString()}</Text>
-        <TouchableOpacity style={styles.voteBtnSmall}>
+        <TouchableOpacity activeOpacity={1} style={styles.voteBtnSmall}>
           <ChevronDown size={24} color="#F87171" />
         </TouchableOpacity>
       </View>

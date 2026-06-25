@@ -1,28 +1,26 @@
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import { colors } from '@/core/theme/colors';
 import { useRouter } from 'expo-router';
+import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { ChartToast } from '@/components/showcase/CrimChart_toast';
 import { Search } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-const COUNTRIES = [
-  { name: 'United States', code: 'US', phone: '1' },
-  { name: 'United Kingdom', code: 'GB', phone: '44' },
-  { name: 'Canada', code: 'CA', phone: '1' },
-  { name: 'Australia', code: 'AU', phone: '61' },
-  { name: 'Germany', code: 'DE', phone: '49' },
-  { name: 'France', code: 'FR', phone: '33' },
-  { name: 'Japan', code: 'JP', phone: '81' },
-  { name: 'China', code: 'CN', phone: '86' },
-  { name: 'India', code: 'IN', phone: '91' },
-  { name: 'Brazil', code: 'BR', phone: '55' },
-  // Add more as needed or use a library
-];
+import { customArray } from 'country-codes-list';
+
+const COUNTRIES = customArray({
+  name: '{countryNameEn}',
+  code: '{countryCode}',
+  phone: '{countryCallingCode}'
+}).sort((a, b) => a.name.localeCompare(b.name));
 
 export default function CountrySelector() {
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const authStore = useAuthStore();
 
   const filteredCountries = COUNTRIES.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -32,10 +30,15 @@ export default function CountrySelector() {
 
   const handleSelect = async (country: any) => {
     setIsLoading(true);
-    // Here we would store the selected country in a store
-    await new Promise(resolve => setTimeout(resolve, 300));
-    setIsLoading(false);
-    router.push('/signup/phone' as any);
+    authStore.setCountryName(country.name);
+
+    if (authStore.pendingGoogleOnboarding) {
+      setIsLoading(false);
+      router.push('/signup/username' as any);
+    } else {
+      setIsLoading(false);
+      router.push('/signup/phone' as any);
+    }
   };
 
   return (
@@ -62,9 +65,9 @@ export default function CountrySelector() {
 
       <FlatList
         data={filteredCountries}
-        keyExtractor={(item) => item.code}
+        keyExtractor={(item, index) => `${item.code}-${index}`}
         renderItem={({ item }) => (
-          <TouchableOpacity
+          <TouchableOpacity activeOpacity={1}
             style={styles.countryItem}
             onPress={() => handleSelect(item)}
             disabled={isLoading}

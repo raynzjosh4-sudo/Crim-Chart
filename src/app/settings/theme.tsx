@@ -1,58 +1,64 @@
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import { useTranslation } from '@/core/localization/i18n';
-import { colors } from '@/core/theme/colors';
-import { Moon, Settings, Sun } from 'lucide-react-native';
-import React, { useState } from 'react';
+import { useCurrentTheme, useThemeStore } from '@/core/store/useThemeStore';
+import { THEMES } from '@/core/theme/themes';
+import { useStyles } from '@/core/hooks/useStyles';
+import { ThemeTokens } from '@/core/theme/themes';
+import { Check } from 'lucide-react-native';
+import React from 'react';
 import { FlatList, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-
-type ThemeMode = 'light' | 'dark' | 'system';
 
 export default function ThemeSettingsPage() {
   const { t } = useTranslation();
-  const [selectedMode, setSelectedMode] = useState<ThemeMode>('dark');
+  const { themeId, setThemeId } = useThemeStore();
+  const styles = useStyles(themeStyles);
+  const currentTheme = useCurrentTheme();
 
-  const THEME_OPTIONS = [
-    { id: 'light', title: t('light'), icon: Sun },
-    { id: 'dark', title: t('dark'), icon: Moon },
-    { id: 'system', title: t('system_default'), icon: Settings },
-  ];
+  const themeOptions = Object.values(THEMES);
 
   return (
     <SafeAreaView style={styles.container}>
-      <ChartAppBar title={t('theme')} showBack />
+      <ChartAppBar title={t('theme' as any, { defaultValue: 'Theme' })} showBack />
 
       <View style={styles.content}>
         <FlatList
-          data={THEME_OPTIONS}
+          data={themeOptions}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => {
-            const isSelected = item.id === selectedMode;
-            const Icon = item.icon;
+            const isSelected = item.id === themeId;
             return (
-              <TouchableOpacity
-                style={styles.optionItem}
-                onPress={() => setSelectedMode(item.id as ThemeMode)}
+              <TouchableOpacity activeOpacity={0.8}
+                style={[
+                  styles.optionItem,
+                  { backgroundColor: item.colors.surface }
+                ]}
+                onPress={() => setThemeId(item.id)}
               >
                 <View style={styles.leftRow}>
-                  <Icon size={22} color={colors.text} />
-                  <Text style={styles.optionTitle}>{item.title}</Text>
+                  <View style={styles.palettePreview}>
+                    <View style={[styles.colorDot, { backgroundColor: item.colors.primary }]} />
+                    <View style={[styles.colorDot, { backgroundColor: item.colors.background }]} />
+                    <View style={[styles.colorDot, { backgroundColor: item.colors.accent }]} />
+                    <View style={[styles.colorDot, { backgroundColor: item.colors.error }]} />
+                  </View>
+                  <Text style={[styles.optionTitle, { color: item.colors.text }]}>
+                    {item.name}
+                  </Text>
                 </View>
-                <View style={[
-                  styles.radio,
-                  isSelected && styles.radioSelected
-                ]}>
-                  {isSelected && <View style={styles.radioInner} />}
-                </View>
+                {isSelected && (
+                  <Check size={20} color={item.colors.primary} />
+                )}
               </TouchableOpacity>
             );
           }}
+          contentContainerStyle={{ padding: 16, gap: 12 }}
         />
       </View>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const themeStyles = (colors: ThemeTokens, scale: number) => ({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -61,40 +67,33 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   optionItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    paddingHorizontal: 16 * scale,
+    paddingVertical: 16 * scale,
+    borderRadius: 12 * scale,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
   },
   leftRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 16 * scale,
+  },
+  palettePreview: {
+    flexDirection: 'row' as const,
+    gap: -4 * scale,
+  },
+  colorDot: {
+    width: 24 * scale,
+    height: 24 * scale,
+    borderRadius: 12 * scale,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   optionTitle: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  radioSelected: {
-    borderColor: colors.primary,
-  },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.primary,
+    fontSize: 16 * scale,
+    fontWeight: '600' as const,
   },
 });

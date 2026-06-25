@@ -15,7 +15,13 @@ interface MovieBoxVideoPreviewTileProps {
 export const MovieBoxVideoPreviewTile: React.FC<MovieBoxVideoPreviewTileProps> = ({ video }) => {
   return (
     <View style={styles.videoPreview}>
-      <Image source={{ uri: video.thumbnailUrl }} style={styles.videoThumb} contentFit="cover" />
+      {video.thumbnailUrl ? (
+        <Image source={{ uri: video.thumbnailUrl }} style={styles.videoThumb} contentFit="cover" />
+      ) : (
+        <View style={[styles.videoThumb, { backgroundColor: '#222', justifyContent: 'center', alignItems: 'center' }]}>
+          <Play size={24} color="rgba(255,255,255,0.2)" />
+        </View>
+      )}
       <View style={styles.durationBadge}>
         <Text style={styles.durationText}>{video.duration}</Text>
       </View>
@@ -33,6 +39,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     overflow: 'hidden',
     position: 'relative',
+    backgroundColor: '#333',
   },
   videoThumb: {
     width: '100%',

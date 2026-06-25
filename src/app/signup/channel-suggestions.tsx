@@ -3,7 +3,8 @@ import { colors } from '@/core/theme/colors';
 import { useRouter } from 'expo-router';
 import { Check } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { FlatList, Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const CHANNELS = Array.from({ length: 15 }, (_, i) => ({
   id: i,
@@ -40,7 +41,7 @@ export default function ChannelSuggestionsPage() {
         title=""
         showBorder
         actions={[
-          <TouchableOpacity
+          <TouchableOpacity activeOpacity={1}
             key="skip"
             onPress={handleFinish}
           >
@@ -64,7 +65,7 @@ export default function ChannelSuggestionsPage() {
           renderItem={({ item }) => {
             const isSelected = selectedChannels.has(item.id);
             return (
-              <TouchableOpacity
+              <TouchableOpacity activeOpacity={1}
                 style={[styles.channelItem, isSelected && styles.channelItemSelected]}
                 onPress={() => toggleChannel(item.id)}
               >
@@ -82,7 +83,7 @@ export default function ChannelSuggestionsPage() {
         />
 
         <View style={styles.footer}>
-          <TouchableOpacity
+          <TouchableOpacity activeOpacity={1}
             style={[styles.finishButton, selectedChannels.size < 3 && styles.finishButtonDisabled]}
             onPress={handleFinish}
             disabled={selectedChannels.size < 3}

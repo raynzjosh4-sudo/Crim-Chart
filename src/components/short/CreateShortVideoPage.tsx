@@ -57,13 +57,13 @@ export const CreateShortVideoPage: React.FC<CreateShortVideoPageProps> = ({ onCl
         <SafeAreaView style={styles.safeArea}>
           {/* Top Bar */}
           <View style={styles.topBar}>
-            <TouchableOpacity style={styles.iconButton} onPress={onClose}>
+            <TouchableOpacity activeOpacity={1} style={styles.iconButton} onPress={onClose}>
               <X size={28} color="#FFF" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconButton} onPress={toggleFlash}>
+            <TouchableOpacity activeOpacity={1} style={styles.iconButton} onPress={toggleFlash}>
               <Flashlight size={24} color={flash === 'on' ? '#FFB300' : '#FFF'} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconButton}>
+            <TouchableOpacity activeOpacity={1} style={styles.iconButton}>
               <Settings size={24} color="#FFF" />
             </TouchableOpacity>
           </View>
@@ -75,11 +75,11 @@ export const CreateShortVideoPage: React.FC<CreateShortVideoPageProps> = ({ onCl
           <View style={styles.bottomControls}>
             {/* Gallery / Capture / Flip row */}
             <View style={styles.captureRow}>
-              <TouchableOpacity style={styles.galleryButton}>
+              <TouchableOpacity activeOpacity={1} style={styles.galleryButton}>
                 <View style={styles.galleryPlaceholder} />
               </TouchableOpacity>
 
-              <TouchableOpacity
+              <TouchableOpacity activeOpacity={1}
                 style={[styles.captureRing, isRecording && { borderColor: '#E50914' }]}
                 onPress={handleCapture}
                 onLongPress={startRecording}
@@ -89,14 +89,14 @@ export const CreateShortVideoPage: React.FC<CreateShortVideoPageProps> = ({ onCl
                 <View style={[styles.captureButton, isRecording && { backgroundColor: '#E50914', borderRadius: 10, width: 36, height: 36 }]} />
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.iconButton} onPress={toggleFacing}>
+              <TouchableOpacity activeOpacity={1} style={styles.iconButton} onPress={toggleFacing}>
                 <RefreshCcw size={28} color="#FFF" />
               </TouchableOpacity>
             </View>
 
             {/* Music Widget */}
             <View style={styles.musicWidgetContainer}>
-              <TouchableOpacity style={styles.musicButton}>
+              <TouchableOpacity activeOpacity={1} style={styles.musicButton}>
                 <Music size={16} color="#FFF" style={styles.musicIcon} />
                 <Text style={styles.musicText}>Add Audio</Text>
               </TouchableOpacity>

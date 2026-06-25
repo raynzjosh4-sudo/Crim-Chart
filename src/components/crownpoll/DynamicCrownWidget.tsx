@@ -89,7 +89,7 @@ export const DynamicCrownWidget: React.FC<DynamicCrownWidgetProps> = ({
           ))}
 
           {/* ADD OPTION CARD / BUTTON AT THE END */}
-          <TouchableOpacity
+          <TouchableOpacity activeOpacity={1}
             style={[
               styles.addCard,
               {
@@ -109,7 +109,7 @@ export const DynamicCrownWidget: React.FC<DynamicCrownWidgetProps> = ({
       {/* ADD OPTION INPUT FIELD */}
       {isAddingOption && (
         <View style={styles.inputRow}>
-          <TouchableOpacity style={styles.iconButton}>
+          <TouchableOpacity activeOpacity={1} style={styles.iconButton}>
             <ImagePlus size={20} color="#666" />
           </TouchableOpacity>
 
@@ -123,11 +123,11 @@ export const DynamicCrownWidget: React.FC<DynamicCrownWidgetProps> = ({
             onSubmitEditing={submitNewOption}
           />
 
-          <TouchableOpacity style={styles.iconButton} onPress={submitNewOption}>
+          <TouchableOpacity activeOpacity={1} style={styles.iconButton} onPress={submitNewOption}>
             <Send size={20} color={themeColor} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.iconButton} onPress={() => setIsAddingOption(false)}>
+          <TouchableOpacity activeOpacity={1} style={styles.iconButton} onPress={() => setIsAddingOption(false)}>
             <X size={20} color="#666" />
           </TouchableOpacity>
         </View>

@@ -59,7 +59,7 @@ export const EditProfileImagePage: React.FC = () => {
     <View style={styles.container}>
       <Text style={styles.heading}>Profile Photo</Text>
 
-      <TouchableOpacity style={styles.avatarWrapper} onPress={pickImage}>
+      <TouchableOpacity activeOpacity={1} style={styles.avatarWrapper} onPress={pickImage}>
         {avatarUri ? (
           <Image source={{ uri: avatarUri }} style={styles.avatar} />
         ) : (
@@ -75,7 +75,7 @@ export const EditProfileImagePage: React.FC = () => {
       <Text style={styles.hint}>Tap the photo to select a new one</Text>
 
       {preview && (
-        <TouchableOpacity style={styles.uploadBtn} onPress={uploadImage} disabled={isUploading}>
+        <TouchableOpacity activeOpacity={1} style={styles.uploadBtn} onPress={uploadImage} disabled={isUploading}>
           {isUploading
             ? <ActivityIndicator color="#000" />
             : <Text style={styles.uploadBtnText}>Save Photo</Text>

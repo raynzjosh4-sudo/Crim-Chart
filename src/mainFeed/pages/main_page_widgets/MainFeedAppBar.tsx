@@ -1,9 +1,9 @@
-import React from 'react';
-import {
-  View, Text, TouchableOpacity, Image, StyleSheet,
-  ActivityIndicator,
-} from 'react-native';
 import { Bell, Search } from 'lucide-react-native';
+import {
+  Image, StyleSheet,
+  Text, TouchableOpacity,
+  View
+} from 'react-native';
 
 interface MainFeedAppBarProps {
   badgeCount?: number;
@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 48,
     paddingBottom: 12,
-    backgroundColor: '#0D0D0D',
+    backgroundColor: '#000000',
   },
   brand: {},
   brandText: {
@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 4,
     borderWidth: 1.5,
-    borderColor: '#0D0D0D',
+    borderColor: '#000000',
   },
   badgeText: { color: '#FFF', fontSize: 10, fontWeight: '800' },
 });

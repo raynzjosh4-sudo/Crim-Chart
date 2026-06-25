@@ -1,13 +1,43 @@
 import { useMediaPermissions } from '@/core/hooks/useMediaPermissions';
 import * as MediaLibrary from 'expo-media-library';
 import { useState } from 'react';
+import { create } from 'zustand';
+
+interface LocalVideoStore {
+  localVideos: any[];
+  hasMoreLocalVideos: boolean;
+  localMediaCursor: string | undefined;
+  selectedAlbum: string | null;
+  setLocalVideos: (videos: any[]) => void;
+  setHasMoreLocalVideos: (hasMore: boolean) => void;
+  setLocalMediaCursor: (cursor: string | undefined) => void;
+  setSelectedAlbum: (album: string | null) => void;
+}
+
+const useLocalVideoStore = create<LocalVideoStore>((set) => ({
+  localVideos: [],
+  hasMoreLocalVideos: true,
+  localMediaCursor: undefined,
+  selectedAlbum: null,
+  setLocalVideos: (videos) => set({ localVideos: videos }),
+  setHasMoreLocalVideos: (hasMore) => set({ hasMoreLocalVideos: hasMore }),
+  setLocalMediaCursor: (cursor) => set({ localMediaCursor: cursor }),
+  setSelectedAlbum: (album) => set({ selectedAlbum: album }),
+}));
 
 export const useLocalVideos = () => {
-  const [localVideos, setLocalVideos] = useState<any[]>([]);
-  const [hasMoreLocalVideos, setHasMoreLocalVideos] = useState(true);
-  const [localMediaCursor, setLocalMediaCursor] = useState<string | undefined>(undefined);
+  const {
+    localVideos,
+    hasMoreLocalVideos,
+    localMediaCursor,
+    selectedAlbum,
+    setLocalVideos,
+    setHasMoreLocalVideos,
+    setLocalMediaCursor,
+    setSelectedAlbum
+  } = useLocalVideoStore();
+  
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null);
 
   const {
     showPermissionDialog,
@@ -86,6 +116,7 @@ export const useLocalVideos = () => {
     hasMoreLocalVideos,
     isLoading,
     selectedAlbum,
-    setSelectedAlbum
+    setSelectedAlbum,
+    setLocalVideos
   };
 };

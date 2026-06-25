@@ -13,21 +13,17 @@ export function useUserProfile(userId?: string) {
     }
 
     const fetchProfile = async () => {
-      const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
+      const { data, error } = await supabase.from('profiles').select('*, user_connection_stats(*)').eq('id', userId).single();
+      // console.log('DEBUG useUserProfile data:', data, 'error:', error, 'userId:', userId);
       if (data) {
-        setProfile({
-          id: data.id,
-          displayName: data.username,
-          profileImageUrl: data.profile_image_url,
-          createdAt: new Date(data.created_at),
-          // map other fields
-        } as CrimChartUserModel);
+        setProfile(CrimChartUserModel.fromMap(data));
       }
     };
 
     fetchProfile();
 
-    const channel = supabase.channel(`public:profiles:id=eq.${userId}`)
+    const channelName = `public:profiles:id=eq.${userId}-${Date.now()}-${Math.random()}`;
+    const channel = supabase.channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` }, () => {
         fetchProfile();
       }).subscribe();

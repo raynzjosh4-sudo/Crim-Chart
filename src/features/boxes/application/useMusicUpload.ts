@@ -61,6 +61,13 @@ export function useMusicUpload() {
 
       if (tagError) throw tagError;
 
+      // 4.5 Record the reaction to update chart points
+      await supabase.rpc('record_box_item_reaction', {
+        p_post_id: newPost.id,
+        p_box_id: boxId,
+        p_reaction_type: 'tag'
+      });
+
       // 5. Construct the final Track item to be injected into the UI
       const finalTrack: MusicTrackItem = {
         id: newPost.id,

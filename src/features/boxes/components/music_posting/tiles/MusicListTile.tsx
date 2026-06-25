@@ -207,7 +207,7 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
           )}
           
           {!isLocal ? (
-            <TouchableOpacity 
+            <TouchableOpacity activeOpacity={1} 
               style={[styles.tagButton, isAdded && styles.tagButtonAdded]} 
               onPress={onTagPress}
             >
@@ -241,7 +241,7 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
       {/* Bottom Action Bar */}
       <View style={styles.actionBar}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity 
+          <TouchableOpacity activeOpacity={1} 
             style={[styles.actionItem, isLocal && { opacity: 0.3 }]} 
             disabled={isLocal}
             onPress={onLikePress}
@@ -250,7 +250,7 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
             <Text style={styles.actionText}>{likesCount ?? editedTrack.likesCount ?? 0}</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity 
+          <TouchableOpacity activeOpacity={1} 
             style={[styles.actionItem, isLocal && { opacity: 0.3 }]} 
             disabled={isLocal}
             onPress={() => setIsCommentSheetVisible(true)}
@@ -259,7 +259,7 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
             <Text style={styles.actionText}>{editedTrack.commentsCount ?? 0}</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={[styles.actionItem, isLocal && { opacity: 0.3 }]} disabled={isLocal}>
+          <TouchableOpacity activeOpacity={1} style={[styles.actionItem, isLocal && { opacity: 0.3 }]} disabled={isLocal}>
             <Eye size={20} color="#FFF" />
             <Text style={styles.actionText}>{viewsCount ?? editedTrack.viewsCount ?? 0}</Text>
           </TouchableOpacity>

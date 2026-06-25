@@ -184,7 +184,7 @@ export const MusicBoxDetailTrackTile = ({ song, isPlaying, onCommentPress }: Mus
       </View>
 
       {/* Track Info Header */}
-      <TouchableOpacity
+      <TouchableOpacity activeOpacity={1}
         style={styles.mainRow}
         onPress={() => router.push({
           pathname: '/now-playing',
@@ -226,7 +226,7 @@ export const MusicBoxDetailTrackTile = ({ song, isPlaying, onCommentPress }: Mus
 
           {/* View Lyrics Button */}
           {song.hasLyrics && (
-            <TouchableOpacity style={styles.lyricsBtn}>
+            <TouchableOpacity activeOpacity={1} style={styles.lyricsBtn}>
               <Text style={styles.lyricsBtnText}>View Lyrics</Text>
             </TouchableOpacity>
           )}
@@ -260,7 +260,7 @@ export const MusicBoxDetailTrackTile = ({ song, isPlaying, onCommentPress }: Mus
             <View style={styles.actionBar}>
               <BoxReactionRecorderWrapper postId={song.postId!} boxId={song.boxId} reactionType="like">
                 {({ recordReaction }) => (
-                  <TouchableOpacity
+                  <TouchableOpacity activeOpacity={1}
                     style={styles.actionBtn}
                     onPress={() => {
                       if (!state.isLiked) {
@@ -277,7 +277,7 @@ export const MusicBoxDetailTrackTile = ({ song, isPlaying, onCommentPress }: Mus
 
               <BoxReactionRecorderWrapper postId={song.postId!} boxId={song.boxId} reactionType="comment">
                 {({ recordReaction }) => (
-                  <TouchableOpacity 
+                  <TouchableOpacity activeOpacity={1} 
                     style={styles.actionBtn}
                     onPress={() => {
                       recordReaction();
@@ -292,7 +292,7 @@ export const MusicBoxDetailTrackTile = ({ song, isPlaying, onCommentPress }: Mus
                 )}
               </BoxReactionRecorderWrapper>
 
-              <TouchableOpacity style={styles.actionBtn}>
+              <TouchableOpacity activeOpacity={1} style={styles.actionBtn}>
                 <Eye size={24} color="#FFF" />
                 <Text style={styles.actionText}>{state.viewsCount}</Text>
               </TouchableOpacity>
@@ -327,12 +327,12 @@ export const MusicBoxDetailTrackTile = ({ song, isPlaying, onCommentPress }: Mus
         </PostInteractionWrapper>
       ) : (
         <View style={styles.actionBar}>
-          <TouchableOpacity style={styles.actionBtn}>
+          <TouchableOpacity activeOpacity={1} style={styles.actionBtn}>
             <Heart size={24} color="#FFF" />
             <Text style={styles.actionText}>{song.likes || 0}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity activeOpacity={1} 
             style={styles.actionBtn}
             onPress={() => {
               if (onCommentPress && song.postId) {
@@ -344,7 +344,7 @@ export const MusicBoxDetailTrackTile = ({ song, isPlaying, onCommentPress }: Mus
             <Text style={styles.actionText}>{song.commentsCount || 0}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionBtn}>
+          <TouchableOpacity activeOpacity={1} style={styles.actionBtn}>
             <Eye size={24} color="#FFF" />
             <Text style={styles.actionText}>0</Text>
           </TouchableOpacity>

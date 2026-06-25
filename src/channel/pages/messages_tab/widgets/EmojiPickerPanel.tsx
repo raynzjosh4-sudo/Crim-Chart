@@ -104,7 +104,7 @@ export const EmojiPickerPanel: React.FC<EmojiPickerPanelProps> = ({
           {CATEGORIES.map((cat, idx) => {
             const isActive = idx === activeTab;
             return (
-              <TouchableOpacity
+              <TouchableOpacity activeOpacity={1}
                 key={cat.label}
                 onPress={() => setActiveTab(idx)}
                 style={[
@@ -123,7 +123,7 @@ export const EmojiPickerPanel: React.FC<EmojiPickerPanelProps> = ({
       <ScrollView style={styles.gridContainer}>
         <View style={styles.emojiRow}>
           {CATEGORIES[activeTab].emojis.map((emoji, idx) => (
-            <TouchableOpacity
+            <TouchableOpacity activeOpacity={1}
               key={`${emoji}-${idx}`}
               onPress={() => onEmojiSelected(emoji)}
               style={[

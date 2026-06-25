@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { FlatList, View, Text, StyleSheet, Dimensions } from 'react-native';
 import { Play } from 'lucide-react-native';
 import { SkeletonChartCard } from '../widgets/SkeletonChartCard';
+import { SkeletonBox } from '@/components/skeletons/SkeletonBox';
 import { NativeDB } from '@/core/db/NativeDB';
 import { supabase } from '@/core/supabase/client';
 import { ProfileVideoItem } from '@/components/profileTabsWidgets/ProfileVideoItem';
@@ -124,7 +125,9 @@ export const VideosProfileTab: React.FC<VideosProfileTabProps> = ({
     return (
       <View style={styles.skeletonGrid}>
         {Array.from({ length: 9 }).map((_, i) => (
-          <SkeletonChartCard key={i} width={ITEM_SIZE - 2} height={ITEM_SIZE - 2} />
+          <View key={i} style={{ width: '33.33%', aspectRatio: 2/3, padding: 1 }}>
+            <SkeletonBox width="100%" height="100%" />
+          </View>
         ))}
       </View>
     );
@@ -142,18 +145,21 @@ export const VideosProfileTab: React.FC<VideosProfileTabProps> = ({
   return (
     <FlatList
       data={videos}
+      scrollEnabled={false}
       numColumns={COLS}
       keyExtractor={item => item.id}
       renderItem={({ item }) => (
-        <ProfileVideoItem
-          thumbnailUrl={item.thumbnailUrl}
-          videoUrl={item.videoUrl}
-          durationLabel={item.durationLabel}
-          size={ITEM_SIZE - 2}
-          onPress={() => onVideoPress?.(item)}
-        />
+        <View style={{ flex: 1/3, padding: 1 }}>
+          <ProfileVideoItem
+            thumbnailUrl={item.thumbnailUrl}
+            videoUrl={item.videoUrl}
+            durationLabel={item.durationLabel}
+            size="100%"
+            onPress={() => onVideoPress?.(item)}
+          />
+        </View>
       )}
-      contentContainerStyle={{ padding: 1, gap: 2 }}
+      contentContainerStyle={styles.grid}
       showsVerticalScrollIndicator={false}
       onEndReached={loadMore}
       onEndReachedThreshold={0.5}
@@ -162,7 +168,8 @@ export const VideosProfileTab: React.FC<VideosProfileTabProps> = ({
 };
 
 const styles = StyleSheet.create({
-  skeletonGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 2, padding: 1 },
+  grid: { padding: 1, gap: 2 },
+  skeletonGrid: { flexDirection: 'row', flexWrap: 'wrap', padding: 1 },
   emptyContainer: {
     paddingTop: 60,
     alignItems: 'center',

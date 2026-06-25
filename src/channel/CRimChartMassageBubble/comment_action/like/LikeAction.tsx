@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { TouchableOpacity, Text } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring } from 'react-native-reanimated';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
+import { ThemeTokens } from '@/core/theme/themes';
 import { Heart } from 'lucide-react-native';
 
 interface LikeActionProps {
@@ -13,10 +17,25 @@ export const LikeAction: React.FC<LikeActionProps> = ({
   initialIsLiked,
   onLikeTap,
 }) => {
+  const styles = useStyles(themeStyles);
+  const theme = useCurrentTheme();
+  
   const [isLiked, setIsLiked] = useState(initialIsLiked);
   const [likesCount, setLikesCount] = useState(initialLikesCount);
+  const scale = useSharedValue(1);
 
-  const handleLike = () => {
+  // Sync state if props change asynchronously (e.g. from interaction store)
+  useEffect(() => {
+    setIsLiked(initialIsLiked);
+    setLikesCount(initialLikesCount);
+  }, [initialIsLiked, initialLikesCount]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handleLikePress = () => {
+    scale.value = withSequence(withSpring(1.2), withSpring(1));
     setIsLiked(!isLiked);
     setLikesCount(isLiked ? likesCount - 1 : likesCount + 1);
     if (onLikeTap) {
@@ -25,22 +44,24 @@ export const LikeAction: React.FC<LikeActionProps> = ({
   };
 
   return (
-    <TouchableOpacity style={styles.container} onPress={handleLike} activeOpacity={0.7}>
-      <Heart size={24} color={isLiked ? '#FF3B30' : '#FFFFFF'} fill={isLiked ? '#FF3B30' : 'transparent'} />
-      <Text style={styles.text}>{likesCount}</Text>
+    <TouchableOpacity activeOpacity={1} style={styles.actionButton} onPress={handleLikePress}>
+      <Animated.View style={animatedStyle}>
+        <Heart size={24} color={isLiked ? theme.colors.error : theme.colors.text} fill={isLiked ? theme.colors.error : 'transparent'} />
+      </Animated.View>
+      <Text style={styles.actionText}>{likesCount}</Text>
     </TouchableOpacity>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+const themeStyles = (colors: ThemeTokens, scale: number) => ({
+  actionButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6 * scale,
   },
-  text: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: '900',
+  actionText: {
+    color: colors.text,
+    fontSize: 14 * scale,
+    fontWeight: '800' as const,
   },
 });

@@ -148,7 +148,7 @@ export default function AccountSelectorPage() {
 
                 {/* Bottom Navigation Actions */}
                 <View style={[styles.bottomNav, { backgroundColor: colors.background, borderTopColor: 'rgba(255,255,255,0.1)' }]}>
-                    <TouchableOpacity 
+                    <TouchableOpacity activeOpacity={1} 
                         style={styles.bottomNavButton} 
                         onPress={() => router.push('/login' as any)}
                     >
@@ -157,7 +157,7 @@ export default function AccountSelectorPage() {
                     
                     <View style={[styles.divider, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
                     
-                    <TouchableOpacity 
+                    <TouchableOpacity activeOpacity={1} 
                         style={styles.bottomNavButton} 
                         onPress={() => router.replace('/landing' as any)}
                     >
@@ -217,7 +217,7 @@ const AccountCard = ({
                 </View>
 
                 {/* Login Button */}
-                <TouchableOpacity style={styles.loginButton} onPress={onLogin}>
+                <TouchableOpacity activeOpacity={1} style={styles.loginButton} onPress={onLogin}>
                     <Text style={[styles.loginButtonText, { color: colors.primary }]}>
                         {tr('account_selector_login')}
                     </Text>

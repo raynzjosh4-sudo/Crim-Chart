@@ -104,21 +104,21 @@ export const InboxThreadOptionsDialog: React.FC<InboxThreadOptionsDialogProps> =
             height: menuHeight,
             width: menuWidth,
           }]}>
-            <TouchableOpacity style={styles.menuItem} onPress={onBlockPress}>
+            <TouchableOpacity activeOpacity={1} style={styles.menuItem} onPress={onBlockPress}>
               <Ban size={18} color="#FF3B30" style={styles.icon} />
               <Text style={[styles.menuText, { color: '#FF3B30' }]}>Block User</Text>
             </TouchableOpacity>
             
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
             
-            <TouchableOpacity style={styles.menuItem} onPress={onMutePress}>
+            <TouchableOpacity activeOpacity={1} style={styles.menuItem} onPress={onMutePress}>
               <BellOff size={18} color="#FF9500" style={styles.icon} />
               <Text style={[styles.menuText, { color: '#FF9500' }]}>Mute Chat</Text>
             </TouchableOpacity>
 
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-            <TouchableOpacity style={styles.menuItem} onPress={onDeletePress}>
+            <TouchableOpacity activeOpacity={1} style={styles.menuItem} onPress={onDeletePress}>
               <Trash2 size={18} color="#FF3B30" style={styles.icon} />
               <Text style={[styles.menuText, { color: '#FF3B30' }]}>Delete Thread</Text>
             </TouchableOpacity>

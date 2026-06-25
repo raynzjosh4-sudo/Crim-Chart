@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { UserPlus, UserCheck } from 'lucide-react-native';
 import { supabase } from '@/core/supabase/client';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { colors } from '@/core/theme/colors';
@@ -9,9 +8,11 @@ export interface FollowUserButtonProps {
   targetUserId: string;
   size?: 'small' | 'medium' | 'large';
   style?: any;
+  textStyle?: any;
+  onToggle?: (isFollowing: boolean) => void;
 }
 
-export const FollowUserButton: React.FC<FollowUserButtonProps> = ({ targetUserId, size = 'medium', style }) => {
+export const FollowUserButton: React.FC<FollowUserButtonProps> = ({ targetUserId, size = 'medium', style, textStyle, onToggle }) => {
   const currentUser = useAuthStore(state => state.user);
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -58,6 +59,7 @@ export const FollowUserButton: React.FC<FollowUserButtonProps> = ({ targetUserId
           .eq('follower_id', currentUser.id)
           .eq('following_id', targetUserId);
         setIsFollowing(false);
+        onToggle?.(false);
       } else {
         // Follow
         await supabase
@@ -67,6 +69,7 @@ export const FollowUserButton: React.FC<FollowUserButtonProps> = ({ targetUserId
             following_id: targetUserId,
           });
         setIsFollowing(true);
+        onToggle?.(true);
       }
     } catch (err) {
       console.log('Toggle follow error:', err);
@@ -97,19 +100,15 @@ export const FollowUserButton: React.FC<FollowUserButtonProps> = ({ targetUserId
       disabled={isLoading || isToggling}
     >
       {isLoading || isToggling ? (
-        <ActivityIndicator size="small" color={isFollowing ? '#FFF' : '#000'} />
+        <Text style={[styles.text, { fontSize }, isFollowing ? styles.followingText : styles.followText, textStyle]}>-</Text>
       ) : (
         <>
-          {isFollowing ? (
-            <UserCheck size={iconSize} color="#FFF" />
-          ) : (
-            <UserPlus size={iconSize} color="#000" />
-          )}
           <Text
             style={[
               styles.text,
               { fontSize },
-              isFollowing ? styles.followingText : styles.followText
+              isFollowing ? styles.followingText : styles.followText,
+              textStyle
             ]}
           >
             {isFollowing ? 'Following' : 'Follow'}
@@ -134,9 +133,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFC400',
   },
   followingBtn: {
-    backgroundColor: '#2A2A2A',
+    backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   text: {
     fontWeight: '700',

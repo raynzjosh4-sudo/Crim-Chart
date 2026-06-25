@@ -35,8 +35,8 @@ export const PromotionBannerCard: React.FC<PromotionBannerCardProps> = ({ moment
 
 const styles = StyleSheet.create({
   container: {
-    width: 140, // Adjusting slightly for viewport matching
-    height: 200,
+    width: 100, // Adjusting slightly for viewport matching
+    height: 140,
     borderRadius: 16,
     overflow: 'hidden',
     marginHorizontal: 6,

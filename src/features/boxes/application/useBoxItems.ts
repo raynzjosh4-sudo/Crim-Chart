@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/core/supabase/supabaseConfig';
 import { NativeDB } from '@/core/db/NativeDB';
+import { supabase } from '@/core/supabase/supabaseConfig';
+import { useCallback, useEffect, useState } from 'react';
 
 export interface BoxItemModel {
   id: string;
@@ -23,6 +23,10 @@ export interface BoxItemModel {
     authorId: string;
     authorName: string;
     authorAvatar: string;
+    postType?: string;
+    aspectRatio?: number;
+    commentsCount?: number;
+    viewsCount?: number;
   };
 }
 
@@ -40,7 +44,7 @@ export function useBoxItems(boxId: string) {
     if (!boxId) return;
 
     let isMounted = true;
-    
+
     const loadFromCache = async () => {
       try {
         const cached = await NativeDB.getBoxItems(boxId);
@@ -66,7 +70,11 @@ export function useBoxItems(boxId: string) {
               isVideo: row.is_video === 1,
               authorId: row.author_id,
               authorName: row.author_name,
-              authorAvatar: row.author_avatar
+              authorAvatar: row.author_avatar,
+              postType: row.post_type || undefined,
+              aspectRatio: row.aspect_ratio || undefined,
+              commentsCount: row.comments_count || 0,
+              viewsCount: row.views_count || 0
             }
           }));
           setItems(parsed);
@@ -97,13 +105,6 @@ export function useBoxItems(boxId: string) {
       });
 
       if (error) throw error;
-
-      // if (targetPage === 0 && data && data.length > 0) {
-      //   console.log('\n=== RAW DB ITEM STRUCTURE (1st Item) ===');
-      //   console.log(JSON.stringify(data[0], null, 2));
-      //   console.log('==========================================\n');
-      // }
-
       // 4. Transform to frontend model
       const networkItems: BoxItemModel[] = (data || []).map((row: any) => ({
         id: row.id,
@@ -121,13 +122,17 @@ export function useBoxItems(boxId: string) {
           id: row.post.id,
           caption: row.post.caption,
           mediaUrl: row.post.media_url,
-          thumbnailUrl: Array.isArray(row.post.thumbnail_url) 
-            ? row.post.thumbnail_url[0] || '' 
+          thumbnailUrl: Array.isArray(row.post.thumbnail_url)
+            ? row.post.thumbnail_url[0] || ''
             : (row.post.thumbnail_url || ''),
           isVideo: row.post.is_video,
           authorId: row.post.author_id,
           authorName: row.post.author_name,
-          authorAvatar: row.post.author_avatar
+          authorAvatar: row.post.author_avatar,
+          postType: row.post.post_type,
+          aspectRatio: row.post.aspect_ratio,
+          commentsCount: row.post.comments_count || 0,
+          viewsCount: row.post.views_count || 0
         }
       }));
 

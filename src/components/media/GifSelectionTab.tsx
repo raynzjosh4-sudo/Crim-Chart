@@ -55,7 +55,7 @@ export default function GifSelectionTab({ selectedIndices, onMediaTap }: GifSele
             autoFocus
           />
         ) : null}
-        <TouchableOpacity
+        <TouchableOpacity activeOpacity={1}
           onPress={() => toggleSearch(!isSearchExpanded)}
           style={styles.searchIcon}
         >
@@ -68,7 +68,7 @@ export default function GifSelectionTab({ selectedIndices, onMediaTap }: GifSele
       </View>
 
       {/* Categories Toggle Header */}
-      <TouchableOpacity style={styles.categoriesHeader} onPress={toggleCategories}>
+      <TouchableOpacity activeOpacity={1} style={styles.categoriesHeader} onPress={toggleCategories}>
         <Text style={[styles.categoriesTitle, { color: colors.text }]}>Categories</Text>
         {isCategoriesExpanded ? (
           <ChevronUp color="rgba(255,255,255,0.6)" size={20} />
@@ -103,7 +103,7 @@ export default function GifSelectionTab({ selectedIndices, onMediaTap }: GifSele
         renderItem={({ item, index }) => {
           const isSelected = selectedIndices.includes(index);
           return (
-            <TouchableOpacity
+            <TouchableOpacity activeOpacity={1}
               style={[
                 styles.gifCell,
                 { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: colors.primary },

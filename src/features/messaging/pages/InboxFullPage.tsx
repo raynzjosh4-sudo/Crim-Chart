@@ -9,9 +9,11 @@ import { useProfileCacheStore } from '@/core/store/useProfileCacheStore';
 import { InboxFullPageShimmer } from '@/components/shimmers/inboxPageShimmer/InboxFullPageShimmer';
 import { InboxThreadOptionsDialog } from '../components/InboxThreadOptionsDialog';
 import { Image as ImageLucide, Video, Sticker } from 'lucide-react-native';
+import { useAuthStore } from '@/features/auth/application/useAuthStore';
 
 export const InboxFullPage = () => {
   const router = useRouter();
+  const { user } = useAuthStore() as any;
   const { threads, onlineUsers, fetchThreads, loadMoreThreads, isLoadingThreads, subscribeToGlobalPresence } = useChatStore();
 
   const allThreads = [...threads];
@@ -75,9 +77,9 @@ export const InboxFullPage = () => {
           )
         }
         renderItem={({ item }) => {
-          const participant = item.participants[0];
+          const participant = item.participants.find((p: any) => p.id !== user?.id) || item.participants[0];
           return (
-            <TouchableOpacity
+            <TouchableOpacity activeOpacity={1}
               style={styles.row}
               onPress={() => router.push({ pathname: '/inboxDetail', params: { threadId: item.id } })}
               onLongPress={(e) => {
@@ -145,7 +147,7 @@ export const InboxFullPage = () => {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0D0D0D' },
-  header: { padding: 16, paddingTop: 52, borderBottomWidth: 0.5, borderBottomColor: 'rgba(255,255,255,0.05)' },
+  header: { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 52, borderBottomWidth: 0.5, borderBottomColor: 'rgba(255,255,255,0.05)' },
   title: { color: '#FFF', fontSize: 26, fontWeight: '900' },
   row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 0.5, borderBottomColor: 'rgba(255,255,255,0.05)' },
   avatarWrapper: { marginRight: 16 },

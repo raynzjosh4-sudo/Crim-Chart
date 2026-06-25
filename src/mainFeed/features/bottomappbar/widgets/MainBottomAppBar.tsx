@@ -32,7 +32,7 @@ export const MainBottomAppBar: React.FC<MainBottomAppBarProps> = ({
         const color = isSelected ? colors.text : 'rgba(255,255,255,0.5)';
         
         return (
-          <TouchableOpacity
+          <TouchableOpacity activeOpacity={1}
             key={index}
             style={styles.tab}
             onPress={() => onItemTapped(index)}

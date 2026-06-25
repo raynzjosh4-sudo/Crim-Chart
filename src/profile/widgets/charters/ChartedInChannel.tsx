@@ -22,7 +22,7 @@ export const ChartedInChannel: React.FC<ChartedInChannelProps> = ({ channel, isS
   const imageUrl = channel.imageUrl || channel.creatorUser?.profileImageUrl || '';
 
   return (
-    <TouchableOpacity 
+    <TouchableOpacity activeOpacity={1} 
       style={styles.container}
       onPress={() => navigation.navigate('ChannelPage', { channelId: channel.id })}
     >

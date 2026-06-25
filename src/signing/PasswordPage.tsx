@@ -155,7 +155,7 @@ export default function PasswordPage() {
                             editable={!isLoading}
                             autoCapitalize="none"
                         />
-                        <TouchableOpacity 
+                        <TouchableOpacity activeOpacity={1} 
                             onPress={() => setObscureText(!obscureText)}
                             style={styles.eyeIcon}
                         >
@@ -179,7 +179,7 @@ export default function PasswordPage() {
 
                     <View style={styles.space8} />
 
-                    <TouchableOpacity style={styles.autoGenerateBtn} onPress={generatePassword}>
+                    <TouchableOpacity activeOpacity={1} style={styles.autoGenerateBtn} onPress={generatePassword}>
                         <Key size={16} color={colors.primary} />
                         <Text style={[styles.autoGenerateText, { color: colors.primary }]}>
                             {tr('password_auto_generate') || 'Auto-generate strong password'}
@@ -188,7 +188,7 @@ export default function PasswordPage() {
 
                     <View style={styles.spacer} />
 
-                    <TouchableOpacity 
+                    <TouchableOpacity activeOpacity={1} 
                         style={[
                             styles.nextButton, 
                             { backgroundColor: (!isLoading && isPasswordValid) ? colors.primary : 'rgba(255, 255, 255, 0.1)' }

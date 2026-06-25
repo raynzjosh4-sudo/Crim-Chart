@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTheme } from '@react-navigation/native';
 
 interface TagCardProps {
   title: string;
@@ -16,17 +17,18 @@ export const TagCard: React.FC<TagCardProps> = ({
   buttonText,
   onTap,
 }) => {
+  const { colors, dark } = useTheme();
   const initial = title.length > 0 ? title[0].toUpperCase() : 'C';
 
   return (
-    <TouchableOpacity style={styles.container} onPress={onTap} activeOpacity={0.8}>
+    <TouchableOpacity style={[styles.container, { backgroundColor: dark ? '#1E1E1E' : colors.card, borderColor: dark ? 'rgba(255,255,255,0.06)' : colors.border }]} onPress={onTap} activeOpacity={0.8}>
       {/* Avatar */}
-      <View style={styles.imageWrapper}>
+      <View style={[styles.imageWrapper, { backgroundColor: dark ? '#2A2A2A' : colors.background }]}>
         {imageUrl && imageUrl.length > 0 ? (
           <Image source={{ uri: imageUrl }} style={styles.image} />
         ) : (
           <View style={styles.imagePlaceholder}>
-            <Text style={styles.initialText}>{initial}</Text>
+            <Text style={[styles.initialText, { color: colors.text, opacity: 0.6 }]}>{initial}</Text>
           </View>
         )}
       </View>
@@ -34,17 +36,17 @@ export const TagCard: React.FC<TagCardProps> = ({
       <View style={{ height: 8 }} />
 
       {/* Name */}
-      <Text style={styles.title} numberOfLines={1}>{title}</Text>
+      <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>{title}</Text>
 
       {description && description.length > 0 && (
-        <Text style={styles.description} numberOfLines={1}>{description}</Text>
+        <Text style={[styles.description, { color: colors.text, opacity: 0.5 }]} numberOfLines={1}>{description}</Text>
       )}
 
       <View style={{ height: 8 }} />
 
       {/* Tag Button */}
-      <View style={styles.button}>
-        <Text style={styles.buttonText}>{buttonText}</Text>
+      <View style={[styles.button, { backgroundColor: dark ? '#2A2A2A' : colors.background, borderColor: dark ? 'rgba(255,255,255,0.12)' : colors.border }]}>
+        <Text style={[styles.buttonText, { color: colors.text, opacity: 0.9 }]}>{buttonText}</Text>
       </View>
     </TouchableOpacity>
   );

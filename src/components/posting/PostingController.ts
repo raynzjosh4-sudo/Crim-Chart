@@ -55,6 +55,7 @@ export const usePostingController = create<PostingState>((set, get) => ({
   createPost: async (params) => {
     set({ status: PostingStatus.processing, progress: 0.1, error: undefined });
     try {
+      console.log('[PostingController] 1. Starting Media Baking & Upload...');
       // 1. Media Baking & Upload
       const uploadResults = await MediaBakingService.uploadMediaAssets(
         params.userId,
@@ -62,14 +63,18 @@ export const usePostingController = create<PostingState>((set, get) => ({
         (progress) => set({ progress: 0.1 + progress * 0.8 }) // 10% to 90% is upload
       );
 
+      console.log('[PostingController] 2. Media Upload Complete. Shaping final post metadata...', uploadResults);
       // 2. Shape the final post metadata
       const postData = MediaBakingService.shapeFinalPostData(params, uploadResults);
 
+      console.log('[PostingController] 3. Enqueuing task to SyncQueue for CREATE_POST...', postData);
       // 3. Queue for sync
-      SyncQueue.addTask('CREATE_POST', postData);
+      SyncQueue.enqueueTask({ type: 'CREATE_POST', payload: postData });
 
+      console.log('[PostingController] 4. Post successfully enqueued!');
       set({ status: PostingStatus.success, progress: 1.0 });
     } catch (error: any) {
+      console.error('[PostingController] ERROR during post creation:', error);
       set({ status: PostingStatus.error, error: error.message || 'Unknown error' });
     }
   }

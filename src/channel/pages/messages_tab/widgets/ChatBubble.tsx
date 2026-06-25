@@ -3,7 +3,10 @@ import * as Clipboard from 'expo-clipboard';
 import { MoreHorizontal } from 'lucide-react-native';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Toast from 'react-native-toast-message';
-import { UserAvatarImage } from '../../widgets2/memberimage/UserAvatarImage';
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import UserAvatar from '@/components/avatar/UserAvatar';
+import { UserProfileBottomSheet } from '../bottom_sheets/UserProfileBottomSheet';
 import { MessageMediaItem } from '../models/MediaModel';
 import { MessageModel } from '../models/MessageModel';
 
@@ -35,6 +38,9 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
   poll,
   onDelete,
 }) => {
+  const router = useRouter();
+  const [sheetVisible, setSheetVisible] = useState(false);
+
   const handleLongPress = async () => {
     if (message) {
       await Clipboard.setStringAsync(message);
@@ -58,13 +64,15 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
         ]}
       >
         {/* Avatar */}
-        <UserAvatarImage
+        <UserAvatar
+          userId={sender?.user.id || ''}
+          fallbackUrl={sender?.user.avatarUrl}
+          name={sender?.user.name}
           size={42}
-          imageUrl={sender?.user.avatarUrl}
-          showStatusRing={false}
-          showActiveDot={false}
-          onImageTap={() => {
-            console.log('Show UserProfileBottomSheet for', sender?.user.name);
+          onTap={() => {
+            if (sender?.user.id) {
+              setSheetVisible(true);
+            }
           }}
         />
 
@@ -91,7 +99,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
             {time && <Text style={styles.timeText}>{time}</Text>}
 
             {isMe && (
-              <TouchableOpacity
+              <TouchableOpacity activeOpacity={1}
                 onPress={onDelete}
                 style={styles.moreButton}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -175,6 +183,14 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
       </View>
 
       <View style={styles.divider} />
+
+      {sender && (
+        <UserProfileBottomSheet
+          user={sender}
+          visible={sheetVisible}
+          onClose={() => setSheetVisible(false)}
+        />
+      )}
     </View>
   );
 };

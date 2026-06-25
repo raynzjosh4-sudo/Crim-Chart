@@ -36,7 +36,7 @@ export default function LocalizationSettingsPage() {
           renderItem={({ item }) => {
             const isSelected = item.code === lang;
             return (
-              <TouchableOpacity
+              <TouchableOpacity activeOpacity={1}
                 style={styles.languageItem}
                 onPress={() => handleLanguageSelect(item.code)}
               >

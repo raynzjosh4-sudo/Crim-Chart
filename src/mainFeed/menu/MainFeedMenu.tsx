@@ -55,12 +55,12 @@ export const MainFeedMenu: React.FC<MainFeedMenuProps> = ({
         <View style={styles.menu}>
           <View style={styles.header}>
             <Text style={styles.menuTitle}>Menu</Text>
-            <TouchableOpacity onPress={onClose}>
+            <TouchableOpacity activeOpacity={1} onPress={onClose}>
               <X color="rgba(255,255,255,0.5)" size={22} />
             </TouchableOpacity>
           </View>
           {actions.map(action => (
-            <TouchableOpacity
+            <TouchableOpacity activeOpacity={1}
               key={action.id}
               style={styles.item}
               onPress={action.onPress}

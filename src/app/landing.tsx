@@ -1,15 +1,43 @@
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
+import { ChartToast } from '@/components/showcase/CrimChart_toast';
 import { useTranslation } from '@/core/localization/i18n';
 import { colors } from '@/core/theme/colors';
+import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { useRouter } from 'expo-router';
 import { ChevronDown, Moon, Sun } from 'lucide-react-native';
-import React from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function LandingPage() {
   const router = useRouter();
   const { t } = useTranslation();
   const isDark = true; // Hardcoded for now matching the theme
+  const authStore = useAuthStore();
+
+  const handleGoogleLogin = async () => {
+    try {
+      const success = await authStore.loginWithGoogle();
+      if (success) {
+        if (useAuthStore.getState().pendingGoogleOnboarding) {
+          router.push('/signup/country' as any);
+        } else {
+          router.push('/(tabs)' as any);
+        }
+      } else {
+        const errorMsg = useAuthStore.getState().errorMessage;
+        console.error('Google Login Error (authStore):', errorMsg);
+        ChartToast.showError(null, {
+          title: t('error_title') || 'Error',
+          message: errorMsg || 'Google login failed',
+        });
+      }
+    } catch (error: any) {
+      console.error('Google Login Error (catch):', error);
+      ChartToast.showError(null, {
+        title: t('error_title') || 'Error',
+        message: error.message || 'Google login failed',
+      });
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -18,10 +46,10 @@ export default function LandingPage() {
           title=""
           showBack={false}
           actions={[
-            <TouchableOpacity key="theme" style={styles.iconButton}>
+            <TouchableOpacity activeOpacity={1} key="theme" style={styles.iconButton}>
               {isDark ? <Sun size={20} color={colors.textSecondary} /> : <Moon size={20} color={colors.textSecondary} />}
             </TouchableOpacity>,
-            <TouchableOpacity key="login" onPress={() => router.push('/login' as any)}>
+            <TouchableOpacity activeOpacity={1} key="login" onPress={() => router.push('/login' as any)}>
               <Text style={styles.loginText}>{t('log_in')}</Text>
             </TouchableOpacity>,
           ]}
@@ -41,7 +69,7 @@ export default function LandingPage() {
         <View style={styles.spacerMedium} />
 
         {/* Language Selector */}
-        <TouchableOpacity style={styles.languageSelector} onPress={() => router.push('/language' as any)}>
+        <TouchableOpacity activeOpacity={1} style={styles.languageSelector} onPress={() => router.push('/language' as any)}>
           <Text style={styles.languageText}>{t('native_name')}</Text>
           <ChevronDown size={20} color={colors.textSecondary} />
         </TouchableOpacity>
@@ -50,12 +78,14 @@ export default function LandingPage() {
 
         {/* Main Buttons */}
         <View style={styles.buttonContainer}>
-          <TouchableOpacity
+          <TouchableOpacity activeOpacity={1}
             style={styles.signUpButton}
             onPress={() => router.push('/signup/phone' as any)}
           >
             <Text style={styles.signUpButtonText}>{t('create_account')}</Text>
           </TouchableOpacity>
+
+
         </View>
 
         <View style={styles.spacerMedium} />
@@ -70,7 +100,7 @@ export default function LandingPage() {
         <View style={styles.spacerMedium} />
 
         {/* Google Sign In */}
-        <TouchableOpacity style={styles.googleButton}>
+        <TouchableOpacity activeOpacity={1} style={styles.googleButton} onPress={handleGoogleLogin}>
           <Image
             source={{ uri: 'https://www.gstatic.com/images/branding/product/2x/googleg_96dp.png' }}
             style={styles.googleIcon}

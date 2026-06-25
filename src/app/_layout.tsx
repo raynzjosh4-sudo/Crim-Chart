@@ -22,6 +22,7 @@ import { useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { chartToastConfig } from '@/components/showcase/CrimChart_toast';
+import { toastConfig } from '@/components/showcase/CrimChartToast';
 import { useProtectedRoute } from '@/core/router/useProtectedRoute';
 import { LocalizationProvider } from '@/core/localization/LocalizationProvider';
 
@@ -32,6 +33,7 @@ const customDarkTheme = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
+    primary: '#FFD700',
     background: '#000000',
     card: '#0D0D0D',
     text: '#FFFFFF',
@@ -60,7 +62,7 @@ export default function RootLayout() {
             <Stack.Screen name="landing" options={{ headerShown: false }} />
             <Stack.Screen name="login" options={{ headerShown: false }} />
           </Stack>
-          <Toast config={chartToastConfig} />
+          <Toast config={{ ...chartToastConfig, ...toastConfig }} />
         </ThemeProvider>
       </LocalizationProvider>
     </SafeAreaProvider>

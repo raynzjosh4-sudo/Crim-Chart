@@ -1,361 +1,772 @@
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft } from 'lucide-react-native';
-import { useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ChannelAndFeedPostModel } from "@/channel/ChannelComponents/ChnnelMainPostCard/ChannelAndFeedPostModel";
+import { channelRepository } from "@/channel/data/repositories/ChannelRepositoryImpl";
+import { useChannelBroadcast } from "@/channel/hooks/useChannelBroadcast";
+import { useChannelMembers } from "@/channel/hooks/useChannelMembers";
+import { useChannelMessages } from "@/channel/hooks/useChannelMessages";
+import { useChannelPermissions } from "@/channel/hooks/useChannelPermissions";
+import { useChannelPosts } from "@/channel/hooks/useChannelPosts";
+import { useChannelStatuses } from "@/channel/hooks/useChannelStatuses";
+import { cloudMediaService } from "@/core/network/cloudMediaService";
+import { useProfileCacheStore } from "@/core/store/useProfileCacheStore";
+import { useAuthStore } from "@/features/auth/application/useAuthStore";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { ChevronLeft } from "lucide-react-native";
+import React, { useCallback, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import CommentingSheet from '@/commentingsheets/widgets/CommentingSheet';
-import { ChannelNavBar } from '@/features/channel/pages/discovery_widgets/ChannelNavBar';
-import { CreatorContactBar } from '@/features/channel/pages/discovery_widgets/CreatorContactBar';
-import { MembersStoryBar } from '@/features/channel/pages/discovery_widgets/MembersStoryBar';
-import { MembersTabView } from '@/features/channel/pages/members_tab/MembersTabView';
-import { ActiveUsersBar } from '@/features/channel/pages/messages_tab/widgets/ActiveUsersBar';
-import { ChatBubble } from '@/features/channel/pages/messages_tab/widgets/chartbubble/ChatBubble';
-import { TypingBubble } from '@/features/channel/pages/messages_tab/widgets/chartbubble/TypingBubble';
-import { ChatInputField } from '@/features/channel/pages/messages_tab/widgets/ChatInputField';
-import { VideoTabView } from '@/features/channel/pages/video_tab/VideoTabView';
-import { styles } from './styles/_channelStyyles.styles';
-import { DateDivider } from './widgets/_datedivider';
-import { DummyFeedPost } from './widgets/_DummyFeedPost';
-import { ChannelTitleBar } from './widgets/ChannelTitleBar';
+import { CustomChannelWidget } from "@/channel/components/CustomChannelWidget";
+import { UserStatusWidget } from "@/components/UserStatusWidget/UserStatusWidget";
+import { ChannelNavBar } from "@/features/channel/pages/discovery_widgets/ChannelNavBar";
+import { useInteractionStore } from "@/core/store/useInteractionStore";
+import { FeedPermissionsWrapper } from "@/components/wrappers/FeedPermissionsWrapper";
 
-
-
+import { ChannelRestrictionOverlay } from "@/channel/components/ChannelRestrictionOverlay";
+import { useChannelData } from "@/channel/hooks/useChannelData";
+import { UserAvatarImage } from "@/channel/pages/widgets2/memberimage/UserAvatarImage";
+import { ChannelRestrictionWrapper } from "@/components/wrappers/ChannelRestrictionWrapper";
+import { MembersTabView } from "@/features/channel/pages/members_tab/MembersTabView";
+import { ActiveUsersBar } from "@/features/channel/pages/messages_tab/widgets/ActiveUsersBar";
+import { ChatBubble } from "@/features/channel/pages/messages_tab/widgets/chartbubble/ChatBubble";
+import { TypingBubble } from "@/features/channel/pages/messages_tab/widgets/chartbubble/TypingBubble";
+import { ChatInputField } from "@/features/channel/pages/messages_tab/widgets/ChatInputField";
+import { VideoTabView } from "@/features/channel/pages/video_tab/VideoTabView";
+import { styles } from "./styles/_channelStyyles.styles";
+import { DateDivider } from "./widgets/_datedivider";
+import { ChannelTitleBar } from "./widgets/ChannelTitleBar";
+import { InviteCardWidget } from "./widgets/InviteCardWidget";
 
 export default function ChannelPage() {
-  const { id } = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { channel, loading } = useChannelData(id);
+  const user = useAuthStore((s) => s.user);
+  const { statuses: channelStatuses } = useChannelStatuses(id as string);
+  const { posts: channelPosts } = useChannelPosts(id as string);
+  const { canPostStatus } = useChannelPermissions(id as string);
+  const { members: channelMembers } = useChannelMembers(id as string);
+
+  React.useEffect(() => {
+    if (channelMembers && channelMembers.length > 0) {
+      console.log("=== CHANNEL MEMBERS WITH PROFILE CACHE ===");
+      const enrichedMembers = channelMembers.map((m) => {
+        const cachedProfile =
+          useProfileCacheStore.getState().profiles[m.userId];
+        return {
+          ...m,
+          cachedProfile: cachedProfile || null,
+        };
+      });
+      console.log(JSON.stringify(enrichedMembers, null, 2));
+      console.log("==========================================");
+    }
+  }, [channelMembers]);
+
   const [activeTab, setActiveTab] = useState(0);
   const [isMediaSheetVisible, setIsMediaSheetVisible] = useState(false);
   const [isStatusMode, setIsStatusMode] = useState(false);
   const [myTyping, setMyTyping] = useState(false);
 
-  const scrollViewRef = useRef<ScrollView | null>(null);
-  const [messages, setMessages] = useState<any[]>([
-    {
-      id: '1',
-      text: 'dsd',
-      time: '1:25 PM',
-      isMe: false,
-      senderName: 'ooooooooo',
-      senderAvatarUrl: 'https://i.pravatar.cc/150?img=13',
-    },
-    {
-      id: '2',
-      text: 'sdsds',
-      time: '2:10 PM',
-      isMe: false,
-      senderName: 'ooooooooo',
-      senderAvatarUrl: 'https://i.pravatar.cc/150?img=13',
-      replyTo: {
-        senderName: 'ooooooooo',
-        text: 'dsd'
-      }
-    },
-    {
-      id: '3',
-      text: 'Look at this cool image!',
-      time: '2:15 PM',
-      isMe: true,
-      senderName: 'Josh',
-      senderAvatarUrl: 'https://i.pravatar.cc/150?img=12',
-      mediaItems: [
-        {
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=500&auto=format&fit=crop'
-        }
-      ]
-    },
-    /*
-    {
-      id: '4',
-      text: 'Listen to this track',
-      time: '2:20 PM',
-      isMe: false,
-      senderName: 'Anna',
-      senderAvatarUrl: 'https://i.pravatar.cc/150?img=9',
-      mediaItems: [
-        {
-          type: 'audio',
-          url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'
-        }
-      ]
-    },
-    */
-    {
-      id: '5',
-      text: '',
-      time: '2:25 PM',
-      isMe: true,
-      senderName: 'Josh',
-      senderAvatarUrl: 'https://i.pravatar.cc/150?img=12',
-      poll: {
-        items: [
-          {
-            id: 'p1',
-            title: 'I love React Native',
-            type: 2, // text type
-            points: 120,
-            suggestedBy: 'Josh'
-          },
-          {
-            id: 'p2',
-            title: 'Flutter is cool too',
-            type: 2,
-            points: 80
-          }
-        ]
-      }
+  const interactionLikes = useInteractionStore((s) => s.likes);
+  const interactionLikesCount = useInteractionStore((s) => s.likesCount);
+  const interactionTagsCount = useInteractionStore((s) => s.channelTagsCount);
+
+  const flatListRef = useRef<FlatList | null>(null);
+  const {
+    messages,
+    setMessages,
+    loadMore,
+    loadingMore,
+    loading: messagesLoading,
+  } = useChannelMessages(id as string);
+
+  // Track latest messages in a ref to avoid stale closures in useCallback without using functional updates
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+
+  const onMessageReceived = useCallback((newMessage: any) => {
+    // Check if we already have this message locally to avoid duplicates
+    if (!messagesRef.current.some((m) => m.id === newMessage.id)) {
+      setMessages([newMessage, ...messagesRef.current]);
+
+      // Also persist the incoming message to the local SQLite database
+      import("@/channel/data/sources/ChannelLocalSource").then(
+        ({ channelLocalSource }) => {
+          channelLocalSource.saveMessage(newMessage);
+        },
+      );
+
+      setTimeout(() => {
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+      }, 100);
     }
-  ]);
+  }, []);
+
+  const { broadcastMessage, broadcastTyping, typingUsers, activeUsers } =
+    useChannelBroadcast(id as string, onMessageReceived);
+
+  // Derived state to merge creator, online users, and all channel members
+  const topBarUsers = React.useMemo(() => {
+    const list: any[] = [];
+    const addedIds = new Set<string>();
+
+    // Pre-compute lastReplied from locally loaded messages
+    const lastRepliedMap: Record<string, number> = {};
+    messages.forEach((msg) => {
+      if (!lastRepliedMap[msg.senderId]) {
+        // Assume messages are sorted newest first, so the first time we see a sender, it's their latest message
+        const msgTime = new Date(
+          msg.createdAt || msg.time || Date.now(),
+        ).getTime();
+        lastRepliedMap[msg.senderId] = msgTime;
+      }
+    });
+
+    // Helper to enrich user with profile cache data
+    const enrichUser = (baseUser: any) => {
+      const cachedProfile =
+        useProfileCacheStore.getState().profiles[baseUser.id];
+      return {
+        ...baseUser,
+        hasStatus: cachedProfile?.hasStatus || false,
+        statusCount: cachedProfile?.statusCount || 0,
+        lastSeen: cachedProfile?.lastSeen,
+        lastReplied: lastRepliedMap[baseUser.id] || 0,
+      };
+    };
+
+    // 1. Add active users first so they get their live online/typing status
+    activeUsers.forEach((u) => {
+      list.push(enrichUser(u));
+      addedIds.add(String(u.id));
+    });
+
+    // 2. Add remaining channel members
+    if (channelMembers && channelMembers.length > 0) {
+      channelMembers.forEach((member) => {
+        if (!addedIds.has(String(member.userId))) {
+          list.push(
+            enrichUser({
+              id: member.userId,
+              username: member.displayName || "Member",
+              profileImageUrl:
+                member.profileImageUrl || "https://i.pravatar.cc/150",
+              isOnline: false, // Will be overridden if they join the websocket later
+              isTyping: false,
+            }),
+          );
+          addedIds.add(String(member.userId));
+        }
+      });
+    }
+
+    // 3. Fallback for creator if they aren't somehow in the members list
+    if (
+      channel?.creatorUser?.id &&
+      !addedIds.has(String(channel.creatorUser.id))
+    ) {
+      list.push(
+        enrichUser({
+          id: channel.creatorUser.id,
+          username:
+            channel.creatorUser.displayName ||
+            channel.creatorUser.username ||
+            "Admin",
+          profileImageUrl:
+            channel.creatorUser.profileImageUrl ||
+            "https://i.pravatar.cc/150?img=12",
+          isOnline: false,
+          isTyping: false,
+        }),
+      );
+    }
+
+    return list;
+  }, [activeUsers, channel, channelMembers, messages]);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <Stack.Screen options={{ headerShown: false }} />
-        {/* Conditional Rendering of Entire View for Messages Tab */}
-        {activeTab === 1 ? (
-          <View style={styles.messagesTabContainer}>
-            <View style={styles.header}>
-              <TouchableOpacity style={styles.backButton} onPress={() => setActiveTab(0)}>
-                <ChevronLeft size={28} color="#FFF" />
-              </TouchableOpacity>
-              <Text style={styles.headerTitle} numberOfLines={1}>beautiful 💖💖💖...</Text>
-              <View style={{ width: 28 }} />
-            </View>
-
-            <ActiveUsersBar
-              users={[
-                {
-                  id: '1',
-                  username: 'josh raynz',
-                  profileImageUrl: 'https://i.pravatar.cc/150?img=13',
-                  isOnline: true,
-                  isTyping: myTyping,
-                  channelCount: 30,
-                  followers: 783
-                }, {
-                  id: '2',
-                  username: 'ooooooooo',
-                  profileImageUrl: 'https://i.pravatar.cc/150?img=13',
-                  isOnline: true,
-                  isTyping: true,
-                  channelCount: 0
-                }, {
-                  id: '3',
-                  username: 'ooooooooo',
-                  profileImageUrl: 'https://i.pravatar.cc/150?img=13',
-                  isOnline: true,
-                  isTyping: true,
-                  channelCount: 0
-                }, {
-                  id: '4',
-                  username: 'rop',
-                  profileImageUrl: 'https://i.pravatar.cc/150?img=13',
-                  isOnline: false,
-                  isTyping: false,
-                }
-              ]}
-            />
-
-            <ScrollView
-              ref={scrollViewRef}
-              style={styles.messagesScroll}
-              contentContainerStyle={styles.messagesScrollContent}
-              onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
-            >
-              <DateDivider date="MAY 12, 2026" />
-
-              {messages.map((msg) => (
-                <View key={msg.id}>
-                  <ChatBubble
-                    message={msg}
-                  />
-                </View>
-              ))}
-
-              {/* Typing Indicator for other users */}
-              {/* Let's pretend the second user in our hardcoded array is currently typing */}
-              <TypingBubble avatarUrl="https://i.pravatar.cc/150?img=13" />
-
-            </ScrollView>
-
-            <ChatInputField
-              channelId={id as string}
-              onSubmitted={(msg) => {
-                setMessages([
-                  ...messages,
-                  {
-                    id: Date.now().toString(),
-                    text: msg,
-                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    isMe: true,
-                    senderName: 'Josh',
-                    senderAvatarUrl: 'https://i.pravatar.cc/150?img=12',
-                  }
-                ]);
-                setTimeout(() => {
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }, 100);
-              }}
-              onMediaSubmitted={(media, caption) => {
-                if (!media || media.length === 0) return;
-
-                const newMediaItems = media.map((m: any) => ({
-                  type: m.type === 'video' ? 'video' : 'image',
-                  url: m.path || m.url || m.uri,
-                  thumbnail: m.thumbnailUrl
-                }));
-
-                setMessages([
-                  ...messages,
-                  {
-                    id: Date.now().toString(),
-                    text: caption || '',
-                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    isMe: true,
-                    senderName: 'Josh',
-                    senderAvatarUrl: 'https://i.pravatar.cc/150?img=12',
-                    mediaItems: newMediaItems
-                  }
-                ]);
-                setTimeout(() => {
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }, 100);
-              }}
-              onVoiceSubmitted={(url, duration) => {
-                setMessages([
-                  ...messages,
-                  {
-                    id: Date.now().toString(),
-                    text: '',
-                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    isMe: true,
-                    senderName: 'Josh',
-                    senderAvatarUrl: 'https://i.pravatar.cc/150?img=12',
-                    mediaItems: [{ type: 'audio', url: url }]
-                  }
-                ]);
-                setTimeout(() => {
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }, 100);
-              }}
-              onLottieSubmitted={(index) => {
-                setMessages([
-                  ...messages,
-                  {
-                    id: Date.now().toString(),
-                    text: '',
-                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    isMe: true,
-                    senderName: 'Josh',
-                    senderAvatarUrl: 'https://i.pravatar.cc/150?img=12',
-                    mediaItems: [{ type: 'lottie', url: String(index) }]
-                  }
-                ]);
-                setTimeout(() => {
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }, 100);
-              }}
-              onTypingChange={(typing) => setMyTyping(typing)}
-            />
-          </View>
-        ) : (
-          <>
-
-
-            {/* Title Bar at the very top (Facebook style) */}
-            <ChannelTitleBar
-              title="beautiful 💖💖💖..."
-              onBackPress={() => router.back()}
-              onSettingsPress={() => router.push(`/channel/settings/${id}` as any)}
-              onPlusPress={() => { setIsStatusMode(false); setIsMediaSheetVisible(true); }}
-            />
-            <View style={{ height: 6, backgroundColor: 'rgba(255,255,255,0.08)' }} />
-
-            {/* Nav Bar */}
-            <ChannelNavBar
-              selectedIndex={activeTab}
-              onTabSelected={setActiveTab}
-              totalMembers={1}
-            />
-            <View style={{ height: 6, backgroundColor: 'rgba(255,255,255,0.08)' }} />
-
-            {/* Tab Content */}
-            <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
-              {activeTab === 0 && (
-                <>
-                  {/* Status Section using the real component */}
-                  <MembersStoryBar
-                    statuses={[
-                      {
-                        id: 's1',
-                        authorId: '1',
-                        authorUsername: 'Josh',
-                        authorAvatarUrl: 'https://i.pravatar.cc/150?img=12',
-                        primaryImageUrl: 'https://picsum.photos/400/600?random=101',
-                        imageUrls: ['https://picsum.photos/400/600?random=101'],
-                      }
-                    ]}
-                    onAddStory={() => { setIsStatusMode(true); setIsMediaSheetVisible(true); }}
-                    canPostStatus={true}
-                  />
-
-                  {/* Creator Contact */}
-                  <CreatorContactBar
-                    creatorName="Josh"
-                    creatorImageUrl="https://i.pravatar.cc/150?img=12"
-                    onMessageTap={() => setActiveTab(1)}
-                    onFollowTap={() => { }}
-                  />
-
-                  {/* Feed Posts */}
-                  <DummyFeedPost />
-                </>
-              )}
-
-              {activeTab === 2 && (
-                <VideoTabView
-                  channelId={id as string}
-                  channelName="beautiful 💖💖💖 girls"
-                  channelTitle="beautiful 💖💖💖 girls description"
-                />
-              )}
-
-              {activeTab === 3 && (
-                <MembersTabView
-                  channelId={id as string}
-                  channelName="beautiful 💖💖💖 girls"
-                  totalMemberCount={1}
-                  members={[
-                    {
-                      id: '1',
-                      displayName: 'Josh',
-                      profileImageUrl: 'https://i.pravatar.cc/150?img=12',
-                      role: 'admin',
-                      channelCount: 50,
-                      isMe: true,
-                    }
-                  ]}
-                  onAddStory={() => { setIsStatusMode(true); setIsMediaSheetVisible(true); }}
-                />
-              )}
-            </ScrollView>
-          </>
+    <View
+      style={[
+        styles.container,
+        { paddingTop: insets.top, paddingBottom: insets.bottom },
+      ]}
+    >
+      <ChannelRestrictionWrapper
+        channelId={id}
+        requiredAction="view_channel"
+        fallback={(reason) => (
+          <ChannelRestrictionOverlay
+            isVisible={true}
+            title="Private Channel"
+            reason={
+              reason ||
+              "This channel is private. You must request to join to view its content and interact with members."
+            }
+            channelName={channel?.title || ""}
+            channelImage={
+              channel?.imageUrl || "https://picsum.photos/400/400?random=11"
+            }
+            channelId={id as string}
+          />
         )}
+      >
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <Stack.Screen options={{ headerShown: false }} />
+          {/* Conditional Rendering of Entire View for Messages Tab */}
+          {activeTab === 1 ? (
+            <View style={styles.messagesTabContainer}>
+              <View style={styles.header}>
+                <TouchableOpacity
+                  activeOpacity={1}
+                  style={styles.backButton}
+                  onPress={() => setActiveTab(0)}
+                >
+                  <ChevronLeft size={28} color="#FFF" />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle} numberOfLines={1}>
+                  {channel?.title || ""}
+                </Text>
+                <View style={{ width: 28 }} />
+              </View>
 
-        <CommentingSheet
-          visible={isMediaSheetVisible}
-          onClose={() => setIsMediaSheetVisible(false)}
-          channelId={id as string}
-          channelName="beautiful 💖💖💖 girls"
-          showInputField={true}
-          isStatus={isStatusMode}
-        />
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+              <ActiveUsersBar users={topBarUsers} />
+
+              <FlatList
+                ref={flatListRef}
+                style={styles.messagesScroll}
+                contentContainerStyle={styles.messagesScrollContent}
+                data={messages}
+                inverted
+                keyExtractor={(item) => item.id}
+                onEndReached={loadMore}
+                onEndReachedThreshold={0.5}
+                renderItem={({ item }) => (
+                  <ChatBubble message={item} channelId={id as string} />
+                )}
+                ListFooterComponent={
+                  <>
+                    {loadingMore && (
+                      <ActivityIndicator
+                        size="small"
+                        color="#FFF"
+                        style={{ marginVertical: 8 }}
+                      />
+                    )}
+                    <DateDivider date="MAY 12, 2026" />
+                  </>
+                }
+                ListEmptyComponent={
+                  !messagesLoading && messages.length === 0 ? (
+                    <View
+                      style={{
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: 40,
+                        marginTop: 40,
+                      }}
+                    >
+                      <UserAvatarImage
+                        imageUrl={
+                          channel?.creatorUser?.profileImageUrl ||
+                          "https://i.pravatar.cc/150"
+                        }
+                        size={80}
+                        showStatusRing={false}
+                      />
+                      <Text
+                        style={{
+                          color: "#FFF",
+                          fontSize: 18,
+                          fontWeight: "bold",
+                          marginTop: 16,
+                        }}
+                      >
+                        {channel?.creatorUser?.displayName ||
+                          channel?.creatorUser?.username ||
+                          "Admin"}
+                      </Text>
+                      <Text
+                        style={{
+                          color: "rgba(255,255,255,0.5)",
+                          fontSize: 14,
+                          textAlign: "center",
+                          marginTop: 8,
+                        }}
+                      >
+                        This is the beginning of the chat history. Send a
+                        message to start the conversation!
+                      </Text>
+                    </View>
+                  ) : null
+                }
+                ListHeaderComponent={() => {
+                  const typingUsersList = Object.values(typingUsers);
+                  if (typingUsersList.length === 0) return null;
+
+                  const firstTypingUser = typingUsersList[0];
+                  const displayName =
+                    firstTypingUser?.display_name ||
+                    firstTypingUser?.username ||
+                    "Someone";
+                  const avatarUrl =
+                    firstTypingUser?.profile_image_url ||
+                    "https://i.pravatar.cc/150?img=13";
+                  const othersCount = typingUsersList.length - 1;
+
+                  return (
+                    <View
+                      style={{
+                        flexDirection: "column",
+                        alignItems: "flex-start",
+                        paddingBottom: 8,
+                      }}
+                    >
+                      <TypingBubble avatarUrl={avatarUrl} />
+                      <Text
+                        style={{
+                          marginLeft: 70,
+                          color: "rgba(255,255,255,0.5)",
+                          fontSize: 12,
+                          marginTop: -4,
+                        }}
+                      >
+                        {othersCount === 0
+                          ? `${displayName} is typing...`
+                          : `${displayName} and ${othersCount} other${othersCount > 1 ? "s" : ""} are typing...`}
+                      </Text>
+                    </View>
+                  );
+                }}
+                showsVerticalScrollIndicator={false}
+              />
+
+              <ChannelRestrictionWrapper
+                channelId={id as string}
+                requiredAction="participate_in_chat"
+                fallback={null}
+              >
+                <ChatInputField
+                  channelId={id as string}
+                  onSubmitted={(msg) => {
+                    console.log(
+                      "\n[Pipeline Step 1] UI: User pressed send. Optimistic UI update executing...",
+                    );
+                    const newMsg = {
+                      id: Date.now().toString(),
+                      text: msg,
+                      time: new Date().toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }),
+                      isMe: true,
+                      senderName:
+                        user?.displayName || user?.username || "Admin",
+                      senderAvatarUrl: user?.profileImageUrl || null,
+                    };
+                    setMessages([newMsg, ...messagesRef.current]);
+
+                    console.log(
+                      "[Pipeline Step 2] WebSocket: Broadcasting message to other users...",
+                    );
+                    broadcastMessage(newMsg);
+
+                    console.log(
+                      "[Pipeline Step 3] Repository: Initiating persistent background save...",
+                    );
+                    channelRepository.createChannelMessage(
+                      id as string,
+                      user?.id as string,
+                      msg,
+                    );
+
+                    setTimeout(() => {
+                      flatListRef.current?.scrollToOffset({
+                        offset: 0,
+                        animated: true,
+                      });
+                    }, 100);
+                  }}
+                  onMediaSubmitted={async (media, caption) => {
+                    if (!media || media.length === 0) return;
+
+                    // 1. Optimistic UI update with local URI
+                    const newMediaItems = media.map((m: any) => ({
+                      type: m.type === "video" ? "video" : "image",
+                      url: m.path || m.url || m.uri,
+                      thumbnail: m.thumbnailUrl,
+                    }));
+
+                    const newMsg = {
+                      id: Date.now().toString(),
+                      text: caption || "",
+                      time: new Date().toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }),
+                      isMe: true,
+                      senderName:
+                        user?.displayName || user?.username || "Admin",
+                      senderAvatarUrl: user?.profileImageUrl || null,
+                      mediaItems: newMediaItems,
+                    };
+                    setMessages([newMsg, ...messagesRef.current]);
+
+                    // Scroll to bottom
+                    setTimeout(() => {
+                      flatListRef.current?.scrollToOffset({
+                        offset: 0,
+                        animated: true,
+                      });
+                    }, 100);
+
+                    try {
+                      // 2. Upload media to cloud storage in background
+                      console.log(
+                        "[Pipeline Step 1.5] Media: Uploading to Cloudflare R2...",
+                      );
+                      const uploadedUrls = await Promise.all(
+                        newMediaItems.map(async (m: any) => {
+                          const remoteUrl = await cloudMediaService.uploadMedia(
+                            m.url,
+                            "channel_messages",
+                            user?.id,
+                          );
+                          return remoteUrl;
+                        }),
+                      );
+
+                      // 3. Broadcast to WebSockets with actual public URLs
+                      const finalMediaItems = newMediaItems.map(
+                        (m: any, index: number) => ({
+                          ...m,
+                          url: uploadedUrls[index],
+                        }),
+                      );
+                      const finalMsg = {
+                        ...newMsg,
+                        mediaItems: finalMediaItems,
+                      };
+
+                      console.log(
+                        "[Pipeline Step 2] WebSocket: Broadcasting uploaded media message...",
+                      );
+                      broadcastMessage(finalMsg);
+
+                      // 4. Save to Repository
+                      console.log(
+                        "[Pipeline Step 3] Repository: Saving uploaded media message...",
+                      );
+                      channelRepository.createChannelMessage(
+                        id as string,
+                        user?.id as string,
+                        caption || "",
+                        finalMediaItems.map((m: any) => ({
+                          uri: m.url,
+                          type: m.type,
+                        })),
+                      );
+                    } catch (e) {
+                      console.error("[Pipeline Error] Media upload failed:", e);
+                    }
+                  }}
+                  onVoiceSubmitted={async (url, duration) => {
+                    const newMsg = {
+                      id: Date.now().toString(),
+                      text: "",
+                      time: new Date().toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }),
+                      isMe: true,
+                      senderName:
+                        user?.displayName || user?.username || "Admin",
+                      senderAvatarUrl: user?.profileImageUrl || null,
+                      mediaItems: [{ type: "audio", url: url }],
+                    };
+                    setMessages([newMsg, ...messagesRef.current]);
+
+                    setTimeout(() => {
+                      flatListRef.current?.scrollToOffset({
+                        offset: 0,
+                        animated: true,
+                      });
+                    }, 100);
+
+                    try {
+                      console.log(
+                        "[Pipeline] Audio: Uploading to Cloudflare R2...",
+                      );
+                      const remoteUrl = await cloudMediaService.uploadMedia(
+                        url,
+                        "channel_messages",
+                        user?.id,
+                      );
+
+                      const finalMsg = {
+                        ...newMsg,
+                        mediaItems: [{ type: "audio", url: remoteUrl }],
+                      };
+                      broadcastMessage(finalMsg);
+                      channelRepository.createChannelMessage(
+                        id as string,
+                        user?.id as string,
+                        "",
+                        [{ type: "audio", url: remoteUrl }],
+                      );
+                    } catch (e) {
+                      console.error("[Pipeline Error] Audio upload failed:", e);
+                    }
+                  }}
+                  onLottieSubmitted={(index) => {
+                    const newMsg = {
+                      id: Date.now().toString(),
+                      text: "",
+                      time: new Date().toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }),
+                      isMe: true,
+                      senderName: user?.displayName || user?.username || "Josh",
+                      senderAvatarUrl:
+                        user?.profileImageUrl ||
+                        "https://i.pravatar.cc/150?img=12",
+                      mediaItems: [{ type: "lottie", url: String(index) }],
+                    };
+                    setMessages([newMsg, ...messagesRef.current]);
+                    broadcastMessage(newMsg);
+                    channelRepository.createChannelMessage(
+                      id as string,
+                      user?.id as string,
+                      "",
+                      [{ type: "lottie", url: String(index) }],
+                    );
+                    setTimeout(() => {
+                      flatListRef.current?.scrollToOffset({
+                        offset: 0,
+                        animated: true,
+                      });
+                    }, 100);
+                  }}
+                  onTypingChange={(typing) => {
+                    setMyTyping(typing);
+                    broadcastTyping(typing);
+                  }}
+                />
+              </ChannelRestrictionWrapper>
+            </View>
+          ) : (
+            <>
+              {/* Title Bar at the very top (Facebook style) */}
+              <ChannelTitleBar
+                title={channel?.title || "Loading..."}
+                channelImageUrl={channel?.imageUrl}
+                onBackPress={() => router.back()}
+              />
+
+              {/* Nav Bar */}
+              <ChannelNavBar
+                selectedIndex={activeTab}
+                onTabSelected={setActiveTab}
+                totalMembers={channel?.membersCount || 0}
+                pendingRequests={channel?.pendingRequestsCount || 0}
+              />
+
+              {/* Tab Content */}
+              <ScrollView
+                style={styles.content}
+                contentContainerStyle={styles.scrollContent}
+              >
+                {activeTab === 0 && (
+                  <>
+                    <CustomChannelWidget
+                      userId={channel?.creatorUser?.id}
+                      username={
+                        channel?.creatorUser?.displayName ||
+                        channel?.creatorUser?.username ||
+                        "Owner"
+                      }
+                      avatarUrl={
+                        channel?.creatorUser?.profileImageUrl ||
+                        "https://i.pravatar.cc/150?img=12"
+                      }
+                      channelId={id as string}
+                      onPlusPress={() => {
+                        router.push({
+                          pathname: "/first-post",
+                          params: {
+                            targetChannelId: id,
+                            isChannelPost: "true",
+                          },
+                        });
+                      }}
+                      onMorePress={() =>
+                        router.push(`/channel/settings/${id}` as any)
+                      }
+                    />
+
+                    {/* Status Section using the new component */}
+                    <ChannelRestrictionWrapper
+                      channelId={id as string}
+                      requiredAction="post_moment"
+                      fallback={
+                        channelStatuses && channelStatuses.length > 0 ? (
+                          <>
+                            <View
+                              style={{
+                                height: 6,
+                                backgroundColor: "rgba(255,255,255,0.08)",
+                                marginTop: 12,
+                              }}
+                            />
+                            <UserStatusWidget
+                              channelId={id as string}
+                              currentUser={user as any}
+                              statuses={channelStatuses}
+                              onAddStatusPress={() => {
+                                router.push({
+                                  pathname: "/first-post",
+                                  params: {
+                                    targetChannelId: id,
+                                    isChannelStatus: "true",
+                                  },
+                                });
+                              }}
+                            />
+                          </>
+                        ) : null
+                      }
+                    >
+                      <View
+                        style={{
+                          height: 6,
+                          backgroundColor: "rgba(255,255,255,0.08)",
+                          marginTop: 12,
+                        }}
+                      />
+                      <UserStatusWidget
+                        channelId={id as string}
+                        currentUser={user as any}
+                        statuses={channelStatuses}
+                        onAddStatusPress={() => {
+                          router.push({
+                            pathname: "/first-post",
+                            params: {
+                              targetChannelId: id,
+                              isChannelStatus: "true",
+                            },
+                          });
+                        }}
+                      />
+                    </ChannelRestrictionWrapper>
+
+                    {/* Channel Posts Feed */}
+                    {channelPosts.map((post) => {
+                      const isLiked = interactionLikes[post.id] ?? false;
+                      const currentLikesCount = interactionLikesCount[post.id] ?? post.likes;
+                      const currentTagsCount = interactionTagsCount[post.id] ?? post.tagsCount;
+
+                      return (
+                        <View key={post.id}>
+                          <FeedPermissionsWrapper permissions={{ canComment: canPostStatus }}>
+                            <ChannelAndFeedPostModel
+                              postId={post.id}
+                              content={post.title || ""}
+                              timeAgo={post.createdAt ? new Date(post.createdAt).toLocaleDateString() : ""}
+                              imageUrls={post.imageUrls?.length > 0 ? post.imageUrls : null}
+                              thumbnailUrl={post.thumbnailUrl}
+                              videoUrl={post.videoUrl}
+                              isVideo={post.isVideo || !!post.videoUrl}
+                              audioUrl={post.audioUrl}
+                              isAudio={post.isAudio}
+                              metadata={post.metadata}
+                              aspectRatio={post.aspectRatio}
+                              type={post.type}
+                              isLiked={isLiked}
+                              likesCount={currentLikesCount}
+                              commentsCount={post.commentsCount}
+                              tagsCount={currentTagsCount}
+                              channelId={id as string}
+                              channelName={channel?.title}
+                              widgetType="channel_post"
+                              canComment={canPostStatus}
+                              onLikeTap={() => {
+                                useInteractionStore.getState().toggleLike(post.id, undefined, post.sourceTable);
+                              }}
+                              authorData={
+                                {
+                                  id: post.addedBy?.id || "",
+                                  displayName: post.addedBy?.name || "Unknown",
+                                  username: post.addedBy?.name || "Unknown",
+                                  profileImageUrl: post.addedBy?.avatarUrl || "",
+                                } as any
+                              }
+                            />
+                          </FeedPermissionsWrapper>
+                        </View>
+                      );
+                    })}
+
+                    {/* Invite Card */}
+                    <InviteCardWidget
+                      channelName={channel?.title}
+                      channelDescription={channel?.description}
+                      channelImageUrl={channel?.imageUrl}
+                      creatorImageUrl={channel?.creatorUser?.profileImageUrl}
+                    />
+                  </>
+                )}
+
+                {activeTab === 2 && (
+                  <VideoTabView
+                    channelId={id as string}
+                    channelName={channel?.title || ""}
+                    channelTitle={channel?.description || ""}
+                  />
+                )}
+
+                {activeTab === 3 && (
+                  <MembersTabView
+                    channelId={id as string}
+                    channelName={channel?.title}
+                    channelImageUrl={channel?.imageUrl}
+                    canPostStatus={canPostStatus}
+                    totalMemberCount={channel?.memberCount}
+                    members={channelMembers?.map((m) => ({
+                      id: m.userId,
+                      displayName: m.displayName || "Member",
+                      profileImageUrl: m.profileImageUrl || "",
+                      role: m.role,
+                      canChat: m.canChat,
+                    }))}
+                    onAddStory={() => {
+                      router.push({
+                        pathname: "/first-post",
+                        params: {
+                          targetChannelId: id,
+                          isChannelStatus: "true",
+                        },
+                      });
+                    }}
+                  />
+                )}
+              </ScrollView>
+            </>
+          )}
+        </KeyboardAvoidingView>
+      </ChannelRestrictionWrapper>
+    </View>
   );
 }

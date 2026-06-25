@@ -44,7 +44,7 @@ export const TrendingInBoxWidget = ({ boxId, onTrackPress }: TrendingInBoxWidget
             onPress={() => onTrackPress?.(item)}
           >
             <View style={styles.imageContainer}>
-              <Image source={{ uri: item.thumbnailUrl }} style={styles.image} contentFit="cover" />
+              <Image source={item.thumbnailUrl ? { uri: item.thumbnailUrl } : undefined} style={styles.image} contentFit="cover" />
               <View style={styles.rankBadge}>
                 <Text style={styles.rankText}>#{index + 1}</Text>
               </View>

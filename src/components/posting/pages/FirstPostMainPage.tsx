@@ -20,6 +20,9 @@ export const FirstPostMainPage: React.FC = () => {
   const targetChannelId = params.targetChannelId as string;
   const isManifestoContext = params.isManifestoContext === 'true';
 
+  const isChannelPost = params.isChannelPost === 'true';
+  const isChannelStatus = params.isChannelStatus === 'true';
+
   const layout = useWindowDimensions();
 
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
@@ -76,6 +79,8 @@ export const FirstPostMainPage: React.FC = () => {
       params: { 
         ...(targetChannelId ? { targetChannelId } : {}),
         isManifestoContext: String(isManifestoContext),
+        ...(isChannelPost ? { isChannelPost: 'true' } : {}),
+        ...(isChannelStatus ? { isChannelStatus: 'true' } : {}),
         selectedMediaJson: JSON.stringify(Object.values(selectedItems))
       }
     });
@@ -123,7 +128,7 @@ export const FirstPostMainPage: React.FC = () => {
         actions={
           Object.keys(selectedItems).length > 0
             ? [
-                <TouchableOpacity key="next" onPress={handleNext}>
+                <TouchableOpacity activeOpacity={1} key="next" onPress={handleNext}>
                   <Text style={styles.nextText}>Next</Text>
                 </TouchableOpacity>,
               ]

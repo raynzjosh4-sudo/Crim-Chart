@@ -3,11 +3,23 @@ import { DraggableProfileButton } from '@/components/profile/DraggableProfileBut
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
+import { ThemeTokens } from '@/core/theme/themes';
+
+import { useWindowDimensions } from 'react-native';
+import { AppSideNavBar } from '@/components/navbar/AppSideNavBar';
+import { DesktopRightSidebar } from '@/components/navbar/DesktopRightSidebar';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const segments = useSegments();
+  const styles = useStyles(themeStyles);
+  const theme = useCurrentTheme();
+  const { width } = useWindowDimensions();
+  
+  const isDesktop = width >= 768;
 
   const bottomPadding = Math.max(8, insets.bottom);
   const tabBarHeight = 60 + insets.bottom;
@@ -17,6 +29,7 @@ export default function TabLayout() {
   if (last === 'index' || last === '') selectedIndex = 0;
   else if (last === 'vids' || last === 'explore') selectedIndex = 1;
   else if (last === 'channels') selectedIndex = 3;
+  else if (last === 'statuses') selectedIndex = 4;
   else if (last === 'inbox') selectedIndex = 5;
 
   const onItemTapped = (index: number) => {
@@ -35,8 +48,21 @@ export default function TabLayout() {
         case 3:
           router.navigate('/channels');
           break;
+        case 4:
+          console.log('[TabsLayout] Statuses clicked. Navigating to /statuses');
+          // Add your statuses route here. For now it just logs or tries to push
+          router.navigate('/statuses' as any);
+          break;
         case 5:
           router.navigate('/inbox');
+          break;
+        case 6:
+          console.log('[TabsLayout] Search clicked.');
+          // router.navigate('/search');
+          break;
+        case 7:
+          console.log('[TabsLayout] Notifications clicked.');
+          // router.navigate('/notifications');
           break;
         default:
           break;
@@ -47,43 +73,59 @@ export default function TabLayout() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#000' }}>
-      <View style={{ flex: 1 }}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background, flexDirection: isDesktop ? 'row' : 'column' }]}>
+      {/* Desktop Side Navigation */}
+      {isDesktop && (
+        <AppSideNavBar selectedIndex={selectedIndex} onItemTapped={onItemTapped} />
+      )}
+
+      {/* Main Content Area */}
+      <View style={{ flex: 1, maxWidth: isDesktop ? 600 : '100%', width: '100%', marginHorizontal: isDesktop ? 'auto' : undefined }}>
         <Slot />
       </View>
 
-      <View style={[styles.tabBar, { height: tabBarHeight, paddingBottom: bottomPadding }]}>
-        <AppBottomNavBar selectedIndex={selectedIndex} onItemTapped={onItemTapped} />
-      </View>
+      {/* Desktop Right Navigation / Status Grid */}
+      {isDesktop && <DesktopRightSidebar />}
 
-      <DraggableProfileButton />
+      {/* Mobile Bottom Navigation */}
+      {!isDesktop && (
+        <View style={[styles.tabBar, { height: tabBarHeight, paddingBottom: bottomPadding, backgroundColor: theme.colors.background }]}>
+          <AppBottomNavBar selectedIndex={selectedIndex} onItemTapped={onItemTapped} />
+        </View>
+      )}
+
+      {/* Profile Button - Hidden on Desktop as it's in the Sidebar */}
+      {!isDesktop && <DraggableProfileButton />}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const themeStyles = (colors: ThemeTokens, scale: number): any => ({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   tabarIcon: {
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 8,
-    padding: 6,
-    alignItems: 'center',
-    justifyContent: 'center'
+    borderRadius: 8 * scale,
+    padding: 6 * scale,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
   tabbaricon2: {
-    position: 'absolute',
-    right: -4,
-    top: -6,
-    backgroundColor: '#FF453A',
-    borderRadius: 6,
-    width: 12,
-    height: 12,
-    borderWidth: 2,
-    borderColor: '#000',
+    position: 'absolute' as const,
+    right: -4 * scale,
+    top: -6 * scale,
+    backgroundColor: colors.error,
+    borderRadius: 6 * scale,
+    width: 12 * scale,
+    height: 12 * scale,
+    borderWidth: 2 * scale,
+    borderColor: colors.background,
   },
-
   tabBar: {
     borderTopWidth: 0.5,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-    backgroundColor: '#000',
+    borderTopColor: colors.surfaceVariant,
+    backgroundColor: colors.background,
   },
-})
+});

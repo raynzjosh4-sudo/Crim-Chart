@@ -51,7 +51,7 @@ export const UserStatusWidget = () => {
         contentContainerStyle={styles.scrollContent}
       >
         {/* Create Status Card */}
-        <TouchableOpacity 
+        <TouchableOpacity activeOpacity={1} 
           style={styles.createCard} 
           onPress={() => router.push('/post' as any)}
         >
@@ -84,7 +84,7 @@ export const UserStatusWidget = () => {
           const primaryImageUrl = latestStatus.primaryImageUrl || latestStatus.image_urls?.[0];
 
           return (
-            <TouchableOpacity 
+            <TouchableOpacity activeOpacity={1} 
               key={authorId} 
               style={styles.statusCard}
               onPress={() => router.push({ pathname: '/status/[id]', params: { id: latestStatus.id } } as any)}

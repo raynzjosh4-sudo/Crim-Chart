@@ -44,7 +44,7 @@ const ChartToastWidget: React.FC<CustomToastProps> = ({ title, message, type, on
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.message}>{message}</Text>
       </View>
-      <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+      <TouchableOpacity activeOpacity={1} onPress={onClose} style={styles.closeButton}>
         <X color="rgba(255, 255, 255, 0.3)" size={16} />
       </TouchableOpacity>
     </View>

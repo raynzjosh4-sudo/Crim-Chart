@@ -6,6 +6,7 @@ interface AvatarWithStatusProps {
   currentChannelAvatar?: string | null;
   sourceChannelAvatar?: string | null;
   authorAvatar?: string | null;
+  onTap?: () => void;
 }
 
 export const AvatarWithStatus: React.FC<AvatarWithStatusProps> = ({
@@ -13,11 +14,12 @@ export const AvatarWithStatus: React.FC<AvatarWithStatusProps> = ({
   currentChannelAvatar,
   sourceChannelAvatar,
   authorAvatar,
+  onTap,
 }) => {
   const imageUrl = currentChannelAvatar || sourceChannelAvatar || authorAvatar || 'https://via.placeholder.com/150';
 
   return (
-    <TouchableOpacity style={styles.container} activeOpacity={0.8}>
+    <TouchableOpacity style={styles.container} activeOpacity={0.8} onPress={onTap}>
       <Image source={{ uri: imageUrl }} style={styles.avatar} />
       {/* TODO: Add status ring and moments badge when providers are ported */}
     </TouchableOpacity>

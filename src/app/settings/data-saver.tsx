@@ -37,7 +37,7 @@ export default function DataSaverPage() {
 
         <View style={styles.divider} />
 
-        <TouchableOpacity
+        <TouchableOpacity activeOpacity={1}
           style={styles.selectionRow}
           onPress={() => setShowOptions(!showOptions)}
         >
@@ -48,7 +48,7 @@ export default function DataSaverPage() {
         {showOptions && (
           <View style={styles.optionsContainer}>
             {OPTIONS.map((opt) => (
-              <TouchableOpacity
+              <TouchableOpacity activeOpacity={1}
                 key={opt.key}
                 style={styles.optionItem}
                 onPress={() => {

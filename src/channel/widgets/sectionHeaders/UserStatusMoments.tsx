@@ -23,7 +23,7 @@ export const UserStatusMoments: React.FC = () => {
     <View style={styles.container}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Create Status Card */}
-        <TouchableOpacity style={styles.card}>
+        <TouchableOpacity activeOpacity={1} style={styles.card}>
           <View style={styles.createIconWrapper}>
             <View style={styles.createAvatar}>
               <User size={30} color="rgba(255,255,255,0.5)" />
@@ -37,7 +37,7 @@ export const UserStatusMoments: React.FC = () => {
 
         {/* User Status Cards */}
         {statuses.map(status => (
-          <TouchableOpacity key={status.id} style={styles.card}>
+          <TouchableOpacity activeOpacity={1} key={status.id} style={styles.card}>
             <ExpoImage source={{ uri: status.imageUrl }} style={styles.cardImage} contentFit="cover" />
             <View style={styles.gradient} />
             <View style={styles.avatarRing}>

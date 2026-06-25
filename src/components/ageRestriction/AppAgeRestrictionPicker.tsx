@@ -38,7 +38,7 @@ export const AppAgeRestrictionPicker: React.FC<AppAgeRestrictionPickerProps> = (
             {AGE_OPTIONS.map((age) => {
               const isSelected = selectedAge === age;
               return (
-                <TouchableOpacity
+                <TouchableOpacity activeOpacity={1}
                   key={age}
                   style={[styles.optionRow, isSelected && styles.optionRowSelected]}
                   onPress={() => {

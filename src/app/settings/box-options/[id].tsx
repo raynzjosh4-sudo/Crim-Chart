@@ -227,7 +227,7 @@ export default function BoxOptionsPage() {
           <View style={styles.section}>
             <View style={styles.row}>
               <Text style={styles.label}>Age Restriction</Text>
-              <TouchableOpacity
+              <TouchableOpacity activeOpacity={1}
                 style={styles.pickerButton}
                 onPress={() => setAgePickerVisible(true)}
               >
@@ -250,13 +250,13 @@ export default function BoxOptionsPage() {
               <View key={c} style={styles.chip}>
                 <Text style={styles.chipText}>{c}</Text>
                 {c !== 'Global' && (
-                  <TouchableOpacity onPress={() => handleRemoveCountry(c)} style={styles.removeChipIcon}>
+                  <TouchableOpacity activeOpacity={1} onPress={() => handleRemoveCountry(c)} style={styles.removeChipIcon}>
                     <X size={12} color="#FFF" />
                   </TouchableOpacity>
                 )}
               </View>
             ))}
-            <TouchableOpacity 
+            <TouchableOpacity activeOpacity={1} 
               style={styles.addChip}
               onPress={() => setCountryPickerVisible(true)}
             >
@@ -264,7 +264,7 @@ export default function BoxOptionsPage() {
             </TouchableOpacity>
             
             {!(box.country_restrictions || ['Global']).includes('Global') && (
-              <TouchableOpacity 
+              <TouchableOpacity activeOpacity={1} 
                 style={styles.resetChip}
                 onPress={() => handleToggle('country_restrictions', ['Global'])}
               >

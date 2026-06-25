@@ -23,6 +23,8 @@ interface ChatState {
   subscribeToThread: (threadId: string) => void;
   unsubscribeFromThread: (threadId: string) => void;
   markThreadAsRead: (threadId: string) => Promise<void>;
+  acceptInboxRequest: (threadId: string) => Promise<void>;
+  checkInboxPrivacy: (participantId: string) => Promise<{ isBlocked: boolean, isLocked: boolean }>;
   subscribeToGlobalPresence: () => void;
   startTyping: (threadId: string) => void;
   stopTyping: (threadId: string) => void;
@@ -70,7 +72,7 @@ export const useChatStore = create<ChatState>()(
           const newThreads: ThreadEntity[] = (data || []).map((row: any) => {
             const pData = profilesMap[row.participant_id] || {};
             console.log(`[DEBUG INBOX] Thread ${row.id} - DB text: "${row.last_message}", DB type: "${row.last_message_type}"`);
-            
+
             return {
               id: String(row.id),
               participants: [
@@ -96,6 +98,9 @@ export const useChatStore = create<ChatState>()(
               } : undefined,
               unreadCount: row.unread_count || 0,
               updatedAt: new Date(row.last_message_at || new Date()),
+              intent: row.connection_intent,
+              status: row.status,
+              initiatedBy: row.initiated_by,
             };
           });
 
@@ -174,7 +179,10 @@ export const useChatStore = create<ChatState>()(
             };
           });
 
-          set({ threads: [...currentThreads, ...newThreads] });
+          const existingIds = new Set(currentThreads.map(t => t.id));
+          const filteredNewThreads = newThreads.filter(t => !existingIds.has(t.id));
+
+          set({ threads: [...currentThreads, ...filteredNewThreads] });
         } catch (e) {
           console.error('[ChatStore] loadMoreThreads error:', e);
         }
@@ -370,7 +378,7 @@ export const useChatStore = create<ChatState>()(
               }
               return t;
             });
-            
+
             // Sort threads so the most recently updated is at the top
             updatedThreads.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
 
@@ -430,9 +438,23 @@ export const useChatStore = create<ChatState>()(
           }
 
           // Extra safety check: never insert local URIs to remote DB
-          if (finalMediaUrl && finalMediaUrl.includes('file:///data')) {
+          if (finalMediaUrl && typeof finalMediaUrl === 'string' && finalMediaUrl.includes('file:///data')) {
             console.error('[ChatStore] Safety check failed: finalMediaUrl contains local file paths. Aborting.');
             return;
+          }
+
+          let parsedMediaUrls: any[] = [];
+          if (finalMediaUrl) {
+            try {
+              const parsed = JSON.parse(finalMediaUrl);
+              if (Array.isArray(parsed)) {
+                parsedMediaUrls = parsed.map((m: any) => m.url || m.uri || m);
+              } else {
+                parsedMediaUrls = [finalMediaUrl];
+              }
+            } catch (e) {
+              parsedMediaUrls = [finalMediaUrl];
+            }
           }
 
           const { data, error } = await supabase
@@ -443,7 +465,8 @@ export const useChatStore = create<ChatState>()(
               sender_id: user.id,
               body: text,
               message_type: type,
-              media_url: finalMediaUrl,
+              media_url: parsedMediaUrls.length > 0 ? parsedMediaUrls[0] : finalMediaUrl,
+              metadata: parsedMediaUrls.length > 0 ? { mediaUrls: parsedMediaUrls } : null,
               isRead: false
             })
             .select()
@@ -476,7 +499,13 @@ export const useChatStore = create<ChatState>()(
       },
 
       subscribeToThread: (threadId: string) => {
-        const channel = supabase.channel(`chat_${threadId}`);
+        const channelName = `chat_${threadId}`;
+
+        // Remove any lingering channel to prevent "cannot add callbacks after subscribe" error
+        const existingChannels = supabase.getChannels().filter(c => c.topic === `realtime:${channelName}`);
+        existingChannels.forEach(c => supabase.removeChannel(c));
+
+        const channel = supabase.channel(channelName);
 
         channel
           .on(
@@ -510,11 +539,11 @@ export const useChatStore = create<ChatState>()(
                   }
                   return t;
                 });
-                
+
                 // Sort threads so the most recently updated is at the top
                 updatedThreads.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
 
-                return { 
+                return {
                   messages: { ...state.messages, [threadId]: [newMsg, ...currentMsgs] },
                   threads: updatedThreads
                 };
@@ -539,54 +568,90 @@ export const useChatStore = create<ChatState>()(
       },
 
       unsubscribeFromThread: (threadId: string) => {
-        supabase.removeChannel(supabase.channel(`chat_${threadId}`));
+        const channelName = `chat_${threadId}`;
+        const existingChannels = supabase.getChannels().filter(c => c.topic === `realtime:${channelName}`);
+        existingChannels.forEach(c => supabase.removeChannel(c));
       },
 
       startTyping: async (threadId: string) => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        supabase.channel(`chat_${threadId}`).send({
-          type: 'broadcast',
-          event: 'typing',
-          payload: { userId: user.id, isTyping: true }
-        });
+        const channelName = `chat_${threadId}`;
+        const channel = supabase.getChannels().find(c => c.topic === `realtime:${channelName}`);
+        if (channel) {
+          channel.send({
+            type: 'broadcast',
+            event: 'typing',
+            payload: { userId: user.id, isTyping: true }
+          });
+        }
       },
 
       stopTyping: async (threadId: string) => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        supabase.channel(`chat_${threadId}`).send({
-          type: 'broadcast',
-          event: 'typing',
-          payload: { userId: user.id, isTyping: false }
-        });
+        const channelName = `chat_${threadId}`;
+        const channel = supabase.getChannels().find(c => c.topic === `realtime:${channelName}`);
+        if (channel) {
+          channel.send({
+            type: 'broadcast',
+            event: 'typing',
+            payload: { userId: user.id, isTyping: false }
+          });
+        }
       },
 
       markThreadAsRead: async (threadId: string) => {
         try {
-          // Optimistically update local state immediately so it vanishes
-          set(state => ({
-            threads: state.threads.map(t =>
-              t.id === threadId ? { ...t, unreadCount: 0 } : t
-            )
-          }));
-
-          const { data: { user } } = await supabase.auth.getUser();
-          if (!user) return;
-
           const { error } = await supabase
             .from('inbox')
             .update({ unread_count: 0 })
             .eq('id', threadId)
-            .eq('user_id', user.id);
+            .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
 
-          if (error) {
-            console.error('[ChatStore] Supabase markThreadAsRead error:', error);
+          if (!error) {
+            set((state) => ({
+              threads: state.threads.map(t =>
+                t.id === threadId ? { ...t, unreadCount: 0 } : t
+              )
+            }));
           }
         } catch (e) {
           console.error('[ChatStore] markThreadAsRead error:', e);
+        }
+      },
+
+      acceptInboxRequest: async (threadId: string) => {
+        try {
+          const { error } = await supabase.rpc('accept_private_inbox', { target_thread_id: threadId });
+          if (error) throw error;
+          
+          set((state) => ({
+            threads: state.threads.map(t =>
+              t.id === threadId ? { ...t, status: 'accepted' } : t
+            )
+          }));
+        } catch (e) {
+          console.error('[ChatStore] acceptInboxRequest error:', e);
+        }
+      },
+
+      checkInboxPrivacy: async (participantId: string) => {
+        try {
+          const { data, error } = await supabase.rpc('check_inbox_privacy', { target_user_id: participantId });
+          if (error) throw error;
+          if (data && data.length > 0) {
+            return {
+              isBlocked: data[0].is_blocked,
+              isLocked: data[0].is_locked
+            };
+          }
+          return { isBlocked: false, isLocked: false };
+        } catch (e) {
+          console.error('[ChatStore] checkInboxPrivacy error:', e);
+          return { isBlocked: false, isLocked: false };
         }
       },
 

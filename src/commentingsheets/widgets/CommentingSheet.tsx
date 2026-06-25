@@ -337,14 +337,14 @@ export default function CommentingSheet({
         </Text>
         <View style={styles.titleActions}>
           {showPostSettings && (
-            <TouchableOpacity
+            <TouchableOpacity activeOpacity={1}
               onPress={() => setSettingsVisible(true)}
               style={[styles.settingsBtn, { backgroundColor: 'rgba(255,255,255,0.05)' }]}
             >
               <Settings2 color={colors.primary} size={20} />
             </TouchableOpacity>
           )}
-          <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+          <TouchableOpacity activeOpacity={1} onPress={onClose} style={styles.closeBtn}>
             <X color={colors.text} size={22} />
           </TouchableOpacity>
         </View>
@@ -396,7 +396,7 @@ export default function CommentingSheet({
           contentContainerStyle={styles.tabBar}
         >
           {tabLabels.map((label, i) => (
-            <TouchableOpacity
+            <TouchableOpacity activeOpacity={1}
               key={i}
               onPress={() => setActiveTab(i)}
               style={styles.tabItem}
@@ -456,7 +456,7 @@ export default function CommentingSheet({
                   style={{ width: 64, height: 64, borderRadius: 8 }}
                   contentFit="cover"
                 />
-                <TouchableOpacity
+                <TouchableOpacity activeOpacity={1}
                   style={{
                     position: 'absolute',
                     top: 4,
@@ -501,7 +501,7 @@ export default function CommentingSheet({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <TouchableOpacity style={styles.backdrop} onPress={onClose} />
+        <TouchableOpacity activeOpacity={1} style={styles.backdrop} onPress={onClose} />
         {content}
       </View>
     </Modal>

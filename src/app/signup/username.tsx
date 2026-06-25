@@ -3,11 +3,12 @@ import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { colors } from '@/core/theme/colors';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function UsernamePage() {
   const router = useRouter();
-  const { pendingSignUp, updateProfile } = useAuthStore();
+  const { pendingSignUp, setUsernameAndCheck } = useAuthStore();
   const [username, setUsername] = useState(pendingSignUp?.username || '');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -22,12 +23,16 @@ export default function UsernamePage() {
     if (username.length < 3) return;
     setIsLoading(true);
 
-    // Check username availability logic would go here
-    await new Promise(resolve => setTimeout(resolve, 600));
-
-    updateProfile({ username, displayName: username }); // Using username as display name placeholder
+    const isAvailable = await setUsernameAndCheck(username);
     setIsLoading(false);
-    router.push('/signup/password' as any);
+
+    if (isAvailable) {
+      if (useAuthStore.getState().pendingGoogleOnboarding) {
+        router.push('/signup/birthday' as any);
+      } else {
+        router.push('/signup/password' as any);
+      }
+    }
   };
 
   return (
@@ -58,7 +63,7 @@ export default function UsernamePage() {
 
         <View style={styles.flexOne} />
 
-        <TouchableOpacity
+        <TouchableOpacity activeOpacity={1}
           style={[styles.nextButton, username.length < 3 && styles.nextButtonDisabled]}
           onPress={handleNext}
           disabled={username.length < 3 || isLoading}

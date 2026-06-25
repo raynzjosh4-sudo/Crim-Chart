@@ -5,6 +5,7 @@ import { Search, Check } from 'lucide-react-native';
 import AppAvatar from '@/components/avatar/AppAvatar';
 import { supabase } from '@/core/supabase/supabaseConfig';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { ChannelListSkeleton } from '@/components/skeletons/Skeletons';
 
 export interface ChannelData {
   id: string;
@@ -144,7 +145,7 @@ export const SelectChannelBottomSheet: React.FC<SelectChannelBottomSheetProps> =
               <View style={[styles.header, { width: '100%' }]}>
                 <View style={{ width: 60 }} />
                 <Text style={styles.headerTitle}>Select Channels</Text>
-                <TouchableOpacity onPress={onClose} style={[styles.headerBtn, { width: 60, alignItems: 'flex-end' }]}>
+                <TouchableOpacity activeOpacity={1} onPress={onClose} style={[styles.headerBtn, { width: 60, alignItems: 'flex-end' }]}>
                   <Text style={styles.saveText}>Done</Text>
                 </TouchableOpacity>
               </View>
@@ -176,14 +177,18 @@ export const SelectChannelBottomSheet: React.FC<SelectChannelBottomSheetProps> =
               onEndReachedThreshold={0.5}
               ListEmptyComponent={
                 loading ? (
-                  <ActivityIndicator color="#FACD11" style={{ marginTop: 32 }} />
+                  <View style={{ paddingTop: 20 }}>
+                    <ChannelListSkeleton count={5} />
+                  </View>
                 ) : (
                   <Text style={styles.emptyText}>No channels found</Text>
                 )
               }
               ListFooterComponent={
                 loading && channels.length > 0 ? (
-                  <ActivityIndicator color="#FACD11" style={{ marginVertical: 16 }} />
+                  <View style={{ paddingTop: 10 }}>
+                    <ChannelListSkeleton count={2} />
+                  </View>
                 ) : null
               }
             />

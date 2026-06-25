@@ -83,13 +83,13 @@ export const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onLi
         )}
 
         <View style={styles.actionsRow}>
-          <TouchableOpacity onPress={() => onReply && onReply(comment.id, comment.author_username)} style={styles.actionBtn}>
+          <TouchableOpacity activeOpacity={1} onPress={() => onReply && onReply(comment.id, comment.author_username)} style={styles.actionBtn}>
             <Text style={styles.actionText}>Reply</Text>
           </TouchableOpacity>
         </View>
       </View>
       <View style={styles.likeContainer}>
-        <TouchableOpacity
+        <TouchableOpacity activeOpacity={1}
           onPress={() => toggleLike(comment.id)}
           style={styles.likeBtn}
           activeOpacity={0.7}

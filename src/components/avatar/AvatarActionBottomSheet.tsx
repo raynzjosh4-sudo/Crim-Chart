@@ -1,38 +1,64 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TouchableWithoutFeedback, useWindowDimensions, Platform } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 
 interface AvatarActionBottomSheetProps {
   visible: boolean;
   onClose: () => void;
   onViewStatuses: () => void;
-  onViewProfileImage: () => void;
+  onViewProfilePage: () => void;
   avatarUrl?: string | null;
   name?: string;
+  anchorPosition?: { x: number, y: number, width: number, height: number } | null;
 }
 
 export const AvatarActionBottomSheet: React.FC<AvatarActionBottomSheetProps> = ({
   visible,
   onClose,
   onViewStatuses,
-  onViewProfileImage,
+  onViewProfilePage,
   avatarUrl,
   name,
+  anchorPosition,
 }) => {
+  const { width, height } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
+
+  let customContainerStyle: any = {};
+  if (isDesktop && anchorPosition) {
+    const MENU_WIDTH = 320;
+    const MENU_HEIGHT = 200; // approximate height
+    let top = anchorPosition.y + anchorPosition.height + 8;
+    let left = anchorPosition.x;
+
+    if (left + MENU_WIDTH > width) {
+      left = anchorPosition.x + anchorPosition.width - MENU_WIDTH;
+    }
+    if (top + MENU_HEIGHT > height) {
+      top = anchorPosition.y - MENU_HEIGHT - 8;
+    }
+
+    customContainerStyle = {
+      position: 'absolute',
+      top,
+      left,
+    };
+  }
+
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType={isDesktop ? "fade" : "slide"}
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, isDesktop && !anchorPosition && styles.overlayDesktop]}>
         <TouchableWithoutFeedback onPress={onClose}>
           <View style={styles.backdrop} />
         </TouchableWithoutFeedback>
 
-        <View style={styles.container}>
-          <View style={styles.dragHandle} />
+        <View style={[styles.container, isDesktop && styles.containerDesktop, customContainerStyle]}>
+          {!isDesktop && <View style={styles.dragHandle} />}
 
           <View style={styles.header}>
             <ExpoImage
@@ -44,7 +70,7 @@ export const AvatarActionBottomSheet: React.FC<AvatarActionBottomSheetProps> = (
           </View>
 
           <View style={styles.actionsContainer}>
-            <TouchableOpacity 
+            <TouchableOpacity activeOpacity={1} 
               style={styles.actionButton}
               onPress={() => {
                 onClose();
@@ -54,14 +80,14 @@ export const AvatarActionBottomSheet: React.FC<AvatarActionBottomSheetProps> = (
               <Text style={[styles.actionText, { color: '#FACD11' }]}>View Statuses</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity activeOpacity={1} 
               style={styles.actionButton}
               onPress={() => {
                 onClose();
-                onViewProfileImage();
+                onViewProfilePage();
               }}
             >
-              <Text style={[styles.actionText, { color: 'rgba(255,255,255,0.7)' }]}>View Profile Image</Text>
+              <Text style={[styles.actionText, { color: 'rgba(255,255,255,0.7)' }]}>View Profile Page</Text>
             </TouchableOpacity>
           </View>
 
@@ -77,6 +103,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
   },
+  overlayDesktop: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -88,6 +118,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#0D0D0D',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
+  },
+  containerDesktop: {
+    width: 320,
+    borderRadius: 24,
+    paddingBottom: 24,
+    paddingTop: 24,
   },
   dragHandle: {
     width: 40,

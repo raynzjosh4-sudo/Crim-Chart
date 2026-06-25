@@ -2,10 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { Heart } from 'lucide-react-native';
-import { VotingItem } from '../../data/dummyVotingBoxData';
-
 interface Props {
-  item: VotingItem;
+  item: any;
   isKing?: boolean;
 }
 
@@ -13,16 +11,16 @@ export function VotingBattleCompetitor({ item, isKing }: Props) {
   return (
     <View style={styles.container}>
       <Image 
-        source={{ uri: item.mediaUrl }} 
+        source={{ uri: item.thumbnailUrl || item.mediaUrl || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=400&q=80' }} 
         style={[styles.image, isKing ? styles.imageKing : styles.imageChallenger]} 
         contentFit="cover" 
       />
       <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
       <View style={styles.likeRow}>
-        <TouchableOpacity style={styles.likeBtn}>
+        <TouchableOpacity activeOpacity={1} style={styles.likeBtn}>
           <Heart size={16} color="#FFF" />
         </TouchableOpacity>
-        <Text style={styles.votes}>{item.score.toLocaleString()} likes</Text>
+        <Text style={styles.votes}>{(item.likes || 0).toLocaleString()} likes</Text>
       </View>
     </View>
   );

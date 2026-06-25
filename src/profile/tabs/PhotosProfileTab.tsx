@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { FlatList, View, StyleSheet, Dimensions, Text } from 'react-native';
 import { ProfileImageItem } from '@/components/profileTabsWidgets/ProfileImageItem';
 import { SkeletonChartCard } from '../widgets/SkeletonChartCard';
+import { SkeletonBox } from '@/components/skeletons/SkeletonBox';
 import { NativeDB } from '@/core/db/NativeDB';
 import { supabase } from '@/core/supabase/client';
 
@@ -114,7 +115,9 @@ export const PhotosProfileTab: React.FC<PhotosProfileTabProps> = ({ userId }) =>
     return (
       <View style={styles.skeletonGrid}>
         {Array.from({ length: 9 }).map((_, i) => (
-          <SkeletonChartCard key={i} width={ITEM_SIZE - 2} height={ITEM_SIZE - 2} />
+          <View key={i} style={{ width: '33.33%', aspectRatio: 2/3, padding: 1 }}>
+            <SkeletonBox width="100%" height="100%" />
+          </View>
         ))}
       </View>
     );
@@ -131,11 +134,16 @@ export const PhotosProfileTab: React.FC<PhotosProfileTabProps> = ({ userId }) =>
   return (
     <FlatList
       data={photos}
+      scrollEnabled={false}
       numColumns={COLS}
       keyExtractor={item => item.id}
       renderItem={({ item }) => {
         const url = (item.image_urls && item.image_urls.length > 0) ? item.image_urls[0] : null;
-        return <ProfileImageItem imageUrl={url} size={ITEM_SIZE - 2} />;
+        return (
+          <View style={{ flex: 1/3, padding: 1 }}>
+            <ProfileImageItem imageUrl={url} size="100%" />
+          </View>
+        );
       }}
       contentContainerStyle={styles.grid}
       showsVerticalScrollIndicator={false}
@@ -150,7 +158,6 @@ const styles = StyleSheet.create({
   skeletonGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 2,
     padding: 1,
   },
   emptyContainer: {

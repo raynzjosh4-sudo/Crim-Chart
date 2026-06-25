@@ -1,21 +1,21 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Switch } from 'react-native';
-import { useTheme } from '@react-navigation/native';
+import { ChannelCreationStatus, useChannelCreationController } from '@/channel/application/useChannelCreationController';
+import { MediaData, MediaType } from '@/channel/pages/widgets2/chartcard/models/media_data';
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
-import { useRouter } from 'expo-router';
-import { Camera, Calendar, ChevronRight, Globe } from 'lucide-react-native';
-import { Image as ExpoImage } from 'expo-image';
-import { useLocalization } from '@/core/localization/localization_provider';
 import { ChartLinearLoader } from '@/components/loader/ChartLinearLoader';
-import { useChannelCreationController, ChannelCreationStatus } from '@/channel/application/useChannelCreationController';
-import { CommentingSheet } from '@/components/Commentingsheets/widgets/CommentingSheet';
-import { MediaData } from '@/channel/pages/widgets2/chartcard/models/media_data';
+import { useLocalization } from '@/core/localization/localization_provider';
+import { useTheme } from '@react-navigation/native';
+import { Image as ExpoImage } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
+import { Calendar, Camera, ChevronRight, Globe } from 'lucide-react-native';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function CreateChannelPage() {
   const { colors } = useTheme();
   const router = useRouter();
   const { tr } = useLocalization();
-  
+
   const createChannel = useChannelCreationController(state => state.createChannel);
   const creationStatus = useChannelCreationController(state => state.status);
   const draftCountries = useChannelCreationController(state => state.draftCountries);
@@ -25,7 +25,18 @@ export default function CreateChannelPage() {
   const [title, setTitle] = useState('Channel Title');
   const [description, setDescription] = useState('Write about the channel or community...');
   const [selectedMedia, setSelectedMedia] = useState<MediaData | null>(null);
-  const [isMediaPickerVisible, setIsMediaPickerVisible] = useState(false);
+
+  const handlePickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+    if (!result.canceled && result.assets?.length > 0) {
+      setSelectedMedia({ contentUrl: result.assets[0].uri, type: MediaType.photo });
+    }
+  };
 
   // Settings State
   const [membersOtherChannels, setMembersOtherChannels] = useState(false);
@@ -53,9 +64,7 @@ export default function CreateChannelPage() {
       countryRestrictions: draftCountries,
       allowCommentingBy,
     }).then(() => {
-      // In a real app we'd navigate back inside the success listener
-      // For now, it will just show the success state.
-      router.back();
+      setTimeout(() => router.back(), 100);
     }).catch((e) => {
       console.error('Create channel failed', e);
     });
@@ -63,19 +72,19 @@ export default function CreateChannelPage() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ChartAppBar 
-        title={tr('create_channel')} 
-        showBack={true} 
+      <ChartAppBar
+        title={tr('create_channel')}
+        showBack={true}
         centerTitle={true}
         titleStyle={{ fontWeight: '900', textTransform: 'lowercase' }}
       />
 
       <ChartLinearLoader isLoading={isLoading} />
-      
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Interactive Avatar Selector */}
         <View style={styles.avatarContainer}>
-          <TouchableOpacity onPress={() => setIsMediaPickerVisible(true)} activeOpacity={0.8}>
+          <TouchableOpacity activeOpacity={0.8} onPress={handlePickImage}>
             <View style={[styles.avatarCircle, { backgroundColor: 'rgba(255, 255, 255, 0.05)' }]}>
               {selectedMedia ? (
                 <ExpoImage source={{ uri: selectedMedia.contentUrl }} style={styles.avatarImage} contentFit="cover" />
@@ -108,38 +117,38 @@ export default function CreateChannelPage() {
 
         {/* Embedded Settings: Who can see channel */}
         <Text style={styles.sectionHeader}>{tr('set_who_can_see_channel').toUpperCase()}</Text>
-        <ActionTile 
-          title={tr('age_restriction')} 
-          subtitle={draftAge === 'All Ages' ? tr('all') : draftAge} 
+        <ActionTile
+          title={tr('age_restriction')}
+          subtitle={draftAge === 'All Ages' ? tr('all') : draftAge}
           icon={<Calendar size={20} color="rgba(255,255,255,0.4)" />}
-          onPress={() => router.push('/channel/age' as any)} 
+          onPress={() => router.push('/channel/age' as any)}
         />
-        <ToggleTile 
-          title={tr('members_in_my_other_channels')} 
-          value={membersOtherChannels} 
-          onChanged={setMembersOtherChannels} 
+        <ToggleTile
+          title={tr('members_in_my_other_channels')}
+          value={membersOtherChannels}
+          onChanged={setMembersOtherChannels}
         />
-        <ToggleTile 
-          title={tr('members_am_following')} 
-          value={membersFollowing} 
-          onChanged={setMembersFollowing} 
+        <ToggleTile
+          title={tr('members_am_following')}
+          value={membersFollowing}
+          onChanged={setMembersFollowing}
         />
 
         <View style={styles.spacer} />
 
         {/* Embedded Settings: How can people join */}
         <Text style={styles.sectionHeader}>{tr('how_can_people_join').toUpperCase()}</Text>
-        <RadioTile 
-          title={tr('by_sending_invitation_request')} 
-          value="invite" 
-          groupValue={joinMethod} 
-          onChanged={setJoinMethod} 
+        <RadioTile
+          title={tr('by_sending_invitation_request')}
+          value="invite"
+          groupValue={joinMethod}
+          onChanged={setJoinMethod}
         />
-        <RadioTile 
-          title={tr('anyone_can_join')} 
-          value="anyone" 
-          groupValue={joinMethod} 
-          onChanged={setJoinMethod} 
+        <RadioTile
+          title={tr('anyone_can_join')}
+          value="anyone"
+          groupValue={joinMethod}
+          onChanged={setJoinMethod}
         />
 
         <View style={styles.spacer} />
@@ -155,16 +164,16 @@ export default function CreateChannelPage() {
 
         {/* Embedded Settings: Global restrictions */}
         <Text style={styles.sectionHeader}>{tr('global_restrictions').toUpperCase()}</Text>
-        <ActionTile 
-          title={tr('which_country_allowed')} 
-          subtitle={draftCountries.length === 1 && draftCountries[0] === 'Global' ? tr('all') : `${draftCountries.length} Selected`} 
+        <ActionTile
+          title={tr('which_country_allowed')}
+          subtitle={draftCountries.length === 1 && draftCountries[0] === 'Global' ? tr('all') : `${draftCountries.length} Selected`}
           icon={<Globe size={20} color="rgba(255,255,255,0.4)" />}
-          onPress={() => router.push('/channel/country' as any)} 
+          onPress={() => router.push('/channel/country' as any)}
         />
-        <ToggleTile 
-          title={tr('allow_members_not_leave')} 
-          value={preventLeaving} 
-          onChanged={setPreventLeaving} 
+        <ToggleTile
+          title={tr('allow_members_not_leave')}
+          value={preventLeaving}
+          onChanged={setPreventLeaving}
         />
         <View style={{ height: 16 }} />
         <Text style={[styles.helpText, { color: 'rgba(255,255,255,0.4)' }]}>
@@ -185,13 +194,6 @@ export default function CreateChannelPage() {
         </View>
 
       </ScrollView>
-
-      {/* Media Picker Bottom Sheet */}
-      <CommentingSheet 
-        visible={isMediaPickerVisible}
-        onClose={() => setIsMediaPickerVisible(false)}
-        onMediaSelected={(media) => setSelectedMedia(media)}
-      />
     </View>
   );
 }
@@ -201,7 +203,7 @@ export default function CreateChannelPage() {
 // ----------------------------------------------------
 
 const ActionTile = ({ title, subtitle, icon, onPress }: any) => (
-  <TouchableOpacity style={styles.tile} onPress={onPress}>
+  <TouchableOpacity activeOpacity={1} style={styles.tile} onPress={onPress}>
     <View style={{ flex: 1, paddingRight: 16 }}>
       <Text style={styles.tileTitle}>{title}</Text>
     </View>
@@ -217,9 +219,9 @@ const ToggleTile = ({ title, value, onChanged }: any) => (
     <View style={{ flex: 1, paddingRight: 16 }}>
       <Text style={styles.tileTitle}>{title}</Text>
     </View>
-    <Switch 
-      value={value} 
-      onValueChange={onChanged} 
+    <Switch
+      value={value}
+      onValueChange={onChanged}
       trackColor={{ false: 'rgba(255,255,255,0.1)', true: 'rgba(250, 205, 17, 0.5)' }}
       thumbColor={value ? '#FACD11' : '#f4f3f4'}
       style={{ transform: [{ scale: 0.8 }] }}
@@ -230,7 +232,7 @@ const ToggleTile = ({ title, value, onChanged }: any) => (
 const RadioTile = ({ title, value, groupValue, onChanged }: any) => {
   const isSelected = value === groupValue;
   return (
-    <TouchableOpacity style={styles.tile} onPress={() => onChanged(value)}>
+    <TouchableOpacity activeOpacity={1} style={styles.tile} onPress={() => onChanged(value)}>
       <View style={{ flex: 1, paddingRight: 16 }}>
         <Text style={styles.tileTitle}>{title}</Text>
       </View>

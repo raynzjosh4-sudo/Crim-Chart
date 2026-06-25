@@ -1,9 +1,20 @@
-import { Image } from 'expo-image';
+import UserAvatar from '@/components/avatar/UserAvatar';
+import { CommentSheet } from '@/components/comments/CommentSheet';
+import { FollowUserButton } from '@/components/FollowUserButton';
+import { ChannelTagWrapper } from '@/components/wrappers/ChannelTagWrapper';
+import { PostInteractionWrapper } from '@/components/wrappers/PostInteractionWrapper';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme, useThemeStore } from '@/core/store/useThemeStore';
+import { ThemeTokens } from '@/core/theme/themes';
+import { CommentAction } from '@/features/feed/components/CommentAction';
+import { LikeAction } from '@/features/feed/components/LikeAction';
+import { UpNextVideoFeed } from './UpNextVideoFeed';
 import { createVideoPlayer, VideoPlayer, VideoView } from 'expo-video';
-import { ArrowLeft, Download, MessageCircle, Search, Share2, ThumbsUp, Tag, Eye } from 'lucide-react-native';
+import { ArrowLeft, Eye, MessageCircle, Search, Tag } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Dimensions, FlatList, ListRenderItemInfo, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { ActivityIndicator, FlatList, ListRenderItemInfo, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 // ─── Isolated video player ────────────────────────────────────────────────────
 // Wrapped in React.memo so it NEVER re-renders when listData / renderItem change.
@@ -66,6 +77,18 @@ export interface LongVideoPlayerLayoutProps {
   renderItem: (info: ListRenderItemInfo<any>) => React.ReactElement | null;
   onLoadMore?: () => void;
   isLoadingMore?: boolean;
+
+  // New Interactive Props
+  videoId?: string;
+  directorId?: string;
+  directorAvatarUrl?: string;
+  likesCount?: number;
+  viewsCount?: number;
+  commentsCount?: number;
+  isLiked?: boolean;
+  isAdded?: boolean; // For tags
+  sourceTable?: string;
+  onTagPress?: () => void;
 }
 
 export const LongVideoPlayerLayout = ({
@@ -79,6 +102,16 @@ export const LongVideoPlayerLayout = ({
   renderItem,
   onLoadMore,
   isLoadingMore,
+  videoId,
+  directorId,
+  directorAvatarUrl,
+  likesCount = 0,
+  viewsCount = 0,
+  commentsCount = 0,
+  isLiked: initialIsLiked = false,
+  isAdded = false,
+  sourceTable = 'posts',
+  onTagPress,
 }: LongVideoPlayerLayoutProps) => {
   const [localTitle, setLocalTitle] = useState(title);
   const [localDirector, setLocalDirector] = useState(director);
@@ -86,6 +119,11 @@ export const LongVideoPlayerLayout = ({
   const [isLiked, setIsLiked] = useState(false);
   // Only start playback after the slide-in animation has fully completed.
   const [isReady, setIsReady] = useState(false);
+  const [isCommentSheetVisible, setIsCommentSheetVisible] = useState(false);
+  const router = useRouter();
+  const styles = useStyles(themeStyles);
+  const theme = useCurrentTheme();
+  const scale = useThemeStore((state) => state.scale);
 
   // useCallback ensures renderHeader reference is stable — prevents FlatList
   // from re-mounting the header on every parent re-render.
@@ -95,10 +133,22 @@ export const LongVideoPlayerLayout = ({
       <View style={styles.detailsContainer}>
         {/* User Row (Avatar + Username) */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-          <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=1780&auto=format&fit=crop' }}
-            style={{ width: 36, height: 36, borderRadius: 18, marginRight: 10 }}
-          />
+          <View style={{ marginRight: 10 }}>
+            <UserAvatar
+              userId={directorId || ''}
+              fallbackUrl={directorAvatarUrl || ''}
+              name={director}
+              size={36 * scale}
+              onTap={() => {
+                if (!isLocal && directorId) {
+                  onClose();
+                  setTimeout(() => {
+                    router.push(`/profile/${directorId}`);
+                  }, 300);
+                }
+              }}
+            />
+          </View>
           {isLocal ? (
             <TextInput
               style={[styles.videoTitle, styles.inputField, { flex: 1, marginTop: 0, paddingVertical: 0, borderBottomWidth: 0 }]}
@@ -110,10 +160,8 @@ export const LongVideoPlayerLayout = ({
           ) : (
             <Text style={[styles.videoTitle, { flex: 1 }]} numberOfLines={1}>{director}</Text>
           )}
-          {!isLocal && (
-            <TouchableOpacity style={styles.followBtn}>
-              <Text style={styles.followText}>Follow</Text>
-            </TouchableOpacity>
+          {!isLocal && directorId && (
+            <FollowUserButton targetUserId={directorId} size="small" style={{ marginLeft: 12 }} />
           )}
         </View>
 
@@ -125,7 +173,7 @@ export const LongVideoPlayerLayout = ({
               value={localDescription}
               onChangeText={setLocalDescription}
               placeholder="Add a description..."
-              placeholderTextColor="rgba(255,255,255,0.4)"
+              placeholderTextColor={theme.colors.textSecondary}
               multiline
             />
           ) : (
@@ -134,28 +182,68 @@ export const LongVideoPlayerLayout = ({
         </View>
 
         {/* Actions Row */}
-        {!isLocal && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.actionsScroll}>
-            <TouchableOpacity
-              style={[styles.actionBadge, isLiked && { backgroundColor: 'rgba(255,255,255,0.2)' }]}
-              onPress={() => setIsLiked(!isLiked)}
-            >
-              <ThumbsUp color={isLiked ? '#4A90E2' : '#FFF'} size={18} />
-              <Text style={[styles.actionText, isLiked && { color: '#4A90E2' }]}>12K</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBadge}>
-              <MessageCircle color="#FFF" size={18} />
-              <Text style={styles.actionText}>4K</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBadge}>
-              <Tag color="#FFF" size={18} />
-              <Text style={styles.actionText}>Tag</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBadge}>
-              <Eye color="#FFF" size={18} />
-              <Text style={styles.actionText}>1.2M</Text>
-            </TouchableOpacity>
-          </ScrollView>
+        {!isLocal && videoId && (
+          <PostInteractionWrapper
+            postId={videoId}
+            initialLikesCount={likesCount}
+            initialViewsCount={viewsCount}
+            initialIsLiked={initialIsLiked}
+            sourceTable={sourceTable}
+          >
+            {(interactionState) => (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.actionsScroll}>
+                <View style={styles.actionBtnWrapper}>
+                  <LikeAction
+                    initialLikes={interactionState.likesCount}
+                    initialIsLiked={interactionState.isLiked}
+                    size={20}
+                    direction="row"
+                    onPress={() => { }} // Wrapper handles optimistic state, LikeAction handles DB update
+                  />
+                </View>
+
+                <View style={styles.actionBtnWrapper}>
+                  <CommentAction
+                    icon={MessageCircle}
+                    label={commentsCount.toString()}
+                    size={20}
+                    direction="row"
+                    onPress={() => setIsCommentSheetVisible(true)}
+                  />
+                </View>
+
+                <View style={styles.actionBtnWrapper}>
+                  {onTagPress ? (
+                    <TouchableOpacity activeOpacity={0.8}
+                      style={[styles.actionBadge, isAdded && { backgroundColor: theme.colors.text }]}
+                      onPress={onTagPress}
+                    >
+                      <Tag color={isAdded ? theme.colors.background : theme.colors.text} size={18} />
+                      <Text style={[styles.actionText, isAdded && { color: theme.colors.background }]}>
+                        {isAdded ? "Tagged" : "Tag"}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <ChannelTagWrapper postId={videoId} sourceChannelId={sourceTable} targetChannelId="video_feed">
+                      <TouchableOpacity activeOpacity={0.8} style={styles.actionBadge}>
+                        <Tag color={theme.colors.text} size={18} />
+                        <Text style={styles.actionText}>Tag</Text>
+                      </TouchableOpacity>
+                    </ChannelTagWrapper>
+                  )}
+                </View>
+
+                <View style={styles.actionBtnWrapper}>
+                  <CommentAction
+                    icon={Eye}
+                    label={interactionState.viewsCount.toString()}
+                    size={20}
+                    direction="row"
+                  />
+                </View>
+              </ScrollView>
+            )}
+          </PostInteractionWrapper>
         )}
       </View>
     </View>
@@ -170,20 +258,20 @@ export const LongVideoPlayerLayout = ({
     >
       <SafeAreaView style={styles.container}>
         {/* Top bar (Back, Search) — must sit above the collapsible header */}
-        <View style={[styles.header, { zIndex: 20, backgroundColor: '#000' }]}>
-          <TouchableOpacity style={styles.backBtn} onPress={onClose}>
-            <ArrowLeft color="#FFF" size={24} />
+        <View style={[styles.header, { zIndex: 20, backgroundColor: theme.colors.background }]}>
+          <TouchableOpacity activeOpacity={0.8} style={styles.backBtn} onPress={onClose}>
+            <ArrowLeft color={theme.colors.text} size={24} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}></Text>
-          <TouchableOpacity style={styles.searchBtn}>
-            <Search color="#FFF" size={24} />
+          <TouchableOpacity activeOpacity={0.8} style={styles.searchBtn}>
+            <Search color={theme.colors.text} size={24} />
           </TouchableOpacity>
         </View>
 
         {/* Video Player — must sit above the collapsible header so it hides behind it */}
         <VideoPlayerSection
           videoUrl={videoUrl}
-          containerStyle={[styles.videoContainer, { zIndex: 20, backgroundColor: '#000' }]}
+          containerStyle={[styles.videoContainer, { zIndex: 20, backgroundColor: theme.colors.background }]}
           style={styles.videoPlayer}
           shouldPlay={isReady}
         />
@@ -195,146 +283,181 @@ export const LongVideoPlayerLayout = ({
           renderItem={renderItem}
           ListHeaderComponent={renderHeader}
           ListFooterComponent={
-            isLoadingMore ? (
-              <View style={{ paddingVertical: 20 }}>
-                <ActivityIndicator size="large" color="#4A90E2" />
-              </View>
-            ) : null
+            <>
+              {(!listData || listData.length === 0) && videoId && !isLocal ? (
+                <UpNextVideoFeed 
+                  currentVideoId={videoId} 
+                  onVideoPress={(params) => {
+                    onClose();
+                    setTimeout(() => {
+                      router.push({
+                        pathname: '/video-player',
+                        params: {
+                          videoUrl: params.videoUrl,
+                          title: params.title,
+                          director: params.director,
+                          description: params.description,
+                          isLocal: String(params.isLocal),
+                        }
+                      });
+                    }, 300);
+                  }} 
+                />
+              ) : null}
+              {isLoadingMore ? (
+                <View style={{ paddingVertical: 20 }}>
+                  <ActivityIndicator size="large" color={theme.colors.primary} />
+                </View>
+              ) : null}
+            </>
           }
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 24 }}
           onEndReached={onLoadMore}
           onEndReachedThreshold={0.1}
         />
+
+        {videoId && (
+          <CommentSheet
+            postId={videoId}
+            visible={isCommentSheetVisible}
+            onClose={() => setIsCommentSheetVisible(false)}
+            onCommentAdded={() => {
+              // Usually handled by refetching or local state. The action badge handles static updates for now
+            }}
+          />
+        )}
       </SafeAreaView>
     </Modal>
   );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = (colors: ThemeTokens, scale: number): any => ({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: colors.background,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    paddingHorizontal: 16 * scale,
+    paddingVertical: 12 * scale,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    borderBottomColor: colors.surfaceVariant,
   },
   backBtn: {
-    padding: 4,
+    padding: 4 * scale,
   },
   headerTitle: {
-    color: '#FFF',
-    fontSize: 20,
-    fontWeight: '700',
+    color: colors.text,
+    fontSize: 20 * scale,
+    fontWeight: '700' as const,
   },
   searchBtn: {
-    padding: 4,
+    padding: 4 * scale,
   },
   videoContainer: {
     width: '100%',
     aspectRatio: 16 / 9,
-    backgroundColor: '#000',
+    backgroundColor: colors.background,
   },
   videoPlayer: {
     width: '100%',
     height: '100%',
   },
   detailsContainer: {
-    padding: 16,
+    padding: 16 * scale,
   },
   videoTitle: {
-    color: '#FFF',
-    fontSize: 20,
-    fontWeight: '700',
-    lineHeight: 28,
+    color: colors.text,
+    fontSize: 20 * scale,
+    fontWeight: '700' as const,
+    lineHeight: 28 * scale,
   },
   videoSubtitle: {
-    color: '#AAAAAA',
-    fontSize: 13,
-    marginTop: 4,
+    color: colors.textSecondary,
+    fontSize: 13 * scale,
+    marginTop: 4 * scale,
   },
   actionsScroll: {
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
+    paddingVertical: 16 * scale,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+  },
+  actionBtnWrapper: {
+    marginRight: 24 * scale,
   },
   actionBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 12,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: colors.surfaceVariant,
+    paddingHorizontal: 16 * scale,
+    paddingVertical: 8 * scale,
+    borderRadius: 20 * scale,
   },
   actionText: {
-    color: '#FFF',
-    marginLeft: 6,
-    fontSize: 14,
-    fontWeight: '600',
+    color: colors.text,
+    marginLeft: 6 * scale,
+    fontSize: 14 * scale,
+    fontWeight: '600' as const,
   },
   channelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    paddingVertical: 12 * scale,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    marginBottom: 16,
+    borderColor: colors.surfaceVariant,
+    marginBottom: 16 * scale,
   },
   channelInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
   },
   channelAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-    backgroundColor: '#333',
+    width: 40 * scale,
+    height: 40 * scale,
+    borderRadius: 20 * scale,
+    marginRight: 12 * scale,
+    backgroundColor: colors.surfaceVariant,
   },
   channelName: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
+    color: colors.text,
+    fontSize: 16 * scale,
+    fontWeight: '600' as const,
   },
   subCount: {
-    color: '#AAAAAA',
-    fontSize: 12,
-    marginTop: 2,
+    color: colors.textSecondary,
+    fontSize: 12 * scale,
+    marginTop: 2 * scale,
   },
   followBtn: {
-    backgroundColor: '#FFF',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginLeft: 12,
+    backgroundColor: colors.text,
+    paddingHorizontal: 16 * scale,
+    paddingVertical: 6 * scale,
+    borderRadius: 20 * scale,
+    marginLeft: 12 * scale,
   },
   followText: {
-    color: '#000',
-    fontWeight: '700',
-    fontSize: 13,
+    color: colors.background,
+    fontWeight: '700' as const,
+    fontSize: 13 * scale,
   },
   descriptionBox: {
-    marginTop: 4,
-    marginBottom: 8,
+    marginTop: 4 * scale,
+    marginBottom: 8 * scale,
   },
   descriptionText: {
-    color: '#FFF',
-    fontSize: 14,
-    lineHeight: 20,
+    color: colors.text,
+    fontSize: 14 * scale,
+    lineHeight: 20 * scale,
   },
   inputField: {
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.2)',
-    paddingVertical: 2,
-    marginTop: 2,
+    borderBottomColor: colors.surfaceVariant,
+    paddingVertical: 2 * scale,
+    marginTop: 2 * scale,
   },
 });

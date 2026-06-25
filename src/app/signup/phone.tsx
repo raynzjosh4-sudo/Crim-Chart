@@ -6,7 +6,8 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { ChevronDown, Mail } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function MobileNumberPage() {
   const router = useRouter();
@@ -40,7 +41,7 @@ export default function MobileNumberPage() {
 
         {/* Phone Input Area */}
         <View style={styles.inputWrapper}>
-          <TouchableOpacity
+          <TouchableOpacity activeOpacity={1}
             style={styles.countrySelector}
             onPress={() => router.push('/signup/country' as any)}
           >
@@ -64,7 +65,7 @@ export default function MobileNumberPage() {
         <View style={styles.spacerMedium} />
 
         {/* Next Button */}
-        <TouchableOpacity
+        <TouchableOpacity activeOpacity={1}
           style={[styles.nextButton, phone.length < 7 && styles.nextButtonDisabled]}
           onPress={handleNext}
           disabled={phone.length < 7 || isLoading}
@@ -77,7 +78,7 @@ export default function MobileNumberPage() {
         {/* Bottom Section */}
         <View style={styles.bottomSection}>
           <View style={styles.alternateActions}>
-            <TouchableOpacity
+            <TouchableOpacity activeOpacity={1}
               style={styles.alternateButton}
               onPress={() => router.push('/signup/email' as any)}
             >
@@ -87,7 +88,7 @@ export default function MobileNumberPage() {
 
             <View style={styles.verticalDivider} />
 
-            <TouchableOpacity style={styles.alternateButton}>
+            <TouchableOpacity activeOpacity={1} style={styles.alternateButton}>
               <Image
                 source={{ uri: 'https://www.gstatic.com/images/branding/product/2x/googleg_96dp.png' }}
                 style={styles.googleIcon}
@@ -104,7 +105,7 @@ export default function MobileNumberPage() {
 
           <View style={styles.loginContainer}>
             <Text style={styles.alreadyText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => router.push('/login' as any)}>
+            <TouchableOpacity activeOpacity={1} onPress={() => router.push('/login' as any)}>
               <Text style={styles.loginActionText}>Log in</Text>
             </TouchableOpacity>
           </View>

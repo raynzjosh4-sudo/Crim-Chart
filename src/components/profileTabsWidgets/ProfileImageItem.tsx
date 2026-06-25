@@ -3,7 +3,7 @@ import { TouchableOpacity, Image, StyleSheet, View } from 'react-native';
 
 interface ProfileImageItemProps {
   imageUrl: string | null;
-  size: number;
+  size: number | string;
   onPress?: () => void;
 }
 
@@ -12,7 +12,7 @@ export const ProfileImageItem: React.FC<ProfileImageItemProps> = ({ imageUrl, si
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.85}
-      style={[styles.container, { width: size, height: size * 1.5 }]}
+      style={[styles.container, { width: size, aspectRatio: 2 / 3 }]}
     >
       <Image
         source={{ uri: imageUrl || 'https://via.placeholder.com/150/1A1A1A/FFFFFF?text=Photo' }}
@@ -27,7 +27,7 @@ export const ProfileImageItem: React.FC<ProfileImageItemProps> = ({ imageUrl, si
 const styles = StyleSheet.create({
   container: {
     overflow: 'hidden',
-    borderRadius: 4,
+    borderRadius: 0,
     backgroundColor: '#1A1A1A',
   },
   overlay: {

@@ -58,11 +58,7 @@ export const ShareStatusButton: React.FC<ShareStatusButtonProps> = ({
 
     if (success) {
       setHasShared(true);
-      console.log(`[ShareStatusButton] Showing success toast.`);
-      Toast.show({
-        type: 'success',
-        text1: `Shared to ${targetType === 'moment' ? 'Moment' : 'Status'}!`,
-      });
+      console.log(`[ShareStatusButton] Shared successfully.`);
       // Reset after a few seconds
       setTimeout(() => setHasShared(false), 3000);
     } else {

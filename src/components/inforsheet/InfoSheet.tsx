@@ -23,7 +23,7 @@ export const InfoSheet: React.FC<InfoSheetProps> = ({
   const { colors } = useTheme();
 
   const ActionItem = ({ icon: Icon, label, color, onTap }: any) => (
-    <TouchableOpacity
+    <TouchableOpacity activeOpacity={1}
       style={styles.actionItem}
       onPress={() => {
         onClose?.();
@@ -52,7 +52,7 @@ export const InfoSheet: React.FC<InfoSheetProps> = ({
         </>
       )}
 
-      <TouchableOpacity
+      <TouchableOpacity activeOpacity={1}
         style={[styles.closeButton, { backgroundColor: colors.card }]}
         onPress={onClose}
       >

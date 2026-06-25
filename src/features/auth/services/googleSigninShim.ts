@@ -23,6 +23,7 @@ const GoogleSignin = RealGoogleSignin ?? {
         );
     },
     signOut: async () => { },
+    revokeAccess: async () => { },
 };
 
 export { GoogleSignin };

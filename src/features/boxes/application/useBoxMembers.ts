@@ -1,6 +1,6 @@
-import { supabase } from '@/core/supabase/client';
-import { useEffect, useState, useCallback, useRef } from 'react';
 import { NativeDB } from '@/core/db/NativeDB';
+import { supabase } from '@/core/supabase/client';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface BoxMember {
   id: string;
@@ -46,7 +46,7 @@ export const useBoxMembers = (boxId?: string) => {
 
   const fetchMembers = useCallback(async (pageIndex: number, isInitial = false) => {
     if (!boxId) return;
-    
+
     if (isInitial) {
       setIsLoading(true);
     } else {
@@ -77,7 +77,8 @@ export const useBoxMembers = (boxId?: string) => {
         return;
       }
 
-      if (data) {
+      if (data && data.length > 0) {
+        // console.log(`[DEBUG] useBoxMembers: Fetched ${data.length} members for box ${boxId}:`, JSON.stringify(data, null, 2));
         const formattedMembers: BoxMember[] = data.map((item: any) => ({
           id: item.profiles.id,
           avatarUrl: item.profiles.profile_image_url || '',
@@ -85,7 +86,7 @@ export const useBoxMembers = (boxId?: string) => {
           interactionType: item.interaction_type,
           lastInteractionAt: item.last_interaction_at,
         }));
-        
+
         if (isInitial) {
           await NativeDB.saveBoxMembers(boxId, formattedMembers);
           setMembers(formattedMembers);
@@ -95,6 +96,7 @@ export const useBoxMembers = (boxId?: string) => {
 
         setHasMore(data.length === PAGE_SIZE);
       } else {
+        // console.log(`[DEBUG] useBoxMembers: No members found for box ${boxId}`);
         if (isInitial) {
           await NativeDB.saveBoxMembers(boxId, []);
           setMembers([]);

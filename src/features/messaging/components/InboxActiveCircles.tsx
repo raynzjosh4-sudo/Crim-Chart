@@ -25,7 +25,7 @@ export const InboxActiveCircles: React.FC<InboxActiveCirclesProps> = ({ contacts
         contentContainerStyle={styles.scrollContent}
       >
         {contacts.map((contact) => (
-          <TouchableOpacity 
+          <TouchableOpacity activeOpacity={1} 
             key={contact.id} 
             style={styles.contactItem}
             onPress={() => onContactPress(contact)}

@@ -20,7 +20,7 @@ export default function AgeSelectionPage() {
                 data={OPTIONS}
                 keyExtractor={(i) => i}
                 renderItem={({ item }) => (
-                    <TouchableOpacity style={styles.row} onPress={() => select(item)}>
+                    <TouchableOpacity activeOpacity={1} style={styles.row} onPress={() => select(item)}>
                         <Text style={styles.text}>{item}</Text>
                     </TouchableOpacity>
                 )}

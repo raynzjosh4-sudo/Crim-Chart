@@ -2,9 +2,10 @@ import { ChannelModel } from '@/channel/models/ChannelModel';
 import ChannelListTile from '@/channel/widgets/ChannelListTile';
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import { useTheme } from '@react-navigation/native';
-import { useRouter } from 'expo-router';
+import { useAppRouter } from '@/core/hooks/useAppRouter';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { ChannelListSkeleton } from '@/components/skeletons/Skeletons';
 
 // Section Headers and Tab Widgets
 import { ProfileMiniSheet } from '@/channel/widgets/bottom_sheets/ProfileMiniSheet';
@@ -19,7 +20,7 @@ import { useAuthStore } from '@/features/auth/application/useAuthStore';
 
 export default function ChannelsPage() {
   const { colors } = useTheme();
-  const router = useRouter();
+  const router = useAppRouter();
   const user = useAuthStore(s => s.user);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -87,7 +88,14 @@ export default function ChannelsPage() {
     );
   };
 
-  if (isLoading) return <ActivityIndicator style={{ flex: 1 }} color={colors.primary} />;
+  if (isLoading) return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ChartAppBar title="CHANNELS" showBack={false} titleStyle={{ fontWeight: '900', fontSize: 16, letterSpacing: 0.5 }} />
+      <ChannelSearchBar onChanged={() => {}} />
+      <ChannelFilterChips filters={['Channels', 'Private', 'Public']} activeFilter={activeFilter} onFilterChanged={setActiveFilter} />
+      <ChannelListSkeleton count={8} />
+    </View>
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -117,6 +125,10 @@ export default function ChannelsPage() {
         )}
         ListEmptyComponent={<Text style={[styles.empty, { color: colors.text }]}>No channels yet</Text>}
         contentContainerStyle={styles.listContent}
+        removeClippedSubviews={true}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={5}
       />
       <ProfileMiniSheet
         visible={selectedChannel !== null}

@@ -96,7 +96,7 @@ export const InboxSectionHeader: React.FC<InboxSectionHeaderProps> = ({ threads 
     <View style={styles.container}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {sortedUsers.map(user => (
-          <TouchableOpacity
+          <TouchableOpacity activeOpacity={1}
             key={user.id}
             style={styles.userCol}
             onPress={() => router.push({ pathname: '/inboxDetail', params: { threadId: user.threadId } })}

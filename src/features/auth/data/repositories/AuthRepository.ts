@@ -22,11 +22,22 @@ export class AuthRepository {
   async loginWithGoogle() {
     const tokens = await GoogleAuthService.signIn();
     const result = await AuthRemoteSource.loginWithGoogle(tokens.idToken, tokens.accessToken);
-    await this.local.saveUser(result.user, result.tokens.accessToken, result.tokens.refreshToken);
-    return result.user;
+    if (!result.isNewUser) {
+      await this.local.saveUser(result.user, result.tokens.accessToken, result.tokens.refreshToken);
+    }
+    return result;
+  }
+
+  async createGoogleUserProfile(params: any) {
+    return AuthRemoteSource.createGoogleUserProfile(params);
   }
 
   async signOut() {
+    try {
+      await GoogleAuthService.signOut();
+    } catch (e) {
+      // Ignore if not signed in with Google or if module is unavailable
+    }
     await supabase.auth.signOut({ scope: 'local' });
     await this.local.clearAll();
   }

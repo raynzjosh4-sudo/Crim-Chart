@@ -26,7 +26,7 @@ export const ContestantCarousel: React.FC<ContestantCarouselProps> = ({ contesta
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Add Button */}
         <View style={styles.slot}>
-          <TouchableOpacity style={[styles.addButton, { backgroundColor: 'rgba(255, 255, 255, 0.1)', borderColor: 'rgba(255, 255, 255, 0.1)' }]}>
+          <TouchableOpacity activeOpacity={1} style={[styles.addButton, { backgroundColor: 'rgba(255, 255, 255, 0.1)', borderColor: 'rgba(255, 255, 255, 0.1)' }]}>
             <Plus size={44} color="rgba(255, 255, 255, 0.8)" />
           </TouchableOpacity>
         </View>
@@ -52,7 +52,7 @@ export const ContestantCarousel: React.FC<ContestantCarouselProps> = ({ contesta
               <Text style={styles.nameText} numberOfLines={1}>{contestant.displayName}</Text>
               <Text style={styles.pointsText}>{(contestant.channelCount ?? 0 / 1000).toFixed(1)}k</Text>
               
-              <TouchableOpacity
+              <TouchableOpacity activeOpacity={1}
                 onPress={() => {
                   if (hasCrowned) return;
                   setHasCrowned(true);

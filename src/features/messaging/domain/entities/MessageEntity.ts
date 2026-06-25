@@ -24,6 +24,7 @@ export interface MessageEntity {
   createdAt: Date;
   text?: string;
   mediaUrl?: string;
+  metadata?: any;
   type: MessageType;
   status: MessageStatus;
   isEncrypted: boolean;
@@ -36,6 +37,9 @@ export interface ThreadEntity {
   lastMessage?: MessageEntity;
   unreadCount: number;
   updatedAt: Date;
+  intent?: string;
+  status?: string;
+  initiatedBy?: string;
 }
 
 export function messageFromMap(map: Record<string, unknown>): MessageEntity {
@@ -46,6 +50,7 @@ export function messageFromMap(map: Record<string, unknown>): MessageEntity {
     createdAt: map['created_at'] ? new Date(String(map['created_at'])) : new Date(),
     text: (map['body'] as string) || (map['text'] as string) || undefined,
     mediaUrl: map['media_url'] as string | undefined,
+    metadata: map['metadata'],
     type: (map['message_type'] as MessageType) || (map['type'] as MessageType) || MessageType.text,
     status: map['isRead'] ? MessageStatus.read : MessageStatus.sent,
     isEncrypted: Boolean(map['is_encrypted'] ?? map['isEncrypted']),

@@ -42,7 +42,7 @@ export const NativeSearchDelegate: React.FC<NativeSearchDelegateProps> = ({
           returnKeyType="search"
         />
         {query.length > 0 && (
-          <TouchableOpacity onPress={clearQuery}>
+          <TouchableOpacity activeOpacity={1} onPress={clearQuery}>
             <X color="rgba(255,255,255,0.5)" size={18} />
           </TouchableOpacity>
         )}
@@ -52,7 +52,7 @@ export const NativeSearchDelegate: React.FC<NativeSearchDelegateProps> = ({
         data={results}
         keyExtractor={item => item.id}
         renderItem={({ item }) => (
-          <TouchableOpacity
+          <TouchableOpacity activeOpacity={1}
             style={styles.resultRow}
             onPress={() => onResult?.(item)}
           >

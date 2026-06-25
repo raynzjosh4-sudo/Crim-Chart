@@ -96,7 +96,7 @@ export const AudioInfoSheet: React.FC<AudioInfoSheetProps> = ({ visible, onClose
               <View style={[styles.header, { width: '100%' }]}>
                 <View style={{ width: 60 }} />
                 <Text style={styles.headerTitle}>Audio Details</Text>
-                <TouchableOpacity onPress={handleConfirm} style={[styles.headerBtn, { width: 60, alignItems: 'flex-end' }]}>
+                <TouchableOpacity activeOpacity={1} onPress={handleConfirm} style={[styles.headerBtn, { width: 60, alignItems: 'flex-end' }]}>
                   <Text style={styles.saveText}>Select</Text>
                 </TouchableOpacity>
               </View>

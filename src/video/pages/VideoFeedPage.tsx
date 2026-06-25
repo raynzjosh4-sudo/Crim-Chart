@@ -1,15 +1,16 @@
 import ThreadDiscussionSheet from '@/channel/channelmemberdata/thread/ThreadDiscussionSheet';
 import CommentInputField from '@/commentingsheets/widgets/CommentInputField';
 import { MediaData } from '@/components/media/types';
+import { VideoCardSkeleton } from '@/components/skeletons/Skeletons';
+import { ShortVideoPlayerCard } from '@/components/video_player/ShortVideoPlayerCard';
+import { useAppRouter } from '@/core/hooks/useAppRouter';
 import { supabase } from '@/core/supabase/supabaseConfig';
 import { useNavigation } from '@react-navigation/native';
-import { useRouter } from 'expo-router';
 import { ChevronLeft, Search } from 'lucide-react-native';
 import React, { useCallback, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
-  Dimensions, FlatList,
+  Dimensions,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -18,11 +19,15 @@ import {
   Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View
+  View,
+  InteractionManager
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { FlashList } from '@shopify/flash-list';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoPost } from '../models/VideoPost';
-import { VideoFeedCard } from '../widgets/VideoFeedCard';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
+import { ThemeTokens } from '@/core/theme/themes';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -47,7 +52,7 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
   onBack,
   disableInteractions = false,
 }) => {
-  const router = useRouter();
+  const router = useAppRouter();
   const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState<VideoFeedTab>(initialTab);
   const [videos, setVideos] = useState<VideoPost[]>(initialVideos ?? []);
@@ -57,6 +62,16 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
   const [isInputModalOpen, setIsInputModalOpen] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [selectedMedia, setSelectedMedia] = useState<MediaData[]>([]);
+  const insets = useSafeAreaInsets();
+  const styles = useStyles(themeStyles);
+  const theme = useCurrentTheme();
+  const [isReady, setIsReady] = useState(false);
+
+  React.useEffect(() => {
+    InteractionManager.runAfterInteractions(() => {
+      setIsReady(true);
+    });
+  }, []);
 
   const openImagePicker = () => {
     setIsInputModalOpen(false);
@@ -81,27 +96,23 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
   }, [isCommentsOpen]);
 
   const loadVideos = useCallback(async () => {
+    if (!isReady) return;
     setIsLoading(true);
     try {
-      let query = supabase
-        .from('posts')
-        .select(`
-          id, caption, video_url, is_video,
-          likes_count, comments_count, created_at,
-          profiles:author_id (id, display_name, profile_image_url),
-          channels:channel_id (id, name)
-        `)
-        .eq('is_video', true)
-        .order('created_at', { ascending: false })
-        .limit(30);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) return;
 
-      if (channelId) query = query.eq('channel_id', channelId);
+      const { data, error } = await supabase.rpc('get_short_video_feed_with_data', {
+        p_user_id: session.user.id,
+        p_tab: activeTab,
+        p_limit: 30,
+        p_offset: 0
+      });
 
-      const { data, error } = await query;
       if (error) throw error;
 
       const mapped = (data ?? []).map((row: any): VideoPost => ({
-        id: row.id,
+        id: row.pointer_id, // We use the pointer ID as the unique key in the FlatList
         postId: row.id,
         videoUrl: row.video_url ?? '',
         caption: row.caption,
@@ -126,25 +137,31 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [channelId]);
+  }, [channelId, activeTab]);
 
   React.useEffect(() => {
-    if (!initialVideos?.length) loadVideos();
-  }, []);
+    if (isReady && (!initialVideos || initialVideos.length === 0)) {
+      loadVideos();
+    }
+  }, [activeTab, loadVideos, initialVideos, isReady]);
+
+  const renderVideoItem = useCallback(({ item, index }: { item: VideoPost, index: number }) => (
+    <ShortVideoPlayerCard
+      video={item}
+      isPlaying={index === currentIndex && !isCommentsOpen}
+      isShrunken={isCommentsOpen && index === currentIndex}
+      hideBottomInput={!showBack}
+      disableInteractions={disableInteractions}
+      onComment={() => setIsCommentsOpen(true)}
+      onShrunkenTap={() => setIsInputModalOpen(true)}
+    />
+  ), [currentIndex, isCommentsOpen, showBack, disableInteractions]);
 
   const onViewableChanged = useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
       setCurrentIndex(viewableItems[0].index ?? 0);
     }
   });
-
-  if (isLoading) {
-    return (
-      <View style={styles.loader}>
-        <ActivityIndicator color="#FACD11" size="large" />
-      </View>
-    );
-  }
 
   const animatedWidth = shrinkAnim.interpolate({
     inputRange: [0, 1],
@@ -184,40 +201,31 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
         elevation: isCommentsOpen ? 10 : 0,
         backgroundColor: isCommentsOpen ? '#111' : '#000',
       }]}>
-        <FlatList
-          ref={flatListRef}
-          data={videos}
-
-          keyExtractor={item => item.id}
-          pagingEnabled
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item, index }) => (
-            <VideoFeedCard
-              video={item}
-              isPlaying={index === currentIndex && !isCommentsOpen}
-              isShrunken={isCommentsOpen && index === currentIndex}
-              hideBottomInput={!showBack}
-              disableInteractions={disableInteractions}
-              onComment={() => setIsCommentsOpen(true)}
-              onShrunkenTap={() => setIsInputModalOpen(true)}
-            />
-          )}
-          onViewableItemsChanged={onViewableChanged.current}
-          viewabilityConfig={{ itemVisiblePercentThreshold: 80 }}
-          getItemLayout={(_, index) => ({
-            length: SCREEN_H,
-            offset: SCREEN_H * index,
-            index,
-          })}
-          initialScrollIndex={initialIndex}
-        />
+        {isReady ? (
+          <FlashList
+            ref={flatListRef}
+            data={videos}
+            keyExtractor={item => item.id}
+            pagingEnabled
+            showsVerticalScrollIndicator={false}
+            renderItem={renderVideoItem}
+            onViewableItemsChanged={onViewableChanged.current}
+            viewabilityConfig={{ itemVisiblePercentThreshold: 80 }}
+            initialScrollIndex={initialIndex}
+          />
+        ) : null}
+        {(!isReady || isLoading) && (
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#000' }]}>
+            <VideoCardSkeleton />
+          </View>
+        )}
       </Animated.View>
 
       {/* Top overlay */}
       {!isCommentsOpen && (
-        <View style={styles.topOverlay} pointerEvents="box-none">
+        <View style={[styles.topOverlay, { paddingTop: Math.max(insets.top, 20) + 12 }]} pointerEvents="box-none">
           {showBack && (
-            <TouchableOpacity
+            <TouchableOpacity activeOpacity={1}
               style={styles.backBtn}
               onPress={() => {
                 if (onBack) {
@@ -236,7 +244,7 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
           )}
           <View style={styles.tabs}>
             {Object.values(VideoFeedTab).map(tab => (
-              <TouchableOpacity key={tab} onPress={() => setActiveTab(tab as VideoFeedTab)}>
+              <TouchableOpacity activeOpacity={1} key={tab} onPress={() => setActiveTab(tab as VideoFeedTab)}>
                 <Text style={[styles.tabText, activeTab === tab && styles.tabActive]}>
                   {tab}
                 </Text>
@@ -245,8 +253,8 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
             ))}
           </View>
           {!showBack && (
-            <TouchableOpacity style={styles.backBtn}>
-              <Search color="#FFF" size={24} />
+            <TouchableOpacity activeOpacity={1} style={styles.backBtn}>
+              <Search color={theme.colors.text} size={24} />
             </TouchableOpacity>
           )}
         </View>
@@ -255,9 +263,9 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
       {/* Comment dismiss backdrop */}
       {isCommentsOpen && (
         <TouchableOpacity
+          activeOpacity={1}
           style={StyleSheet.absoluteFillObject}
           onPress={() => setIsCommentsOpen(false)}
-          activeOpacity={1}
         />
       )}
 
@@ -321,72 +329,71 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#000' },
-  loader: { flex: 1, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' },
+const themeStyles = (colors: ThemeTokens, scale: number) => ({
+  root: { flex: 1, backgroundColor: colors.background },
+  loader: { flex: 1, backgroundColor: colors.background, justifyContent: 'center' as const, alignItems: 'center' as const },
   playerContainer: {
-    overflow: 'hidden',
-    alignSelf: 'center', // Starts centered, but animatedWidth handles layout
+    overflow: 'hidden' as const,
+    alignSelf: 'center' as const,
     marginTop: 0,
   },
   topOverlay: {
-    position: 'absolute',
+    position: 'absolute' as const,
     top: 0,
     left: 0,
     right: 0,
-    paddingTop: 52,
-    paddingHorizontal: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 8 * scale,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
     zIndex: 10,
     elevation: 10,
   },
-  backBtn: { padding: 8 },
-  tabs: { flex: 1, flexDirection: 'row', justifyContent: 'center', gap: 20 },
+  backBtn: { padding: 8 * scale },
+  tabs: { flex: 1, flexDirection: 'row' as const, justifyContent: 'center' as const, gap: 20 * scale },
   tabText: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 16,
-    fontWeight: '600',
+    color: colors.textSecondary,
+    fontSize: 16 * scale,
+    fontWeight: '600' as const,
     textShadowColor: 'rgba(0,0,0,0.8)',
     textShadowRadius: 4,
   },
   tabActive: {
-    color: '#FACD11',
-    fontSize: 17,
-    fontWeight: '800',
+    color: colors.primary,
+    fontSize: 17 * scale,
+    fontWeight: '800' as const,
   },
   tabIndicator: {
-    width: 20,
-    height: 2.5,
-    backgroundColor: '#FACD11',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginTop: 2,
+    width: 20 * scale,
+    height: 2.5 * scale,
+    backgroundColor: colors.primary,
+    borderRadius: 2 * scale,
+    alignSelf: 'center' as const,
+    marginTop: 2 * scale,
   },
   commentsSheetWrapper: {
-    position: 'absolute',
+    position: 'absolute' as const,
     left: 0,
     right: 0,
     height: SCREEN_H * 0.75,
   },
   modalOverlay: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: 'flex-end' as const,
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalContent: {
-    backgroundColor: '#1C1C1E',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 8,
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 20 * scale,
+    borderTopRightRadius: 20 * scale,
+    paddingBottom: 8 * scale,
   },
   modalHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginVertical: 12,
+    width: 40 * scale,
+    height: 4 * scale,
+    backgroundColor: colors.muted,
+    borderRadius: 2 * scale,
+    alignSelf: 'center' as const,
+    marginVertical: 12 * scale,
   },
 });

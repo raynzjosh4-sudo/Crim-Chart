@@ -1,13 +1,17 @@
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
-import { useNavigation } from '@react-navigation/native';
 import { MoreHorizontal, Tag } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
+import { ThemeTokens } from '@/core/theme/themes';
 
 import { LikeAction } from '@/channel/CRimChartMassageBubble/comment_action/like/LikeAction';
 import { CommentActionWidget } from '@/channel/CRimChartMassageBubble/comments/CommentActionWidget';
 import { TagOverlay } from '@/channel/pages/tag/TagOverlay';
 import { AvatarWithStatus } from './postCardFiles/AvatarWithStatus';
+import { useFeedPermissions } from '@/components/wrappers/FeedPermissionsWrapper';
 import { ChannelAudioPostWidget } from './postCardFiles/ChannelAudioPostWidget';
 import { ChannelImagePostWidget } from './postCardFiles/ChannelImagePostWidget';
 import { ChannelVideoPostWidget } from './postCardFiles/ChannelVideoPostWidget';
@@ -28,6 +32,7 @@ export interface ChannelPostCardProps {
   tagsCount?: number;
   isLiked?: boolean;
   postId?: string | null;
+  onLikeTap?: () => void;
   onTagTap?: () => void;
   channelId?: string | null;
   channelName?: string | null;
@@ -39,6 +44,7 @@ export interface ChannelPostCardProps {
   showCreatorBadge?: boolean;
   thumbnailUrl?: string | null;
   metadata?: any;
+  canComment?: boolean;
 }
 
 export const ChannelPostCard: React.FC<ChannelPostCardProps> = ({
@@ -55,7 +61,9 @@ export const ChannelPostCard: React.FC<ChannelPostCardProps> = ({
   tagsCount = 0,
   isLiked = false,
   postId,
+  onLikeTap,
   onTagTap,
+  canComment: canCommentProp = true,
   channelId,
   channelName,
   currentChannelAvatar,
@@ -67,8 +75,12 @@ export const ChannelPostCard: React.FC<ChannelPostCardProps> = ({
   thumbnailUrl,
   metadata,
 }) => {
-  const navigation = useNavigation() as any;
+  const { canComment: contextCanComment } = useFeedPermissions();
+  const canComment = canCommentProp && contextCanComment;
+  const router = useRouter();
   const [tagOverlayVisible, setTagOverlayVisible] = useState(false);
+  const styles = useStyles(themeStyles);
+  const theme = useCurrentTheme();
 
   const allImages = React.useMemo(() => {
     const imgs: string[] = [];
@@ -78,6 +90,13 @@ export const ChannelPostCard: React.FC<ChannelPostCardProps> = ({
   }, [imageUrl, imageUrls]);
 
   const hasChannel = Boolean(channelId);
+
+  const goToProfile = () => {
+    console.log('[ChannelPostCard] Tapped avatar. author.id:', author?.id);
+    if (author?.id) {
+      router.push(`/profile/${author.id}`);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -89,6 +108,7 @@ export const ChannelPostCard: React.FC<ChannelPostCardProps> = ({
             currentChannelAvatar={currentChannelAvatar}
             sourceChannelAvatar={sourceChannelAvatar}
             authorAvatar={author.profileImageUrl}
+            onTap={goToProfile}
           />
         )}
         <View style={styles.authorInfoContainer}>
@@ -101,8 +121,8 @@ export const ChannelPostCard: React.FC<ChannelPostCardProps> = ({
             </Text>
           ) : null}
         </View>
-        <TouchableOpacity style={styles.moreButton}>
-          <MoreHorizontal color="rgba(255,255,255,0.6)" size={20} />
+        <TouchableOpacity activeOpacity={1} style={styles.moreButton}>
+          <MoreHorizontal color={theme.colors.textSecondary} size={20} />
         </TouchableOpacity>
       </View>
 
@@ -126,16 +146,23 @@ export const ChannelPostCard: React.FC<ChannelPostCardProps> = ({
         <Text style={styles.timeAgo}>{timeAgo}</Text>
         <View style={{ flex: 1 }} />
 
-        <LikeAction initialLikesCount={likesCount} initialIsLiked={isLiked} />
-        <CommentActionWidget commentsCount={commentsCount} postId={postId || ''} />
+        <LikeAction initialLikesCount={likesCount} initialIsLiked={isLiked} onLikeTap={onLikeTap} />
+        
+        {canComment ? (
+          <CommentActionWidget commentsCount={commentsCount} postId={postId || ''} />
+        ) : (
+          <View style={{ opacity: 0.3 }} pointerEvents="none">
+            <CommentActionWidget commentsCount={commentsCount} postId={postId || ''} />
+          </View>
+        )}
 
-        <TouchableOpacity
+        <TouchableOpacity activeOpacity={1}
           style={[styles.actionButton, { marginLeft: 24 }]}
           onPress={() => {
             if (onTagTap) { onTagTap(); } else { setTagOverlayVisible(true); }
           }}
         >
-          <Tag size={24} color="#FFFFFF" />
+          <Tag size={24} color={theme.colors.text} />
           <Text style={styles.actionText}>{tagsCount}</Text>
         </TouchableOpacity>
       </View>
@@ -152,55 +179,55 @@ export const ChannelPostCard: React.FC<ChannelPostCardProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = (colors: ThemeTokens, scale: number) => ({
   container: {
-    paddingVertical: 6,
+    paddingVertical: 6 * scale,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: colors.surfaceVariant,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 12,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    paddingHorizontal: 16 * scale,
+    marginBottom: 12 * scale,
   },
   authorInfoContainer: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'center' as const,
   },
   displayName: {
-    color: '#FFF',
-    fontSize: 15,
-    fontWeight: '700',
+    color: colors.text,
+    fontSize: 15 * scale,
+    fontWeight: '700' as const,
   },
   taggedText: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 11,
-    fontWeight: '600',
+    color: colors.textSecondary,
+    fontSize: 11 * scale,
+    fontWeight: '600' as const,
   },
   moreButton: {
-    padding: 4,
+    padding: 4 * scale,
   },
   footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 8,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    paddingHorizontal: 16 * scale,
+    paddingTop: 8 * scale,
+    paddingBottom: 8 * scale,
   },
   actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6 * scale,
   },
   actionText: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: '900',
+    color: colors.text,
+    fontSize: 14 * scale,
+    fontWeight: '900' as const,
   },
   timeAgo: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 13,
-    fontWeight: '500',
+    color: colors.textSecondary,
+    fontSize: 13 * scale,
+    fontWeight: '500' as const,
   },
 });

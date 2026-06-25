@@ -1,7 +1,16 @@
 import UserAvatar from '@/components/avatar/UserAvatar';
+import { FollowUserButton } from '@/components/FollowUserButton';
+import { BoxReactions } from '@/components/reactions/BoxReactions';
+import { DownloadButton } from '@/components/buttons/DownloadButton';
+import { useDelayedAutoPlay } from '@/features/auto_play/useDelayedAutoPlay';
+import { useUserProfile } from '@/features/auth/application/useUserProfile';
+import { InteractionType } from '@/features/boxes/application/useBoxInteractionTracker';
+import { CommentAction } from '@/features/feed/components/CommentAction';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { MessageCircle, Play, Pause, ThumbsDown, ThumbsUp, Download } from 'lucide-react-native';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import { Download, Eye, MessageCircle, Play } from 'lucide-react-native';
+import { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export interface CommentPreview {
@@ -22,9 +31,11 @@ export interface MovieBoxDetailVideoTileProps {
     title: string;
     director: string;
     thumbnailUrl: string;
+    videoUrl?: string;
     duration: string;
     likes: number;
     dislikes: number;
+    viewsCount?: number;
     commentsCount?: number;
     addedBy?: AddedBy;
     linkedFrom?: {
@@ -32,13 +43,47 @@ export interface MovieBoxDetailVideoTileProps {
       avatarUrl: string;
       name: string;
     };
+    postId?: string;
+    boxId?: string;
+    isShort?: boolean;
     recentComments?: CommentPreview[];
   };
   isPlaying?: boolean;
+  onVideoPress?: () => void;
+  onCommentPress?: (postId: string) => void;
+  currentUserId?: string;
+  onInteraction?: (boxId: string, userId: string, type: InteractionType) => void;
 }
 
-export const MovieBoxDetailVideoTile = ({ video, isPlaying }: MovieBoxDetailVideoTileProps) => {
+const TileVideoPlayer = ({ videoUrl, isPlaying, style }: { videoUrl: string; isPlaying: boolean; style: any }) => {
+  const player = useVideoPlayer(isPlaying ? videoUrl : null, p => {
+    p.loop = true;
+    p.muted = true;
+  });
+
+  useEffect(() => {
+    if (!player) return;
+    if (isPlaying) player.play();
+    else player.pause();
+  }, [isPlaying, player]);
+
+  return (
+    <VideoView
+      player={player!}
+      style={style}
+      contentFit="cover"
+      allowsFullscreen={false}
+      allowsPictureInPicture={false}
+      nativeControls={false}
+    />
+  );
+};
+
+export const MovieBoxDetailVideoTile = ({ video, isPlaying, onVideoPress, onCommentPress, currentUserId, onInteraction }: MovieBoxDetailVideoTileProps) => {
   const router = useRouter();
+  const { shouldPlay } = useDelayedAutoPlay(!!isPlaying, 5000);
+  const profile = useUserProfile(video.addedBy?.id);
+  const crownTitle = profile?.crownTitle || 'Added a video';
 
   return (
     <View style={styles.container}>
@@ -46,55 +91,60 @@ export const MovieBoxDetailVideoTile = ({ video, isPlaying }: MovieBoxDetailVide
       <View style={styles.postHeader}>
         {video.addedBy ? (
           <View style={styles.headerLeft}>
-            <UserAvatar 
-              userId={video.addedBy.id} 
-              fallbackUrl={video.addedBy.avatarUrl} 
-              name={video.addedBy.name} 
-              size={36} 
+            <UserAvatar
+              userId={video.addedBy.id}
+              fallbackUrl={video.addedBy.avatarUrl}
+              name={video.addedBy.name}
+              size={44}
             />
             <View style={styles.postHeaderText}>
               <Text style={styles.postHeaderName}>{video.addedBy.name}</Text>
-              <Text style={styles.postHeaderSub}>Added a video</Text>
+              <Text style={styles.postHeaderSub}>{crownTitle}</Text>
             </View>
-            <TouchableOpacity style={styles.followBtn}>
-              <Text style={styles.followBtnText}>Follow</Text>
-            </TouchableOpacity>
+            <FollowUserButton targetUserId={video.addedBy.id} size="small" style={{ flex: 0, marginLeft: 12 }} />
           </View>
         ) : (
           <View style={styles.headerLeft} />
         )}
-        
-        <TouchableOpacity style={styles.downloadBtn}>
-          <Download size={20} color="rgba(255,255,255,0.8)" />
-        </TouchableOpacity>
+
+        <DownloadButton 
+          onPress={() => {}}
+          style={styles.downloadBtn}
+          color="rgba(255,255,255,0.8)"
+          size={20}
+        />
       </View>
 
-      {/* Cinematic 16:9 Video Header */}
+      {/* Cinematic Video Header */}
       <TouchableOpacity
-        style={styles.thumbnailContainer}
-        onPress={() => {}}
+        style={[styles.thumbnailContainer, video.isShort && { aspectRatio: 4 / 5, borderRadius: 0 }]}
+        onPress={onVideoPress}
         activeOpacity={0.8}
       >
-        <Image source={{ uri: video.thumbnailUrl }} style={styles.videoThumbnail} contentFit="cover" />
+        {shouldPlay && video.videoUrl ? (
+          <TileVideoPlayer videoUrl={video.videoUrl} isPlaying={shouldPlay} style={styles.videoThumbnail} />
+        ) : (
+          <Image source={video.thumbnailUrl ? { uri: video.thumbnailUrl } : undefined} style={styles.videoThumbnail} contentFit="cover" />
+        )}
+
         <View style={styles.durationBadge}>
           <Text style={styles.durationText}>{video.duration}</Text>
         </View>
-        <View style={[styles.playOverlay, isPlaying && styles.playingOverlay]}>
-          {isPlaying ? (
-            <Pause size={24} color="#FFF" fill="#FFF" />
-          ) : (
+
+        {!shouldPlay && (
+          <View style={styles.playOverlay}>
             <Play size={24} color="#FFF" fill="#FFF" />
-          )}
-        </View>
-        
+          </View>
+        )}
+
         {/* Avatar of the original user if the track was linked from somewhere */}
         {video.linkedFrom && (
           <View style={styles.linkedFromBadge}>
-            <UserAvatar 
-              userId={video.linkedFrom.id} 
-              fallbackUrl={video.linkedFrom.avatarUrl} 
-              name={video.linkedFrom.name} 
-              size={36} 
+            <UserAvatar
+              userId={video.linkedFrom.id}
+              fallbackUrl={video.linkedFrom.avatarUrl}
+              name={video.linkedFrom.name}
+              size={36}
             />
           </View>
         )}
@@ -102,7 +152,6 @@ export const MovieBoxDetailVideoTile = ({ video, isPlaying }: MovieBoxDetailVide
 
       <View style={styles.videoInfo}>
         <Text style={styles.videoTitle}>{video.title}</Text>
-        <Text style={styles.videoDirector}>Directed by {video.director}</Text>
       </View>
 
       {/* Inline Comments Preview (Before Action Bar) */}
@@ -127,20 +176,30 @@ export const MovieBoxDetailVideoTile = ({ video, isPlaying }: MovieBoxDetailVide
 
       {/* Facebook-style Action Bar */}
       <View style={styles.actionBar}>
-        <TouchableOpacity style={styles.actionBtn}>
-          <ThumbsUp size={24} color="#FFF" />
-          <Text style={styles.actionText}>{video.likes > 0 ? video.likes : 'Like'}</Text>
-        </TouchableOpacity>
+        <BoxReactions
+          boxItemId={video.id}
+          postId={video.postId}
+          boxId={video.boxId}
+          initialLikes={video.likes}
+          initialDislikes={video.dislikes}
+          currentUserId={currentUserId}
+          onInteraction={onInteraction}
+        />
 
-        <TouchableOpacity style={styles.actionBtn}>
-          <ThumbsDown size={24} color="#FFF" />
-          <Text style={styles.actionText}>{video.dislikes > 0 ? video.dislikes : 'Dislike'}</Text>
-        </TouchableOpacity>
+        <View style={styles.actionBtn}>
+          <CommentAction
+            icon={MessageCircle}
+            label={video.commentsCount ? `${video.commentsCount}` : '0'}
+            size={24}
+            direction="row"
+            onPress={() => video.postId && onCommentPress?.(video.postId)}
+          />
+        </View>
 
-        <TouchableOpacity style={styles.actionBtn}>
-          <MessageCircle size={24} color="#FFF" />
-          <Text style={styles.actionText}>{video.commentsCount ? `${video.commentsCount} Comments` : 'Comment'}</Text>
-        </TouchableOpacity>
+        <View style={[styles.actionBtn, { marginLeft: 'auto', marginRight: 0 }]}>
+          <Eye size={24} color="#FFF" />
+          <Text style={styles.actionText}>{video.viewsCount ? `${video.viewsCount}` : '0'}</Text>
+        </View>
       </View>
     </View>
   );
@@ -149,7 +208,6 @@ export const MovieBoxDetailVideoTile = ({ video, isPlaying }: MovieBoxDetailVide
 const styles = StyleSheet.create({
   container: {
     marginBottom: 20,
-    paddingHorizontal: 16,
   },
   thumbnailContainer: {
     width: '100%',
@@ -197,6 +255,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 12,
+    paddingHorizontal: 16,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -223,11 +282,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 14,
   },
-  followBtnText: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: '700',
-  },
+
   downloadBtn: {
     width: 36,
     height: 36,
@@ -247,6 +302,7 @@ const styles = StyleSheet.create({
   },
   videoInfo: {
     width: '100%',
+    paddingHorizontal: 16,
   },
   videoTitle: {
     color: '#FFF',
@@ -266,6 +322,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.05)',
+    paddingHorizontal: 16,
   },
   actionBtn: {
     flexDirection: 'row',
@@ -280,6 +337,7 @@ const styles = StyleSheet.create({
   },
   commentsContainer: {
     marginTop: 12,
+    paddingHorizontal: 16,
   },
   commentRow: {
     flexDirection: 'row',

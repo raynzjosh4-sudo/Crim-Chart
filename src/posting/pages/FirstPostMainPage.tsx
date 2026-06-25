@@ -119,13 +119,13 @@ export function FirstPostMainPage() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.appBar}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+        <TouchableOpacity activeOpacity={1} style={styles.backBtn} onPress={() => navigation.goBack()}>
           <ChevronLeft color={colors.text} size={28} />
         </TouchableOpacity>
         <Text style={styles.title}>{tr('recents') || 'Recents'}</Text>
         <View style={styles.actions}>
           {selectedItems.size > 0 && (
-            <TouchableOpacity onPress={onNext}>
+            <TouchableOpacity activeOpacity={1} onPress={onNext}>
               <Text style={styles.nextText}>{tr('next') || 'Next'}</Text>
             </TouchableOpacity>
           )}
@@ -133,7 +133,7 @@ export function FirstPostMainPage() {
       </View>
 
       <View style={styles.tabBar}>
-        <TouchableOpacity 
+        <TouchableOpacity activeOpacity={1} 
           style={[styles.tab, activeTab === 'photos' && styles.activeTab]} 
           onPress={() => setActiveTab('photos')}
         >
@@ -141,7 +141,7 @@ export function FirstPostMainPage() {
             {tr('photos_tab') || 'Photos'}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity activeOpacity={1} 
           style={[styles.tab, activeTab === 'videos' && styles.activeTab]} 
           onPress={() => setActiveTab('videos')}
         >
@@ -171,7 +171,7 @@ export function FirstPostMainPage() {
           renderItem={({ item }) => {
             const isSelected = selectedItems.has(item.id);
             return (
-              <TouchableOpacity
+              <TouchableOpacity activeOpacity={1}
                 style={[styles.gridItem, isSelected && { borderColor: colors.primary, borderWidth: 3 }]}
                 onPress={() => toggleSelection(item)}
                 activeOpacity={0.8}

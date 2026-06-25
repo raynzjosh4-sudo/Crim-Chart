@@ -4,7 +4,8 @@ import { colors } from '@/core/theme/colors';
 import { useRouter } from 'expo-router';
 import { Eye, EyeOff, Key } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function PasswordPage() {
   const router = useRouter();
@@ -58,14 +59,14 @@ export default function PasswordPage() {
             onChangeText={setPasswordText}
             autoFocus
           />
-          <TouchableOpacity onPress={() => setObscureText(!obscureText)}>
+          <TouchableOpacity activeOpacity={1} onPress={() => setObscureText(!obscureText)}>
             {obscureText ? <Eye size={20} color="rgba(255, 255, 255, 0.5)" /> : <EyeOff size={20} color="rgba(255, 255, 255, 0.5)" />}
           </TouchableOpacity>
         </View>
 
         <View style={styles.spacerSmall} />
 
-        <TouchableOpacity
+        <TouchableOpacity activeOpacity={1}
           style={styles.autoGenerate}
           onPress={generateStrongPassword}
         >
@@ -75,7 +76,7 @@ export default function PasswordPage() {
 
         <View style={styles.flexOne} />
 
-        <TouchableOpacity
+        <TouchableOpacity activeOpacity={1}
           style={[styles.nextButton, !isPasswordValid && styles.nextButtonDisabled]}
           onPress={handleNext}
           disabled={!isPasswordValid || isLoading}

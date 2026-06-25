@@ -53,7 +53,7 @@ export default function CountrySelectionPage() {
   const renderItem = ({ item }: { item: {name: string, code: string} }) => {
     const isSelected = selected.includes(item.name);
     return (
-      <TouchableOpacity 
+      <TouchableOpacity activeOpacity={1} 
         style={styles.item} 
         onPress={() => handleSelect(item.name)}
         activeOpacity={0.7}
@@ -84,7 +84,7 @@ export default function CountrySelectionPage() {
           />
         </View>
 
-        <TouchableOpacity 
+        <TouchableOpacity activeOpacity={1} 
           style={styles.item} 
           onPress={() => handleSelect('Global')}
           activeOpacity={0.7}

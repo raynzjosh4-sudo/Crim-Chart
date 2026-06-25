@@ -9,6 +9,7 @@ interface ChannelNavBarProps {
   unreadMessages?: number;
   unreadMoments?: number;
   totalMembers?: number;
+  pendingRequests?: number;
 }
 
 export const ChannelNavBar: React.FC<ChannelNavBarProps> = ({
@@ -17,12 +18,13 @@ export const ChannelNavBar: React.FC<ChannelNavBarProps> = ({
   unreadMessages = 0,
   unreadMoments = 0,
   totalMembers = 0,
+  pendingRequests = 0,
 }) => {
   const tabs = [
     { icon: Compass, badge: null },
     { icon: MessageCircle, badge: unreadMessages > 0 ? unreadMessages.toString() : null },
     { icon: MonitorPlay, badge: unreadMoments > 0 ? unreadMoments.toString() : null },
-    { icon: Users, badge: totalMembers > 0 ? totalMembers.toString() : null },
+    { icon: Users, badge: pendingRequests > 0 ? pendingRequests.toString() : null },
   ];
 
   return (
@@ -32,7 +34,7 @@ export const ChannelNavBar: React.FC<ChannelNavBarProps> = ({
         const IconComponent = tab.icon;
         
         return (
-          <TouchableOpacity 
+          <TouchableOpacity activeOpacity={1} 
             key={index} 
             style={styles.tabItem} 
             onPress={() => onTabSelected(index)}

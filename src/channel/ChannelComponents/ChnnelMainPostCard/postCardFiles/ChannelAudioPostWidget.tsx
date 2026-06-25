@@ -120,9 +120,7 @@ export const ChannelAudioPostWidget: React.FC<ChannelAudioPostWidgetProps> = ({
   };
 
   useEffect(() => {
-    if (isActive === true) {
-      playAudio();
-    } else if (isActive === false) {
+    if (isActive === false) {
       pauseAudio();
     }
   }, [isActive]);

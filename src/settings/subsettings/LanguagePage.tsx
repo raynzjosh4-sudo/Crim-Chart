@@ -36,7 +36,7 @@ const LanguagePage: React.FC = () => {
         const isSelected = currentLang === lang.code;
 
         return (
-            <TouchableOpacity
+            <TouchableOpacity activeOpacity={1}
                 style={styles.languageItem}
                 onPress={() => handleLanguageChange(lang.code)}
             >

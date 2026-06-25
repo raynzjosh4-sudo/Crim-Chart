@@ -29,7 +29,7 @@ export default function SelectChannelPage() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
+        <TouchableOpacity activeOpacity={1} onPress={() => router.back()} style={styles.headerButton}>
           <ChevronLeft size={28} color="#FFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>SELECT CHANNEL</Text>
@@ -61,7 +61,7 @@ export default function SelectChannelPage() {
                 <Text style={styles.channelMembers}>{channel.memberCount} members</Text>
               </View>
               
-              <TouchableOpacity 
+              <TouchableOpacity activeOpacity={1} 
                 style={[styles.inviteButton, isSent && styles.sentButton]} 
                 onPress={() => !isSent && handleInvite(channel.id)}
                 disabled={isSent}

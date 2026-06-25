@@ -19,7 +19,7 @@ export const SettingsItem: React.FC<SettingsItemProps> = ({
   showChevron = true,
 }) => {
   return (
-    <TouchableOpacity style={styles.container} onPress={onTap}>
+    <TouchableOpacity activeOpacity={1} style={styles.container} onPress={onTap}>
       <View style={styles.leftContent}>
         <Icon size={22} color={colors.primary} />
         <Text style={styles.title}>{title}</Text>

@@ -61,7 +61,7 @@ export const MessageMediaGrid: React.FC<MessageMediaGridProps> = ({
     }
 
     return (
-      <TouchableOpacity
+      <TouchableOpacity activeOpacity={1}
         onPress={() => handleMediaTap(0, type)}
         style={styles.singleContainer}
         activeOpacity={0.7}
@@ -121,7 +121,7 @@ export const MessageMediaGrid: React.FC<MessageMediaGridProps> = ({
           {items.map((item, index) => {
             const type = item.type as string;
             return (
-              <TouchableOpacity
+              <TouchableOpacity activeOpacity={1}
                 key={index}
                 onPress={() => handleMediaTap(index, type)}
                 style={styles.threadItem}

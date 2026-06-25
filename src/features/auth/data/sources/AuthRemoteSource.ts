@@ -1,6 +1,6 @@
 import { supabase } from '@/core/supabase/supabaseConfig';
-import { AuthTokens, LoginParams, SignUpParams } from '../../domain/entities/AuthParams';
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
+import { AuthTokens, LoginParams, SignUpParams } from '../../domain/entities/AuthParams';
 
 export class AuthRemoteSource {
   static async signUp(params: SignUpParams): Promise<{ user: CrimChartUserModel; tokens: AuthTokens }> {
@@ -26,9 +26,10 @@ export class AuthRemoteSource {
 
       const profileData = {
         id: authUser.id,
-        username: params.username,
+        display_name: params.username,
         birthday: params.birthday?.toISOString(),
         gender: params.gender,
+        country: params.countryName,
       };
 
       try {
@@ -45,6 +46,7 @@ export class AuthRemoteSource {
           email: authUser.email,
           birthday: params.birthday,
           gender: params.gender,
+          country: params.countryName,
           createdAt: new Date(),
         }),
         tokens: {
@@ -77,23 +79,18 @@ export class AuthRemoteSource {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select()
+        .select('*, user_connection_stats(*)')
         .eq('id', authUser.id)
         .maybeSingle();
 
+      const baseUser = CrimChartUserModel.fromMap(profile || {});
       return {
-        user: CrimChartUserModel.empty().copyWith({
+        user: baseUser.copyWith({
           id: authUser.id,
-          displayName: profile?.username ?? params.identifier.split('@')[0],
-          username: profile?.username,
           email: authUser.email,
-          profileImageUrl: CrimChartUserModel.correctImageUrl(profile?.profile_image_url ?? ''),
-          birthday: profile?.birthday ? new Date(profile.birthday) : undefined,
-          gender: profile?.gender,
-          followersCount: profile?.followers_count ?? 0,
-          followingCount: profile?.following_count ?? 0,
-          channelsCreatedCount: profile?.charts_count ?? 0,
-          createdAt: profile?.created_at ? new Date(profile.created_at) : new Date(),
+          displayName: baseUser.displayName || params.identifier.split('@')[0],
+          profileImageUrl: CrimChartUserModel.correctImageUrl(baseUser.profileImageUrl ?? ''),
+          createdAt: baseUser.createdAt || new Date(),
         }),
         tokens: {
           accessToken: session.access_token,
@@ -106,7 +103,40 @@ export class AuthRemoteSource {
     }
   }
 
-  static async loginWithGoogle(idToken: string, accessToken: string): Promise<{ user: CrimChartUserModel; tokens: AuthTokens }> {
+  static async createGoogleUserProfile(params: any): Promise<CrimChartUserModel> {
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+
+    if (!user) {
+      throw new Error('No authenticated user found for profile creation.');
+    }
+
+    try {
+      const profileData = {
+        id: user.id,
+        display_name: params.username,
+        birthday: params.birthday ? new Date(params.birthday).toISOString() : undefined,
+        gender: params.gender,
+        crown_title: params.crownTitle,
+        country: params.countryName,
+        profile_image_url: user.user_metadata?.avatar_url || '',
+      };
+
+      const { data: response, error } = await supabase
+        .from('profiles')
+        .insert(profileData)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return CrimChartUserModel.fromMap(response);
+    } catch (e: any) {
+      throw new Error(`Google profile creation failed: ${e.message || e}`);
+    }
+  }
+
+  static async loginWithGoogle(idToken: string, accessToken: string): Promise<{ user: CrimChartUserModel; tokens: AuthTokens; isNewUser?: boolean }> {
     try {
       const { data: res, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
@@ -124,22 +154,39 @@ export class AuthRemoteSource {
       }
 
       let profile: any = null;
-      for (let i = 0; i < 3; i++) {
-        const { data } = await supabase
-          .from('profiles')
-          .select()
-          .eq('id', authUser.id)
-          .maybeSingle();
-        
-        if (data) {
-          profile = data;
-          break;
-        }
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
+      const { data } = await supabase
+        .from('profiles')
+        .select()
+        .eq('id', authUser.id)
+        .maybeSingle();
 
-      if (!profile) {
-        throw new Error('Profile creation is taking longer than expected. Please try again.');
+      if (data) {
+        profile = data;
+      } else {
+        // Instead of automatically creating the profile here, we flag it as a new user
+        // so the UI can redirect to the onboarding screens.
+        profile = {
+          id: authUser.id,
+          username: authUser.email?.split('@')[0] || 'user',
+          display_name: authUser.user_metadata?.full_name || 'User',
+          profile_image_url: authUser.user_metadata?.avatar_url || '',
+        };
+        return {
+          user: CrimChartUserModel.empty().copyWith({
+            id: authUser.id,
+            displayName: profile.display_name,
+            username: profile.username,
+            email: authUser.email,
+            profileImageUrl: CrimChartUserModel.correctImageUrl(profile.profile_image_url),
+            createdAt: new Date(),
+          }),
+          tokens: {
+            accessToken: session.access_token,
+            refreshToken: session.refresh_token ?? '',
+            expiresAt: new Date(Date.now() + 3600 * 1000),
+          },
+          isNewUser: true,
+        };
       }
 
       return {
@@ -151,6 +198,9 @@ export class AuthRemoteSource {
           profileImageUrl: CrimChartUserModel.correctImageUrl(
             profile.profile_image_url ?? authUser.user_metadata?.avatar_url ?? ''
           ),
+          birthday: profile?.birthday ? new Date(profile.birthday) : undefined,
+          gender: profile?.gender,
+          country: profile?.country,
           createdAt: new Date(),
         }),
         tokens: {
@@ -169,7 +219,7 @@ export class AuthRemoteSource {
       const { data } = await supabase
         .from('profiles')
         .select('id')
-        .eq('username', username)
+        .eq('display_name', username)
         .maybeSingle();
       return !data;
     } catch (_) {
@@ -216,19 +266,23 @@ export class AuthRemoteSource {
     if (!user) return;
 
     try {
-      const payload: any = { is_online: isOnline, active: isOnline };
-      
+      const payload: any = { is_online: isOnline };
+
       // If they are going offline, log the exact timestamp
       if (!isOnline) {
         payload.last_seen = new Date().toISOString();
       }
 
-      await supabase
+      const { error } = await supabase
         .from('profiles')
         .update(payload)
         .eq('id', user.id);
+        
+      if (error) {
+        console.warn('❌ [AuthRemote] Failed to update online status:', error);
+      }
     } catch (e) {
-      console.warn('❌ [AuthRemote] Failed to update online status:', e);
+      console.warn('❌ [AuthRemote] Exception updating online status:', e);
     }
   }
 }

@@ -27,7 +27,7 @@ export const UserStatusMoments: React.FC<UserStatusMomentsProps> = ({ statuses, 
         contentContainerStyle={styles.scrollContent}
       >
         {/* Create Status Card */}
-        <TouchableOpacity style={styles.createCard} onPress={onAddStatus}>
+        <TouchableOpacity activeOpacity={1} style={styles.createCard} onPress={onAddStatus}>
           <View style={styles.createAvatarContainer}>
             <View style={styles.avatarCircle}>
               <Image 
@@ -44,7 +44,7 @@ export const UserStatusMoments: React.FC<UserStatusMomentsProps> = ({ statuses, 
 
         {/* Status Cards */}
         {statuses.map((status) => (
-          <TouchableOpacity 
+          <TouchableOpacity activeOpacity={1} 
             key={status.id} 
             style={styles.statusCard}
             onPress={() => onViewStatus(status)}

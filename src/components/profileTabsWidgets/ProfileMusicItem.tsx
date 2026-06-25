@@ -5,7 +5,7 @@ interface ProfileMusicItemProps {
   thumbnailUrl: string;
   title?: string;
   artist?: string;
-  size: number;
+  size: number | string;
   onPress?: () => void;
 }
 
@@ -16,18 +16,16 @@ export const ProfileMusicItem: React.FC<ProfileMusicItemProps> = ({
   size,
   onPress,
 }) => {
-  const imageSize = size * 0.8;
-
   return (
     <TouchableOpacity
-      style={[styles.container, { width: size, height: size * 1.65 }]}
+      style={[styles.container, { width: size, aspectRatio: 0.6 }]}
       onPress={onPress}
       activeOpacity={0.85}
     >
       <View style={styles.content}>
         <Image
           source={{ uri: thumbnailUrl || 'https://via.placeholder.com/150/1A1A1A/FFFFFF?text=Music' }}
-          style={[styles.image, { width: imageSize, height: imageSize, borderRadius: imageSize / 2 }]}
+          style={[styles.image, { width: '80%', aspectRatio: 1, borderRadius: 999 }]}
           resizeMode="cover"
         />
         
@@ -56,7 +54,7 @@ export const ProfileMusicItem: React.FC<ProfileMusicItemProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 8,
+    borderRadius: 0,
     backgroundColor: '#1E1E1E',
     overflow: 'hidden',
     padding: 8,
@@ -102,7 +100,7 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#2A2A2A',
     paddingVertical: 8,
-    borderRadius: 4,
+    borderRadius: 0,
     alignItems: 'center',
     marginTop: 6,
   },

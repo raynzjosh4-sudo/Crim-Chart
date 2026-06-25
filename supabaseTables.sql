@@ -234,6 +234,7 @@ CREATE TABLE public.channel_posts (
   shares_count integer DEFAULT 0,
   views_count integer DEFAULT 0,
   downloads_count integer DEFAULT 0,
+  type text,
   CONSTRAINT channel_posts_pkey PRIMARY KEY (id),
   CONSTRAINT channel_posts_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id),
   CONSTRAINT channel_posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.profiles(id)
@@ -390,6 +391,7 @@ CREATE TABLE public.posts (
   metadata jsonb DEFAULT '{}'::jsonb,
   views_count integer DEFAULT 0,
   downloads_count integer DEFAULT 0,
+  type text,
   CONSTRAINT posts_pkey PRIMARY KEY (id),
   CONSTRAINT posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.profiles(id),
   CONSTRAINT posts_parent_post_id_fkey FOREIGN KEY (parent_post_id) REFERENCES public.posts(id)
@@ -507,4 +509,13 @@ CREATE TABLE public.post_views (
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT post_views_pkey PRIMARY KEY (user_id, post_id),
   CONSTRAINT post_views_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.post_tags (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  post_id uuid,
+  user_id uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT post_tags_pkey PRIMARY KEY (id),
+  CONSTRAINT post_tags_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.posts(id),
+  CONSTRAINT post_tags_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );

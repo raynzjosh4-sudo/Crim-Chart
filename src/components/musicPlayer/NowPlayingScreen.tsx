@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Image, Dimensions, TouchableOpacity, Platform, PanResponder } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, Heart, Shuffle, SkipBack, Pause, Play, SkipForward, ListMusic } from 'lucide-react-native';
-import { Audio, AVPlaybackStatus } from 'expo-av';
 import { useTheme } from '@react-navigation/native';
-import { SyncedLyrics } from './SyncedLyrics';
+import { Audio, AVPlaybackStatus } from 'expo-av';
+import { LinearGradient } from 'expo-linear-gradient';
+import { ArrowLeft, Heart, ListMusic, Pause, Play, Shuffle, SkipBack, SkipForward } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AudioProgressBar } from './AudioProgressBar';
+import { SyncedLyrics } from './SyncedLyrics';
 
 const { width } = Dimensions.get('window');
 
@@ -30,7 +30,7 @@ export const NowPlayingScreen: React.FC<NowPlayingScreenProps> = ({
   const { colors } = useTheme();
   const [isPlaying, setIsPlaying] = useState(true);
   const [isLiked, setIsLiked] = useState(false);
-  
+
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -58,6 +58,7 @@ export const NowPlayingScreen: React.FC<NowPlayingScreenProps> = ({
 
   useEffect(() => {
     let currentSound: Audio.Sound | null = null;
+    let isUnmounted = false;
 
     const loadAudio = async () => {
       if (!audioUrl) return;
@@ -70,9 +71,14 @@ export const NowPlayingScreen: React.FC<NowPlayingScreenProps> = ({
 
         const { sound: newSound } = await Audio.Sound.createAsync(
           { uri: audioUrl },
-          { shouldPlay: true },
+          { shouldPlay: !isUnmounted },
           onPlaybackStatusUpdate
         );
+
+        if (isUnmounted) {
+          await newSound.unloadAsync();
+          return;
+        }
 
         currentSound = newSound;
         setSound(newSound);
@@ -85,6 +91,7 @@ export const NowPlayingScreen: React.FC<NowPlayingScreenProps> = ({
     loadAudio();
 
     return () => {
+      isUnmounted = true;
       if (currentSound) {
         currentSound.unloadAsync();
       }
@@ -96,7 +103,7 @@ export const NowPlayingScreen: React.FC<NowPlayingScreenProps> = ({
       setPosition(status.positionMillis);
       setDuration(status.durationMillis || 0);
       setIsPlaying(status.isPlaying);
-      
+
       if (status.didJustFinish) {
         setIsPlaying(false);
         setPosition(0);
@@ -121,12 +128,12 @@ export const NowPlayingScreen: React.FC<NowPlayingScreenProps> = ({
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Blurred background image layer */}
-      <Image 
+      <Image
         source={{ uri: coverUrl }}
         style={StyleSheet.absoluteFillObject}
         blurRadius={60}
       />
-      
+
       {/* Dark gradient overlay to blend into the bottom */}
       <LinearGradient
         colors={['rgba(20,20,20,0.4)', 'rgba(15,15,15,0.9)', colors.background]}
@@ -137,13 +144,13 @@ export const NowPlayingScreen: React.FC<NowPlayingScreenProps> = ({
       <SafeAreaView style={styles.safeArea}>
         {/* Top Navigation Bar */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={onBack} style={styles.iconButton}>
+          <TouchableOpacity activeOpacity={1} onPress={onBack} style={styles.iconButton}>
             <ArrowLeft color="#FFF" size={24} />
           </TouchableOpacity>
-          
+
           <Text style={styles.headerTitle}>Now Playing</Text>
-          
-          <TouchableOpacity onPress={() => setIsLiked(!isLiked)} style={styles.iconButton}>
+
+          <TouchableOpacity activeOpacity={1} onPress={() => setIsLiked(!isLiked)} style={styles.iconButton}>
             <Heart color="#FFF" size={24} fill={isLiked ? "#FFF" : "transparent"} />
           </TouchableOpacity>
         </View>
@@ -151,7 +158,7 @@ export const NowPlayingScreen: React.FC<NowPlayingScreenProps> = ({
         {/* Circular Album Art */}
         <View style={styles.artContainer}>
           <View style={styles.artWrapper}>
-            <Image 
+            <Image
               source={{ uri: coverUrl }}
               style={styles.artImage}
             />
@@ -179,16 +186,16 @@ export const NowPlayingScreen: React.FC<NowPlayingScreenProps> = ({
 
         {/* Controls */}
         <View style={styles.controlsRow}>
-          <TouchableOpacity>
+          <TouchableOpacity activeOpacity={1}>
             <Shuffle color="rgba(255,255,255,0.7)" size={22} />
           </TouchableOpacity>
 
           <View style={styles.mainControls}>
-            <TouchableOpacity style={styles.secondaryButton}>
+            <TouchableOpacity activeOpacity={1} style={styles.secondaryButton}>
               <SkipBack color="#FFF" size={24} fill="#FFF" />
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.playPauseButton, { backgroundColor: colors.primary, shadowColor: colors.primary }]}
               onPress={togglePlayPause}
               activeOpacity={0.8}
@@ -200,12 +207,12 @@ export const NowPlayingScreen: React.FC<NowPlayingScreenProps> = ({
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.secondaryButton}>
+            <TouchableOpacity activeOpacity={1} style={styles.secondaryButton}>
               <SkipForward color="#FFF" size={24} fill="#FFF" />
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity>
+          <TouchableOpacity activeOpacity={1}>
             <ListMusic color="rgba(255,255,255,0.7)" size={22} />
           </TouchableOpacity>
         </View>

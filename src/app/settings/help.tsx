@@ -26,7 +26,7 @@ export default function HelpPage() {
           renderItem={({ item }) => {
             const Icon = item.icon;
             return (
-              <TouchableOpacity style={styles.item} onPress={() => { }}>
+              <TouchableOpacity activeOpacity={1} style={styles.item} onPress={() => { }}>
                 <View style={styles.leftRow}>
                   <Icon size={22} color={colors.text} />
                   <Text style={styles.itemTitle}>{item.title}</Text>

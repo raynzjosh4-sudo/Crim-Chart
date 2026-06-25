@@ -1,14 +1,10 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import LottieView from 'lottie-react-native';
+import { STICKER_SOURCES } from '@/features/channel/pages/messages_tab/widgets/StickerSheet';
 
-const QUICK_EMOJIS = [
-  require('../../../../assets/stickers/sticker_4.json'),
-  require('../../../../assets/stickers/sticker_5.json'),
-  require('../../../../assets/stickers/sticker_6.json'),
-  require('../../../../assets/stickers/sticker_7.json'),
-  require('../../../../assets/stickers/sticker_8.json'),
-];
+// Use standard indices for quick emojis
+const QUICK_EMOJI_INDICES = [4, 5, 6, 7, 8];
 
 interface QuickEmojiToolbarProps {
   onEmojiSelected: (asset: any) => void;
@@ -23,15 +19,15 @@ export const QuickEmojiToolbar: React.FC<QuickEmojiToolbarProps> = ({ onEmojiSel
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {QUICK_EMOJIS.map((asset, index) => (
-          <TouchableOpacity 
+        {QUICK_EMOJI_INDICES.map((index) => (
+          <TouchableOpacity activeOpacity={1} 
             key={index} 
-            onPress={() => onEmojiSelected(asset)}
+            onPress={() => onEmojiSelected(String(index))}
             style={styles.emojiWrapper}
           >
             <View style={styles.emojiContainer}>
               <LottieView
-                source={asset}
+                source={STICKER_SOURCES[index]}
                 autoPlay
                 loop
                 style={styles.lottie}

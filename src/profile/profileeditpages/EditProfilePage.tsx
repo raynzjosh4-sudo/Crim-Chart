@@ -153,7 +153,7 @@ export const EditProfilePage = () => {
         showBack={false}
         leading={<CrimchartBackButton onPress={() => router.back()} color={colors.text} />}
         actions={[
-          <TouchableOpacity key="save" onPress={handleSave} disabled={isLoading} style={styles.saveButton}>
+          <TouchableOpacity activeOpacity={1} key="save" onPress={handleSave} disabled={isLoading} style={styles.saveButton}>
             <Text style={[styles.saveText, isLoading && { opacity: 0.5 }]}>Save</Text>
           </TouchableOpacity>
         ]}
@@ -164,7 +164,7 @@ export const EditProfilePage = () => {
       <ScrollView contentContainerStyle={styles.content}>
         {/* Profile Picture Section */}
         <View style={styles.pictureSection}>
-          <TouchableOpacity onPress={handleEditPicture}>
+          <TouchableOpacity activeOpacity={1} onPress={handleEditPicture}>
             <View>
               <Image
                 source={{ uri: localImageUri || user?.profileImageUrl || 'https://via.placeholder.com/150' }}
@@ -175,7 +175,7 @@ export const EditProfilePage = () => {
               </View>
             </View>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleEditPicture} style={styles.editPictureButton}>
+          <TouchableOpacity activeOpacity={1} onPress={handleEditPicture} style={styles.editPictureButton}>
             <Text style={styles.editPictureText}>Edit picture</Text>
           </TouchableOpacity>
         </View>
@@ -200,7 +200,7 @@ export const EditProfilePage = () => {
 
         {/* Personal Info Link */}
         <View style={styles.personalInfoRow}>
-          <TouchableOpacity
+          <TouchableOpacity activeOpacity={1}
             style={styles.personalInfoButton}
             onPress={() => router.push('/personal-info')}
           >
@@ -216,17 +216,17 @@ export const EditProfilePage = () => {
           <View style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, 24) }]}>
             <Text style={styles.modalTitle}>CHANGE PROFILE PICTURE</Text>
 
-            <TouchableOpacity style={styles.modalItemRow} onPress={() => handleSelectImageSource(0)}>
+            <TouchableOpacity activeOpacity={1} style={styles.modalItemRow} onPress={() => handleSelectImageSource(0)}>
               <Camera size={20} color={colors.text} />
               <Text style={styles.modalItemText}>Take Photo</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.modalItemRow} onPress={() => handleSelectImageSource(1)}>
+            <TouchableOpacity activeOpacity={1} style={styles.modalItemRow} onPress={() => handleSelectImageSource(1)}>
               <ImageIcon size={20} color={colors.text} />
               <Text style={styles.modalItemText}>Choose from Gallery</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.modalCancelButton} onPress={() => setShowImagePickerModal(false)}>
+            <TouchableOpacity activeOpacity={1} style={styles.modalCancelButton} onPress={() => setShowImagePickerModal(false)}>
               <Text style={styles.modalCancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>

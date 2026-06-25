@@ -48,7 +48,7 @@ export const ChannelStatusMoments = () => {
         contentContainerStyle={styles.scrollContent}
       >
         {/* Create Card */}
-        <TouchableOpacity 
+        <TouchableOpacity activeOpacity={1} 
           style={styles.createCard} 
           onPress={() => router.push('/channel-create' as any)}
         >
@@ -88,7 +88,7 @@ export const ChannelStatusMoments = () => {
             : { borderStyle: 'solid' as const };
 
           return (
-            <TouchableOpacity 
+            <TouchableOpacity activeOpacity={1} 
               key={channelId} 
               style={styles.statusCard}
               onPress={() => router.push({ pathname: '/status/[id]', params: { id: latestMoment.id } } as any)}

@@ -4,6 +4,23 @@ import { authRepository } from '../data/repositories/AuthRepository';
 import { SignUpParams, LoginParams } from '../types/AuthTypes';
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
+
+const Storage = {
+  setItemAsync: async (key: string, value: string) => {
+    if (Platform.OS === 'web') return AsyncStorage.setItem(key, value);
+    return SecureStore.setItemAsync(key, value);
+  },
+  getItemAsync: async (key: string) => {
+    if (Platform.OS === 'web') return AsyncStorage.getItem(key);
+    return SecureStore.getItemAsync(key);
+  },
+  deleteItemAsync: async (key: string) => {
+    if (Platform.OS === 'web') return AsyncStorage.removeItem(key);
+    return SecureStore.deleteItemAsync(key);
+  }
+};
 import { useProfileCacheStore } from '@/core/store/useProfileCacheStore';
 
 export enum AuthStatus {
@@ -18,6 +35,7 @@ interface AuthState {
   isLoading: boolean;
   errorMessage: string | null;
   pendingSignUp: SignUpParams | null;
+  pendingGoogleOnboarding: boolean;
 }
 
 interface AuthActions {
@@ -28,12 +46,14 @@ interface AuthActions {
   setPassword: (password: string) => void;
   setBirthday: (birthday: Date) => void;
   setGender: (gender: string) => void;
+  setCountryName: (countryName: string) => void;
   setUsernameAndCheck: (username: string) => Promise<boolean>;
   completeSignUp: () => Promise<boolean>;
   verifyOtp: (token: string) => Promise<boolean>;
   updateProfile: (updates: any) => Promise<boolean>;
   login: (params: LoginParams) => Promise<boolean>;
   loginWithGoogle: () => Promise<boolean>;
+  completeGoogleOnboarding: () => Promise<boolean>;
   signOut: () => Promise<void>;
   clearError: () => void;
 }
@@ -44,6 +64,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   isLoading: false,
   errorMessage: null,
   pendingSignUp: null,
+  pendingGoogleOnboarding: false,
 
   checkSession: async () => {
     try {
@@ -62,41 +83,48 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   startSignUp: (countryCode, countryName) => {
     const pending = { countryCode, countryName, phoneNumber: '', email: '', username: '' };
     set({ pendingSignUp: pending });
-    SecureStore.setItemAsync('saved_pending_signup', JSON.stringify(pending));
+    Storage.setItemAsync('saved_pending_signup', JSON.stringify(pending));
   },
 
   setPhoneNumber: (phoneNumber) => set((state) => {
     if (!state.pendingSignUp) return state;
     const updated = { ...state.pendingSignUp, phoneNumber };
-    SecureStore.setItemAsync('saved_pending_signup', JSON.stringify(updated));
+    Storage.setItemAsync('saved_pending_signup', JSON.stringify(updated));
     return { pendingSignUp: updated };
   }),
 
   setEmail: (email) => set((state) => {
     if (!state.pendingSignUp) return state;
     const updated = { ...state.pendingSignUp, email };
-    SecureStore.setItemAsync('saved_pending_signup', JSON.stringify(updated));
+    Storage.setItemAsync('saved_pending_signup', JSON.stringify(updated));
     return { pendingSignUp: updated };
   }),
 
   setPassword: (password) => set((state) => {
     if (!state.pendingSignUp) return state;
     const updated = { ...state.pendingSignUp, password };
-    SecureStore.setItemAsync('saved_pending_signup', JSON.stringify(updated));
+    Storage.setItemAsync('saved_pending_signup', JSON.stringify(updated));
     return { pendingSignUp: updated };
   }),
 
   setBirthday: (birthday) => set((state) => {
     if (!state.pendingSignUp) return state;
     const updated = { ...state.pendingSignUp, birthday };
-    SecureStore.setItemAsync('saved_pending_signup', JSON.stringify(updated));
+    Storage.setItemAsync('saved_pending_signup', JSON.stringify(updated));
     return { pendingSignUp: updated };
   }),
 
   setGender: (gender) => set((state) => {
     if (!state.pendingSignUp) return state;
     const updated = { ...state.pendingSignUp, gender };
-    SecureStore.setItemAsync('saved_pending_signup', JSON.stringify(updated));
+    Storage.setItemAsync('saved_pending_signup', JSON.stringify(updated));
+    return { pendingSignUp: updated };
+  }),
+
+  setCountryName: (countryName) => set((state) => {
+    if (!state.pendingSignUp) return state;
+    const updated = { ...state.pendingSignUp, countryName };
+    Storage.setItemAsync('saved_pending_signup', JSON.stringify(updated));
     return { pendingSignUp: updated };
   }),
 
@@ -110,7 +138,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
       if (available) {
         const updated = { ...pendingSignUp, username };
         set({ isLoading: false, pendingSignUp: updated });
-        SecureStore.setItemAsync('saved_pending_signup', JSON.stringify(updated));
+        Storage.setItemAsync('saved_pending_signup', JSON.stringify(updated));
         return true;
       } else {
         set({ isLoading: false, errorMessage: 'This username is already taken' });
@@ -134,7 +162,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
     set({ isLoading: true, errorMessage: null });
     try {
       const user = await authRepository.signUp(pendingSignUp);
-      await SecureStore.deleteItemAsync('saved_pending_signup');
+      await Storage.deleteItemAsync('saved_pending_signup');
       set({ isLoading: false, status: AuthStatus.AUTHENTICATED, user, pendingSignUp: null });
       return true;
     } catch (e: any) {
@@ -173,7 +201,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
         });
 
         await authRepository.local.saveUser(user, data.session.access_token, data.session.refresh_token);
-        await SecureStore.deleteItemAsync('saved_pending_signup');
+        await Storage.deleteItemAsync('saved_pending_signup');
         
         set({ isLoading: false, status: AuthStatus.AUTHENTICATED, user, pendingSignUp: null });
         return true;
@@ -215,8 +243,46 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   loginWithGoogle: async () => {
     set({ isLoading: true, errorMessage: null });
     try {
-      const user = await authRepository.loginWithGoogle();
-      set({ isLoading: false, status: AuthStatus.AUTHENTICATED, user });
+      const result = await authRepository.loginWithGoogle();
+      if (result.isNewUser) {
+        set({ 
+          isLoading: false, 
+          pendingGoogleOnboarding: true,
+          pendingSignUp: { 
+            countryCode: '', 
+            countryName: '', 
+            phoneNumber: '', 
+            email: result.user.email || '', 
+            username: result.user.username || '' 
+          } 
+        });
+        return true;
+      } else {
+        set({ isLoading: false, status: AuthStatus.AUTHENTICATED, user: result.user, pendingGoogleOnboarding: false });
+        return true;
+      }
+    } catch (e: any) {
+      console.error('Raw Google Signin error:', e);
+      set({ isLoading: false, errorMessage: e?.message || e?.code || String(e) || 'Unknown error' });
+      return false;
+    }
+  },
+
+  completeGoogleOnboarding: async () => {
+    const { pendingSignUp } = get();
+    if (!pendingSignUp) return false;
+
+    set({ isLoading: true, errorMessage: null });
+    try {
+      const user = await authRepository.createGoogleUserProfile(pendingSignUp);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await authRepository.local.saveUser(user, session.access_token, session.refresh_token);
+      }
+
+      await Storage.deleteItemAsync('saved_pending_signup');
+      set({ isLoading: false, status: AuthStatus.AUTHENTICATED, user, pendingSignUp: null, pendingGoogleOnboarding: false });
       return true;
     } catch (e: any) {
       set({ isLoading: false, errorMessage: e.message });

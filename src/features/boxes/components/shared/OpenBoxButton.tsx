@@ -8,7 +8,7 @@ interface OpenBoxButtonProps {
 
 export const OpenBoxButton: React.FC<OpenBoxButtonProps> = ({ onPress, title = "Open Box" }) => {
   return (
-    <TouchableOpacity style={styles.smallOpenBtn} onPress={onPress}>
+    <TouchableOpacity activeOpacity={1} style={styles.smallOpenBtn} onPress={onPress}>
       <Text style={styles.smallOpenText}>{title}</Text>
     </TouchableOpacity>
   );

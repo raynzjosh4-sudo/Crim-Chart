@@ -85,7 +85,7 @@ export const PersonalInformationPage = () => {
         showBack={false}
         leading={<CrimchartBackButton onPress={() => router.back()} color={colors.text} />}
         actions={[
-          <TouchableOpacity key="save" onPress={handleSave} disabled={isLoading} style={styles.saveButton}>
+          <TouchableOpacity activeOpacity={1} key="save" onPress={handleSave} disabled={isLoading} style={styles.saveButton}>
             <Text style={[styles.saveText, isLoading && { opacity: 0.5 }]}>Save</Text>
           </TouchableOpacity>
         ]}
@@ -97,7 +97,7 @@ export const PersonalInformationPage = () => {
         <Text style={styles.sectionHeader}>BASIC DETAILS</Text>
 
         {/* Birthday Field */}
-        <TouchableOpacity style={styles.capsuleField} onPress={() => setShowDatePicker(true)}>
+        <TouchableOpacity activeOpacity={1} style={styles.capsuleField} onPress={() => setShowDatePicker(true)}>
           <Text style={styles.capsuleLabel} numberOfLines={1}>Birthday</Text>
           <Text style={styles.capsuleValue}>{formatDate(birthday)}</Text>
           <ChevronRight size={16} color="rgba(255, 255, 255, 0.2)" />
@@ -114,7 +114,7 @@ export const PersonalInformationPage = () => {
         )}
 
         {/* Gender Field */}
-        <TouchableOpacity style={styles.capsuleField} onPress={() => setShowGenderModal(true)}>
+        <TouchableOpacity activeOpacity={1} style={styles.capsuleField} onPress={() => setShowGenderModal(true)}>
           <Text style={styles.capsuleLabel} numberOfLines={1}>Gender</Text>
           <Text style={styles.capsuleValue}>{gender || 'Not specified'}</Text>
           <ChevronRight size={16} color="rgba(255, 255, 255, 0.2)" />
@@ -133,14 +133,14 @@ export const PersonalInformationPage = () => {
           </View>
 
           <View style={styles.emailActionsRow}>
-            <TouchableOpacity style={styles.smallAction}>
+            <TouchableOpacity activeOpacity={1} style={styles.smallAction}>
               <EyeOff size={14} color="rgba(255, 255, 255, 0.3)" />
               <Text style={styles.smallActionText}>Hidden</Text>
             </TouchableOpacity>
 
             <View style={{ width: 20 }} />
 
-            <TouchableOpacity style={styles.smallAction}>
+            <TouchableOpacity activeOpacity={1} style={styles.smallAction}>
               <Star size={14} color={colors.primary} />
               <Text style={[styles.smallActionText, { color: colors.primary }]}>Primary</Text>
             </TouchableOpacity>
@@ -180,7 +180,7 @@ export const PersonalInformationPage = () => {
           <View style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, 24) }]}>
             <Text style={styles.modalTitle}>SELECT GENDER</Text>
             {['Male', 'Female', 'Non-binary', 'Prefer not to say'].map((g) => (
-              <TouchableOpacity key={g} style={styles.modalItem} onPress={() => selectGender(g)}>
+              <TouchableOpacity activeOpacity={1} key={g} style={styles.modalItem} onPress={() => selectGender(g)}>
                 <Text style={styles.modalItemText}>{g}</Text>
               </TouchableOpacity>
             ))}

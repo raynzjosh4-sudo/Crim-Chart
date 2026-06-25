@@ -60,7 +60,7 @@ export default function ChannelSuggestionsPage() {
                 showBorder={true} 
                 backgroundColor={colors.background}
                 actions={[
-                    <TouchableOpacity key="skip" onPress={handleSkip}>
+                    <TouchableOpacity activeOpacity={1} key="skip" onPress={handleSkip}>
                         <Text style={[styles.skipText, { color: 'rgba(255, 255, 255, 0.5)' }]}>
                             {tr('skip')}
                         </Text>
@@ -119,7 +119,7 @@ export default function ChannelSuggestionsPage() {
                 />
 
                 <View style={styles.footer}>
-                    <TouchableOpacity 
+                    <TouchableOpacity activeOpacity={1} 
                         style={[styles.finishButton, { backgroundColor: colors.primary }]}
                         onPress={handleFinish}
                     >

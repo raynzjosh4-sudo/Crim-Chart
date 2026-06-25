@@ -1,0 +1,3 @@
+ALTER TABLE public.profiles
+ADD COLUMN IF NOT EXISTS country TEXT,
+ADD COLUMN IF NOT EXISTS crown_title TEXT;

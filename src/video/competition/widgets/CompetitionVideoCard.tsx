@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
 import { VideoPost } from '../../models/VideoPost';
-import { VideoFeedCard } from '../../widgets/VideoFeedCard';
+import { ShortVideoPlayerCard } from '@/components/video_player/ShortVideoPlayerCard';
 import { CompetitorOverlay } from './CompetitorOverlay';
 
 interface CompetitionVideoCardProps {
@@ -21,7 +21,7 @@ export const CompetitionVideoCard: React.FC<CompetitionVideoCardProps> = ({
 }) => {
   return (
     <View style={styles.container}>
-      <VideoFeedCard
+      <ShortVideoPlayerCard
         video={video}
         isPlaying={isPlaying}
         onLike={onLike}

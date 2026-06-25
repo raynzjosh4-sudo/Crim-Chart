@@ -55,7 +55,7 @@ export const CrownDetailPage: React.FC<CrownDetailPageProps> = ({
     <SafeAreaView style={styles.container}>
       {/* App Bar equivalent */}
       <View style={styles.appBar}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity activeOpacity={1} onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft color="#000" size={24} />
         </TouchableOpacity>
         <View style={styles.appBarTitleContainer}>

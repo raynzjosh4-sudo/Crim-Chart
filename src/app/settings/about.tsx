@@ -23,7 +23,7 @@ export default function AboutPage() {
           data={ABOUT_ITEMS}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <TouchableOpacity style={styles.item} onPress={() => { }}>
+            <TouchableOpacity activeOpacity={1} style={styles.item} onPress={() => { }}>
               <Text style={styles.itemTitle}>{item.title}</Text>
               <ChevronRight size={18} color="rgba(255, 255, 255, 0.3)" />
             </TouchableOpacity>

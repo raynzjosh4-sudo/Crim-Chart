@@ -38,7 +38,7 @@ export const RecentContributorsWidget: React.FC<RecentContributorsWidgetProps> =
     return (
       <View style={styles.container}>
         <View style={styles.avatarWrapper}>
-          <TouchableOpacity style={styles.addBtn} onPress={onAddPress}>
+          <TouchableOpacity activeOpacity={1} style={styles.addBtn} onPress={onAddPress}>
             <Plus size={24} color="#FFF" />
           </TouchableOpacity>
           <Text style={styles.name} numberOfLines={1}>Add</Text>
@@ -62,7 +62,7 @@ export const RecentContributorsWidget: React.FC<RecentContributorsWidgetProps> =
         onEndReachedThreshold={0.5}
         ListHeaderComponent={
           <View style={styles.avatarWrapper}>
-            <TouchableOpacity style={styles.addBtn} onPress={onAddPress}>
+            <TouchableOpacity activeOpacity={1} style={styles.addBtn} onPress={onAddPress}>
               <Plus size={24} color="#FFF" />
             </TouchableOpacity>
             <Text style={styles.name} numberOfLines={1}>Add</Text>
@@ -72,7 +72,7 @@ export const RecentContributorsWidget: React.FC<RecentContributorsWidgetProps> =
         renderItem={({ item: user }) => {
           const isSelected = selectedMemberId === user.id;
           return (
-            <TouchableOpacity
+            <TouchableOpacity activeOpacity={1}
               style={[styles.avatarWrapper]}
               onPress={() => onSelectMember?.(isSelected ? null : user.id)}
             >
@@ -96,7 +96,7 @@ export const RecentContributorsWidget: React.FC<RecentContributorsWidgetProps> =
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 16,
+    paddingVertical: 0,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.05)',
     marginBottom: 8,
@@ -124,6 +124,11 @@ const styles = StyleSheet.create({
     borderRadius: 60,
     borderWidth: 2,
     borderColor: 'transparent',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
   },
   selectedRing: {
     borderColor: '#4DA2FF',
@@ -149,5 +154,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.05)',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
   }
 });

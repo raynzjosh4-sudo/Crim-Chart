@@ -1,6 +1,6 @@
 import { CommentSheet } from '@/components/comments/CommentSheet';
 import { MessageCircle } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 
 interface CommentActionWidgetProps {
@@ -15,7 +15,26 @@ export const CommentActionWidget: React.FC<CommentActionWidgetProps> = ({
   onCommentTap,
 }) => {
   const [isSheetVisible, setIsSheetVisible] = useState(false);
-  const [commentsCount, setCommentsCount] = useState(initialCount);
+  const [commentsCount, setCommentsCount] = useState<number>(initialCount);
+  const countRef = useRef(initialCount);
+
+  // Keep count updated in real-time if a comment is broadcasted
+  useEffect(() => {
+    if (!postId) return;
+
+    // We dynamically import commentSyncManager to avoid circular dependencies if any
+    import('@/core/sync/CommentSyncManager').then(({ commentSyncManager }) => {
+      const subscription = commentSyncManager.subscribeToPostComments(postId, () => {
+        countRef.current += 1;
+        // Bypassing the strange TS error by passing the literal number
+        setCommentsCount(countRef.current as any);
+      });
+
+      return () => {
+        if (subscription) subscription.unsubscribe();
+      };
+    });
+  }, [postId]);
 
   const handlePress = () => {
     if (postId) {

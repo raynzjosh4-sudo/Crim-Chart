@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { ChannelAvatar } from '@/channel/pages/widgets2/memberimage/ChannelAvatar';
 import { UserAvatarImage } from '@/channel/pages/widgets2/memberimage/UserAvatarImage';
-import { colors } from '@/core/theme/colors';
+import { colors as defaultColors } from '@/core/theme/colors';
+import { useTheme } from '@react-navigation/native';
 
 interface ActiveChannelCircleProps {
   imageUrl?: string | null;
@@ -20,6 +21,7 @@ export const ActiveChannelCircle: React.FC<ActiveChannelCircleProps> = ({
   onTap,
 }) => {
   const size = 72; // Increased from 62 for impact
+  const { colors } = useTheme();
 
   return (
     <TouchableOpacity
@@ -50,6 +52,7 @@ export const ActiveChannelCircle: React.FC<ActiveChannelCircleProps> = ({
         style={[
           styles.nameText,
           {
+            color: colors.text,
             fontWeight: hasUpdate ? '900' : '700',
             opacity: 0.8,
           },

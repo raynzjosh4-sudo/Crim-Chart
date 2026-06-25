@@ -29,7 +29,7 @@ export default function AgeSelectionPage() {
   const renderItem = ({ item }: { item: string }) => {
     const isSelected = draftAge === item;
     return (
-      <TouchableOpacity 
+      <TouchableOpacity activeOpacity={1} 
         style={styles.item} 
         onPress={() => handleSelect(item)}
         activeOpacity={0.7}

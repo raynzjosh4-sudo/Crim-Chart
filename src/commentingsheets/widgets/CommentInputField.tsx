@@ -94,7 +94,7 @@ export default function CommentInputField({
               />
             )}
             {isTikTokStyle && (
-              <TouchableOpacity onPress={(e) => { e.stopPropagation(); onImageTap?.(); }} style={styles.cameraBtn}>
+              <TouchableOpacity activeOpacity={1} onPress={(e) => { e.stopPropagation(); onImageTap?.(); }} style={styles.cameraBtn}>
                 <Camera color="white" size={22} />
               </TouchableOpacity>
             )}
@@ -107,7 +107,7 @@ export default function CommentInputField({
 
         {/* Send / Mic Button */}
         {isTikTokStyle ? (
-          <TouchableOpacity
+          <TouchableOpacity activeOpacity={1}
             onPress={showSend ? () => onSend(controller.value) : undefined}
             style={styles.tiktokSend}
           >

@@ -4,7 +4,7 @@ import { ChevronDown, ChevronUp, Smartphone } from 'lucide-react-native';
 
 export const PhoneMusicWidget: React.FC<{ onPress?: () => void; isExpanded?: boolean }> = ({ onPress, isExpanded }) => {
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress}>
+    <TouchableOpacity activeOpacity={1} style={styles.container} onPress={onPress}>
       <View style={styles.leftContent}>
         <Smartphone size={18} color="#FFF" style={styles.icon} />
         <Text style={styles.title}>Load from device</Text>

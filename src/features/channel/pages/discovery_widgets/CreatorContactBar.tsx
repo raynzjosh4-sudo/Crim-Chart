@@ -40,12 +40,12 @@ export const CreatorContactBar: React.FC<CreatorContactBarProps> = ({
 
         {!isOwnChannel && (
           <View style={styles.actionsRow}>
-            <TouchableOpacity style={[styles.button, styles.primaryButton]} onPress={onMessageTap}>
+            <TouchableOpacity activeOpacity={1} style={[styles.button, styles.primaryButton]} onPress={onMessageTap}>
               <MessageSquare size={16} color={colors.primary} />
               <Text style={[styles.buttonText, styles.primaryButtonText]}>Message</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.button, styles.secondaryButton]} onPress={onFollowTap}>
+            <TouchableOpacity activeOpacity={1} style={[styles.button, styles.secondaryButton]} onPress={onFollowTap}>
               <UserPlus size={16} color="#FFF" />
               <Text style={[styles.buttonText, styles.secondaryButtonText]}>Follow</Text>
             </TouchableOpacity>

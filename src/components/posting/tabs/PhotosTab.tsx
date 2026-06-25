@@ -37,6 +37,7 @@ export const PhotosTab: React.FC<PhotosTabProps> = ({ selectedItems, onToggleSel
         type: MediaType.photo,
         thumbnailUrl: asset.uri,
         source: MediaSource.device,
+        aspectRatio: asset.width && asset.height ? asset.width / asset.height : 1,
       }));
 
       setPhotos(mediaItems);

@@ -24,7 +24,7 @@ export default function ChannelIntroPage() {
                 showBorder={false} 
                 backgroundColor={colors.background}
                 actions={[
-                    <TouchableOpacity key="skip" onPress={handleSkip}>
+                    <TouchableOpacity activeOpacity={1} key="skip" onPress={handleSkip}>
                         <Text style={[styles.skipText, { color: 'rgba(255, 255, 255, 0.5)' }]}>
                             {tr('skip')}
                         </Text>
@@ -47,7 +47,7 @@ export default function ChannelIntroPage() {
 
                     <View style={styles.spacer} />
 
-                    <TouchableOpacity 
+                    <TouchableOpacity activeOpacity={1} 
                         style={[styles.primaryButton, { backgroundColor: colors.primary }]}
                         onPress={() => router.push('/channelSuggestions' as any)}
                         activeOpacity={0.8}
@@ -58,7 +58,7 @@ export default function ChannelIntroPage() {
                         </Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity 
+                    <TouchableOpacity activeOpacity={1} 
                         style={styles.secondaryButton}
                         onPress={() => router.push('/channelSuggestions' as any)}
                     >

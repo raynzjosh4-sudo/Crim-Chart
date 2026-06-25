@@ -6,7 +6,7 @@ import { Video, ResizeMode } from 'expo-av';
 interface ProfileVideoItemProps {
   thumbnailUrl: string;
   durationLabel?: string;
-  size: number;
+  size: number | string;
   videoUrl?: string;
   onPress?: () => void;
 }
@@ -21,8 +21,8 @@ export const ProfileVideoItem: React.FC<ProfileVideoItemProps> = ({
   const [isHoverPlaying, setIsHoverPlaying] = useState(false);
 
   return (
-    <TouchableOpacity
-      style={[styles.container, { width: size, height: size * 1.5 }]}
+    <TouchableOpacity activeOpacity={1}
+      style={[styles.container, { width: size, aspectRatio: 2 / 3 }]}
       onPress={onPress}
       onPressIn={() => setIsHoverPlaying(true)}
       onPressOut={() => setIsHoverPlaying(false)}

@@ -5,12 +5,15 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ChevronLeft, Search } from 'lucide-react-native';
+import { useAppRouter } from '@/core/hooks/useAppRouter';
 import { supabase } from '@/core/supabase/supabaseConfig';
 import { ExploreItemModel, ExploreItemType } from '../models/ExploreItemModel';
 import { ExploreGridItem } from '../widgets/ExploreGridItem';
+import { ExploreGridSkeleton } from '@/components/skeletons/Skeletons';
 
 export const ExplorePage: React.FC = () => {
   const navigation = useNavigation();
+  const router = useAppRouter();
   const [query, setQuery] = useState('');
   const [items, setItems] = useState<ExploreItemModel[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -64,7 +67,7 @@ export const ExplorePage: React.FC = () => {
     <SafeAreaView style={styles.root}>
       {/* App Bar */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <TouchableOpacity activeOpacity={1} onPress={() => navigation.goBack()} style={styles.backBtn}>
           <ChevronLeft color="#FFF" size={28} />
         </TouchableOpacity>
         <View style={styles.searchBox}>
@@ -79,16 +82,14 @@ export const ExplorePage: React.FC = () => {
             returnKeyType="search"
           />
         </View>
-        <TouchableOpacity onPress={onSearch}>
+        <TouchableOpacity activeOpacity={1} onPress={onSearch}>
           <Text style={styles.searchBtnText}>Search</Text>
         </TouchableOpacity>
       </View>
 
       {/* Grid */}
       {isLoading ? (
-        <View style={styles.loader}>
-          <ActivityIndicator color="#FACD11" size="large" />
-        </View>
+        <ExploreGridSkeleton />
       ) : (
         <FlatList
           data={items}
@@ -101,6 +102,10 @@ export const ExplorePage: React.FC = () => {
             </View>
           )}
           contentContainerStyle={{ padding: 8 }}
+          removeClippedSubviews={true}
+          initialNumToRender={8}
+          maxToRenderPerBatch={6}
+          windowSize={5}
         />
       )}
     </SafeAreaView>

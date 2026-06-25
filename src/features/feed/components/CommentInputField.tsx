@@ -32,12 +32,12 @@ export const CommentInputField: React.FC<CommentInputFieldProps> = ({ onSend, on
             onFocus={onTap}
             multiline
           />
-          <TouchableOpacity onPress={onImageTap} style={styles.cameraButton}>
+          <TouchableOpacity activeOpacity={1} onPress={onImageTap} style={styles.cameraButton}>
             <Camera size={22} color="#FFF" />
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity 
+        <TouchableOpacity activeOpacity={1} 
           style={styles.sendButton} 
           onPress={handleSend}
           disabled={!text.trim()}

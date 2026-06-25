@@ -80,6 +80,7 @@ export const useVideoFeedStore = create<VideoFeedState>((set, get) => ({
         dislikes: 0,
         commentsCount: post.commentsCount,
         viewsCount: post.viewsCount,
+        createdAt: post.createdAt?.toISOString(),
       }));
 
       // Sync interaction state

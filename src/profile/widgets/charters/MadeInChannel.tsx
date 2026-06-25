@@ -32,7 +32,7 @@ export const MadeInChannel: React.FC<MadeInChannelProps> = ({ channel, isSubChan
   const initial = channel.title ? channel.title[0].toUpperCase() : '?';
 
   return (
-    <TouchableOpacity
+    <TouchableOpacity activeOpacity={1}
       style={styles.container}
       onPress={() => navigation.navigate('ChannelPage', { channelId: channel.id })}
     >

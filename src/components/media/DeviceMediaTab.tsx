@@ -161,7 +161,7 @@ export default function DeviceMediaTab({
           {albums.map(album => {
             const isSelected = album.id === selectedAlbumId;
             return (
-              <TouchableOpacity
+              <TouchableOpacity activeOpacity={1}
                 key={album.id}
                 style={[
                   styles.chip,
@@ -212,7 +212,7 @@ export default function DeviceMediaTab({
         renderItem={({ item, index }) => {
           const isSelected = selectedIndices.includes(1000 + index);
           return (
-            <TouchableOpacity
+            <TouchableOpacity activeOpacity={1}
               style={[styles.gridItem, isSelected && { borderColor: colors.primary, borderWidth: 3 }]}
               onPress={() => handleAssetTap(index, item)}
               activeOpacity={0.8}

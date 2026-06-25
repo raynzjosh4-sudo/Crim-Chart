@@ -87,7 +87,7 @@ export const CompactThumbnailLink: React.FC<{ thumbnailLink: ThumbnailLinkModel;
   const IconComponent = Link;
 
   return (
-    <TouchableOpacity onPress={onTap} disabled={!onTap} style={styles.row}>
+    <TouchableOpacity activeOpacity={1} onPress={onTap} disabled={!onTap} style={styles.row}>
       <IconComponent size={14} color={thumbnailLink.isOriginal ? colors.primary : colors.text} />
       <View style={{ width: 4 }} />
       <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>

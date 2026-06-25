@@ -37,13 +37,13 @@ export const MediaGalleryBottomSheet: React.FC<MediaGalleryBottomSheetProps> = (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.container}>
         <View style={styles.topBar}>
-          <TouchableOpacity onPress={onClose} style={styles.iconButton}>
+          <TouchableOpacity activeOpacity={1} onPress={onClose} style={styles.iconButton}>
             <X color="#FFF" size={28} />
           </TouchableOpacity>
           <Text style={styles.counterText}>
             {currentIndex + 1} / {items.length}
           </Text>
-          <TouchableOpacity style={styles.iconButton}>
+          <TouchableOpacity activeOpacity={1} style={styles.iconButton}>
             <Download color="#FFF" size={28} />
           </TouchableOpacity>
         </View>

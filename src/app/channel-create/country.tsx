@@ -25,13 +25,13 @@ export default function CountrySelectionPage() {
                 data={COUNTRIES}
                 keyExtractor={(i) => i}
                 renderItem={({ item }) => (
-                    <TouchableOpacity style={styles.row} onPress={() => toggle(item)}>
+                    <TouchableOpacity activeOpacity={1} style={styles.row} onPress={() => toggle(item)}>
                         <Text style={styles.text}>{item}</Text>
                         <Text style={styles.check}>{selected.includes(item) ? '✓' : ''}</Text>
                     </TouchableOpacity>
                 )}
             />
-            <TouchableOpacity style={styles.done} onPress={done}>
+            <TouchableOpacity activeOpacity={1} style={styles.done} onPress={done}>
                 <Text style={styles.doneText}>Done</Text>
             </TouchableOpacity>
         </View>

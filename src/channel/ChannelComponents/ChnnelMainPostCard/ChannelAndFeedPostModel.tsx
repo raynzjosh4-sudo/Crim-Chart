@@ -2,6 +2,7 @@ import { ChannelPostCard } from '@/channel/ChannelComponents/ChnnelMainPostCard/
 import { RegularPostCard } from '@/channel/ChannelComponents/ChnnelMainPostCard/RegularPostCard'; // TS Server: please refresh!
 import { InvitePostCard } from '@/components/inviteCard/InvitePostCard';
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
+import { GenericBoxFeedCard } from '@/features/boxes/components/feed/GenericBoxFeedCard';
 
 export interface ChannelAndFeedPostModelProps {
   content: string;
@@ -43,9 +44,20 @@ export interface ChannelAndFeedPostModelProps {
   channelDescription?: string | null;
   metadata?: any;
   isActive?: boolean;
+  canComment?: boolean;
 }
 
 export const ChannelAndFeedPostModel: React.FC<ChannelAndFeedPostModelProps> = (props) => {
+  // 0. Check for Box Shadow Post
+  if (props.metadata?.is_box_shadow_post && props.metadata?.box_id) {
+    return (
+      <GenericBoxFeedCard 
+        boxId={props.metadata.box_id} 
+        boxTypeHint={props.metadata.box_type} 
+      />
+    );
+  }
+
   // 1. Check for Invite type
   if (props.type === 'invite') {
     return (
@@ -68,6 +80,7 @@ export const ChannelAndFeedPostModel: React.FC<ChannelAndFeedPostModelProps> = (
     return (
       <ChannelPostCard
         {...props}
+        canComment={props.canComment ?? true}
       />
     );
   }
@@ -79,6 +92,7 @@ export const ChannelAndFeedPostModel: React.FC<ChannelAndFeedPostModelProps> = (
       author={props.authorData}
       metadata={props.metadata}
       isActive={props.isActive}
+      canComment={props.canComment ?? true}
     />
   );
 };

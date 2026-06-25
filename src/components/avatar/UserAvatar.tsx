@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, TouchableWithoutFeedback, Alert } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
-import { useProfileCacheStore } from '@/core/store/useProfileCacheStore';
-import { NativeDB } from '@/core/db/NativeDB';
-import { AvatarActionBottomSheet } from './AvatarActionBottomSheet';
 import { UserStatusViewer } from '@/components/status/UserStatusViewer';
+import { NativeDB } from '@/core/db/NativeDB';
+import { useProfileCacheStore } from '@/core/store/useProfileCacheStore';
+import { useRouter } from 'expo-router';
+import React, { useState, useRef } from 'react';
+import { StyleSheet, View, Platform } from 'react-native';
 import AppAvatar from './AppAvatar';
+import { AvatarActionBottomSheet } from './AvatarActionBottomSheet';
 
 interface UserAvatarProps {
   userId: string;
@@ -31,6 +31,7 @@ export default function UserAvatar({
   forceHasStatus,
   forceStatusCount,
 }: UserAvatarProps) {
+  const router = useRouter();
   const profile = useProfileCacheStore(state => state.profiles[userId]);
   const requestSync = useProfileCacheStore(state => state.requestSync);
   const updateProfile = useProfileCacheStore(state => state.updateProfile);
@@ -38,6 +39,8 @@ export default function UserAvatar({
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [sheetVisible, setSheetVisible] = useState(false);
   const [statusViewerVisible, setStatusViewerVisible] = useState(false);
+  const avatarRef = useRef<View>(null);
+  const [anchorPos, setAnchorPos] = useState<{ x: number, y: number, width: number, height: number } | null>(null);
 
   // 1. Initial Local Load (Fast)
   React.useEffect(() => {
@@ -68,22 +71,29 @@ export default function UserAvatar({
     requestSync(userId);
   }, [userId, requestSync]);
 
-  const isOnline = forceOnline !== undefined ? forceOnline : profile?.isOnline;
+  const isOnline = profile?.isOnline !== undefined ? profile.isOnline : forceOnline;
   
   // A user is deemed to have statuses if statusCount > 0
-  const hasStatus = forceHasStatus !== undefined ? forceHasStatus : (profile?.statusCount ?? 0) > 0;
-  const statusSegmentCount = forceStatusCount !== undefined ? forceStatusCount : (profile?.statusCount || 0);
+  const hasStatus = profile?.statusCount !== undefined ? profile.statusCount > 0 : forceHasStatus;
+  const statusSegmentCount = profile?.statusCount !== undefined ? profile.statusCount : forceStatusCount;
 
   const handleTap = () => {
     if (hasStatus) {
-      setSheetVisible(true);
+      if (Platform.OS === 'web' && avatarRef.current) {
+        avatarRef.current.measure((x, y, w, h, pageX, pageY) => {
+          setAnchorPos({ x: pageX, y: pageY, width: w, height: h });
+          setSheetVisible(true);
+        });
+      } else {
+        setSheetVisible(true);
+      }
     } else if (onTap) {
       onTap();
     }
   };
 
   return (
-    <View>
+    <View ref={avatarRef}>
       <AppAvatar
         imageUrl={fallbackUrl}
         size={size}
@@ -99,11 +109,12 @@ export default function UserAvatar({
         onClose={() => setSheetVisible(false)}
         avatarUrl={fallbackUrl}
         name={name || '-'}
+        anchorPosition={anchorPos}
         onViewStatuses={() => {
           setStatusViewerVisible(true);
         }}
-        onViewProfileImage={() => {
-          Alert.alert("Profile Image", "Profile image viewer coming soon!");
+        onViewProfilePage={() => {
+          router.push(`/profile/${userId}`);
         }}
       />
 

@@ -1,12 +1,28 @@
 import React from 'react';
-import { View, StyleSheet, Image, FlatList } from 'react-native';
+import { View, StyleSheet, Image, FlatList, Dimensions } from 'react-native';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface ChannelImagePostWidgetProps {
   images: string[];
+  aspectRatio?: number; // width / height of the first image
 }
 
-export const ChannelImagePostWidget: React.FC<ChannelImagePostWidgetProps> = ({ images }) => {
+export const ChannelImagePostWidget: React.FC<ChannelImagePostWidgetProps> = ({ images, aspectRatio }) => {
   if (!images || images.length === 0) return null;
+
+  if (images.length === 1) {
+    const imgHeight = aspectRatio ? SCREEN_WIDTH / aspectRatio : 400;
+    return (
+      <View style={styles.container}>
+        <Image
+          source={{ uri: images[0] }}
+          style={[styles.singleImageFull, { height: imgHeight }]}
+          resizeMode="contain"
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -19,7 +35,7 @@ export const ChannelImagePostWidget: React.FC<ChannelImagePostWidgetProps> = ({ 
         renderItem={({ item }) => (
           <Image
             source={{ uri: item }}
-            style={[styles.image, images.length === 1 ? styles.singleImage : styles.multiImage]}
+            style={[styles.image, styles.multiImage]}
             resizeMode="cover"
           />
         )}
@@ -38,8 +54,10 @@ const styles = StyleSheet.create({
     marginRight: 8,
     backgroundColor: '#1A1A1A',
   },
-  singleImage: {
-    width: 340, // or '100%' if preferred, but dart uses fixed aspect for single vs multi
+  singleImageFull: {
+    width: '100%',
+    height: 350,
+    backgroundColor: '#1A1A1A',
   },
   multiImage: {
     width: 220,

@@ -1,141 +1,168 @@
+import { BoxFeedCardWrapper } from '@/components/wrappers/BoxFeedCardWrapper';
 import { useRouter } from 'expo-router';
 import { MoreHorizontal } from 'lucide-react-native';
+import UserAvatar from '@/components/avatar/UserAvatar';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { VotingItem } from '../../data/dummyVotingBoxData';
+import { useState } from 'react';
 import { OpenBoxButton } from '../shared/OpenBoxButton';
 import { VotingBattleCompetitor } from './VotingBattleCompetitor';
+import { TagOverlay } from '@/channel/pages/tag/TagOverlay';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
+import { ThemeTokens } from '@/core/theme/themes';
 
-// Removed Props interface as we will use dummy data directly
-
-export function VotingBoxFeedCard() {
+interface Props { boxId: string; prefetchedData?: any; }
+export const VotingBoxFeedCard = ({ boxId, prefetchedData }: Props) => {
   const router = useRouter();
-  const post = require('../../data/dummyVotingBoxData').dummyVotingBoxPost;
-  const { id: boxId, title, description } = post.box;
-  const topItems = post.items;
-  const creator = post.creator;
-
-  // Ensure we have exactly 3 for the podium layout
-  const first = topItems[0];
-  const second = topItems[1];
-  const third = topItems[2];
+  const [tagOverlayVisible, setTagOverlayVisible] = useState(false);
+  const styles = useStyles(themeStyles);
+  const theme = useCurrentTheme();
 
   const handleOpenBox = () => {
     router.push(`/voting-box/${boxId}` as any);
   };
 
   return (
-    <View style={styles.cardContainer}>
-      {/* Post Header */}
-      <View style={styles.postHeader}>
-        <View style={styles.headerLeft}>
-          <Image source={{ uri: creator.avatarUrl }} style={styles.creatorAvatar} />
-          <View>
-            <Text style={styles.creatorName}>{creator.name}</Text>
-            <Text style={styles.actionText}>Started a Voting Box</Text>
+    <BoxFeedCardWrapper boxId={boxId} prefetchedData={prefetchedData}>
+      {(rawData, boxModel, ownerModel, interactionState) => {
+        const rawName = ownerModel?.displayName || 'Unknown';
+        const topItems = rawData.trendingTracks || [];
+        const first = topItems[0];
+        const second = topItems[1];
+
+        return (
+          <View style={styles.cardContainer}>
+            {/* Post Header */}
+            <View style={styles.postHeader}>
+              <View style={styles.headerLeft}>
+                <View style={{ marginRight: 10 }}>
+                  <UserAvatar 
+                    userId={ownerModel?.id || ''} 
+                    fallbackUrl={ownerModel?.profileImageUrl || undefined} 
+                    name={rawName} 
+                    size={36} 
+                  />
+                </View>
+                <View>
+                  <Text style={styles.creatorName}>{rawName}</Text>
+                  <Text style={styles.actionText}>Started a Voting Box</Text>
+                </View>
+              </View>
+              <TouchableOpacity activeOpacity={1}>
+                <MoreHorizontal size={20 * (StyleSheet.hairlineWidth > 0 ? 1 : 1)} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Box Info */}
+            <View style={styles.boxInfo}>
+              <Text style={styles.boxTitle}>{boxModel.title}</Text>
+              <Text style={styles.boxDescription} numberOfLines={2}>{boxModel.raw?.description || ''}</Text>
+            </View>
+
+            {/* The Battle Preview: #1 vs #2 */}
+            <View style={styles.battleContainer}>
+              {/* The Reigning King (#1) */}
+              {first && <VotingBattleCompetitor item={first} isKing={true} />}
+
+              {first && second && (
+                <View style={styles.vsBadge}>
+                  <Text style={styles.vsText}>VS</Text>
+                </View>
+              )}
+
+              {/* The Challenger (#2) */}
+              {second && <VotingBattleCompetitor item={second} isKing={false} />}
+            </View>
+
+            {/* Footer */}
+            <View style={styles.footerRow}>
+              <TouchableOpacity activeOpacity={1} style={styles.joinBtn}>
+                <Text style={styles.joinBtnText}>Add</Text>
+              </TouchableOpacity>
+              <OpenBoxButton onPress={handleOpenBox} />
+            </View>
+
+            <TagOverlay
+              visible={tagOverlayVisible}
+              onClose={() => setTagOverlayVisible(false)}
+              postId={boxModel.postId ?? ''}
+              sourceChannelId=""
+              linkChain={[]}
+            />
           </View>
-        </View>
-        <TouchableOpacity>
-          <MoreHorizontal size={20} color="rgba(255,255,255,0.6)" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Box Info */}
-      <View style={styles.boxInfo}>
-        <Text style={styles.boxTitle}>{title}</Text>
-        <Text style={styles.boxDescription} numberOfLines={2}>{description}</Text>
-      </View>
-
-      {/* The Battle Preview: #1 vs #2 */}
-      <View style={styles.battleContainer}>
-        {/* The Reigning King (#1) */}
-        {first && <VotingBattleCompetitor item={first} isKing={true} />}
-
-        <View style={styles.vsBadge}>
-          <Text style={styles.vsText}>VS</Text>
-        </View>
-
-        {/* The Challenger (#2) */}
-        {second && <VotingBattleCompetitor item={second} isKing={false} />}
-      </View>
-
-      {/* Footer */}
-      <View style={styles.footerRow}>
-        <TouchableOpacity style={styles.joinBtn}>
-          <Text style={styles.joinBtnText}>Add</Text>
-        </TouchableOpacity>
-        <OpenBoxButton onPress={handleOpenBox} />
-      </View>
-    </View>
+        );
+      }}
+    </BoxFeedCardWrapper>
   );
 }
 
-const styles = StyleSheet.create({
+const themeStyles = (colors: ThemeTokens, scale: number): any => ({
   cardContainer: {
-    backgroundColor: '#121212',
-    marginBottom: 8,
-    paddingTop: 16,
-    paddingBottom: 16,
+    backgroundColor: colors.background,
+    marginBottom: 8 * scale,
+    paddingTop: 16 * scale,
+    paddingBottom: 16 * scale,
   },
   postHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 12,
+    paddingHorizontal: 16 * scale,
+    marginBottom: 12 * scale,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   creatorAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    marginRight: 10,
+    width: 36 * scale,
+    height: 36 * scale,
+    borderRadius: 18 * scale,
+    marginRight: 10 * scale,
   },
   creatorName: {
-    color: '#FFF',
-    fontSize: 15,
+    color: colors.text,
+    fontSize: 15 * scale,
     fontWeight: '700',
   },
   actionText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 13,
+    color: colors.textSecondary,
+    fontSize: 13 * scale,
   },
   boxInfo: {
-    paddingHorizontal: 16,
-    marginBottom: 20,
+    paddingHorizontal: 16 * scale,
+    marginBottom: 20 * scale,
   },
   boxTitle: {
-    color: '#FFF',
-    fontSize: 22,
+    color: colors.text,
+    fontSize: 22 * scale,
     fontWeight: '900',
-    marginBottom: 4,
+    marginBottom: 4 * scale,
   },
   boxDescription: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
-    lineHeight: 20,
+    color: colors.textSecondary,
+    fontSize: 14 * scale,
+    lineHeight: 20 * scale,
   },
   battleContainer: {
     flexDirection: 'row',
     justifyContent: 'space-evenly',
     alignItems: 'center', // aligns VS badge in middle, competitors will center their images
-    marginBottom: 20,
-    paddingHorizontal: 16,
+    marginBottom: 20 * scale,
+    paddingHorizontal: 16 * scale,
   },
   vsBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 32 * scale,
+    height: 32 * scale,
+    borderRadius: 16 * scale,
     backgroundColor: 'rgba(255,255,255,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 8,
+    marginHorizontal: 8 * scale,
   },
   vsText: {
-    color: '#FFF',
-    fontSize: 12,
+    color: colors.text,
+    fontSize: 12 * scale,
     fontWeight: '900',
     fontStyle: 'italic',
   },
@@ -143,18 +170,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginTop: 10,
+    paddingHorizontal: 16 * scale,
+    marginTop: 10 * scale,
   },
   joinBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 16 * scale,
+    paddingVertical: 8 * scale,
+    borderRadius: 20 * scale,
   },
   joinBtnText: {
-    color: '#FFF',
-    fontSize: 14,
+    color: colors.text,
+    fontSize: 14 * scale,
     fontWeight: '600',
   },
 });

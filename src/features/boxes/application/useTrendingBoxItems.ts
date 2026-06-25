@@ -4,10 +4,14 @@ import { NativeDB } from '@/core/db/NativeDB';
 
 export interface TrendingTrack {
   id: string;
+  postId?: string;
   title: string;
   artist: string;
   thumbnailUrl: string;
   audioUrl: string;
+  videoUrl: string;
+  isAudio: boolean;
+  isShort: boolean;
   likes: number;
 }
 
@@ -76,8 +80,8 @@ export const useTrendingBoxItems = (boxId?: string) => {
 
         // Fetch details from both posts and channel_posts
         const [postsResponse, channelPostsResponse] = await Promise.all([
-          supabase.from('posts').select('id, caption, metadata, audio_url, thumbnail_urls').in('id', postIds),
-          supabase.from('channel_posts').select('id, caption, author_username, audio_url, video_url, thumbnail_urls').in('id', postIds)
+          supabase.from('posts').select('id, caption, metadata, audio_url, video_url, thumbnail_urls, type, is_video, is_audio').in('id', postIds),
+          supabase.from('channel_posts').select('id, caption, author_username, audio_url, video_url, thumbnail_urls, post_type, is_video, is_audio').in('id', postIds)
         ]);
 
         const postsMap = new Map();
@@ -95,6 +99,9 @@ export const useTrendingBoxItems = (boxId?: string) => {
           let artist = 'Unknown';
           let thumbnailUrl = '';
           let audioUrl = '';
+          let videoUrl = '';
+          let isAudio = false;
+          let isShort = false;
 
           if (postData) {
             title = postData.caption || (postData.metadata?.title) || title;
@@ -109,14 +116,21 @@ export const useTrendingBoxItems = (boxId?: string) => {
             }
 
             audioUrl = postData.audio_url || postData.video_url || '';
+            videoUrl = postData.video_url || '';
+            isAudio = postData.is_audio || false;
+            isShort = postData.type === 'short';
           }
 
           return {
             id: item.id,
+            postId: item.post_id,
             title,
             artist,
             thumbnailUrl,
             audioUrl,
+            videoUrl,
+            isAudio,
+            isShort,
             likes: item.likes_count || 0,
           };
         });

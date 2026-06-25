@@ -1,9 +1,11 @@
 import { BadgeIcon } from '@/mainFeed/features/bottomappbar/iconwithbarge/BadgeIcon'; // Assuming this exists
-import { useTheme } from '@react-navigation/native';
-import { Hash, MessageCircle, PlaySquare, PlusCircle, Podcast } from 'lucide-react-native';
+import { Compass, MessageSquare, Clapperboard, PlusCircle, Home } from 'lucide-react-native';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppBottomNavBarProps } from './AppBottomNavBarProps';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
+import { ThemeTokens } from '@/core/theme/themes';
 
 export const AppBottomNavBar = ({
 
@@ -12,55 +14,57 @@ export const AppBottomNavBar = ({
   onItemTapped,
   homeBadgeCount = 0,
 }: AppBottomNavBarProps) => {
-  const { colors } = useTheme();
+  const theme = useCurrentTheme();
+  const styles = useStyles(themeStyles);
+  const colors = theme.colors;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background, borderTopColor: 'rgba(255, 255, 255, 0.08)' }]}>
+    <View style={[styles.container, { backgroundColor: colors.background, borderTopColor: colors.surfaceVariant }]}>
       <SafeAreaView edges={['bottom', 'left', 'right']}>
         <View style={styles.navBar}>
           <NavItem
             index={0}
             selectedIndex={selectedIndex}
             onTap={onItemTapped}
-            icon={<BadgeIcon IconComponent={Podcast} count={Boolean(homeBadgeCount) ? 1 : 0} />}
-            selectedIcon={<BadgeIcon IconComponent={Podcast} count={Boolean(homeBadgeCount) ? 1 : 0} />}
-            label="Feed"
-            color={colors.primary}
-            inactiveColor="rgba(255, 255, 255, 0.45)"
+            icon={<BadgeIcon IconComponent={Home} count={Boolean(homeBadgeCount) ? 1 : 0} />}
+            selectedIcon={<BadgeIcon IconComponent={Home} count={Boolean(homeBadgeCount) ? 1 : 0} />}
+            label="Crim"
+            color={colors.text}
+            inactiveColor={colors.textSecondary}
           />
           <NavItem
             index={1}
             selectedIndex={selectedIndex}
             onTap={onItemTapped}
-            icon={<PlaySquare size={32} />}
-            selectedIcon={<PlaySquare size={32} />}
+            icon={<Clapperboard size={32} />}
+            selectedIcon={<Clapperboard size={32} />}
             label="Vids"
-            color={colors.primary}
-            inactiveColor="rgba(255, 255, 255, 0.45)"
+            color={colors.text}
+            inactiveColor={colors.textSecondary}
           />
 
-          <AddButton onTap={() => onItemTapped(2)} color={colors.primary} />
+          <AddButton onTap={() => onItemTapped(2)} color={colors.text} styles={styles} />
 
           <NavItem
             index={3}
             selectedIndex={selectedIndex}
             onTap={onItemTapped}
-            icon={<BadgeIcon IconComponent={Hash} showDot={true} />}
-            selectedIcon={<BadgeIcon IconComponent={Hash} showDot={true} />}
+            icon={<BadgeIcon IconComponent={Compass} showDot={true} />}
+            selectedIcon={<BadgeIcon IconComponent={Compass} showDot={true} />}
             label="Channels"
-            color={colors.primary}
-            inactiveColor="rgba(255, 255, 255, 0.45)"
+            color={colors.text}
+            inactiveColor={colors.textSecondary}
           />
 
           <NavItem
             index={5}
             selectedIndex={selectedIndex}
             onTap={onItemTapped}
-            icon={<MessageCircle size={32} />}
-            selectedIcon={<MessageCircle size={32} />}
-            label="Msgs"
-            color={colors.primary}
-            inactiveColor="rgba(255, 255, 255, 0.45)"
+            icon={<MessageSquare size={32} />}
+            selectedIcon={<MessageSquare size={32} />}
+            label="Charts"
+            color={colors.text}
+            inactiveColor={colors.textSecondary}
           />
         </View>
       </SafeAreaView>
@@ -80,6 +84,8 @@ const NavItem = ({
 }: any) => {
   const isSelected = index === selectedIndex;
   const itemColor = isSelected ? color : inactiveColor;
+  const theme = useCurrentTheme();
+  const styles = useStyles(themeStyles);
 
   return (
     <TouchableOpacity
@@ -99,7 +105,7 @@ const NavItem = ({
   );
 };
 
-const AddButton = ({ onTap, color }: { onTap: () => void; color: string }) => {
+const AddButton = ({ onTap, color, styles }: { onTap: () => void; color: string; styles: any }) => {
   return (
     <TouchableOpacity onPress={onTap} style={styles.addButton} activeOpacity={0.8}>
       <PlusCircle color={color} size={36} />
@@ -107,32 +113,31 @@ const AddButton = ({ onTap, color }: { onTap: () => void; color: string }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = (colors: ThemeTokens, scale: number): any => ({
   container: {
-    borderTopWidth: 0.5,
+    borderTopWidth: 0.5 * scale,
   },
   navBar: {
-    height: 62,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
+    height: 62 * scale,
+    flexDirection: 'row' as const,
+    justifyContent: 'space-around' as const,
+    alignItems: 'center' as const,
   },
   navItem: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 4,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    paddingVertical: 4 * scale,
   },
   label: {
-    fontSize: 10,
-    fontWeight: '700',
-    marginTop: 4,
+    fontSize: 10 * scale,
+    fontWeight: '700' as const,
+    marginTop: 4 * scale,
   },
   addButton: {
-    width: 56,
-    height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 56 * scale,
+    height: 56 * scale,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
 });
-

@@ -28,7 +28,7 @@ export const VideoPlayerScreen: React.FC<VideoPlayerScreenProps> = ({ url, onClo
         allowsFullscreen
         allowsPictureInPicture
       />
-      <TouchableOpacity 
+      <TouchableOpacity activeOpacity={1} 
         style={[styles.closeButton, { top: Math.max(insets.top, 20) }]} 
         onPress={onClose}
       >

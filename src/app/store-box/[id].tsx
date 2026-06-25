@@ -1,89 +1,128 @@
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
+import { StorePostingPageShimmer } from '@/components/shimmers/StorePostingShimmer';
+import { useBoxDetail } from '@/features/boxes/application/useBoxDetail';
+import { useBoxItems } from '@/features/boxes/application/useBoxItems';
+import { useBoxMembers } from '@/features/boxes/application/useBoxMembers';
 import { RecentContributorsWidget } from '@/features/boxes/components/contributors/RecentContributorsWidget';
 import { StoreItemTile } from '@/features/boxes/components/details/StoreItemTile';
-import { dummyStoreBoxPost } from '@/features/boxes/data/dummyStoreBoxData';
-import { useLocalSearchParams } from 'expo-router';
+import { StoreItem } from '@/features/boxes/data/dummyStoreBoxData';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Tag } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { FlatList, SafeAreaView, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
-import { useBoxDetail } from '@/features/boxes/application/useBoxDetail';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuthStore } from '@/features/auth/application/useAuthStore';
 
 export default function StoreBoxDetailPage() {
   const { id } = useLocalSearchParams();
-  
-  const { box: fetchedBox, isLoading } = useBoxDetail(id as string);
+  const router = useRouter();
+  const user = useAuthStore(state => state.user);
 
-  const post = React.useMemo(() => {
-    if (!fetchedBox) return dummyStoreBoxPost;
-    return {
-      ...dummyStoreBoxPost,
-      box: {
-        ...dummyStoreBoxPost.box,
-        title: fetchedBox.title,
-        description: (fetchedBox as any).raw?.description || dummyStoreBoxPost.box.description,
-        coverImageUrl: fetchedBox.coverImageUrl || dummyStoreBoxPost.box.coverImageUrl,
-      }
-    };
-  }, [fetchedBox]);
+  const { box } = useBoxDetail(id as string);
+  const { items, isLoading, isFetchingMore, loadMore } = useBoxItems(id as string);
 
   const [selectedSellerId, setSelectedSellerId] = useState<string | null>(null);
 
-  // Extract unique sellers from the items
-  const uniqueSellers = React.useMemo(() => {
-    const map = new Map();
-    post.items.forEach(item => {
-      if (item.seller && !map.has(item.seller.id)) {
-        map.set(item.seller.id, item.seller);
-      }
-    });
-    return Array.from(map.values());
-  }, [post.items]);
+  useEffect(() => {
+    console.log('[StoreBoxDetailPage] items count:', items.length);
+    console.log('[StoreBoxDetailPage] raw items:', JSON.stringify(items, null, 2));
+  }, [items]);
+
+  // Map BoxItemModel → StoreItem for StoreItemTile
+  const storeItems: StoreItem[] = React.useMemo(() =>
+    items.map(item => ({
+      id: item.post_id,
+      title: item.post.caption || 'Store Item',
+      description: '',
+      price: '',
+      mediaUrl: item.post.mediaUrl || item.post.thumbnailUrl || '',
+      seller: {
+        id: item.addedBy?.id || item.post.authorId || '',
+        name: item.addedBy?.name || item.post.authorName || '',
+        avatarUrl: item.addedBy?.avatarUrl || item.post.authorAvatar || '',
+      },
+      likes: item.likes,
+      commentsCount: item.post.commentsCount ?? 0,
+      viewsCount: item.post.viewsCount ?? 0,
+    })),
+    [items]
+  );
+
+  // Fetch actual members for this box
+  const { members, isLoading: isLoadingMembers, isPaginating: isPaginatingMembers, loadMore: loadMoreMembers } = useBoxMembers(id as string);
 
   const displayedItems = React.useMemo(() => {
-    if (!selectedSellerId) return post.items;
-    return post.items.filter(item => item.seller?.id === selectedSellerId);
-  }, [post.items, selectedSellerId]);
+    if (!selectedSellerId) return storeItems;
+    return storeItems.filter(item => item.seller?.id === selectedSellerId);
+  }, [storeItems, selectedSellerId]);
 
   const renderHeader = () => (
     <View style={styles.headerContainer}>
-      <Text style={styles.boxTitle}>{post.box.title}</Text>
-      <Text style={styles.boxDescription}>{post.box.description}</Text>
+      <Text style={styles.boxTitle}>{box?.title || ''}</Text>
+      {(box as any)?.raw?.description ? (
+        <Text style={styles.boxDescription}>{(box as any).raw.description}</Text>
+      ) : null}
 
       <View style={styles.statsRow}>
         <Tag size={16} color="#4ADE80" />
-        <Text style={styles.statsText}>{post.stats.activeListings} Active Listings</Text>
+        <Text style={styles.statsText}>{storeItems.length} Active Listings</Text>
       </View>
 
       <View style={styles.widgetWrapper}>
         <Text style={styles.widgetTitle}>Browse by Seller</Text>
         <RecentContributorsWidget
-          contributors={uniqueSellers}
+          contributors={members}
+          isLoading={isLoadingMembers}
+          isPaginating={isPaginatingMembers}
+          onLoadMore={loadMoreMembers}
           selectedMemberId={selectedSellerId}
           onSelectMember={setSelectedSellerId}
+          boxId={id as string}
+          onAddPress={() => router.push(`/store-box/post/${id}`)}
         />
       </View>
     </View>
   );
+
+  if (isLoading && items.length === 0) {
+    return <StorePostingPageShimmer />;
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <ChartAppBar title="Store Box" />
 
-        {isLoading ? (
-          <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-            <ActivityIndicator color="#4ADE80" size="large" />
-          </View>
-        ) : (
-          <FlatList
-            data={displayedItems}
+        <FlatList
+          data={displayedItems}
           keyExtractor={(item) => item.id}
           ListHeaderComponent={renderHeader}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => <StoreItemTile item={item} />}
+          renderItem={({ item }) => (
+            <StoreItemTile 
+              item={item} 
+              boxItemId={(item as any).boxItemId || item.id}
+              boxId={id as string}
+              initialDislikes={(item as any).dislikes || 0}
+              currentUserId={user?.id}
+            />
+          )}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            isFetchingMore ? (
+              <View style={styles.footer}>
+                <ActivityIndicator color="#4ADE80" size="small" />
+              </View>
+            ) : null
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No items in this box yet</Text>
+            </View>
+          }
         />
-        )}
       </View>
     </SafeAreaView>
   );
@@ -141,5 +180,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     marginBottom: 8,
+  },
+  footer: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  emptyContainer: {
+    paddingTop: 60,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 15,
   },
 });

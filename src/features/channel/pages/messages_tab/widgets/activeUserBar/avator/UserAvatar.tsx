@@ -1,5 +1,5 @@
 import { CrimChatUser } from '@/app/user/_usertypemodel';
-import { Image } from 'expo-image';
+import AppAvatar from '@/components/avatar/AppAvatar';
 import { MessageSquare } from 'lucide-react-native';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, Text, TouchableOpacity, View } from 'react-native';
@@ -19,11 +19,16 @@ export const UserAvatar: React.FC<{ user: CrimChatUser; onPress?: (u: CrimChatUs
     }, [user.isTyping]);
 
     return (
-        <TouchableOpacity style={styles.userItem} onPress={() => onPress?.(user)} activeOpacity={0.8}>
+        <TouchableOpacity activeOpacity={0.8} style={styles.userItem} onPress={() => onPress?.(user)}>
             <View style={styles.avatarContainer}>
-                <View style={styles.avatarBorder}>
-                    <Image source={{ uri: user.profileImageUrl }} style={styles.avatar} />
-                </View>
+                <AppAvatar
+                    imageUrl={user.profileImageUrl}
+                    size={46} // Matches previous size roughly, or can be dynamic
+                    hasStatus={user.hasStatus}
+                    statusSegmentCount={user.statusCount || 1}
+                    isOnline={false} // We handle the online dot locally below to coordinate with typing
+                    onTap={() => onPress?.(user)}
+                />
 
                 {/* Animated Typing Badge on the Top Right */}
                 <Animated.View style={[styles.typingBadge, { transform: [{ scale: scaleAnim }] }]}>

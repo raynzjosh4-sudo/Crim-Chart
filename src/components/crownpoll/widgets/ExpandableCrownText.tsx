@@ -27,7 +27,7 @@ export const ExpandableCrownText: React.FC<ExpandableCrownTextProps> = ({ text, 
       {(isOverflowing || isExpanded) && (
         <View style={styles.actionRow}>
           {!isExpanded && isOverflowing && (
-            <TouchableOpacity onPress={() => setIsExpanded(true)}>
+            <TouchableOpacity activeOpacity={1} onPress={() => setIsExpanded(true)}>
               <Text style={[styles.actionText, { color: style?.color ? `${String(style.color)}80` : '#888' }]}>
                 more
               </Text>
@@ -35,7 +35,7 @@ export const ExpandableCrownText: React.FC<ExpandableCrownTextProps> = ({ text, 
           )}
           
           {isExpanded && (
-            <TouchableOpacity onPress={() => setIsExpanded(false)}>
+            <TouchableOpacity activeOpacity={1} onPress={() => setIsExpanded(false)}>
               <Text style={[styles.actionText, { color: style?.color ? `${String(style.color)}80` : '#888' }]}>
                 less
               </Text>

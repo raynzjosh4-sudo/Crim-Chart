@@ -8,7 +8,7 @@ import UserAvatar from '@/components/avatar/UserAvatar';
  * A completely static, hook-free tile for displaying a video item in lists
  * where no video playback is needed (e.g. the "Up Next" feed inside the player modal).
  *
- * Unlike MovieListTile, this component NEVER calls useVideoPlayer — ensuring it
+ * Unlike GeneralAndShortVideoPlayer, this component NEVER calls useVideoPlayer — ensuring it
  * never touches Android's audio session or codec pool, so the main player above
  * keeps playing uninterrupted even as new items load.
  */

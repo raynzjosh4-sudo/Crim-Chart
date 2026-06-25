@@ -9,11 +9,12 @@ import {
   ActivityIndicator,
   Animated,
 } from 'react-native';
-import { router } from 'expo-router';
 import { TagCarousel } from './widgets/TagCarousel';
 import { TagShimmer } from './widgets/TagShimmer';
+import { useTheme } from '@react-navigation/native';
 import { TagNoInternet } from './widgets/TagNoInternet';
-import { createTag, fetchTaggableChannels } from './tagService';
+import { createTag } from './tagService';
+import { fetchUserTagChannels } from '@/features/channel/application/tagChannelService';
 
 interface Channel {
   id: string;
@@ -47,6 +48,7 @@ export const TagOverlay: React.FC<TagOverlayProps> = ({
   const pageRef = useRef(0);
   const hasMoreRef = useRef(true);
   const channelsRef = useRef<Channel[]>([]);
+  const { colors, dark } = useTheme();
 
   const scaleAnim = useRef(new Animated.Value(0.85)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -87,7 +89,7 @@ export const TagOverlay: React.FC<TagOverlayProps> = ({
 
     try {
       const page = reset ? 0 : pageRef.current;
-      const data = await fetchTaggableChannels({ limit: 20, offset: page * 20 });
+      const data = await fetchUserTagChannels({ limit: 20, offset: page * 20 });
       if (reset) {
         channelsRef.current = data;
       } else {
@@ -105,30 +107,20 @@ export const TagOverlay: React.FC<TagOverlayProps> = ({
     }
   }, []);
 
-  const handleTagTap = async (targetChannelId: string) => {
-    try {
-      await createTag({
-        postId,
-        sourceChannelId,
-        targetChannelId,
-        linkChain: [...linkChain, targetChannelId],
-      });
-    } catch (e) {
-      console.error('[TagOverlay] createTag error:', e);
-    }
-    onClose();
-  };
+
 
   const handleSeeAll = () => {
     onClose();
     // Use Expo Router to navigate to the file-based route
-    router.push({
-      pathname: '/tag-discovery' as any,
-      params: {
-        postId,
-        sourceChannelId,
-        linkChain: JSON.stringify(linkChain),
-      },
+    import('expo-router').then(({ router }) => {
+      router.push({
+        pathname: '/tag-discovery' as any,
+        params: {
+          postId,
+          sourceChannelId,
+          linkChain: JSON.stringify(linkChain),
+        },
+      });
     });
   };
 
@@ -146,10 +138,13 @@ export const TagOverlay: React.FC<TagOverlayProps> = ({
           title: c.name,
           description: c.description,
           imageUrl: c.avatarUrl,
-          onTap: () => handleTagTap(c.id),
         }))}
         isLoadingMore={isLoadingMore}
         onEndReached={() => loadChannels(false)}
+        postId={postId}
+        sourceChannelId={sourceChannelId}
+        linkChain={linkChain}
+        onTagSuccess={onClose}
       />
     );
   };
@@ -167,23 +162,17 @@ export const TagOverlay: React.FC<TagOverlayProps> = ({
         onPress={onClose}
       >
         <Animated.View
-          style={[styles.sheet, { transform: [{ scale: scaleAnim }], opacity: opacityAnim }]}
+          style={[styles.sheet, { transform: [{ scale: scaleAnim }], opacity: opacityAnim, backgroundColor: dark ? '#121212' : colors.card }]}
           onStartShouldSetResponder={() => true}
         >
-          {/* Header */}
-          <View style={{ height: 24 }} />
-          <View style={styles.headerRow}>
-            <Text style={styles.headerTitle}>Tag Options</Text>
-          </View>
-
           {/* Body */}
-          <View style={{ paddingVertical: 16 }}>{renderBody()}</View>
+          <View style={{ paddingTop: 16, paddingBottom: 8 }}>{renderBody()}</View>
 
           {/* Footer */}
-          <TouchableOpacity onPress={handleSeeAll} style={styles.seeAllButton}>
-            <Text style={styles.seeAllText}>See all</Text>
+          <TouchableOpacity activeOpacity={1} onPress={handleSeeAll} style={styles.seeAllButton}>
+            <Text style={[styles.seeAllText, { color: colors.primary }]}>See all</Text>
           </TouchableOpacity>
-          <View style={{ height: 24 }} />
+          <View style={{ height: 16 }} />
         </Animated.View>
       </TouchableOpacity>
     </Modal>

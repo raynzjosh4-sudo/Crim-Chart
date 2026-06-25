@@ -49,7 +49,7 @@ export default function ThreadDiscussionSheet({
       <View style={styles.header}>
         <View style={styles.headerSpacer} />
         <Text style={styles.title}>{commentsCount} comments</Text>
-        <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+        <TouchableOpacity activeOpacity={1} style={styles.closeBtn} onPress={onClose}>
           <X color="rgba(255,255,255,0.7)" size={22} />
         </TouchableOpacity>
       </View>

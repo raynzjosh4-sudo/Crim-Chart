@@ -1,19 +1,24 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import UserAvatar from '@/components/avatar/UserAvatar';
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
-import { Tag, MoreHorizontal } from 'lucide-react-native';
-import { useNavigation } from '@react-navigation/native';
-import AppAvatar from '@/components/avatar/AppAvatar';
+import { useRouter } from 'expo-router';
+import { MoreHorizontal, Tag } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
+import { ThemeTokens } from '@/core/theme/themes';
 
-import { PostContent } from './postCardFiles/PostContent';
-import { ChannelImagePostWidget } from './postCardFiles/ChannelImagePostWidget';
-import { ChannelVideoPostWidget } from './postCardFiles/ChannelVideoPostWidget';
-import { ChannelAudioPostWidget } from './postCardFiles/ChannelAudioPostWidget';
 import { LikeAction } from '@/channel/CRimChartMassageBubble/comment_action/like/LikeAction';
 import { CommentActionWidget } from '@/channel/CRimChartMassageBubble/comments/CommentActionWidget';
 import { TagOverlay } from '@/channel/pages/tag/TagOverlay';
+import { PostHeader } from '@/components/PostHeader/PostHeader';
+import { useFeedPermissions } from '@/components/wrappers/FeedPermissionsWrapper';
+import { ChannelAudioPostWidget } from './postCardFiles/ChannelAudioPostWidget';
+import { ChannelImagePostWidget } from './postCardFiles/ChannelImagePostWidget';
+import { PostContent } from './postCardFiles/PostContent';
 
 export interface RegularPostCardProps {
+  channelId?: string | null;
   author: CrimChartUserModel;
   content: string;
   timeAgo: string;
@@ -32,6 +37,7 @@ export interface RegularPostCardProps {
   metadata?: any;
   isActive?: boolean;
   widgetType?: string | null;
+  canComment?: boolean;
 }
 
 export const RegularPostCard: React.FC<RegularPostCardProps> = ({
@@ -53,9 +59,15 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
   metadata,
   isActive,
   widgetType,
+  channelId,
+  canComment: canCommentProp = true,
 }) => {
-  const navigation = useNavigation() as any;
+  const { canComment: contextCanComment } = useFeedPermissions();
+  const canComment = canCommentProp && contextCanComment;
+  const router = useRouter();
   const [tagOverlayVisible, setTagOverlayVisible] = useState(false);
+  const styles = useStyles(themeStyles);
+  const theme = useCurrentTheme();
 
   const allImages = React.useMemo(() => {
     const imgs: string[] = [];
@@ -65,8 +77,9 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
   }, [imageUrl, imageUrls]);
 
   const goToProfile = () => {
-    if (author.id) {
-      navigation.navigate('Profile', { userId: author.id });
+    console.log('[RegularPostCard] Tapped avatar. author.id:', author?.id);
+    if (author?.id) {
+      router.push(`/profile/${author.id}`);
     }
   };
 
@@ -75,24 +88,11 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, isPersonalPost && { flexDirection: 'row-reverse' }]}>
-        <TouchableOpacity onPress={goToProfile}>
-          <View style={[styles.avatarContainer, isPersonalPost ? { marginRight: 0, marginLeft: 12 } : { marginRight: 12 }]}>
-            <AppAvatar
-              imageUrl={author.profileImageUrl}
-              size={44}
-              showStatusRing={true}
-              showActiveDot={true}
-            />
-          </View>
-        </TouchableOpacity>
-        <Text style={[styles.displayName, isPersonalPost && { textAlign: 'right' }]} numberOfLines={1}>
-          {author.displayName || 'Unknown User'}
-        </Text>
-        <TouchableOpacity style={styles.moreButton}>
-          <MoreHorizontal color="rgba(255,255,255,0.6)" size={24} />
-        </TouchableOpacity>
-      </View>
+      <PostHeader
+        author={author}
+        isPersonalPost={isPersonalPost}
+        onAvatarTap={goToProfile}
+      />
 
       {/* Content */}
       <PostContent content={content} />
@@ -100,12 +100,9 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
       {/* Media */}
       {audioUrl ? (
         <ChannelAudioPostWidget audioUrl={audioUrl} thumbnailUrl={thumbnailUrl ?? undefined} metadata={metadata} isActive={isActive} />
-      ) : videoUrl ? (
-        <ChannelVideoPostWidget videoUrl={videoUrl} aspectRatio={aspectRatio} thumbnail={thumbnailUrl} />
       ) : allImages.length > 0 ? (
         <ChannelImagePostWidget images={allImages} />
       ) : null}
-
       {/* Footer */}
       <View style={styles.footer}>
         <Text style={styles.timeAgo}>{timeAgo}</Text>
@@ -113,15 +110,21 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
         <View style={styles.actionsRight}>
           <LikeAction initialLikesCount={likesCount} initialIsLiked={isLiked} />
           <View style={{ width: 16 }} />
-          <CommentActionWidget commentsCount={commentsCount} postId={postId || ''} />
+          {canComment ? (
+            <CommentActionWidget commentsCount={commentsCount} postId={postId || ''} />
+          ) : (
+            <View style={{ opacity: 0.3 }} pointerEvents="none">
+              <CommentActionWidget commentsCount={commentsCount} postId={postId || ''} />
+            </View>
+          )}
           <View style={{ width: 16 }} />
-          <TouchableOpacity
+          <TouchableOpacity activeOpacity={1}
             style={styles.actionButton}
             onPress={() => {
               if (onTagTap) { onTagTap(); } else { setTagOverlayVisible(true); }
             }}
           >
-            <Tag size={24} color="#FFFFFF" />
+            <Tag size={24} color={theme.colors.text} />
             <Text style={styles.actionText}>{tagsCount}</Text>
           </TouchableOpacity>
         </View>
@@ -131,61 +134,42 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
         visible={tagOverlayVisible}
         onClose={() => setTagOverlayVisible(false)}
         postId={postId ?? ''}
-        sourceChannelId=''
+        sourceChannelId={channelId ?? ''}
         linkChain={[]}
       />
     </View>
   );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = (colors: ThemeTokens, scale: number) => ({
   container: {
-    paddingVertical: 12,
+    paddingVertical: 12 * scale,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 8,
-  },
-  avatarContainer: {
-    marginRight: 12,
-  },
-  displayName: {
-    flex: 1,
-    color: '#FFF',
-    fontSize: 15,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-  },
-  moreButton: {
-    padding: 4,
+    borderBottomColor: colors.surfaceVariant,
   },
   footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    paddingHorizontal: 16 * scale,
+    paddingTop: 12 * scale,
   },
   actionsRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
   },
   actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6 * scale,
   },
   actionText: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: '800',
+    color: colors.text,
+    fontSize: 14 * scale,
+    fontWeight: '800' as const,
   },
   timeAgo: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 13,
-    fontWeight: '600',
+    color: colors.textSecondary,
+    fontSize: 13 * scale,
+    fontWeight: '600' as const,
   },
 });

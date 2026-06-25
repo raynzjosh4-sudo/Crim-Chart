@@ -3,12 +3,15 @@ import { useRouter } from 'expo-router';
 import { Search } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useExploreChannels } from '../hooks/useExploreChannels';
 import ChannelListTile from '../widgets/ChannelListTile';
+import { CustomBackButton } from '@/components/CustomBackButton';
+import { ChannelListSkeleton } from '@/components/skeletons/Skeletons';
 export const ExploreChannelsPage: React.FC = () => {
   const { colors } = useTheme() as any;
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const { channels, loadMore, isLoading, hasMore } = useExploreChannels();
   const [searchQuery, setSearchQuery] = useState('');
@@ -26,18 +29,15 @@ export const ExploreChannelsPage: React.FC = () => {
 
   const renderFooter = () => {
     if (!isLoading) return <View style={{ height: 40 }} />;
-    return (
-      <View style={{ paddingVertical: 20 }}>
-        <ActivityIndicator color={colors.primary} />
-      </View>
-    );
+    return <ChannelListSkeleton count={4} />;
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
+      {/* Header Row */}
+      <View style={styles.headerContainer}>
+        <CustomBackButton onPressed={() => router.back()} color={colors.text} />
         <View style={[styles.searchBox, { backgroundColor: colors.card }]}>
           <Search color={colors.text + '80'} size={20} style={styles.searchIcon} />
           <TextInput
@@ -91,16 +91,20 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  searchContainer: {
-    paddingHorizontal: 20,
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
     paddingVertical: 12,
   },
   searchBox: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     height: 48,
     borderRadius: 16,
     paddingHorizontal: 12,
+    marginLeft: 8,
   },
   searchIcon: {
     marginRight: 8,
@@ -112,10 +116,10 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingBottom: 40,
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
   },
   channelTileWrapper: {
-    paddingVertical: 4,
+    paddingVertical: 0,
   },
   emptyContainer: {
     paddingVertical: 32,

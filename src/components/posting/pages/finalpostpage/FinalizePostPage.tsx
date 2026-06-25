@@ -1,28 +1,33 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
+import { ChartToast } from '@/components/showcase/CrimChart_toast';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CircleDot, Hash, Settings } from 'lucide-react-native';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import { PostType, usePostingStore } from '@/core/store/usePostingStore';
+import { AdvancedSettingsSheet } from './widgets/AdvancedSettingsSheet';
 import { FinalizeCaptionSection } from './widgets/FinalizeCaptionSection';
 import { FinalizeMediaPreview } from './widgets/FinalizeMediaPreview';
 import { FinalizeShareButton } from './widgets/FinalizeShareButton';
 import { FinalizeListTile, FinalizeSwitchTile } from './widgets/FinalizeTiles';
-import { ChannelData } from './widgets/ChannelTags'; // keep data structure
 import { SelectChannelBottomSheet } from './widgets/SelectChannelBottomSheet';
-import { AdvancedSettingsSheet } from './widgets/AdvancedSettingsSheet';
-import { usePostingStore, PostType } from '@/core/store/usePostingStore';
+import { VideoFormatSelector } from './widgets/VideoFormatSelector';
 
 // Removed dummy channels as they are now fetched internally
 // We mock the posting controller state for the UI translation
 export const FinalizePostPage: React.FC = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
-  
+
   const selectedMediaJson = params.selectedMediaJson as string | undefined;
-  const selectedMedia = selectedMediaJson ? JSON.parse(selectedMediaJson) : []; 
+  const selectedMedia = selectedMediaJson ? JSON.parse(selectedMediaJson) : [];
   const targetChannelId = params.targetChannelId as string | undefined;
   const isManifestoContext = params.isManifestoContext === 'true';
+  const isChannelPost = params.isChannelPost === 'true';
+  const isChannelStatus = params.isChannelStatus === 'true';
+  const isChannelMoment = params.isChannelMoment === 'true';
+  const isGlobalStatus = params.isGlobalStatus === 'true';
 
   const { createPost } = usePostingStore();
 
@@ -30,41 +35,51 @@ export const FinalizePostPage: React.FC = () => {
   const [shareToStatus, setShareToStatus] = useState(false);
   const [isChannelSheetVisible, setIsChannelSheetVisible] = useState(false);
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
-  
+
   const [isAdvancedSettingsVisible, setIsAdvancedSettingsVisible] = useState(false);
   const [isPublic, setIsPublic] = useState(true);
   const [allowComments, setAllowComments] = useState(true);
-  
-  const [isPosting, setIsPosting] = useState(false);
 
-  const isDirectChannelPost = !!targetChannelId;
+  const [isPosting, setIsPosting] = useState(false);
+  const [isShortClip, setIsShortClip] = useState(true);
+
+  // If none of the new flags are set, but targetChannelId is present, it's a legacy manifesto
+  const isManifesto = !!targetChannelId && !isChannelPost && !isChannelStatus && !isChannelMoment;
+  const hasVideo = selectedMedia.some((m: any) => m.type === 'video');
 
   const handleChannelSelect = (id: string) => {
-    const newChannels = selectedChannels.includes(id) 
-      ? selectedChannels.filter(c => c !== id) 
+    const newChannels = selectedChannels.includes(id)
+      ? selectedChannels.filter(c => c !== id)
       : [...selectedChannels, id];
     setSelectedChannels(newChannels);
   };
 
   const handlePost = async () => {
     console.log('[FinalizePostPage] Starting handlePost...');
-    console.log('[FinalizePostPage] Inputs:', { caption, targetChannelId, isDirectChannelPost, shareToStatus, allowComments, isPublic, selectedChannelsLength: selectedChannels.length });
-    
+    console.log('[FinalizePostPage] Inputs:', { caption, targetChannelId, isChannelPost, isChannelStatus, isManifesto, shareToStatus, allowComments, isPublic, selectedChannelsLength: selectedChannels.length });
+
     setIsPosting(true);
-    
-    // 1. Submit the main post to the `posts` table (or manifesto)
-    // We intentionally do not use PostType.channel here for the feed post,
-    // so it falls back to the default `posts` table insert.
-    console.log('[FinalizePostPage] Step 1: Submitting main post...');
+    ChartToast.showInfo(null, { title: 'Uploading...', message: 'You can leave this page while we finish!' });
+
+    // Determine the post type dynamically
+    let primaryPostType = 'feed';
+    if (isManifesto) primaryPostType = PostType.manifesto;
+    if (isChannelPost) primaryPostType = PostType.channel;
+    if (isChannelStatus) primaryPostType = PostType.channel_status;
+    if (isChannelMoment) primaryPostType = PostType.channel_moment;
+    if (isGlobalStatus) primaryPostType = PostType.status;
+
+    console.log(`[FinalizePostPage] Step 1: Submitting main post as ${primaryPostType}...`);
     const success = await createPost({
       media: selectedMedia,
       caption,
-      channelId: targetChannelId, // Only relevant if isDirectChannelPost
-      postType: isDirectChannelPost ? PostType.manifesto : 'feed',
+      channelId: targetChannelId, // Relevant for manifesto, channel post, channel status
+      postType: primaryPostType,
       shareToStatus: false, // We handle this explicitly below
       allowComments,
       isPublicFeed: isPublic,
       aspectRatio: selectedMedia.length > 0 ? selectedMedia[0].aspectRatio : undefined,
+      isShortClip,
     });
     console.log('[FinalizePostPage] Main post success?', success);
     if (!success) {
@@ -73,7 +88,7 @@ export const FinalizePostPage: React.FC = () => {
 
     if (success) {
       // 2. Reuse the existing status insertion wrapper logic if switch is on
-      if (shareToStatus && !isDirectChannelPost) {
+      if (shareToStatus && !isManifesto) {
         console.log('[FinalizePostPage] Step 2: Submitting post to status because shareToStatus is ON...');
         const statusSuccess = await createPost({
           media: selectedMedia,
@@ -82,6 +97,7 @@ export const FinalizePostPage: React.FC = () => {
           shareToStatus: true,
           allowComments,
           isPublicFeed: isPublic,
+          isShortClip,
         });
         console.log('[FinalizePostPage] Status post success?', statusSuccess);
       } else {
@@ -97,75 +113,93 @@ export const FinalizePostPage: React.FC = () => {
         console.log(`[FinalizePostPage] Step 3 Skipped: No channels selected.`);
       }
 
-      console.log('[FinalizePostPage] All tasks completed successfully, navigating home.');
+      console.log('[FinalizePostPage] All tasks completed successfully, navigating.');
       setIsPosting(false);
-      Alert.alert('Success', 'Post created successfully!', [
-        { text: 'OK', onPress: () => {
-            router.push('/(tabs)');
-        }}
-      ]);
+      ChartToast.showSuccess(null, { title: 'Success', message: 'Post created successfully!' });
+
+      if (targetChannelId && (isChannelPost || isChannelStatus || isChannelMoment || isManifesto)) {
+        router.push({ pathname: '/channel/channelpage', params: { id: targetChannelId } } as any);
+      } else {
+        router.push('/(tabs)');
+      }
     } else {
       setIsPosting(false);
-      Alert.alert('Error', 'Failed to create post');
+      ChartToast.showError(null, { title: 'Error', message: 'Failed to create post' });
     }
+  };
+
+  const getHeaderTitle = () => {
+    if (isManifesto) return 'New Manifesto';
+    if (isChannelPost) return 'New Channel Post';
+    if (isChannelStatus) return 'New Channel Status';
+    return 'New Post';
   };
 
   return (
     <View style={styles.root}>
-      <ChartAppBar 
-        title={isDirectChannelPost ? 'New Manifesto' : 'New Post'} 
-        onBack={() => router.back()} 
+      <ChartAppBar
+        title={getHeaderTitle()}
+        onBack={() => router.back()}
         isLoading={isPosting}
         loadingProgress={0.5}
       />
-      
+
       <View style={styles.body}>
         <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
           <FinalizeMediaPreview selectedMedia={selectedMedia} />
-          
-          <FinalizeCaptionSection 
-            caption={caption} 
-            onChangeText={setCaption} 
+
+          <FinalizeCaptionSection
+            caption={caption}
+            onChangeText={setCaption}
           />
 
           <View style={styles.spacing} />
 
-          {!isDirectChannelPost && (
-            <>
-              <FinalizeSwitchTile
-                icon={<CircleDot color="rgba(255,255,255,0.7)" size={22} />}
-                title="Share to Status"
-                value={shareToStatus}
-                onChanged={setShareToStatus}
-              />
+          {hasVideo && (
+            <VideoFormatSelector
+              isShortClip={isShortClip}
+              onFormatChange={setIsShortClip}
+            />
+          )}
 
-              <FinalizeListTile
-                icon={<Hash color="rgba(255,255,255,0.7)" size={22} />}
-                title={selectedChannels.length === 0 ? 'Tag in Channel' : `Tag in Channel (${selectedChannels.length} selected)`}
-                onTap={() => setIsChannelSheetVisible(true)}
-              />
-            </>
+          {!isGlobalStatus && (
+            <FinalizeSwitchTile
+              icon={<CircleDot color="rgba(255,255,255,0.7)" size={22} />}
+              title="Share to Status"
+              value={shareToStatus}
+              onChanged={setShareToStatus}
+            />
+          )}
+
+          {!isManifesto && !isChannelStatus && !isChannelMoment && !isGlobalStatus && (
+            <FinalizeListTile
+              icon={<Hash color="rgba(255,255,255,0.7)" size={22} />}
+              title={selectedChannels.length === 0 ? 'Tag in Channel' : `Tag in Channel (${selectedChannels.length} selected)`}
+              onTap={() => setIsChannelSheetVisible(true)}
+            />
           )}
 
           <View style={styles.spacingSmall} />
 
-          <FinalizeListTile
-            icon={<Settings color="rgba(255,255,255,0.7)" size={22} />}
-            title="Advanced Settings"
-            onTap={() => setIsAdvancedSettingsVisible(true)}
-          />
+          {!isGlobalStatus && (
+            <FinalizeListTile
+              icon={<Settings color="rgba(255,255,255,0.7)" size={22} />}
+              title="Advanced Settings"
+              onTap={() => setIsAdvancedSettingsVisible(true)}
+            />
+          )}
 
           <View style={styles.bottomSpacing} />
         </ScrollView>
 
-        <FinalizeShareButton 
-          onTap={handlePost} 
-          isLoading={isPosting} 
-          statusText={isPosting ? 'UPLOADING...' : 'SHARE'}
+        <FinalizeShareButton
+          onTap={handlePost}
+          isLoading={isPosting}
+          statusText={isPosting ? 'UPLOADING... YOU CAN LEAVE' : 'SHARE'}
         />
       </View>
 
-      <AdvancedSettingsSheet 
+      <AdvancedSettingsSheet
         visible={isAdvancedSettingsVisible}
         onClose={() => setIsAdvancedSettingsVisible(false)}
         isPublic={isPublic}
@@ -204,5 +238,5 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 40,
-  }
+  },
 });

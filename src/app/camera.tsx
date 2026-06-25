@@ -27,7 +27,7 @@ export default function CameraScreen() {
     return (
       <View style={styles.center}>
         <Text style={styles.message}>We need your permission to show the camera.</Text>
-        <TouchableOpacity 
+        <TouchableOpacity activeOpacity={1} 
           style={styles.button}
           onPress={() => permission.canAskAgain ? requestPermission() : Linking.openSettings()}
         >
@@ -35,7 +35,7 @@ export default function CameraScreen() {
             {permission.canAskAgain ? 'Grant Permission' : 'Open Settings'}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={() => router.back()}>
+        <TouchableOpacity activeOpacity={1} style={[styles.button, styles.cancelButton]} onPress={() => router.back()}>
           <Text style={styles.buttonText}>Cancel</Text>
         </TouchableOpacity>
       </View>

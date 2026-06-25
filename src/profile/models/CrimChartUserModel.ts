@@ -1,3 +1,16 @@
+export interface UserConnectionStatsModel {
+  relSentCount: number;
+  relAcceptedCount: number;
+  relationshipStatus: string;
+  preferredCountries: string[];
+  preferredAgeRanges: string[];
+  showStatusCircle: boolean;
+  showStatusText: boolean;
+  showCountryPref: boolean;
+  showAgePref: boolean;
+  lockedIntent: boolean;
+}
+
 export class CrimChartUserModel {
   public id: string;
   public displayName: string;
@@ -8,6 +21,7 @@ export class CrimChartUserModel {
   public crownTitle?: string;
   public birthday?: Date | null;
   public gender?: string | null;
+  public country?: string | null;
   public isVerified?: boolean;
   public role?: string;
   public statusCount?: number;
@@ -26,6 +40,8 @@ export class CrimChartUserModel {
   public isFollowing?: boolean;
   public isMe?: boolean;
   public createdAt?: Date;
+  public inboxPermission?: string;
+  public connectionStats?: UserConnectionStatsModel;
 
   constructor(params: {
     id: string;
@@ -37,6 +53,7 @@ export class CrimChartUserModel {
     crownTitle?: string;
     birthday?: Date | null;
     gender?: string | null;
+    country?: string | null;
     isVerified?: boolean;
     role?: string;
     statusCount?: number;
@@ -55,6 +72,8 @@ export class CrimChartUserModel {
     isFollowing?: boolean;
     isMe?: boolean;
     createdAt?: Date;
+    inboxPermission?: string;
+    connectionStats?: UserConnectionStatsModel;
   }) {
     this.id = params.id;
     this.displayName = params.displayName;
@@ -65,6 +84,7 @@ export class CrimChartUserModel {
     this.crownTitle = params.crownTitle;
     this.birthday = params.birthday;
     this.gender = params.gender;
+    this.country = params.country;
     this.isVerified = params.isVerified;
     this.role = params.role;
     this.statusCount = params.statusCount;
@@ -83,6 +103,8 @@ export class CrimChartUserModel {
     this.isFollowing = params.isFollowing;
     this.isMe = params.isMe;
     this.createdAt = params.createdAt;
+    this.inboxPermission = params.inboxPermission ?? 'everyone';
+    this.connectionStats = params.connectionStats;
   }
 
   static empty(): CrimChartUserModel {
@@ -102,6 +124,7 @@ export class CrimChartUserModel {
       crownTitle: map.crown_title ?? map.crownTitle,
       birthday: map.birthday ? new Date(map.birthday) : null,
       gender: map.gender ?? null,
+      country: map.country ?? null,
       isVerified: Boolean(map.is_verified ?? map.isVerified),
       role: map.role,
       statusCount: Number(map.status_count ?? map.statusCount ?? 0),
@@ -115,11 +138,23 @@ export class CrimChartUserModel {
       inboxCount: Number(map.inbox_count ?? map.inboxCount ?? 0),
       giftsEarned: Number(map.gifts_earned ?? map.giftsEarned ?? 0),
       coinsEarned: Number(map.coins_earned ?? map.coinsEarned ?? 0),
-      isActive: Boolean(map.is_active ?? map.isActive ?? true),
-      hasStatus: Boolean(map.has_status ?? map.hasStatus ?? false),
-      isFollowing: Boolean(map.is_following ?? map.isFollowing ?? false),
+      isActive: map.is_active,
+      hasStatus: map.has_status,
+      isFollowing: map.is_following,
       isMe: Boolean(map.is_me ?? map.isMe ?? false),
       createdAt: map.created_at ? new Date(map.created_at) : undefined,
+      inboxPermission: map.inbox_permission,
+      connectionStats: map.user_connection_stats ? {
+        relSentCount: map.user_connection_stats.rel_sent_count ?? 0,
+        relAcceptedCount: map.user_connection_stats.rel_accepted_count ?? 0,
+        relationshipStatus: map.user_connection_stats.relationship_status ?? 'Unknown',
+        preferredCountries: map.user_connection_stats.preferred_countries ?? [],
+        preferredAgeRanges: map.user_connection_stats.preferred_age_ranges ?? [],
+        showStatusCircle: map.user_connection_stats.show_status_circle ?? true,
+        showStatusText: map.user_connection_stats.show_status_text ?? true,
+        showCountryPref: map.user_connection_stats.show_country_pref ?? true,
+        showAgePref: map.user_connection_stats.show_age_pref ?? true,
+      } : undefined,
     });
   }
 

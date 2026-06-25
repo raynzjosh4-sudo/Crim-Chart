@@ -21,7 +21,7 @@ export const AllGivenGiftsSheet: React.FC<AllGivenGiftsSheetProps> = ({
           <View style={styles.handle} />
           <View style={styles.header}>
             <Text style={styles.title}>All Gifts Received</Text>
-            <TouchableOpacity onPress={onClose}>
+            <TouchableOpacity activeOpacity={1} onPress={onClose}>
               <X color="rgba(255,255,255,0.54)" size={24} />
             </TouchableOpacity>
           </View>

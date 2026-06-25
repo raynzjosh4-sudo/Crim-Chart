@@ -58,7 +58,7 @@ export default function GoogleSignInPage() {
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                    <TouchableOpacity activeOpacity={1} onPress={() => router.back()} style={styles.backButton}>
                         <ChevronLeft size={24} color={colors.text} />
                     </TouchableOpacity>
                 </View>
@@ -96,7 +96,7 @@ export default function GoogleSignInPage() {
                                 const name = item.split('@')[0];
                                 return (
                                     <View>
-                                        <TouchableOpacity 
+                                        <TouchableOpacity activeOpacity={1} 
                                             style={styles.accountTile} 
                                             onPress={() => handleSelectEmail(item)}
                                         >
@@ -116,7 +116,7 @@ export default function GoogleSignInPage() {
                     )}
                 </View>
 
-                <TouchableOpacity style={styles.useAnotherButton} onPress={() => router.back()}>
+                <TouchableOpacity activeOpacity={1} style={styles.useAnotherButton} onPress={() => router.back()}>
                     <UserPlus size={20} color="rgba(255, 255, 255, 0.7)" />
                     <Text style={[styles.useAnotherText, { color: colors.text }]}>
                         {tr('use_another')}

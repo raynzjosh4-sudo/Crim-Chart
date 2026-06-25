@@ -25,7 +25,7 @@ export const Mainfeedcard: React.FC<MainfeedcardProps> = ({ data, isFeedView = t
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
+        <TouchableOpacity activeOpacity={1}
           onPress={() => navigation.navigate('Profile', { userId: data.id })}
           activeOpacity={0.8}
         >
@@ -37,7 +37,7 @@ export const Mainfeedcard: React.FC<MainfeedcardProps> = ({ data, isFeedView = t
             <Text style={styles.bio} numberOfLines={1}>👑 {data.bio}</Text>
           ) : null}
         </View>
-        <TouchableOpacity style={styles.moreBtn}>
+        <TouchableOpacity activeOpacity={1} style={styles.moreBtn}>
           <MoreVertical color="rgba(255,255,255,0.6)" size={20} />
         </TouchableOpacity>
       </View>

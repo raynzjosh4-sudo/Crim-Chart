@@ -1,8 +1,9 @@
-import { supabase } from '@/core/supabase/supabaseConfig';
-import { MediaItem, MediaType } from './models/MediaItem';
-import { CreatePostParams } from './PostingController';
+import { cloudMediaService } from '@/core/network/cloudMediaService';
+import { supabase } from '@/core/supabase/client';
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
+import { MediaItem, MediaType } from './models/MediaItem';
+import { CreatePostParams } from './PostingController';
 
 export interface PostUploadResult {
   imageUrls: string[];
@@ -16,8 +17,9 @@ export interface PostUploadResult {
 
 export class MediaBakingService {
   /**
-   * Uploads media assets to Supabase storage.
-   * In a real app, this would also compress media beforehand using expo-video or react-native-compressor.
+   * Uploads media assets to Cloudflare R2.
+   * Videos are first transcoded into HLS on-device, then all chunks go to R2.
+   * Images and audio are uploaded directly to R2 via CloudMediaService.
    */
   static async uploadMediaAssets(
     userId: string,
@@ -36,7 +38,7 @@ export class MediaBakingService {
     const total = media.length;
 
     for (const item of media) {
-      // If path is already a URL, just add it.
+      // If path is already a remote URL, just use it directly.
       if (item.path.startsWith('http')) {
         if (item.type === MediaType.photo) imageUrls.push(item.path);
         else if (item.type === MediaType.video) {
@@ -48,61 +50,58 @@ export class MediaBakingService {
           isAudio = true;
         }
       } else {
-        // Upload to Supabase Storage
-        const fileExt = item.path.split('.').pop();
-        const fileName = `${userId}/${Date.now()}_${uuidv4()}.${fileExt}`;
-        
         try {
-          // React Native specific File to Blob/FormData conversion might be needed here 
-          // depending on the exact fetch implementation used by Supabase JS.
-          const response = await fetch(item.path);
-          const blob = await response.blob();
-          
-          const { data, error } = await supabase.storage
-            .from('media')
-            .upload(fileName, blob);
+          if (item.type === MediaType.video) {
+            // ── Video: transcode via Coconut API Edge Function ──
+            console.log('[MediaBakingService] 1️⃣ Uploading raw video to Cloudflare R2 for Coconut...');
+            const videoFilename = `${userId}_${Date.now()}.mp4`;
+            await cloudMediaService.uploadRawVideoForCoconut(item.path, videoFilename);
 
-          if (error) throw error;
+            console.log('[MediaBakingService] 2️⃣ Triggering Coconut Video Processor Edge Function...');
+            const { data, error } = await supabase.functions.invoke('process-video', {
+              body: { 
+                videoFilename: videoFilename,
+                userId: userId 
+              }
+            });
 
-          const { data: { publicUrl } } = supabase.storage
-            .from('media')
-            .getPublicUrl(data.path);
+            if (error) {
+              console.error('[MediaBakingService] Coconut trigger failed:', error);
+              throw new Error(`Coconut Transcoding failed: ${error.message || 'Unknown error'}`);
+            }
 
-          if (item.type === MediaType.photo) imageUrls.push(publicUrl);
-          else if (item.type === MediaType.video) {
-            hdVideoUrls.push(publicUrl);
-            sdVideoUrls.push(publicUrl); // Mock SD video as the same for now
+            console.log('[MediaBakingService] ✅ Processing Started! Future Stream URL:', data.streamUrl);
+            
+            hdVideoUrls.push(data.streamUrl);
+            sdVideoUrls.push(data.streamUrl);
+            thumbnailUrls.push(data.thumbnailUrl);
             isVideo = true;
+          } else if (item.type === MediaType.photo) {
+            // ── Photo: upload directly to R2 ──────────────────────────────────
+            const url = await cloudMediaService.uploadMedia(item.path, 'photos', userId);
+            imageUrls.push(url);
           } else if (item.type === MediaType.audio) {
-            audioUrl = publicUrl;
+            // ── Audio: upload directly to R2 ──────────────────────────────────
+            const url = await cloudMediaService.uploadMedia(item.path, 'audio', userId);
+            audioUrl = url;
             isAudio = true;
           }
-
         } catch (e) {
           console.error('[MediaBakingService] Upload failed for', item.path, e);
-          // throw e; // Decided to continue or throw based on app policy
         }
       }
 
-      // Handle thumbnails (if they are local paths)
-      if (item.thumbnailUrl) {
+      // ── Thumbnail: upload directly to R2 ──────────────────────────────────
+      if (item.type !== MediaType.video && item.thumbnailUrl) {
         if (item.thumbnailUrl.startsWith('http')) {
           thumbnailUrls.push(item.thumbnailUrl);
         } else {
-           // Same upload logic for thumbnail
-           try {
-             const fileExt = item.thumbnailUrl.split('.').pop() || 'jpg';
-             const fileName = `${userId}/thumb_${Date.now()}_${uuidv4()}.${fileExt}`;
-             const response = await fetch(item.thumbnailUrl);
-             const blob = await response.blob();
-             const { data, error } = await supabase.storage.from('media').upload(fileName, blob);
-             if (!error && data) {
-               const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(data.path);
-               thumbnailUrls.push(publicUrl);
-             }
-           } catch (e) {
-             console.error('[MediaBakingService] Thumbnail upload failed', e);
-           }
+          try {
+            const thumbUrl = await cloudMediaService.uploadMedia(item.thumbnailUrl, 'thumbnails', userId);
+            thumbnailUrls.push(thumbUrl);
+          } catch (e) {
+            console.error('[MediaBakingService] Thumbnail upload failed', e);
+          }
         }
       }
 
@@ -123,7 +122,7 @@ export class MediaBakingService {
 
   static shapeFinalPostData(params: CreatePostParams, uploadResults: PostUploadResult): any {
     const {
-      userId, caption, channelId, channelName, postType = 'post', 
+      userId, caption, channelId, channelName, postType = 'post',
       parentPostId, isPublicFeed = true, allowComments = true, aspectRatio = 1.0
     } = params;
 

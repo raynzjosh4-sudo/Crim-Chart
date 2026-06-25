@@ -51,11 +51,11 @@ export const DiscoverChannelWidget: React.FC<DiscoverChannelWidgetProps> = ({ us
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <TouchableOpacity style={styles.closeButton}>
+            <TouchableOpacity activeOpacity={1} style={styles.closeButton}>
               <X size={16} color="rgba(255,255,255,0.6)" />
             </TouchableOpacity>
 
-            <TouchableOpacity
+            <TouchableOpacity activeOpacity={1}
               style={styles.cardContent}
               onPress={() => router.push(`/channel/${item.id}` as any)}
             >
@@ -115,13 +115,14 @@ const styles = StyleSheet.create({
   },
   card: {
     width: 220,
-    minHeight: 200,
+    minHeight: 250,
     backgroundColor: '#0D0D0D', // Scaffold bg color
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 18,
+    paddingVertical: 20,
     alignItems: 'center',
     marginRight: 5,
+    justifyContent: 'space-between',
   },
   closeButton: {
     position: 'absolute',

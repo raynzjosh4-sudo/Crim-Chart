@@ -37,7 +37,7 @@ export const GivenGiftsDisplay: React.FC<GivenGiftsDisplayProps> = ({
       </View>
 
       {aggregations.length > 3 && (
-        <TouchableOpacity style={styles.seeAllBtn} onPress={() => setShowAll(true)}>
+        <TouchableOpacity activeOpacity={1} style={styles.seeAllBtn} onPress={() => setShowAll(true)}>
           <Text style={styles.seeAllText}>See all gifts</Text>
           <ChevronRight color="#FACD11" size={16} />
         </TouchableOpacity>

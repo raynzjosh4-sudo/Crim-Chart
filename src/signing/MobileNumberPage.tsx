@@ -74,7 +74,7 @@ export default function MobileNumberPage() {
                             backgroundColor: colors.surface 
                         }
                     ]}>
-                        <TouchableOpacity 
+                        <TouchableOpacity activeOpacity={1} 
                             style={styles.countryPicker}
                             onPress={() => router.push('/signupCountry' as any)} // Using the country picker route we created
                         >
@@ -99,7 +99,7 @@ export default function MobileNumberPage() {
 
                     <View style={styles.space24} />
 
-                    <TouchableOpacity 
+                    <TouchableOpacity activeOpacity={1} 
                         style={[
                             styles.nextButton, 
                             { backgroundColor: colors.primary },
@@ -117,7 +117,7 @@ export default function MobileNumberPage() {
 
                     <View style={styles.bottomSection}>
                         <View style={styles.socialRow}>
-                            <TouchableOpacity 
+                            <TouchableOpacity activeOpacity={1} 
                                 style={styles.socialButton}
                                 onPress={() => router.push('/emailSignup' as any)}
                             >
@@ -129,7 +129,7 @@ export default function MobileNumberPage() {
 
                             <View style={[styles.dividerVertical, { backgroundColor: 'rgba(255, 255, 255, 0.1)' }]} />
 
-                            <TouchableOpacity 
+                            <TouchableOpacity activeOpacity={1} 
                                 style={styles.socialButton}
                                 onPress={() => router.push('/googleSignIn' as any)}
                             >
@@ -152,7 +152,7 @@ export default function MobileNumberPage() {
                             <Text style={[styles.loginText, { color: 'rgba(255, 255, 255, 0.5)' }]}>
                                 {tr('already_have_account')}
                             </Text>
-                            <TouchableOpacity onPress={() => router.push('/login' as any)}>
+                            <TouchableOpacity activeOpacity={1} onPress={() => router.push('/login' as any)}>
                                 <Text style={[styles.loginAction, { color: colors.primary }]}>
                                     {tr('login_action')}
                                 </Text>

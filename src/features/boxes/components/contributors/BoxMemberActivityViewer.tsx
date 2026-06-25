@@ -72,10 +72,13 @@ export const BoxMemberActivityViewer: React.FC<BoxMemberActivityViewerProps> = (
         }
 
         if (!data || data.length === 0) {
+          console.log(`[DEBUG] BoxMemberActivityViewer: No interactions found for user ${userId} in box ${boxId}`);
           setInteractions([]);
           activityCache[cacheKey] = [];
           return;
         }
+
+        console.log(`[DEBUG] BoxMemberActivityViewer: Fetched ${data.length} interactions for user ${userId} in box ${boxId}:`, JSON.stringify(data, null, 2));
 
         // Cache the fresh data and update UI
         activityCache[cacheKey] = data;
@@ -115,7 +118,7 @@ export const BoxMemberActivityViewer: React.FC<BoxMemberActivityViewerProps> = (
               </View>
             </View>
 
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <TouchableOpacity activeOpacity={1} onPress={onClose} style={styles.closeBtn}>
               <X size={28} color="#FFF" />
             </TouchableOpacity>
           </View>

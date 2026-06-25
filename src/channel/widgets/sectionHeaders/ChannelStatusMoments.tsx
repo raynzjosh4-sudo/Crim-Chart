@@ -63,7 +63,7 @@ export const ChannelStatusMoments: React.FC<ChannelStatusMomentsProps> = ({ disp
     <View style={styles.container}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Create Channel Card */}
-        <TouchableOpacity style={styles.card} onPress={() => router.push('/channel/create' as any)}>
+        <TouchableOpacity activeOpacity={1} style={styles.card} onPress={() => router.push('/channel/create' as any)}>
           <View style={styles.createCardContent}>
             <Text style={styles.statusLabelTop}>Create</Text>
             
@@ -84,7 +84,7 @@ export const ChannelStatusMoments: React.FC<ChannelStatusMomentsProps> = ({ disp
           const coverImage = group.moments[group.moments.length - 1]?.thumbnail_url || group.moments[group.moments.length - 1]?.media_url;
 
           return (
-            <TouchableOpacity key={group.channel_id} style={styles.card} onPress={() => openViewer(index)}>
+            <TouchableOpacity activeOpacity={1} key={group.channel_id} style={styles.card} onPress={() => openViewer(index)}>
               <ExpoImage source={{ uri: coverImage }} style={styles.cardImage} contentFit="cover" />
               <View style={styles.gradient} />
               <View style={styles.avatarRing}>

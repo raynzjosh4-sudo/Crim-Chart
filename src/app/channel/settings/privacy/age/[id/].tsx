@@ -13,7 +13,7 @@ export default function AgeSelectionPage() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
+        <TouchableOpacity activeOpacity={1} onPress={() => router.back()} style={styles.headerButton}>
           <ChevronLeft size={28} color="#FFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>SELECT AGE RESTRICTION</Text>
@@ -22,7 +22,7 @@ export default function AgeSelectionPage() {
 
       <ScrollView style={styles.content}>
         {AGES.map((age) => (
-          <TouchableOpacity 
+          <TouchableOpacity activeOpacity={1} 
             key={age} 
             style={styles.tile} 
             onPress={() => {

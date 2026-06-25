@@ -85,7 +85,7 @@ export default function OtpVerificationPage() {
 
                     <View style={styles.spacer} />
 
-                    <TouchableOpacity 
+                    <TouchableOpacity activeOpacity={1} 
                         style={[
                             styles.verifyButton, 
                             { 

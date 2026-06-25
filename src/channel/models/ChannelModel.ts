@@ -13,6 +13,7 @@ export interface ChannelModel {
   likesCount: number;
   followersCount: number;
   unreadCount: number;
+  pendingRequestsCount: number;
   hasActiveMembers: boolean;
   ageRestriction?: string;
   visibleToOtherChannelMembers: boolean;
@@ -21,8 +22,10 @@ export interface ChannelModel {
   preventLeaving: boolean;
   countryRestrictions: string[];
   allowCommentingBy: string;
+  allowPostingBy: string;
   allowStatusPostingBy: string;
   allowInvitationsBy: string;
+  allowChattingBy: string;
   isOwnChannel: boolean;
   isCharted: boolean;
   giftsVisible: boolean;
@@ -38,10 +41,9 @@ export function emptyChannel(): ChannelModel {
   return {
     id: '', title: 'Unknown Channel', membersCount: 0, momentsCount: 0,
     messagesCount: 0, tagsCount: 0, likesCount: 0, followersCount: 0,
-    unreadCount: 0, hasActiveMembers: false, visibleToOtherChannelMembers: true, visibleToFollowedUsers: true,
-    joinMethod: 'invite', preventLeaving: false, countryRestrictions: ['Global'],
-    allowCommentingBy: 'all', allowStatusPostingBy: 'all', allowInvitationsBy: 'all',
-    isOwnChannel: false, isCharted: false, giftsVisible: true, isPrivate: false,
+    unreadCount: 0, pendingRequestsCount: 0, hasActiveMembers: false, visibleToOtherChannelMembers: true, visibleToFollowedUsers: true,
+    joinMethod: 'invite', preventLeaving: false, countryRestrictions: ['Global'], allowCommentingBy: 'all', allowPostingBy: 'all',
+    allowStatusPostingBy: 'all', allowInvitationsBy: 'all', allowChattingBy: 'all', isOwnChannel: false, isCharted: false, giftsVisible: true, isPrivate: false,
     isActive: false, isDiscoverable: true,
     creatorUser: { id: '', displayName: '', username: '', profileImageUrl: '' } as any,
     createdAt: new Date(),
@@ -65,16 +67,20 @@ export function channelFromMap(map: Record<string, any>): ChannelModel {
     likesCount: Number(map.likes_count ?? 0),
     followersCount: Number(map.followers_count ?? 0),
     unreadCount: Number(map.unread_count ?? 0),
+    pendingRequestsCount: Number(map.pending_requests_count ?? 0),
     hasActiveMembers: Boolean(map.has_active_members ?? false),
-    visibleToOtherChannelMembers: true,
-    visibleToFollowedUsers: true,
+    ageRestriction: map.age_restriction?.toString(),
+    visibleToOtherChannelMembers: map.visible_to_other_channel_members !== undefined ? Boolean(map.visible_to_other_channel_members) : true,
+    visibleToFollowedUsers: map.visible_to_followed_users !== undefined ? Boolean(map.visible_to_followed_users) : true,
     joinMethod: map.join_method ?? 'invite',
-    preventLeaving: false,
-    countryRestrictions: ['Global'],
+    preventLeaving: Boolean(map.prevent_leaving ?? false),
+    countryRestrictions: map.country_restrictions ? (typeof map.country_restrictions === 'string' ? JSON.parse(map.country_restrictions) : map.country_restrictions) : ['Global'],
     allowCommentingBy: map.allow_commenting_by ?? 'all',
+    allowPostingBy: map.allow_posting_by ?? 'all',
     allowStatusPostingBy: map.allow_status_posting_by ?? 'all',
     allowInvitationsBy: map.allow_invitations_by ?? 'all',
-    isDiscoverable: (map.is_discoverable ?? 1) !== 0,
+    allowChattingBy: map.allow_chatting_by ?? 'all',
+    isDiscoverable: map.is_discoverable !== undefined ? Boolean(map.is_discoverable) : true,
     isOwnChannel: false,
     isCharted: Boolean(map.isCharted ?? false),
     giftsVisible: true,

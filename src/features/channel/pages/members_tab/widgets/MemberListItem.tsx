@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Switch } from 'react-native';
 import { Image } from 'expo-image';
 import { colors } from '@/core/theme/colors';
+import { FollowUserButton } from '@/components/FollowUserButton';
 
 interface MemberListItemProps {
   id: string;
@@ -13,6 +14,9 @@ interface MemberListItemProps {
   showFollow?: boolean;
   onAvatarTap?: () => void;
   onFollowTap?: () => void;
+  showChatToggle?: boolean;
+  canChat?: boolean;
+  onToggleChat?: () => void;
 }
 
 export const MemberListItem: React.FC<MemberListItemProps> = ({
@@ -23,12 +27,15 @@ export const MemberListItem: React.FC<MemberListItemProps> = ({
   hasStatus,
   statusCount,
   showFollow = true,
+  showChatToggle = false,
+  canChat = true,
   onAvatarTap,
   onFollowTap,
+  onToggleChat,
 }) => {
   return (
     <View style={styles.container}>
-      <TouchableOpacity 
+      <TouchableOpacity activeOpacity={1} 
         style={[styles.avatarContainer, hasStatus && styles.statusRing]} 
         onPress={onAvatarTap}
         disabled={!onAvatarTap}
@@ -41,10 +48,25 @@ export const MemberListItem: React.FC<MemberListItemProps> = ({
         <Text style={styles.subtitle}>{subtitle}</Text>
       </View>
 
-      {showFollow && (
-        <TouchableOpacity style={styles.followButton} onPress={onFollowTap}>
-          <Text style={styles.followButtonText}>Follow</Text>
-        </TouchableOpacity>
+      {showChatToggle && (
+        <View style={styles.chatToggleContainer}>
+          <Text style={styles.chatToggleLabel}>Chat</Text>
+          <Switch
+            value={canChat}
+            onValueChange={onToggleChat}
+            trackColor={{ false: '#333', true: colors.primary + '66' }}
+            thumbColor={canChat ? colors.primary : '#666'}
+          />
+        </View>
+      )}
+
+      {showFollow && !showChatToggle && (
+        <FollowUserButton 
+          targetUserId={id} 
+          size="small" 
+          style={styles.followButton}
+          textStyle={styles.followButtonText}
+        />
       )}
     </View>
   );
@@ -97,5 +119,14 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 13,
     fontWeight: 'bold',
+  },
+  chatToggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  chatToggleLabel: {
+    color: '#FFF',
+    fontSize: 13,
+    marginRight: 8,
   },
 });

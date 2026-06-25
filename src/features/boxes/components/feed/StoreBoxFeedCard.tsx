@@ -1,40 +1,52 @@
+import { LikeAction } from '@/channel/CRimChartMassageBubble/comment_action/like/LikeAction';
+import { CommentActionWidget } from '@/channel/CRimChartMassageBubble/comments/CommentActionWidget';
+import { TagOverlay } from '@/channel/pages/tag/TagOverlay';
+import { BoxFeedCardWrapper } from '@/components/wrappers/BoxFeedCardWrapper';
+import { FeedPermissionsWrapper } from '@/components/wrappers/FeedPermissionsWrapper';
+import { useInteractionStore } from '@/core/store/useInteractionStore';
+import UserAvatar from '@/components/avatar/UserAvatar';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { MoreHorizontal, Plus, Tag } from 'lucide-react-native';
+import { useState } from 'react';
 import { Dimensions, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { StoreItem, dummyStoreBoxPost } from '../../data/dummyStoreBoxData';
 import { OpenBoxButton } from '../shared/OpenBoxButton';
-import { LikeAction } from '@/channel/CRimChartMassageBubble/comment_action/like/LikeAction';
-import { CommentActionWidget } from '@/channel/CRimChartMassageBubble/comments/CommentActionWidget';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
+import { ThemeTokens } from '@/core/theme/themes';
 
-// Removed Props interface as we will use dummy data directly
+interface Props { boxId?: string; prefetchedData?: any; }
 
 const { width } = Dimensions.get('window');
 const CAROUSEL_ITEM_WIDTH = 140;
 
-export function StoreBoxFeedCard() {
-  const post = dummyStoreBoxPost;
-  const { id: boxId, title, description } = post.box;
-  const items = post.items;
-  const creator = post.creator;
+export const StoreBoxFeedCard = ({ boxId, prefetchedData }: Props) => {
   const router = useRouter();
+  const [tagOverlayVisible, setTagOverlayVisible] = useState(false);
+  const styles = useStyles(themeStyles);
+  const theme = useCurrentTheme();
+
+  if (!boxId) return null;
 
   const handleOpenBox = () => {
     router.push(`/store-box/${boxId}` as any);
   };
 
-  const renderStoreItem = ({ item }: { item: StoreItem }) => (
-    <View style={styles.carouselItem}>
-      <Image source={{ uri: item.mediaUrl }} style={styles.carouselImage} contentFit="cover" />
-      <View style={styles.priceTag}>
-        <Text style={styles.priceText}>{item.currency}{item.price.toLocaleString()}</Text>
+  const renderStoreItem = ({ item }: { item: any }) => {
+    const priceStr = item.price || '$0.00';
+    return (
+      <View style={styles.carouselItem}>
+        <Image source={{ uri: item.thumbnailUrl || item.mediaUrl || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=400&q=80' }} style={styles.carouselImage} contentFit="cover" />
+        <View style={styles.priceTag}>
+          <Text style={styles.priceText}>{priceStr}</Text>
+        </View>
+        <Text style={styles.itemTitle} numberOfLines={2}>{item.title}</Text>
       </View>
-      <Text style={styles.itemTitle} numberOfLines={2}>{item.title}</Text>
-    </View>
-  );
+    );
+  };
 
   const renderAddYoursCard = () => (
-    <TouchableOpacity style={[styles.carouselItem, styles.addYoursCard]}>
+    <TouchableOpacity activeOpacity={1} style={[styles.carouselItem, styles.addYoursCard]} onPress={() => router.push(`/store-box/post/${boxId}` as any)}>
       <View style={styles.addYoursImagePlaceholder}>
         <Plus color="rgba(255,255,255,0.5)" size={40} />
       </View>
@@ -43,147 +55,187 @@ export function StoreBoxFeedCard() {
   );
 
   return (
-    <View style={styles.cardContainer}>
-      {/* Post Header */}
-      <View style={styles.postHeader}>
-        <View style={styles.headerLeft}>
-          <Image source={{ uri: creator.avatarUrl }} style={styles.creatorAvatar} />
-          <View>
-            <Text style={styles.creatorName}>{creator.name}</Text>
-            <Text style={styles.headerSubText}>Opened a Store Box</Text>
+    <BoxFeedCardWrapper boxId={boxId} prefetchedData={prefetchedData}>
+      {(rawData, boxModel, ownerModel, interactionState) => {
+        const rawName = ownerModel?.displayName || 'Unknown';
+        return (
+          <FeedPermissionsWrapper permissions={{ canComment: true, canSubmit: boxModel?.allowSubmissions ?? true }}>
+          <View style={styles.cardContainer}>
+            {/* Post Header */}
+            <View style={styles.postHeader}>
+              <View style={styles.headerLeft}>
+                <View style={{ marginRight: 10 }}>
+                  <UserAvatar 
+                    userId={ownerModel?.id || ''} 
+                    fallbackUrl={ownerModel?.profileImageUrl || undefined} 
+                    name={rawName} 
+                    size={36} 
+                  />
+                </View>
+                <View>
+                  <Text style={styles.creatorName}>{rawName}</Text>
+                  <Text style={styles.headerSubText}>Opened a Store Box</Text>
+                </View>
+              </View>
+              <TouchableOpacity activeOpacity={1}>
+                <MoreHorizontal size={20} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Box Info */}
+            <View style={styles.boxInfo}>
+              <Text style={styles.boxTitle}>{boxModel.title}</Text>
+              <Text style={styles.boxDescription} numberOfLines={2}>{boxModel.raw?.description || ''}</Text>
+            </View>
+
+            {/* Store Items Carousel */}
+            <FlatList
+              data={(rawData.trendingTracks || []).slice(0, 5)} // Show top 5 in preview
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              ListHeaderComponent={renderAddYoursCard}
+              keyExtractor={(item: any) => item.id}
+              renderItem={renderStoreItem}
+              contentContainerStyle={styles.carouselContent}
+            />
+
+            {/* Action Bar */}
+            <View style={styles.actionBar}>
+              <View style={styles.leftActions}>
+                <LikeAction 
+                  initialLikesCount={interactionState?.likesCount ?? 0} 
+                  initialIsLiked={interactionState?.isLiked ?? false} 
+                  onLikeTap={() => {
+                    if (boxModel.postId) {
+                      useInteractionStore.getState().toggleLike(boxModel.postId, undefined, 'posts');
+                    }
+                  }}
+                />
+                <CommentActionWidget commentsCount={0} postId={boxModel.postId} />
+                <TouchableOpacity 
+                  activeOpacity={0.7} 
+                  style={[styles.actionBtn, { marginLeft: 24, marginRight: 0 }]}
+                  onPress={() => {
+                    if (boxModel.postId) {
+                      setTagOverlayVisible(true);
+                    }
+                  }}
+                >
+                  <Tag color={interactionState?.isTagged ? "#FACD11" : "#FFF"} size={24} />
+                  <Text style={[styles.actionText, interactionState?.isTagged && { color: "#FACD11" }]}>{0}</Text>
+                </TouchableOpacity>
+              </View>
+
+            <OpenBoxButton onPress={handleOpenBox} />
+            </View>
+
+            <TagOverlay
+              visible={tagOverlayVisible}
+              onClose={() => setTagOverlayVisible(false)}
+              postId={boxModel.postId ?? ''}
+              sourceChannelId=""
+              linkChain={[]}
+            />
           </View>
-        </View>
-        <TouchableOpacity>
-          <MoreHorizontal size={20} color="rgba(255,255,255,0.6)" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Box Info */}
-      <View style={styles.boxInfo}>
-        <Text style={styles.boxTitle}>{title}</Text>
-        <Text style={styles.boxDescription} numberOfLines={2}>{description}</Text>
-      </View>
-
-      {/* Store Items Carousel */}
-      <FlatList
-        data={items.slice(0, 5)} // Show top 5 in preview
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        ListHeaderComponent={renderAddYoursCard}
-        keyExtractor={(item) => item.id}
-        renderItem={renderStoreItem}
-        contentContainerStyle={styles.carouselContent}
-      />
-
-      {/* Action Bar */}
-      <View style={styles.actionBar}>
-        <View style={styles.leftActions}>
-          <LikeAction initialLikesCount={dummyStoreBoxPost.stats.likes} initialIsLiked={false} />
-          <CommentActionWidget commentsCount={dummyStoreBoxPost.stats.comments} />
-          <TouchableOpacity style={[styles.actionBtn, { marginLeft: 24, marginRight: 0 }]}>
-            <Tag color="#FFF" size={24} />
-            <Text style={styles.actionText}>{dummyStoreBoxPost.stats.shares}</Text>
-          </TouchableOpacity>
-        </View>
-
-        <OpenBoxButton onPress={handleOpenBox} />
-      </View>
-    </View>
+          </FeedPermissionsWrapper>
+        );
+      }}
+    </BoxFeedCardWrapper>
   );
 }
 
-const styles = StyleSheet.create({
+const themeStyles = (colors: ThemeTokens, scale: number): any => ({
   cardContainer: {
-    backgroundColor: '#121212',
-    marginBottom: 8,
-    paddingTop: 16,
-    paddingBottom: 16,
+    backgroundColor: colors.background,
+    marginBottom: 8 * scale,
+    paddingTop: 16 * scale,
+    paddingBottom: 16 * scale,
   },
   postHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 12,
+    paddingHorizontal: 16 * scale,
+    marginBottom: 12 * scale,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   creatorAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    marginRight: 10,
+    width: 36 * scale,
+    height: 36 * scale,
+    borderRadius: 18 * scale,
+    marginRight: 10 * scale,
   },
   creatorName: {
-    color: '#FFF',
-    fontSize: 15,
+    color: colors.text,
+    fontSize: 15 * scale,
     fontWeight: '700',
   },
   headerSubText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 13,
+    color: colors.textSecondary,
+    fontSize: 13 * scale,
   },
   boxInfo: {
-    paddingHorizontal: 16,
-    marginBottom: 16,
+    paddingHorizontal: 16 * scale,
+    marginBottom: 16 * scale,
   },
   boxTitle: {
-    color: '#FFF',
-    fontSize: 22,
+    color: colors.text,
+    fontSize: 22 * scale,
     fontWeight: '900',
-    marginBottom: 4,
+    marginBottom: 4 * scale,
   },
   boxDescription: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
-    lineHeight: 20,
+    color: colors.textSecondary,
+    fontSize: 14 * scale,
+    lineHeight: 20 * scale,
   },
   carouselContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingHorizontal: 16 * scale,
+    paddingBottom: 16 * scale,
   },
   carouselItem: {
-    width: CAROUSEL_ITEM_WIDTH,
-    marginRight: 12,
+    width: CAROUSEL_ITEM_WIDTH * scale,
+    marginRight: 12 * scale,
   },
   carouselImage: {
-    width: CAROUSEL_ITEM_WIDTH,
-    height: CAROUSEL_ITEM_WIDTH,
-    borderRadius: 12,
-    marginBottom: 8,
+    width: CAROUSEL_ITEM_WIDTH * scale,
+    height: CAROUSEL_ITEM_WIDTH * scale,
+    borderRadius: 12 * scale,
+    marginBottom: 8 * scale,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
   },
   priceTag: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: 8 * scale,
+    right: 8 * scale,
     backgroundColor: '#4ADE80',
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 6 * scale,
+    paddingVertical: 4 * scale,
+    borderRadius: 6 * scale,
   },
   priceText: {
     color: '#000',
-    fontSize: 12,
+    fontSize: 12 * scale,
     fontWeight: '900',
   },
   itemTitle: {
-    color: '#FFF',
-    fontSize: 13,
+    color: colors.text,
+    fontSize: 13 * scale,
     fontWeight: '600',
-    lineHeight: 18,
+    lineHeight: 18 * scale,
   },
   addYoursCard: {
     alignItems: 'center',
   },
   addYoursImagePlaceholder: {
-    width: CAROUSEL_ITEM_WIDTH,
-    height: CAROUSEL_ITEM_WIDTH,
-    borderRadius: 12,
-    marginBottom: 8,
+    width: CAROUSEL_ITEM_WIDTH * scale,
+    height: CAROUSEL_ITEM_WIDTH * scale,
+    borderRadius: 12 * scale,
+    marginBottom: 8 * scale,
     borderWidth: 2,
     borderStyle: 'dashed',
     borderColor: 'rgba(255,255,255,0.2)',
@@ -192,17 +244,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.02)',
   },
   addYoursText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 14,
+    color: colors.textSecondary,
+    fontSize: 14 * scale,
     fontWeight: '700',
-    marginTop: 4,
+    marginTop: 4 * scale,
   },
   actionBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingHorizontal: 16 * scale,
+    paddingTop: 12 * scale,
   },
   leftActions: {
     flexDirection: 'row',
@@ -211,12 +263,12 @@ const styles = StyleSheet.create({
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 24,
+    marginRight: 24 * scale,
   },
   actionText: {
-    color: '#FFF',
-    fontSize: 14,
+    color: colors.text,
+    fontSize: 14 * scale,
     fontWeight: '600',
-    marginLeft: 6,
+    marginLeft: 6 * scale,
   },
 });

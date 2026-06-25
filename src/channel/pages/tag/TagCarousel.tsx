@@ -18,7 +18,7 @@ export const TagCarousel: React.FC<TagCarouselProps> = ({
         <View style={styles.headerRow}>
           <Text style={styles.title}>{title}</Text>
           {trailingText && (
-            <TouchableOpacity onPress={onSeeAllPressed}>
+            <TouchableOpacity activeOpacity={1} onPress={onSeeAllPressed}>
               <Text style={styles.trailingText}>{trailingText}</Text>
             </TouchableOpacity>
           )}

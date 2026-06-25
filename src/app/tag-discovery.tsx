@@ -67,17 +67,7 @@ export default function TagDiscoveryRoute() {
     load(true);
   }, []);
 
-  const handleTagTap = async (targetChannelId: string) => {
-    try {
-      await createTag({
-        postId,
-        sourceChannelId,
-        targetChannelId,
-        linkChain: [...linkChain, targetChannelId],
-      });
-    } catch (e) {
-      console.error('[TagDiscoveryRoute] createTag error:', e);
-    }
+  const handleTagSuccess = () => {
     router.back();
   };
 
@@ -93,7 +83,7 @@ export default function TagDiscoveryRoute() {
     return (
       <View style={styles.centered}>
         <Text style={styles.errorText}>Failed to load channels</Text>
-        <TouchableOpacity onPress={() => load(true)}>
+        <TouchableOpacity activeOpacity={1} onPress={() => load(true)}>
           <Text style={styles.retryText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -104,7 +94,7 @@ export default function TagDiscoveryRoute() {
     <View style={styles.container}>
       {/* App Bar */}
       <View style={styles.appBar}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity activeOpacity={1} onPress={() => router.back()} style={styles.backBtn}>
           <Text style={styles.backArrow}>‹</Text>
         </TouchableOpacity>
         <Text style={styles.appBarTitle}>Tag Options</Text>
@@ -119,7 +109,11 @@ export default function TagDiscoveryRoute() {
             subtitle={item.description}
             imageUrl={item.avatarUrl}
             buttonText="Tag"
-            onTap={() => handleTagTap(item.id)}
+            postId={postId}
+            sourceChannelId={sourceChannelId}
+            targetChannelId={item.id}
+            linkChain={linkChain}
+            onTagSuccess={handleTagSuccess}
           />
         )}
         ItemSeparatorComponent={() => <View style={styles.separator} />}

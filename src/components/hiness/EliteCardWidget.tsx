@@ -22,7 +22,7 @@ export const EliteCardWidget = ({ data }: { data: any }) => {
           </View>
           <Text style={[styles.subtitle, { color: themeColor }]}>{data.title?.toUpperCase()}</Text>
         </View>
-        <TouchableOpacity>
+        <TouchableOpacity activeOpacity={1}>
           <MoreVertical size={20} color="#FFF" />
         </TouchableOpacity>
       </View>
@@ -46,12 +46,12 @@ export const EliteCardWidget = ({ data }: { data: any }) => {
         <View style={styles.actionsRow}>
           <LikeAction initialLikesCount={data.likes || 0} initialIsLiked={data.isLiked || false} />
           <CommentActionWidget commentsCount={data.comments || 0} />
-          <TouchableOpacity style={{ marginLeft: 24 }}>
+          <TouchableOpacity activeOpacity={1} style={{ marginLeft: 24 }}>
             <Tag size={24} color="#FFF" />
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.creatorRow}>
+        <TouchableOpacity activeOpacity={1} style={styles.creatorRow}>
           <Image
             source={{ uri: data.channelCreator?.profileImageUrl || 'https://via.placeholder.com/150' }}
             style={styles.creatorAvatar}

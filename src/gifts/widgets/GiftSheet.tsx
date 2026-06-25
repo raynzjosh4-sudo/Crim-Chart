@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { X, DollarSign } from 'lucide-react-native';
 import { GiftModel } from '../models/GiftModel';
+import { GiftGridSkeleton } from '@/components/skeletons/Skeletons';
 
 interface GiftSheetProps {
   visible: boolean;
@@ -32,7 +33,7 @@ export const GiftSheet: React.FC<GiftSheetProps> = ({
         <View style={styles.sheet}>
           <View style={styles.header}>
             <Text style={styles.title}>SEND GIFT</Text>
-            <TouchableOpacity onPress={() => onClose()}>
+            <TouchableOpacity activeOpacity={1} onPress={() => onClose()}>
               <X color="rgba(255,255,255,0.7)" size={24} />
             </TouchableOpacity>
           </View>
@@ -42,7 +43,11 @@ export const GiftSheet: React.FC<GiftSheetProps> = ({
             <TabBtn label="PREMIUM" active={activeTab === 'premium'} onSelect={() => setActiveTab('premium')} color={themeColor} />
           </View>
 
-          <FlatList
+          {/* Dummy loading state for skeleton demonstration */}
+          {gifts.length === 0 ? (
+            <GiftGridSkeleton count={8} />
+          ) : (
+            <FlatList
             data={gifts}
             keyExtractor={g => g.id}
             renderItem={({ item }) => (
@@ -55,7 +60,7 @@ export const GiftSheet: React.FC<GiftSheetProps> = ({
                     <Text style={styles.price}>{item.coinPrice}</Text>
                   </View>
                 </View>
-                <TouchableOpacity
+                <TouchableOpacity activeOpacity={1}
                   style={[styles.sendBtn, { backgroundColor: themeColor }]}
                   onPress={() => onClose(item)}
                 >
@@ -66,6 +71,7 @@ export const GiftSheet: React.FC<GiftSheetProps> = ({
             ItemSeparatorComponent={() => <View style={styles.separator} />}
             contentContainerStyle={{ paddingVertical: 16 }}
           />
+          )}
         </View>
       </View>
     </Modal>
@@ -73,7 +79,7 @@ export const GiftSheet: React.FC<GiftSheetProps> = ({
 };
 
 const TabBtn: React.FC<{ label: string; active: boolean; onSelect: () => void; color: string }> = ({ label, active, onSelect, color }) => (
-  <TouchableOpacity style={[styles.tab, active && { borderBottomColor: color }]} onPress={onSelect}>
+  <TouchableOpacity activeOpacity={1} style={[styles.tab, active && { borderBottomColor: color }]} onPress={onSelect}>
     <Text style={[styles.tabLabel, active && { color: '#FFF' }]}>{label}</Text>
   </TouchableOpacity>
 );

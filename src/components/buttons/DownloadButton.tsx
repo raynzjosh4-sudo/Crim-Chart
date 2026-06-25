@@ -24,7 +24,7 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
   textStyle,
 }) => {
   return (
-    <TouchableOpacity 
+    <TouchableOpacity activeOpacity={1} 
       style={[styles.button, disabled && { opacity: 0.3 }, style]} 
       disabled={disabled || isDownloading} 
       onPress={onPress}

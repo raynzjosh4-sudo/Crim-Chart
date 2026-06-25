@@ -1,14 +1,19 @@
 import React, { useRef } from 'react';
 import { View, ScrollView, Animated, StyleSheet } from 'react-native';
+import { useTheme } from '@react-navigation/native';
 
 const ShimmerBox = ({
   width,
   height,
   borderRadius = 4,
+  dark,
+  colors,
 }: {
   width: number | string;
   height: number;
   borderRadius?: number;
+  dark: boolean;
+  colors: any;
 }) => {
   const anim = useRef(new Animated.Value(0)).current;
 
@@ -25,52 +30,48 @@ const ShimmerBox = ({
 
   return (
     <Animated.View
-      style={{ width, height, borderRadius, backgroundColor: '#333', opacity }}
+      style={{ width, height, borderRadius, backgroundColor: dark ? '#333' : colors.border, opacity }}
     />
   );
 };
 
-const CardShimmer = () => (
+const CardShimmer = ({ dark, colors }: any) => (
   <View style={styles.card}>
-    <ShimmerBox width={52} height={52} borderRadius={26} />
+    <ShimmerBox width={72} height={72} borderRadius={36} dark={dark} colors={colors} />
     <View style={{ height: 8 }} />
-    <ShimmerBox width={70} height={11} borderRadius={4} />
-    <View style={{ height: 4 }} />
-    <ShimmerBox width={50} height={9} borderRadius={4} />
+    <ShimmerBox width={60} height={12} borderRadius={4} dark={dark} colors={colors} />
     <View style={{ height: 8 }} />
-    <ShimmerBox width={60} height={26} borderRadius={13} />
+    <ShimmerBox width={46} height={22} borderRadius={11} dark={dark} colors={colors} />
   </View>
 );
 
-export const TagShimmer: React.FC = () => (
-  <ScrollView
-    horizontal
-    showsHorizontalScrollIndicator={false}
-    contentContainerStyle={styles.list}
-    scrollEnabled={false}
-  >
-    <CardShimmer />
-    <CardShimmer />
-    <CardShimmer />
-    <CardShimmer />
-  </ScrollView>
-);
+export const TagShimmer: React.FC = () => {
+  const { colors, dark } = useTheme();
+
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.list}
+      scrollEnabled={false}
+    >
+      <CardShimmer dark={dark} colors={colors} />
+      <CardShimmer dark={dark} colors={colors} />
+      <CardShimmer dark={dark} colors={colors} />
+      <CardShimmer dark={dark} colors={colors} />
+    </ScrollView>
+  );
+};
 
 const styles = StyleSheet.create({
   list: {
     paddingHorizontal: 20,
-    gap: 10,
     alignItems: 'flex-start',
     paddingBottom: 4,
   },
   card: {
-    width: 100,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    backgroundColor: '#1E1E1E',
-    borderRadius: 16,
+    width: 72,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    marginRight: 18,
   },
 });

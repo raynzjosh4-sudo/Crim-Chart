@@ -38,7 +38,7 @@ export default function ExploreScreen() {
           />
         </View>
 
-        <TouchableOpacity onPress={() => console.log('Searching for:', searchQuery)}>
+        <TouchableOpacity activeOpacity={1} onPress={() => console.log('Searching for:', searchQuery)}>
           <Text style={styles.searchButtonText}>Search</Text>
         </TouchableOpacity>
       </View>

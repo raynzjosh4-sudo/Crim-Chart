@@ -6,12 +6,12 @@ import * as FileSystem from 'expo-file-system/legacy';
 class CommentSyncManager {
   private isSyncing = false;
 
-  async syncPendingComments() {
+  async syncPendingComments(directComments?: any[]) {
     if (this.isSyncing) return;
     this.isSyncing = true;
 
     try {
-      const pendingComments = await NativeDB.getPendingComments();
+      const pendingComments = directComments || await NativeDB.getPendingComments();
       if (!pendingComments || pendingComments.length === 0) {
         this.isSyncing = false;
         return;
@@ -22,13 +22,19 @@ class CommentSyncManager {
           let publicMediaUrl = comment.media_url;
 
           // If the media URL is a local file, upload it to Cloudflare R2
-          if (publicMediaUrl && publicMediaUrl.startsWith('file://')) {
-            // Read file info to get mime type and filename
-            const fileInfo = await FileSystem.getInfoAsync(publicMediaUrl);
-            if (fileInfo.exists) {
+          if (publicMediaUrl && (publicMediaUrl.startsWith('file://') || publicMediaUrl.startsWith('blob:') || publicMediaUrl.startsWith('data:'))) {
+            let isValid = false;
+            
+            if (Platform.OS !== 'web' && publicMediaUrl.startsWith('file://')) {
+              const fileInfo = await FileSystem.getInfoAsync(publicMediaUrl);
+              isValid = fileInfo.exists;
+            } else {
+              // On web, blob/data URIs are valid
+              isValid = true;
+            }
+
+            if (isValid) {
               const extension = publicMediaUrl.split('.').pop() || 'tmp';
-              const filename = `comments/${comment.id}-${Date.now()}.${extension}`;
-              
               // cloudMediaService.uploadMedia(localUri, folderName, userId)
               publicMediaUrl = await cloudMediaService.uploadMedia(
                 publicMediaUrl,
@@ -68,9 +74,10 @@ class CommentSyncManager {
           });
 
           if (error) {
+            if (typeof window !== 'undefined' && window.alert) window.alert('Supabase Sync Error: ' + error.message);
             console.error(`[CommentSyncManager] Error syncing comment ${comment.id}:`, JSON.stringify(error, null, 2));
           } else {
-            console.log(`[CommentSyncManager] Successfully synced comment ${comment.id}`);
+            // console.log(`[CommentSyncManager] Successfully synced comment ${comment.id}`);
             // Mark as synced locally
             await NativeDB.markCommentSynced(comment.id);
             // Optionally update the local db with the new remote media url if it changed
@@ -106,7 +113,7 @@ class CommentSyncManager {
         }
       )
       .subscribe((status) => {
-        console.log(`[CommentSyncManager] Broadcast subscription status for post ${postId}:`, status);
+        // console.log(`[CommentSyncManager] Broadcast subscription status for post ${postId}:`, status);
       });
   }
 }

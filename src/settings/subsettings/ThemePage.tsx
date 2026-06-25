@@ -57,7 +57,7 @@ const ThemeOptionItem: React.FC<ThemeOptionItemProps> = ({
 }) => {
   const isSelected = selectedValue === value;
   return (
-    <TouchableOpacity
+    <TouchableOpacity activeOpacity={1}
       style={styles.option}
       onPress={() => onSelect(value)}
       activeOpacity={0.7}

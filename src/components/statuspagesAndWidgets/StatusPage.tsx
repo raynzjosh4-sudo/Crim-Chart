@@ -176,10 +176,10 @@ export const StatusPage: React.FC<StatusPageProps> = ({
                 <Text style={styles.username}>{displayUsername}</Text>
                 <Text style={styles.counterText}>{currentIndex + 1} of {totalMedia}</Text>
               </View>
-              <TouchableOpacity onPress={() => onOptionsTap(currentIndex)} style={styles.iconButton}>
+              <TouchableOpacity activeOpacity={1} onPress={() => onOptionsTap(currentIndex)} style={styles.iconButton}>
                 <MoreHorizontal color="white" size={28} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={onClose} style={styles.iconButton}>
+              <TouchableOpacity activeOpacity={1} onPress={onClose} style={styles.iconButton}>
                 <X color="white" size={28} />
               </TouchableOpacity>
             </View>

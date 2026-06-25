@@ -1,11 +1,13 @@
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
+import { ChartToast } from '@/components/showcase/CrimChart_toast';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { colors } from '@/core/theme/colors';
 import RNDateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { Mars, User as UserIcon, Venus } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function BirthdayPage() {
   const router = useRouter();
@@ -23,11 +25,41 @@ export default function BirthdayPage() {
     if (!selectedGender) return;
     setIsLoading(true);
 
-    // Update profile logic would go here
-    await new Promise(resolve => setTimeout(resolve, 800));
+    const authStore = useAuthStore.getState();
+    authStore.setBirthday(selectedDate);
+    authStore.setGender(selectedGender);
 
-    setIsLoading(false);
-    router.push('/signup/profile-picture' as any);
+    if (authStore.pendingGoogleOnboarding) {
+      const success = await authStore.completeGoogleOnboarding();
+      setIsLoading(false);
+      if (success) {
+        router.push('/signup/profile-picture' as any);
+      } else {
+        const errorMsg = useAuthStore.getState().errorMessage || 'Failed to complete setup';
+        console.error('Google Onboarding Error:', errorMsg);
+        ChartToast.showError(null, {
+          title: 'Error',
+          message: errorMsg,
+        });
+      }
+    } else {
+      // If it's email/phone signup, we update the profile since they are already authenticated
+      const success = await authStore.updateProfile({ 
+        birthday: selectedDate.toISOString(), 
+        gender: selectedGender 
+      });
+      setIsLoading(false);
+      if (success) {
+        router.push('/signup/profile-picture' as any);
+      } else {
+        const errorMsg = useAuthStore.getState().errorMessage || 'Failed to complete setup';
+        console.error('Update Profile Error:', errorMsg);
+        ChartToast.showError(null, {
+          title: 'Error',
+          message: errorMsg,
+        });
+      }
+    }
   };
 
   const genders = [
@@ -50,7 +82,7 @@ export default function BirthdayPage() {
 
         <View style={styles.datePickerContainer}>
           {Platform.OS === 'android' && (
-            <TouchableOpacity
+            <TouchableOpacity activeOpacity={1}
               style={styles.dateButton}
               onPress={() => setShowDatePicker(true)}
             >
@@ -82,7 +114,7 @@ export default function BirthdayPage() {
             const isSelected = selectedGender === gender.id;
             const Icon = gender.icon;
             return (
-              <TouchableOpacity
+              <TouchableOpacity activeOpacity={1}
                 key={gender.id}
                 style={[
                   styles.genderItem,
@@ -102,7 +134,7 @@ export default function BirthdayPage() {
 
         <View style={styles.flexOne} />
 
-        <TouchableOpacity
+        <TouchableOpacity activeOpacity={1}
           style={[styles.nextButton, (!selectedGender) && styles.nextButtonDisabled]}
           onPress={handleNext}
           disabled={!selectedGender || isLoading}

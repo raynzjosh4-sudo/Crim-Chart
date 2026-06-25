@@ -1,9 +1,8 @@
-import { supabase } from '@/core/supabase/client';
-import { cloudMediaService } from '@/core/network/cloudMediaService';
-import { create } from 'zustand';
-import { useProfileCacheStore } from '@/core/store/useProfileCacheStore';
 import { NativeDB } from '@/core/db/NativeDB';
-import * as VideoThumbnails from 'expo-video-thumbnails';
+import { cloudMediaService } from '@/core/network/cloudMediaService';
+import { useProfileCacheStore } from '@/core/store/useProfileCacheStore';
+import { supabase } from '@/core/supabase/client';
+import { create } from 'zustand';
 
 export enum MediaType {
   photo = 'photo',
@@ -18,6 +17,8 @@ export enum MediaSource {
 
 export const PostType = {
   channel: 'channel_post',
+  channel_status: 'channel_status',
+  channel_moment: 'channel_moment',
   status: 'status',
   comment: 'comment',
   manifesto: 'manifesto',
@@ -54,6 +55,7 @@ export interface CreatePostParams {
   linkedChannelId?: string;
   linkedThumbnailUrls?: string[];
   aspectRatio?: number;
+  isShortClip?: boolean;
 }
 
 interface PostingState {
@@ -98,55 +100,106 @@ export const usePostingStore = create<PostingState>((set) => ({
       const galleryThumbs: string[] = [];
       let finalAudioUrl: string | null = null;
 
+      // Ensure all videos have a local thumbnail generated if not provided, or if it is an mp4
+      for (const m of visualMedia) {
+        if (m.type === MediaType.video && (!m.thumbnailUrl || m.thumbnailUrl.endsWith('.mp4'))) {
+          try {
+            const VideoThumbnails = require('expo-video-thumbnails');
+            const { uri } = await VideoThumbnails.getThumbnailAsync(m.path, { time: 1000 });
+            m.thumbnailUrl = uri;
+          } catch (e) {
+            console.warn('[usePostingStore] Fallback thumbnail generation failed:', e);
+          }
+        }
+      }
+
       for (const m of visualMedia) {
         let uploadedMainUrl = m.path;
-        if (m.path.startsWith('file://') || m.path.startsWith('/')) {
-           uploadedMainUrl = await cloudMediaService.uploadMedia(m.path, 'posts_media', user.id);
-           galleryUrls.push(uploadedMainUrl);
-        } else {
-           galleryUrls.push(m.path);
-        }
-        
+
         if (m.type === MediaType.video && (m.path.startsWith('file://') || m.path.startsWith('/'))) {
-           // It's a video, let's generate a REAL image thumbnail locally!
-           try {
-             const { uri } = await VideoThumbnails.getThumbnailAsync(m.path, { time: 1000 });
-             const thumbUrl = await cloudMediaService.uploadMedia(uri, 'posts_media_thumbs', user.id);
-             galleryThumbs.push(thumbUrl);
-           } catch (err) {
-             console.warn('Failed to generate real video thumbnail, falling back to video url', err);
-             galleryThumbs.push(uploadedMainUrl);
-           }
-        } else if (m.thumbnailUrl) {
-           if (m.thumbnailUrl === m.path) {
-             galleryThumbs.push(uploadedMainUrl);
-           } else if (m.thumbnailUrl.startsWith('file://') || m.thumbnailUrl.startsWith('/')) {
-             const thumbUrl = await cloudMediaService.uploadMedia(m.thumbnailUrl, 'posts_media_thumbs', user.id);
-             galleryThumbs.push(thumbUrl);
-           } else {
-             galleryThumbs.push(m.thumbnailUrl);
-           }
+          console.log('[usePostingStore] 1️⃣ Uploading raw video to Cloudflare R2 for Coconut...');
+          const videoFilename = `${user.id}_${Date.now()}.mp4`;
+          
+          await cloudMediaService.uploadRawVideoForCoconut(m.path, videoFilename);
+
+          console.log('[usePostingStore] 2️⃣ Triggering Coconut Video Processor Edge Function...');
+          const { data: functionData, error: functionError } = await supabase.functions.invoke('process-video', {
+            body: { 
+              videoFilename: videoFilename,
+              userId: user.id 
+            }
+          });
+
+          // Add this line to catch the real error we are forcing through:
+          if (functionData?.error) throw new Error(functionData.error); 
+          
+          if (functionError) throw new Error("Network failed");
+
+          console.log('[usePostingStore] ✅ Processing Started! Future Stream URL:', functionData.streamUrl);
+          
+          uploadedMainUrl = functionData.streamUrl;
+          galleryUrls.push(uploadedMainUrl);
+          galleryThumbs.push(functionData.thumbnailUrl);
+
+        } else if (m.path.startsWith('file://') || m.path.startsWith('/')) {
+          uploadedMainUrl = await cloudMediaService.uploadMedia(m.path, 'posts_media', user.id);
+          galleryUrls.push(uploadedMainUrl);
+        } else {
+          galleryUrls.push(m.path);
+        }
+
+        // Process the local thumbnail if it exists
+        if (m.thumbnailUrl) {
+          if (m.thumbnailUrl === m.path) {
+            if (m.type !== MediaType.video) {
+              galleryThumbs.push(uploadedMainUrl);
+            }
+          } else if (m.thumbnailUrl.startsWith('file://') || m.thumbnailUrl.startsWith('/')) {
+            const thumbUrl = await cloudMediaService.uploadMedia(m.thumbnailUrl, 'posts_media_thumbs', user.id);
+            if (m.type === MediaType.video) {
+              if (galleryThumbs.length > 0) {
+                galleryThumbs[galleryThumbs.length - 1] = thumbUrl;
+              } else {
+                galleryThumbs.push(thumbUrl);
+              }
+            } else {
+              galleryThumbs.push(thumbUrl);
+            }
+          } else {
+            if (m.type === MediaType.video) {
+              if (galleryThumbs.length > 0) {
+                galleryThumbs[galleryThumbs.length - 1] = m.thumbnailUrl;
+              } else {
+                galleryThumbs.push(m.thumbnailUrl);
+              }
+            } else {
+              galleryThumbs.push(m.thumbnailUrl);
+            }
+          }
         }
       }
 
       const metadata: Record<string, any> = {};
+      if (params.isShortClip !== undefined) {
+        metadata.is_short = params.isShortClip;
+      }
 
       if (audioMedia) {
         if (audioMedia.path.startsWith('file://') || audioMedia.path.startsWith('/')) {
-           const url = await cloudMediaService.uploadMedia(audioMedia.path, 'posts_audio', user.id);
-           finalAudioUrl = url;
+          const url = await cloudMediaService.uploadMedia(audioMedia.path, 'posts_audio', user.id);
+          finalAudioUrl = url;
         } else {
-           finalAudioUrl = audioMedia.path;
+          finalAudioUrl = audioMedia.path;
         }
 
         // Upload the audio cover image (thumbnail)
         if (audioMedia.thumbnailUrl) {
-           if (audioMedia.thumbnailUrl.startsWith('file://') || audioMedia.thumbnailUrl.startsWith('/')) {
-             const thumbUrl = await cloudMediaService.uploadMedia(audioMedia.thumbnailUrl, 'posts_media_thumbs', user.id);
-             galleryThumbs.push(thumbUrl);
-           } else {
-             galleryThumbs.push(audioMedia.thumbnailUrl);
-           }
+          if (audioMedia.thumbnailUrl.startsWith('file://') || audioMedia.thumbnailUrl.startsWith('/')) {
+            const thumbUrl = await cloudMediaService.uploadMedia(audioMedia.thumbnailUrl, 'posts_media_thumbs', user.id);
+            galleryThumbs.push(thumbUrl);
+          } else {
+            galleryThumbs.push(audioMedia.thumbnailUrl);
+          }
         }
 
         // Build metadata JSON
@@ -157,6 +210,9 @@ export const usePostingStore = create<PostingState>((set) => ({
 
       let mainInsertSuccess = true;
 
+      const finalImageUrls = isVideo ? [] : galleryUrls;
+      const finalVideoUrl = isVideo ? galleryUrls[0] : null;
+
       // 1. If it's a MOMENT
       if (params.postType === PostType.moment) {
         if (!params.channelId) throw new Error('Channel ID is required for moments');
@@ -166,20 +222,25 @@ export const usePostingStore = create<PostingState>((set) => ({
           author_id: user.id,
           media_url: mediaUrl,
           caption: params.caption,
-          media_type: isVideo ? 'video' : 'photo', // Or 'audio'
+          media_type: isVideo ? 'video' : (audioMedia ? 'audio' : 'photo'),
           thumbnail_url: galleryThumbs.length > 0 ? galleryThumbs[0] : null,
           expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         };
-        const { error } = await supabase.from('channel_moments').insert(momentPayload);
+        const { error, data } = await supabase.from('channel_moments').insert(momentPayload).select().single();
         if (error) throw error;
+        if (data) {
+          import('@/channel/data/sources/ChannelLocalSource').then(({ channelLocalSource }) => {
+            channelLocalSource.saveMoments([data]);
+          });
+        }
       }
       // 2. If it's a STATUS
       else if (params.postType === PostType.status) {
         const statusPayload = {
           author_id: user.id,
           caption: params.caption || null,
-          image_urls: galleryUrls || [],
-          video_url: isVideo ? visualMedia.find((m) => m.type === MediaType.video)?.path || null : null,
+          image_urls: finalImageUrls,
+          video_url: finalVideoUrl,
           audio_url: finalAudioUrl,
           is_video: isVideo,
           is_audio: !!finalAudioUrl,
@@ -204,7 +265,9 @@ export const usePostingStore = create<PostingState>((set) => ({
           post_type: params.postType,
           aspect_ratio: params.aspectRatio,
           is_video: isVideo,
-          image_urls: galleryUrls,
+          video_url: finalVideoUrl,
+          video_urls: finalVideoUrl ? [finalVideoUrl] : [],
+          image_urls: finalImageUrls,
           thumbnail_urls: galleryThumbs,
           audio_url: finalAudioUrl,
           is_audio: !!finalAudioUrl,
@@ -212,6 +275,45 @@ export const usePostingStore = create<PostingState>((set) => ({
         };
         const { error } = await supabase.from('channel_posts').insert(cPostPayload);
         if (error) throw error;
+      }
+      // 3.5. If it's a CHANNEL STATUS
+      else if (params.postType === PostType.channel_status) {
+        if (!params.channelId) throw new Error('Channel ID is required for channel statuses');
+        const cStatusPayload = {
+          channel_id: params.channelId,
+          author_id: user.id,
+          caption: params.caption || null,
+          image_urls: finalImageUrls,
+          video_url: finalVideoUrl,
+          audio_url: finalAudioUrl,
+          is_video: isVideo,
+          is_audio: !!finalAudioUrl,
+          thumbnail_url: galleryThumbs.length > 0 ? galleryThumbs[0] : null,
+          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        };
+        const { error } = await supabase.from('channel_statuses').insert(cStatusPayload);
+        if (error) throw error;
+      }
+      // 3.6. If it's a CHANNEL MOMENT
+      else if (params.postType === PostType.channel_moment) {
+        if (!params.channelId) throw new Error('Channel ID is required for channel moments');
+        const firstMedia = finalImageUrls[0] || finalVideoUrl || '';
+        const cMomentPayload = {
+          channel_id: params.channelId,
+          author_id: user.id,
+          caption: params.caption || null,
+          media_url: firstMedia,
+          media_type: isVideo ? 'video' : (audioMedia ? 'audio' : 'photo'),
+          thumbnail_url: galleryThumbs.length > 0 ? galleryThumbs[0] : (finalImageUrls[0] || null),
+          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        };
+        const { error, data } = await supabase.from('channel_moments').insert(cMomentPayload).select().single();
+        if (error) throw error;
+        if (data) {
+          import('@/channel/data/sources/ChannelLocalSource').then(({ channelLocalSource }) => {
+            channelLocalSource.saveMoments([data]);
+          });
+        }
       }
       // 4. Default REGULAR POST
       else {
@@ -222,7 +324,9 @@ export const usePostingStore = create<PostingState>((set) => ({
           allow_comments: params.allowComments ?? true,
           aspect_ratio: params.aspectRatio,
           is_video: isVideo,
-          image_urls: galleryUrls,
+          video_url: finalVideoUrl,
+          video_urls: finalVideoUrl ? [finalVideoUrl] : [],
+          image_urls: finalImageUrls,
           thumbnail_urls: galleryThumbs,
           audio_url: finalAudioUrl,
           is_audio: !!finalAudioUrl,

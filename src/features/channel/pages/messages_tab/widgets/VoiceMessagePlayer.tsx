@@ -128,7 +128,7 @@ export const VoiceMessagePlayer: React.FC<VoiceMessagePlayerProps> = ({ url, dur
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={[styles.playBtn, { backgroundColor: playBtnBg }]} onPress={togglePlay}>
+      <TouchableOpacity activeOpacity={1} style={[styles.playBtn, { backgroundColor: playBtnBg }]} onPress={togglePlay}>
         {isPlaying ? <Pause size={20} color={activeColor} /> : <Play size={20} color={activeColor} fill={activeColor} />}
       </TouchableOpacity>
       

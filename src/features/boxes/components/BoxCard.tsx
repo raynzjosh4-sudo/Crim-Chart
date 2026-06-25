@@ -1,9 +1,11 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Play, ShoppingBag, Trophy, FolderHeart, Music } from 'lucide-react-native';
+import { Image } from 'expo-image';
 
 export interface BoxModel {
   id: string;
+  postId?: string;
   title: string;
   boxType: 'music' | 'movie' | 'store' | 'sports' | 'voting';
   coverImageUrl?: string;
@@ -24,27 +26,39 @@ interface BoxCardProps {
 }
 
 export const BoxCard: React.FC<BoxCardProps> = ({ box, onPress }) => {
-  // Determine icon based on box type
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const animatedValue = new Animated.Value(0);
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(animatedValue, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(animatedValue, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
+  const opacity = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.3, 0.7],
+  });
+
   const renderIcon = () => {
     switch (box.boxType) {
-      case 'music': return <Music size={14} color="#FFF" />;
-      case 'movie': return <Play size={14} color="#FFF" />;
-      case 'store': return <ShoppingBag size={14} color="#FFF" />;
-      case 'sports': return <Trophy size={14} color="#FFF" />;
-      case 'voting': return <FolderHeart size={14} color="#FFF" />;
-      default: return <FolderHeart size={14} color="#FFF" />;
-    }
-  };
-
-  // Determine accent color
-  const getAccentColor = () => {
-    switch (box.boxType) {
-      case 'music': return '#1DB954'; // Spotify Green
-      case 'movie': return '#E50914'; // Netflix Red
-      case 'store': return '#FF9900'; // Amazon Orange
-      case 'sports': return '#00529B'; // Sports Blue
-      case 'voting': return '#9C27B0'; // Purple
-      default: return '#FACD11'; // Crimchart Yellow
+      case 'music': return <Music size={24} color="rgba(255,255,255,0.5)" />;
+      case 'movie': return <Play size={24} color="rgba(255,255,255,0.5)" />;
+      case 'store': return <ShoppingBag size={24} color="rgba(255,255,255,0.5)" />;
+      case 'sports': return <Trophy size={24} color="rgba(255,255,255,0.5)" />;
+      case 'voting': return <FolderHeart size={24} color="rgba(255,255,255,0.5)" />;
+      default: return <FolderHeart size={24} color="rgba(255,255,255,0.5)" />;
     }
   };
 
@@ -54,18 +68,26 @@ export const BoxCard: React.FC<BoxCardProps> = ({ box, onPress }) => {
       onPress={() => onPress(box)}
       style={styles.cardContainer}
     >
-      {/* Cover Image or Gradient Placeholder */}
-      <View style={[styles.coverContainer, { backgroundColor: getAccentColor() }]}>
+      <View style={styles.coverContainer}>
+        {/* Shimmer Background */}
+        <Animated.View style={[StyleSheet.absoluteFillObject, styles.shimmerBg, { opacity }]} />
+        
+        {/* Icon Fallback */}
+        <View style={styles.iconFallback}>
+          {renderIcon()}
+        </View>
+
         {box.coverImageUrl ? (
-          <Image source={{ uri: box.coverImageUrl }} style={styles.coverImage} />
-        ) : (
-          <View style={styles.placeholderOverlay}>
-             {renderIcon()}
-          </View>
-        )}
+          <Image 
+            source={{ uri: box.coverImageUrl }} 
+            style={[styles.coverImage, { opacity: isImageLoaded ? 1 : 0 }]} 
+            contentFit="cover"
+            onLoad={() => setIsImageLoaded(true)}
+            transition={300}
+          />
+        ) : null}
       </View>
 
-      {/* Info Row */}
       <View style={styles.infoContainer}>
         <Text style={styles.titleText} numberOfLines={1}>
           {box.title}
@@ -86,17 +108,22 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     position: 'relative',
+    backgroundColor: '#1A1A1A', // Base dark gray
+  },
+  shimmerBg: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  iconFallback: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   coverImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
-  },
-  placeholderOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    position: 'absolute',
+    top: 0,
+    left: 0,
   },
 
   infoContainer: {

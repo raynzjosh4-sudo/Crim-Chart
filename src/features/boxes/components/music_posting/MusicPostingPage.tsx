@@ -1,4 +1,5 @@
 import { MediaChips } from '@/components/mediaChips/MediaChips';
+import { UploadingToast } from '@/components/loader/UploadingToast';
 import { PostInteractionWrapper } from '@/components/wrappers/PostInteractionWrapper';
 import { VisibilityBoxTrackerWrapper } from '@/components/wrappers/VisibilityBoxTrackerWrapper';
 import { BoxReactionRecorderWrapper } from '@/components/wrappers/BoxReactionRecorderWrapper';
@@ -12,6 +13,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View, ViewToken } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMusicFeedStore } from './store/useMusicFeedStore';
+import { ChartToast } from '@/components/showcase/CrimChart_toast';
 import { MusicListTile, MusicTrackItem } from './tiles/MusicListTile';
 import { MusicListTileShimmer } from './tiles/MusicListTileShimmer';
 import { PhoneMusicWidget } from './widgets/PhoneMusicWidget';
@@ -152,7 +154,7 @@ export const MusicPostingPage = ({ boxId }: { boxId: string }) => {
         setShowLocalOnly(false);
       }
     } else {
-      Alert.alert("Error", "Failed to upload track. Please try again.");
+      ChartToast.showErrorSimple("Upload Failed", "Failed to upload track. Please try again.");
     }
   };
 
@@ -196,16 +198,11 @@ export const MusicPostingPage = ({ boxId }: { boxId: string }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {isUploading && (
-        <View style={styles.uploadingOverlay}>
-          <ActivityIndicator size="small" color="#FACD11" />
-          <Text style={styles.uploadingText}>Uploading track...</Text>
-        </View>
-      )}
+      <UploadingToast visible={isUploading} message="Uploading track..." />
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity activeOpacity={1} style={styles.backButton} onPress={() => router.back()}>
           <ArrowLeft size={24} color="#FFF" />
         </TouchableOpacity>
         <View style={styles.searchContainer}>
@@ -223,7 +220,7 @@ export const MusicPostingPage = ({ boxId }: { boxId: string }) => {
       {/* Filter Options */}
       <VisibilityBoxTrackerWrapper box={box || {}} isCurrentUser={isOwner} actionType="upload_post">
         <View style={styles.filterContainer}>
-          <TouchableOpacity
+          <TouchableOpacity activeOpacity={1}
             style={styles.filterToggle}
             onPress={() => setShowLocalOnly(!showLocalOnly)}
             activeOpacity={0.7}
@@ -348,26 +345,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
-  uploadingOverlay: {
-    position: 'absolute',
-    top: 50,
-    left: 20,
-    right: 20,
-    backgroundColor: 'rgba(25, 25, 25, 0.95)',
-    zIndex: 100,
-    padding: 12,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  uploadingText: {
-    color: '#FFF',
-    fontWeight: 'bold',
-    marginLeft: 12,
-  },
+
   header: {
     flexDirection: 'row',
     alignItems: 'center',

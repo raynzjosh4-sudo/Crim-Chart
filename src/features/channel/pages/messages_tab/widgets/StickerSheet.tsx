@@ -7,6 +7,7 @@ import {
   Modal,
   FlatList,
   useWindowDimensions,
+  Platform,
 } from 'react-native';
 import { X } from 'lucide-react-native';
 import { colors } from '@/core/theme/colors';
@@ -104,7 +105,11 @@ export const StickerSheet: React.FC<StickerSheetProps> = ({
     >
       {LottieView ? (
         <LottieView
-          source={STICKER_SOURCES[item]}
+          source={
+            Platform.OS === 'web'
+              ? { uri: `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(STICKER_SOURCES[item]))}` }
+              : STICKER_SOURCES[item]
+          }
           autoPlay
           loop
           style={{ width: itemSize - 16, height: itemSize - 16 }}

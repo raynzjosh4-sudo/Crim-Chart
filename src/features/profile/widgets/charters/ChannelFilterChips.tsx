@@ -26,7 +26,7 @@ export const ChannelFilterChips: React.FC<ChannelFilterChipsProps> = ({
         {filters.map((filter) => {
           const isSelected = filter === activeFilter;
           return (
-            <TouchableOpacity
+            <TouchableOpacity activeOpacity={1}
               key={filter}
               onPress={() => onFilterChanged(filter)}
               style={[

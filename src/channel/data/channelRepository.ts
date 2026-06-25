@@ -72,7 +72,7 @@ export class ChannelRepository {
 
     const { error: memberError } = await supabase
       .from('channel_members')
-      .insert(memberPayload);
+      .upsert(memberPayload, { onConflict: 'channel_id,user_id', ignoreDuplicates: true });
 
     if (memberError) {
       console.error('Failed to add creator as member:', memberError);
@@ -173,6 +173,18 @@ export class ChannelRepository {
       console.error('discoverYoutubeChannels error:', e);
       return [];
     }
+  }
+
+  async createChannelRequest(channelId: string, targetUserId: string, requestType: 'admin_invite' | 'member_invite' | 'join_request' | 'leave_request', requestedById: string): Promise<void> {
+    return channelRemoteSource.createChannelRequest(channelId, targetUserId, requestType, requestedById);
+  }
+
+  async getPendingChannelRequests(channelId: string): Promise<any[]> {
+    return channelRemoteSource.getPendingChannelRequests(channelId);
+  }
+
+  async updateChannelRequestStatus(requestId: string, status: 'approved' | 'rejected' | 'canceled'): Promise<void> {
+    return channelRemoteSource.updateChannelRequestStatus(requestId, status);
   }
 }
 

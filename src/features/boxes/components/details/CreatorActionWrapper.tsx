@@ -22,7 +22,7 @@ export function CreatorActionWrapper({ ownerId, onAddPress, children }: Props) {
     <View style={styles.container}>
       {children}
       {isCreator && (
-        <TouchableOpacity 
+        <TouchableOpacity activeOpacity={1} 
           style={[styles.fab, { bottom: Math.max(insets.bottom + 24, 24) }]} 
           onPress={onAddPress}
         >

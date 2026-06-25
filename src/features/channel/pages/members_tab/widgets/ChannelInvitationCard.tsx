@@ -13,7 +13,7 @@ export const ChannelInvitationCard: React.FC<ChannelInvitationCardProps> = ({
   onTap,
 }) => {
   return (
-    <TouchableOpacity style={styles.container} onPress={onTap}>
+    <TouchableOpacity activeOpacity={1} style={styles.container} onPress={onTap}>
       <View style={styles.iconContainer}>
         <Share2 size={24} color={colors.primary} />
       </View>

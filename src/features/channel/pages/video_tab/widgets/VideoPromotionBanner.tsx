@@ -7,8 +7,7 @@ import React, { useRef } from 'react';
 import { Animated, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { PromotionBannerCard } from './PromotionBannerCard';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const ITEM_WIDTH = 140; // Matching PromotionBannerCard width
+const ITEM_WIDTH = 100; // Matching PromotionBannerCard width
 const ITEM_MARGIN = 6;
 const SNAP_INTERVAL = ITEM_WIDTH + ITEM_MARGIN * 2;
 
@@ -40,6 +39,7 @@ export const VideoPromotionBanner = ({
     avatarUrl: m.authorAvatarUrl || 'https://i.pravatar.cc/150',
     media: [
       {
+        id: m.id,
         url: m.mediaUrl,
         type: 'image',
         caption: m.caption,
@@ -58,21 +58,7 @@ export const VideoPromotionBanner = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Moments</Text>
-
-      {isEmpty ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.subtitle}>
-            Share moments with friends on{' '}
-            <Text style={styles.highlight}>{channelName || 'this channel'}</Text>
-          </Text>
-
-          {channelTitle && (
-            <Text style={styles.description}>{channelTitle}</Text>
-          )}
-        </View>
-      ) : (
-        <Animated.FlatList
+      <Animated.FlatList
           data={listData}
           keyExtractor={(item) => item.id}
           horizontal
@@ -111,7 +97,7 @@ export const VideoPromotionBanner = ({
                         <View style={styles.iconCircle}>
                           <Plus color="#000" size={24} />
                         </View>
-                        <Text style={styles.postCardText}>Post a Moment</Text>
+                        <Text style={styles.postCardText}>Add Moment</Text>
                       </View>
                       <Text style={styles.postCardChannel} numberOfLines={1}>{channelName}</Text>
                     </TouchableOpacity>
@@ -136,7 +122,6 @@ export const VideoPromotionBanner = ({
             );
           }}
         />
-      )}
 
       {/* Interactive Status Viewer */}
       <StatusViewer
@@ -163,6 +148,7 @@ const styles = StyleSheet.create({
   emptyContainer: {
     paddingHorizontal: 20,
     alignItems: 'center',
+    marginBottom: 20,
   },
   carouselContent: {
     paddingHorizontal: 14,
@@ -186,8 +172,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   postCardContainer: {
-    width: 140,
-    height: 200,
+    width: 100,
+    height: 140,
     borderRadius: 16,
     overflow: 'hidden',
     marginHorizontal: 6,

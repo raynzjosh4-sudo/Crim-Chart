@@ -8,7 +8,7 @@ export async function createTag({
   linkChain,
 }: {
   postId: string;
-  sourceChannelId: string;
+  sourceChannelId?: string | null;
   targetChannelId: string;
   linkChain: string[];
 }): Promise<void> {
@@ -23,7 +23,7 @@ export async function createTag({
   const payload = {
     post_id: postId,
     user_id: userId,
-    source_channel_id: sourceChannelId,
+    source_channel_id: sourceChannelId || null,
     target_channel_id: targetChannelId,
     link_chain: linkChain,
   };
@@ -35,6 +35,10 @@ export async function createTag({
     .insert(payload);
 
   if (error) {
+    if (error.code === '23505') {
+      console.log('⚠️ [TagService] User already tagged this post to this channel. Ignoring duplicate.');
+      return; // Silently resolve since the intent is already fulfilled
+    }
     console.error('❌ [TagService] Insert failed:', error.message);
     throw error;
   }

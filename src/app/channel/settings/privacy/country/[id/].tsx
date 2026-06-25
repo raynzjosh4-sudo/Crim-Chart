@@ -39,11 +39,11 @@ export default function CountrySelectionPage() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
+        <TouchableOpacity activeOpacity={1} onPress={() => router.back()} style={styles.headerButton}>
           <ChevronLeft size={28} color="#FFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Select Countries</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
+        <TouchableOpacity activeOpacity={1} onPress={() => router.back()} style={styles.headerButton}>
           <Text style={styles.doneText}>Done</Text>
         </TouchableOpacity>
       </View>
@@ -65,7 +65,7 @@ export default function CountrySelectionPage() {
         {COUNTRIES.filter(c => c.name.toLowerCase().includes(search.toLowerCase())).map((country) => {
           const isSelected = selectedCountries.has(country.name);
           return (
-            <TouchableOpacity 
+            <TouchableOpacity activeOpacity={1} 
               key={country.name} 
               style={styles.tile} 
               onPress={() => toggleCountry(country.name)}

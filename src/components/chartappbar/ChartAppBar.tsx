@@ -1,8 +1,9 @@
-import { colors } from '@/core/theme/colors';
 import { useRouter } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import CrimchartBackButton from '@/components/CrimChartBackButton/CrimChart_back_button';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useStyles } from '@/core/hooks/useStyles';
+import { ThemeTokens } from '@/core/theme/themes';
 
 type ChartAppBarProps = {
     title: string;
@@ -38,9 +39,10 @@ export default function ChartAppBar({
     useSafeArea = true,
 }: ChartAppBarProps) {
     const router = useRouter();
+    const styles = useStyles(themeStyles);
 
     return (
-        <View style={[styles.container, { backgroundColor: backgroundColor ?? colors.background }]}>
+        <View style={[styles.container, backgroundColor ? { backgroundColor } : undefined]}>
             <SafeAreaView edges={useSafeArea ? ['top'] : []}>
                 <View style={[styles.row, showBorder && !isLoading ? styles.border : null]}>
                     {/* Leading / Back */}
@@ -84,52 +86,53 @@ export default function ChartAppBar({
     );
 }
 
-const styles = StyleSheet.create({
+const themeStyles = (colors: ThemeTokens, scale: number) => ({
     container: {
         width: '100%',
+        backgroundColor: colors.background,
     },
     row: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        minHeight: 48,
-        paddingHorizontal: 8,
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        minHeight: 48 * scale,
+        paddingHorizontal: 8 * scale,
     },
     side: {
-        minWidth: 48,
-        alignItems: 'center',
-        justifyContent: 'center',
+        minWidth: 48 * scale,
+        alignItems: 'center' as const,
+        justifyContent: 'center' as const,
     },
     backButton: {
-        padding: 6,
+        padding: 6 * scale,
     },
     backText: {
-        fontSize: 28,
+        fontSize: 28 * scale,
         color: colors.text,
-        lineHeight: 28,
+        lineHeight: 28 * scale,
     },
     placeholder: {
-        width: 24,
+        width: 24 * scale,
     },
     titleContainer: {
         flex: 1,
-        justifyContent: 'center',
+        justifyContent: 'center' as const,
     },
     title: {
-        fontWeight: '700',
-        fontSize: 17,
+        fontWeight: '700' as const,
+        fontSize: 17 * scale,
         color: colors.text,
     },
     actionsRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        gap: 8 * scale,
     },
     border: {
         borderBottomWidth: 0.8,
-        borderBottomColor: 'rgba(0,0,0,0.08)',
+        borderBottomColor: 'rgba(255,255,255,0.08)',
     },
     loaderContainer: {
-        height: 2,
+        height: 2 * scale,
         width: '100%',
         backgroundColor: 'transparent',
     },

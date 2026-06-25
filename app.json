@@ -19,10 +19,11 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.crimchart"
+      "package": "com.crimchart.app",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -57,7 +58,8 @@
           "isAccessMediaLocationEnabled": true
         }
       ],
-      "./withNotifeeRepo.js"
+      "./withNotifeeRepo.js",
+      "@react-native-google-signin/google-signin"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -145,7 +145,7 @@ export const InvitePostCard: React.FC<InvitePostCardProps> = ({
           )}
         </View>
         
-        <TouchableOpacity
+        <TouchableOpacity activeOpacity={1}
           style={[
             styles.joinButton,
             { backgroundColor: isMember ? colors.card : colors.primary },

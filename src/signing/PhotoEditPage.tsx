@@ -57,7 +57,7 @@ export default function PhotoEditPage() {
                             renderItem={({ item }) => {
                                 if (item.uri === 'camera') {
                                     return (
-                                        <TouchableOpacity 
+                                        <TouchableOpacity activeOpacity={1} 
                                             style={[styles.galleryItem, { backgroundColor: 'rgba(255, 255, 255, 0.05)' }]}
                                             onPress={() => setPickerVisible(false)}
                                         >
@@ -66,7 +66,7 @@ export default function PhotoEditPage() {
                                     );
                                 }
                                 return (
-                                    <TouchableOpacity 
+                                    <TouchableOpacity activeOpacity={1} 
                                         style={styles.galleryItem}
                                         onPress={() => setPickerVisible(false)}
                                     >
@@ -89,7 +89,7 @@ export default function PhotoEditPage() {
                 isLoading={isLoading}
                 backgroundColor={colors.background}
                 actions={[
-                    <TouchableOpacity key="save" onPress={handleSave} disabled={isLoading} style={styles.actionButton}>
+                    <TouchableOpacity activeOpacity={1} key="save" onPress={handleSave} disabled={isLoading} style={styles.actionButton}>
                         <Text style={[styles.saveText, { color: colors.primary }]}>
                             {tr('save') || 'Save'}
                         </Text>
@@ -107,7 +107,7 @@ export default function PhotoEditPage() {
 
                 <View style={styles.spacer} />
 
-                <TouchableOpacity 
+                <TouchableOpacity activeOpacity={1} 
                     onPress={handleChangePhoto}
                     disabled={isLoading}
                     style={styles.changePhotoButton}

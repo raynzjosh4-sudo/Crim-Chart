@@ -24,7 +24,7 @@ export const ChannelsWidget: React.FC<ChannelsWidgetProps> = ({
       <View style={styles.header}>
         <Text style={styles.title}>Channels</Text>
         {onSeeAll && (
-          <TouchableOpacity onPress={onSeeAll}>
+          <TouchableOpacity activeOpacity={1} onPress={onSeeAll}>
             <Text style={styles.seeAll}>See All</Text>
           </TouchableOpacity>
         )}
@@ -35,7 +35,7 @@ export const ChannelsWidget: React.FC<ChannelsWidgetProps> = ({
         contentContainerStyle={styles.list}
       >
         {models.map(model => (
-          <TouchableOpacity
+          <TouchableOpacity activeOpacity={1}
             key={model.id}
             style={styles.card}
             onPress={() => onChannelPress?.(model)}

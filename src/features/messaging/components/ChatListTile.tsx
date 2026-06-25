@@ -31,7 +31,7 @@ export const ChatListTile: React.FC<ChatListTileProps> = ({ chat, onTap, showTim
   const avatarColor = avatarColors[initial.charCodeAt(0) % avatarColors.length];
 
   return (
-    <TouchableOpacity
+    <TouchableOpacity activeOpacity={1}
       style={[styles.container, isUnread && styles.containerUnread]}
       onPress={onTap}
     >

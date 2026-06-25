@@ -1,38 +1,33 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Plus, MoreHorizontal, ChevronLeft } from 'lucide-react-native';
+import { ChevronLeft } from 'lucide-react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+import AppAvatar from '@/components/avatar/AppAvatar';
 
 interface ChannelTitleBarProps {
   title: string;
-  onSettingsPress: () => void;
-  onPlusPress?: () => void;
+  channelImageUrl?: string | null;
   onBackPress?: () => void;
 }
 
 export const ChannelTitleBar: React.FC<ChannelTitleBarProps> = ({
   title,
-  onSettingsPress,
-  onPlusPress,
+  channelImageUrl,
   onBackPress
 }) => {
   return (
     <View style={styles.container}>
       <View style={styles.leftSection}>
         {onBackPress && (
-          <TouchableOpacity style={styles.backButton} onPress={onBackPress}>
+          <TouchableOpacity activeOpacity={1} style={styles.backButton} onPress={onBackPress}>
             <ChevronLeft size={28} color="#FFF" />
           </TouchableOpacity>
         )}
+        {channelImageUrl && (
+          <AppAvatar imageUrl={channelImageUrl} size={36} style={{ marginRight: 12 }} />
+        )}
         <Text style={styles.title} numberOfLines={1}>{title}</Text>
       </View>
-      <View style={styles.actions}>
-        <TouchableOpacity style={styles.actionCircle} onPress={onPlusPress}>
-          <Plus size={20} color="#FFF" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionCircle} onPress={onSettingsPress}>
-          <MoreHorizontal size={20} color="#FFF" />
-        </TouchableOpacity>
-      </View>
+
     </View>
   );
 };

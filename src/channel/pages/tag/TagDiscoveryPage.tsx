@@ -8,8 +8,11 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useTheme } from '@react-navigation/native';
 import { TagListTile } from './widgets/TagListTile';
-import { createTag, fetchTaggableChannels } from './tagService';
+import { createTag } from './tagService';
+import { fetchUserTagChannels } from '@/features/channel/application/tagChannelService';
+import { ChannelListSkeleton } from '@/components/skeletons/Skeletons';
 
 interface Channel {
   id: string;
@@ -22,14 +25,16 @@ type Status = 'loading' | 'loaded' | 'error';
 
 export const TagDiscoveryPage: React.FC = () => {
   const navigation = useNavigation();
-  const route = useRoute<any>();
+  const route = useRoute() as any;
   const { postId, sourceChannelId, linkChain = [] } = route.params ?? {};
+  const { colors, dark } = useTheme();
 
   const [channels, setChannels] = useState<Channel[]>([]);
   const [status, setStatus] = useState<Status>('loading');
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const pageRef = useRef(0);
   const hasMoreRef = useRef(true);
+  const channelsRef = useRef<Channel[]>([]);
 
   const load = useCallback(async (reset = false) => {
     if (!hasMoreRef.current && !reset) return;
@@ -38,8 +43,15 @@ export const TagDiscoveryPage: React.FC = () => {
 
     try {
       const page = reset ? 0 : pageRef.current;
-      const data = await fetchTaggableChannels({ limit: 20, offset: page * 20 });
-      setChannels((prev) => (reset ? data : [...prev, ...data]));
+      const data = await fetchUserTagChannels({ limit: 20, offset: page * 20 });
+      
+      if (reset) {
+        channelsRef.current = data;
+      } else {
+        channelsRef.current = [...channelsRef.current, ...data];
+      }
+      setChannels(channelsRef.current);
+      
       hasMoreRef.current = data.length === 20;
       pageRef.current = page + 1;
       setStatus('loaded');
@@ -55,34 +67,28 @@ export const TagDiscoveryPage: React.FC = () => {
     load(true);
   }, []);
 
-  const handleTagTap = async (targetChannelId: string) => {
-    try {
-      await createTag({
-        postId,
-        sourceChannelId,
-        targetChannelId,
-        linkChain: [...linkChain, targetChannelId],
-      });
-    } catch (e) {
-      console.error('[TagDiscoveryPage] createTag error:', e);
-    }
-    navigation.goBack();
-  };
+
 
   if (status === 'loading' && channels.length === 0) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator color="rgba(255,255,255,0.24)" />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.appBar, { backgroundColor: colors.background }]}>
+          <TouchableOpacity activeOpacity={1} onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Text style={[styles.backArrow, { color: colors.text }]}>‹</Text>
+          </TouchableOpacity>
+          <Text style={[styles.appBarTitle, { color: colors.text }]}>Tag Options</Text>
+        </View>
+        <ChannelListSkeleton count={8} />
       </View>
     );
   }
 
   if (status === 'error' && channels.length === 0) {
     return (
-      <View style={styles.centered}>
+      <View style={[styles.centered, { backgroundColor: colors.background }]}>
         <Text style={styles.errorIcon}>⚠️</Text>
-        <Text style={styles.errorText}>Failed to load channels</Text>
-        <TouchableOpacity onPress={() => load(true)}>
+        <Text style={[styles.errorText, { color: colors.text, opacity: 0.5 }]}>Failed to load channels</Text>
+        <TouchableOpacity activeOpacity={1} onPress={() => load(true)}>
           <Text style={styles.retryText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -90,13 +96,13 @@ export const TagDiscoveryPage: React.FC = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* App Bar */}
-      <View style={styles.appBar}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backArrow}>‹</Text>
+      <View style={[styles.appBar, { backgroundColor: colors.background }]}>
+        <TouchableOpacity activeOpacity={1} onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Text style={[styles.backArrow, { color: colors.text }]}>‹</Text>
         </TouchableOpacity>
-        <Text style={styles.appBarTitle}>Tag Options</Text>
+        <Text style={[styles.appBarTitle, { color: colors.text }]}>Tag Options</Text>
       </View>
 
       <FlatList
@@ -108,17 +114,20 @@ export const TagDiscoveryPage: React.FC = () => {
             subtitle={item.description}
             imageUrl={item.avatarUrl}
             buttonText="Tag"
-            onTap={() => handleTagTap(item.id)}
+            postId={postId}
+            sourceChannelId={sourceChannelId}
+            targetChannelId={item.id}
+            linkChain={linkChain}
+            onTagSuccess={() => navigation.goBack()}
           />
         )}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-        contentContainerStyle={{ paddingTop: 12, paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 40 }}
         onEndReached={() => load(false)}
         onEndReachedThreshold={0.3}
         ListFooterComponent={
           isLoadingMore ? (
-            <View style={{ padding: 20, alignItems: 'center' }}>
-              <ActivityIndicator color="rgba(255,255,255,0.24)" strokeWidth={2} />
+            <View style={{ paddingTop: 10 }}>
+              <ChannelListSkeleton count={2} />
             </View>
           ) : null
         }

@@ -6,7 +6,7 @@ import { styles } from "../../app/channel/styles/_channelStyyles.styles";
 
 // Simple Add Status card just for this context as seen in screenshot
 export const AddStatusCard = ({ userImage, onstatusWidgetImageTaped }: { userImage: string | undefined; onstatusWidgetImageTaped: () => void }) => (
-    <TouchableOpacity onPress={onstatusWidgetImageTaped} style={styles.addStatusCard}>
+    <TouchableOpacity activeOpacity={1} onPress={onstatusWidgetImageTaped} style={styles.addStatusCard}>
         <View style={styles.addStatusAvatarContainer}>
             <Image source={{ uri: userImage!! }} style={styles.addStatusAvatar} />
             <View style={styles.addStatusPlus}>

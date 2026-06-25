@@ -60,7 +60,7 @@ export const LongVideoTile = ({
         </View>
 
         {/* Options Button */}
-        <TouchableOpacity style={styles.optionsBtn} onPress={onOptionsPress}>
+        <TouchableOpacity activeOpacity={1} style={styles.optionsBtn} onPress={onOptionsPress}>
           <MoreVertical size={20} color="#FFF" />
         </TouchableOpacity>
       </View>

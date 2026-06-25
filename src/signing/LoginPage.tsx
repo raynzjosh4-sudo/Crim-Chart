@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Image, ActivityIndicator, Platform, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Eye, EyeOff } from 'lucide-react-native';
@@ -15,6 +15,8 @@ export default function LoginPage() {
     const { tr } = useLocalization();
     const { themeMode } = useThemeSettings();
     const authStore = useAuthStore();
+    const { width } = useWindowDimensions();
+    const isDesktop = width > 800;
 
     const [identifier, setIdentifier] = useState('');
     const [password, setPassword] = useState('');
@@ -53,9 +55,23 @@ export default function LoginPage() {
     const handleGoogleLogin = async () => {
         setIsLoading(true);
         try {
-            await new Promise(resolve => setTimeout(resolve, 800));
-            router.replace('/(tabs)' as any);
+            const success = await authStore.loginWithGoogle();
+            if (success) {
+                if (useAuthStore.getState().pendingGoogleOnboarding) {
+                    router.push('/username' as any);
+                } else {
+                    router.replace('/(tabs)' as any);
+                }
+            } else {
+                const errorMsg = useAuthStore.getState().errorMessage;
+                console.error('Google Login Error (authStore):', errorMsg);
+                ChartToast.showError(null, {
+                    title: tr('error_title') || 'Error',
+                    message: errorMsg || tr('google_error_reading') || 'Google login failed',
+                });
+            }
         } catch (error: any) {
+            console.error('Google Login Error (catch):', error);
             ChartToast.showError(null, {
                 title: tr('error_title'),
                 message: error.message || tr('google_error_reading'),
@@ -92,7 +108,7 @@ export default function LoginPage() {
                     editable={!isLoading}
                 />
                 {isPassword && (
-                    <TouchableOpacity 
+                    <TouchableOpacity activeOpacity={1} 
                         onPress={() => setObscureText(!obscureText)}
                         style={styles.eyeIcon}
                     >
@@ -107,117 +123,170 @@ export default function LoginPage() {
         );
     };
 
+    const renderLoginForm = () => (
+        <View style={styles.formContainer}>
+            <View style={styles.space20} />
+
+            {/* Chart Logo - Only on mobile, desktop has big branding */}
+            {!isDesktop && (
+                <View style={styles.logoContainer}>
+                    <View style={[styles.logoGlow, { shadowColor: colors.primary }]} />
+                    <Image 
+                        source={require('../../../assets/images/react-logo.png')} 
+                        style={styles.logo}
+                    />
+                </View>
+            )}
+
+            {!isDesktop && <View style={styles.space54} />}
+            {isDesktop && <View style={styles.space20} />}
+            {isDesktop && (
+                <Text style={[styles.desktopWelcomeText, { color: colors.text }]}>
+                    Welcome back
+                </Text>
+            )}
+            {isDesktop && <View style={styles.space32} />}
+
+            {/* Identifier Input */}
+            {renderInputField({
+                value: identifier,
+                onChangeText: setIdentifier,
+                hint: tr('login_identifier_hint') || 'Email or Phone',
+            })}
+
+            <View style={styles.space16} />
+
+            {/* Password Input */}
+            {renderInputField({
+                value: password,
+                onChangeText: setPassword,
+                hint: tr('login_password_hint') || 'Password',
+                isPassword: true,
+            })}
+
+            <View style={styles.space20} />
+
+            {/* Login Button */}
+            <TouchableOpacity activeOpacity={1} 
+                style={[
+                    styles.loginButton, 
+                    { backgroundColor: colors.primary },
+                    isLoading && styles.loginButtonDisabled
+                ]}
+                onPress={handleLogin}
+                disabled={isLoading}
+            >
+                {isLoading ? (
+                    <ActivityIndicator color={colors.surface} />
+                ) : (
+                    <Text style={[styles.loginButtonText, { color: colors.surface }]}>
+                        {tr('log_in')}
+                    </Text>
+                )}
+            </TouchableOpacity>
+
+            <View style={styles.space24} />
+
+            {/* Forgot Password */}
+            <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+                <Text style={[styles.forgotPassword, { color: 'rgba(255, 255, 255, 0.8)' }]}>
+                    {tr('login_forgot_password') || 'Forgot password?'}
+                </Text>
+            </TouchableOpacity>
+
+            <View style={styles.space32} />
+
+            {/* OR Separator */}
+            <View style={styles.separatorRow}>
+                <View style={[styles.separatorLine, { backgroundColor: 'rgba(255, 255, 255, 0.15)' }]} />
+                <Text style={[styles.separatorText, { color: 'rgba(255, 255, 255, 0.4)' }]}>
+                    OR
+                </Text>
+                <View style={[styles.separatorLine, { backgroundColor: 'rgba(255, 255, 255, 0.15)' }]} />
+            </View>
+
+            <View style={styles.space32} />
+
+            {/* Login with Google */}
+            <TouchableOpacity activeOpacity={1} 
+                style={styles.googleButton}
+                onPress={handleGoogleLogin}
+                disabled={isLoading}
+            >
+                <Image 
+                    source={{ uri: 'https://www.gstatic.com/images/branding/product/2x/googleg_96dp.png' }} 
+                    style={styles.googleIcon} 
+                />
+                <Text style={[styles.googleText, { color: colors.primary }]}>
+                    {tr('try_with_google')}
+                </Text>
+            </TouchableOpacity>
+        </View>
+    );
+
+    const renderFooter = () => (
+        <View style={[styles.footer, { borderTopColor: 'rgba(255, 255, 255, 0.1)' }]}>
+            <Text style={[styles.footerText, { color: 'rgba(255, 255, 255, 0.5)' }]}>
+                {tr('login_no_account')}
+            </Text>
+            <TouchableOpacity activeOpacity={1} onPress={() => router.push('/landing' as any)}>
+                <Text style={[styles.signupAction, { color: colors.primary }]}>
+                    {tr('login_signup')}
+                </Text>
+            </TouchableOpacity>
+        </View>
+    );
+
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
+            {Platform.OS === 'web' && (
+                <style type="text/css">{`
+                    input:-webkit-autofill,
+                    input:-webkit-autofill:hover, 
+                    input:-webkit-autofill:focus, 
+                    input:-webkit-autofill:active{
+                        transition: background-color 5000s ease-in-out 0s;
+                        -webkit-text-fill-color: white !important;
+                    }
+                `}</style>
+            )}
             <ChartAppBar 
                 title="" 
                 showBorder={false} 
                 backgroundColor={colors.background}
             />
             <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
-                <View style={styles.contentWrapper}>
-                    <ScrollView contentContainerStyle={styles.scrollContent}>
-                        <View style={styles.space20} />
-
-                        {/* Chart Logo */}
-                        <View style={styles.logoContainer}>
-                            <View style={[styles.logoGlow, { shadowColor: colors.primary }]} />
+                {isDesktop ? (
+                    <View style={styles.desktopLayout}>
+                        {/* Left Branding Side */}
+                        <View style={[styles.desktopBranding, { backgroundColor: 'rgba(255, 255, 255, 0.02)' }]}>
+                            <View style={[styles.logoGlow, { shadowColor: colors.primary, width: 250, height: 250, borderRadius: 125, opacity: 0.1 }]} />
                             <Image 
-                                source={require('../../../assets/images/react-logo.png')} // Replace with actual logo
-                                style={styles.logo}
+                                source={require('../../../assets/images/react-logo.png')} 
+                                style={styles.desktopLogo}
                             />
+                            <Text style={[styles.brandingTitle, { color: colors.text }]}>CrimChart</Text>
+                            <Text style={[styles.brandingSubtitle, { color: 'rgba(255, 255, 255, 0.6)' }]}>
+                                Connect and explore the community.
+                            </Text>
                         </View>
-
-                        <View style={styles.space54} />
-
-                        {/* Identifier Input */}
-                        {renderInputField({
-                            value: identifier,
-                            onChangeText: setIdentifier,
-                            hint: tr('login_identifier_hint') || 'Email or Phone',
-                        })}
-
-                        <View style={styles.space16} />
-
-                        {/* Password Input */}
-                        {renderInputField({
-                            value: password,
-                            onChangeText: setPassword,
-                            hint: tr('login_password_hint') || 'Password',
-                            isPassword: true,
-                        })}
-
-                        <View style={styles.space20} />
-
-                        {/* Login Button */}
-                        <TouchableOpacity 
-                            style={[
-                                styles.loginButton, 
-                                { backgroundColor: colors.primary },
-                                isLoading && styles.loginButtonDisabled
-                            ]}
-                            onPress={handleLogin}
-                            disabled={isLoading}
-                        >
-                            {isLoading ? (
-                                <ActivityIndicator color={colors.surface} />
-                            ) : (
-                                <Text style={[styles.loginButtonText, { color: colors.surface }]}>
-                                    {tr('log_in')}
-                                </Text>
-                            )}
-                        </TouchableOpacity>
-
-                        <View style={styles.space24} />
-
-                        {/* Forgot Password */}
-                        <TouchableOpacity onPress={() => {}}>
-                            <Text style={[styles.forgotPassword, { color: 'rgba(255, 255, 255, 0.8)' }]}>
-                                {tr('login_forgot_password') || 'Forgot password?'}
-                            </Text>
-                        </TouchableOpacity>
-
-                        <View style={styles.space32} />
-
-                        {/* OR Separator */}
-                        <View style={styles.separatorRow}>
-                            <View style={[styles.separatorLine, { backgroundColor: 'rgba(255, 255, 255, 0.15)' }]} />
-                            <Text style={[styles.separatorText, { color: 'rgba(255, 255, 255, 0.4)' }]}>
-                                OR
-                            </Text>
-                            <View style={[styles.separatorLine, { backgroundColor: 'rgba(255, 255, 255, 0.15)' }]} />
+                        
+                        {/* Right Form Side */}
+                        <View style={styles.desktopFormWrapper}>
+                            <ScrollView contentContainerStyle={styles.desktopScrollContent}>
+                                {renderLoginForm()}
+                            </ScrollView>
+                            {renderFooter()}
                         </View>
-
-                        <View style={styles.space32} />
-
-                        {/* Login with Google */}
-                        <TouchableOpacity 
-                            style={styles.googleButton}
-                            onPress={handleGoogleLogin}
-                            disabled={isLoading}
-                        >
-                            <Image 
-                                source={{ uri: 'https://www.gstatic.com/images/branding/product/2x/googleg_96dp.png' }} 
-                                style={styles.googleIcon} 
-                            />
-                            <Text style={[styles.googleText, { color: colors.primary }]}>
-                                {tr('try_with_google')}
-                            </Text>
-                        </TouchableOpacity>
-                    </ScrollView>
-
-                    {/* Bottom Footer: Create New Account */}
-                    <View style={[styles.footer, { borderTopColor: 'rgba(255, 255, 255, 0.1)' }]}>
-                        <Text style={[styles.footerText, { color: 'rgba(255, 255, 255, 0.5)' }]}>
-                            {tr('login_no_account')}
-                        </Text>
-                        <TouchableOpacity onPress={() => router.push('/landing' as any)}>
-                            <Text style={[styles.signupAction, { color: colors.primary }]}>
-                                {tr('login_signup')}
-                            </Text>
-                        </TouchableOpacity>
                     </View>
-                </View>
+                ) : (
+                    <View style={styles.contentWrapper}>
+                        <ScrollView contentContainerStyle={styles.scrollContent}>
+                            {renderLoginForm()}
+                        </ScrollView>
+                        {renderFooter()}
+                    </View>
+                )}
             </SafeAreaView>
         </View>
     );
@@ -234,6 +303,54 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
         justifyContent: 'center',
         paddingBottom: 40,
+    },
+    desktopLayout: {
+        flex: 1,
+        flexDirection: 'row',
+    },
+    desktopBranding: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 40,
+        borderRightWidth: 1,
+        borderRightColor: 'rgba(255, 255, 255, 0.05)',
+    },
+    desktopLogo: {
+        width: 160,
+        height: 160,
+        resizeMode: 'contain',
+        marginBottom: 32,
+    },
+    brandingTitle: {
+        fontSize: 42,
+        fontWeight: 'bold',
+        marginBottom: 16,
+    },
+    brandingSubtitle: {
+        fontSize: 18,
+        textAlign: 'center',
+        maxWidth: 340,
+        lineHeight: 26,
+    },
+    desktopFormWrapper: {
+        flex: 1,
+        justifyContent: 'center',
+    },
+    desktopScrollContent: {
+        flexGrow: 1,
+        paddingHorizontal: 40,
+        justifyContent: 'center',
+    },
+    desktopWelcomeText: {
+        fontSize: 32,
+        fontWeight: 'bold',
+        textAlign: 'center',
+    },
+    formContainer: {
+        width: '100%',
+        maxWidth: 420,
+        alignSelf: 'center',
     },
     space16: { height: 16 },
     space20: { height: 20 },
@@ -266,13 +383,18 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderRadius: 8,
         borderWidth: 1,
-        height: 48,
+        height: 52,
     },
     input: {
         flex: 1,
-        fontSize: 14,
+        fontSize: 15,
         paddingHorizontal: 16,
         height: '100%',
+        ...Platform.select({
+            web: {
+                outlineStyle: 'none',
+            } as any,
+        }),
     },
     eyeIcon: {
         paddingHorizontal: 16,
@@ -290,11 +412,11 @@ const styles = StyleSheet.create({
         opacity: 0.7,
     },
     loginButtonText: {
-        fontSize: 15,
+        fontSize: 16,
         fontWeight: 'bold',
     },
     forgotPassword: {
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: '600',
         textAlign: 'center',
     },
@@ -308,37 +430,43 @@ const styles = StyleSheet.create({
     },
     separatorText: {
         paddingHorizontal: 16,
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: 'bold',
     },
     googleButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
+        height: 52,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
     },
     googleIcon: {
-        width: 18,
-        height: 18,
-        marginRight: 10,
+        width: 20,
+        height: 20,
+        marginRight: 12,
     },
     googleText: {
-        fontSize: 14,
+        fontSize: 15,
         fontWeight: 'bold',
     },
     footer: {
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
-        paddingVertical: 20,
+        paddingVertical: 24,
         borderTopWidth: 0.5,
     },
     footerText: {
-        fontSize: 12,
-        marginRight: 4,
+        fontSize: 14,
+        marginRight: 6,
     },
     signupAction: {
-        fontSize: 12,
+        fontSize: 14,
         fontWeight: 'bold',
         paddingVertical: 4,
     },
 });
+
