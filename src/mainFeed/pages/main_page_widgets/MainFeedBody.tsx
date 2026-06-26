@@ -123,6 +123,8 @@ export const MainFeedBody = ({
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
 
+  const styles = useStyles(themeStyles);
+
   const { statuses: flatStatuses, refresh: refreshStatuses } = useFeedStatuses(user?.id);
 
   const groupedStatuses = React.useMemo(() => {
