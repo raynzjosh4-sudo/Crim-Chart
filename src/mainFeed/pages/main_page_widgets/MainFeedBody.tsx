@@ -102,6 +102,7 @@ interface MainFeedBodyProps {
   onRefresh: () => void;
   onLoadMore: () => void;
   onNewItemsBannerPress?: () => void;
+  listRef?: React.RefObject<any>;
 }
 
 export const MainFeedBody = ({
@@ -114,6 +115,7 @@ export const MainFeedBody = ({
   onRefresh,
   onLoadMore,
   onNewItemsBannerPress,
+  listRef,
 }: MainFeedBodyProps) => {
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const user = useAuthStore(s => s.user);
@@ -217,6 +219,7 @@ export const MainFeedBody = ({
       )}
 
       <FlashList
+        ref={listRef}
         data={cards}
         keyExtractor={item => item.id}
         viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}

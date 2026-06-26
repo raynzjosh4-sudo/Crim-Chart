@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, AppState, Dimensions, InteractionManager, useWindowDimensions } from 'react-native';
+import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, AppState, Dimensions, InteractionManager, useWindowDimensions, DeviceEventEmitter } from 'react-native';
 
 import { ChannelButton } from '@/components/ChannelButton/ChannelButton';
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
@@ -37,6 +37,7 @@ export const MainFeedPage = () => {
   const isFetchingRef = useRef(false);
   const pageRef = useRef(0);
   const cardsRef = useRef<MixedFeedItem[]>([]);
+  const listRef = useRef<any>(null);
 
   const styles = useStyles(themeStyles);
   const theme = useCurrentTheme();
@@ -68,6 +69,18 @@ export const MainFeedPage = () => {
       loadDiscoveryChannels();
     }
   }, [user?.id]);
+
+  // Tab refresh listener
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('tabRefresh', (tab) => {
+      if (tab === 'feed') {
+        console.log('[MainFeedPage] Tab refresh requested');
+        listRef.current?.scrollToOffset({ offset: 0, animated: true });
+        handleRefresh();
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   // Realtime: reload feed when the current user creates a new box
   useEffect(() => {
@@ -403,6 +416,7 @@ export const MainFeedPage = () => {
           newItemCount={newItemCount}
           onRefresh={handleRefresh}
           onLoadMore={handleLoadMore}
+          listRef={listRef}
           onNewItemsBannerPress={() => {
             setNewItemCount(0);
             handleRefresh();

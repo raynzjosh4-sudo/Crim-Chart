@@ -4,7 +4,7 @@ import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
 import { Slot, useGlobalSearchParams, useRouter, useSegments } from 'expo-router';
-import { Platform, Text, View } from 'react-native';
+import { Platform, Text, View, DeviceEventEmitter } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DesktopChannelNavigator } from '@/channel/widgets/DesktopChannelNavigator';
@@ -54,6 +54,9 @@ export default function TabLayout() {
     try {
       switch (index) {
         case 0:
+          if (selectedIndex === 0) {
+            DeviceEventEmitter.emit('tabRefresh', 'feed');
+          }
           if (isDesktop) {
             setDesktopView('feed');
             router.navigate('/');
