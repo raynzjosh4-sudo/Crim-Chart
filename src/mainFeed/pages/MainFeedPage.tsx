@@ -78,7 +78,7 @@ export const MainFeedPage = () => {
       if (tab === 'feed') {
         console.log('[MainFeedPage] Tab refresh requested');
         listRef.current?.scrollToOffset({ offset: 0, animated: true });
-        setRefreshTrigger(prev => prev + 1);
+        setRefreshTrigger(Date.now());
       }
     });
     return () => sub.remove();
