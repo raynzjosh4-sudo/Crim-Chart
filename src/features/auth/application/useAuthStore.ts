@@ -69,12 +69,38 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   checkSession: async () => {
     try {
       if (Platform.OS === 'web') {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
+        let sessionToProcess = null;
+        
+        // MANUALLY parse the hash just in case Supabase's detectSessionInUrl is failing
+        // or Expo Router is interfering with it before Supabase can read it.
+        if (typeof window !== 'undefined' && window.location.hash.includes('access_token=')) {
+          const hashStr = window.location.hash.substring(1); // remove '#'
+          const params = new URLSearchParams(hashStr);
+          const accessToken = params.get('access_token');
+          const refreshToken = params.get('refresh_token');
+          
+          if (accessToken && refreshToken) {
+            const { data } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken
+            });
+            sessionToProcess = data?.session;
+            // Clear the hash from the URL so it's clean
+            window.history.replaceState(null, '', window.location.pathname);
+          }
+        }
+        
+        // If we didn't manually intercept it, fallback to regular getSession
+        if (!sessionToProcess) {
+          const { data } = await supabase.auth.getSession();
+          sessionToProcess = data?.session;
+        }
+
+        if (sessionToProcess) {
           const localUser = await authRepository.local.getUser();
           if (!localUser) {
             // We have a session but no local user -> just signed in via Web OAuth
-            const result = await authRepository.handleWebOAuthSession(session);
+            const result = await authRepository.handleWebOAuthSession(sessionToProcess);
             if (result.isNewUser) {
               set({ 
                 isLoading: false, 
