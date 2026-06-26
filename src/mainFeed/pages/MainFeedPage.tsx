@@ -71,16 +71,25 @@ export const MainFeedPage = () => {
   }, [user?.id]);
 
   // Tab refresh listener
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
   useEffect(() => {
     const sub = DeviceEventEmitter.addListener('tabRefresh', (tab) => {
       if (tab === 'feed') {
         console.log('[MainFeedPage] Tab refresh requested');
         listRef.current?.scrollToOffset({ offset: 0, animated: true });
-        handleRefresh();
+        setRefreshTrigger(prev => prev + 1);
       }
     });
     return () => sub.remove();
   }, []);
+
+  // Trigger refresh with fresh closure
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      handleRefresh();
+    }
+  }, [refreshTrigger]);
 
   // Realtime: reload feed when the current user creates a new box
   useEffect(() => {
