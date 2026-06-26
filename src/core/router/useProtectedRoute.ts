@@ -3,7 +3,7 @@ import { useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 
 export function useProtectedRoute() {
-  const { status, checkSession } = useAuthStore();
+  const { status, checkSession, pendingGoogleOnboarding } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
 
@@ -19,19 +19,25 @@ export function useProtectedRoute() {
     
     // Special Rule: Authenticated users can stay on signup-related setup pages
     const isSignupSetupRoute = 
-      segments.includes('otp') ||
-      segments.includes('birthday') ||
-      segments.includes('profile-picture') ||
-      segments.includes('channel-intro') ||
-      segments.includes('channel-suggestions');
+      (segments as string[]).includes('otp') ||
+      (segments as string[]).includes('birthday') ||
+      (segments as string[]).includes('profile-picture') ||
+      (segments as string[]).includes('channel-intro') ||
+      (segments as string[]).includes('channel-suggestions');
 
-    // Rule 1: Not logged in? Stay on public/auth pages.
-    if (status === AuthStatus.UNAUTHENTICATED && !inAuthGroup) {
+    // Rule 1: Google Onboarding (Web OAuth Redirect handling)
+    if (pendingGoogleOnboarding && segments[0] !== 'signup') {
+      router.replace('/signup/username' as any);
+      return;
+    }
+
+    // Rule 2: Not logged in? Stay on public/auth pages.
+    if (status === AuthStatus.UNAUTHENTICATED && !inAuthGroup && !pendingGoogleOnboarding) {
       router.replace('/landing');
     } 
-    // Rule 2: Logged in? Move from auth pages to feed, UNLESS in setup flow.
+    // Rule 3: Logged in? Move from auth pages to feed, UNLESS in setup flow.
     else if (status === AuthStatus.AUTHENTICATED && inAuthGroup && !isSignupSetupRoute) {
       router.replace('/(tabs)'); // Assuming tabs index is the main feed
     }
-  }, [status, segments, router]);
+  }, [status, segments, router, pendingGoogleOnboarding]);
 }

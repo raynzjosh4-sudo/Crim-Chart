@@ -78,6 +78,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
             if (result.isNewUser) {
               set({ 
                 isLoading: false, 
+                status: AuthStatus.UNAUTHENTICATED,
                 pendingGoogleOnboarding: true,
                 pendingSignUp: { 
                   countryCode: '', 
