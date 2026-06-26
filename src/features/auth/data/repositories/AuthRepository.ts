@@ -3,6 +3,7 @@ import { AuthRemoteSource } from '../sources/AuthRemoteSource';
 import { GoogleAuthService } from '../../services/GoogleAuthService';
 import { SignUpParams, LoginParams } from '../../types/AuthTypes';
 import { supabase } from '@/core/supabase/supabaseConfig';
+import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
 
 export class AuthRepository {
   local = new AuthLocalSource();
