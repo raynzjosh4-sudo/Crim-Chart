@@ -6,13 +6,16 @@ import { colors } from '@/core/theme/colors';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Calendar, CheckCircle2, ChevronLeft, Circle, Globe } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View, Platform, useWindowDimensions } from 'react-native';
 import { Country } from 'react-native-country-picker-modal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function PrivacyPermissionsPage() {
+export default function PrivacyPermissionsPage({ channelIdOverride }: { channelIdOverride?: string }) {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id: routeId } = useLocalSearchParams<{ id: string }>();
+  const id = channelIdOverride || routeId;
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
   const { channel, loading } = useChannelData(id);
 
   // Settings State
@@ -112,7 +115,13 @@ export default function PrivacyPermissionsPage() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity activeOpacity={1} onPress={() => router.back()} style={styles.headerButton}>
+        <TouchableOpacity activeOpacity={1} onPress={() => {
+          if (isDesktop && channelIdOverride) {
+            router.setParams({ desktopChannelView: 'settings' });
+          } else {
+            router.back();
+          }
+        }} style={styles.headerButton}>
           <ChevronLeft size={28} color="#FFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Privacy & Permissions</Text>

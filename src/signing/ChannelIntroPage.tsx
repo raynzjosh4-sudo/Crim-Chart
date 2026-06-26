@@ -47,7 +47,7 @@ export default function ChannelIntroPage() {
 
                     <View style={styles.spacer} />
 
-                    <TouchableOpacity activeOpacity={1} 
+                    <TouchableOpacity
                         style={[styles.primaryButton, { backgroundColor: colors.primary }]}
                         onPress={() => router.push('/channelSuggestions' as any)}
                         activeOpacity={0.8}

@@ -21,12 +21,14 @@ export const ProfileMusicItem: React.FC<ProfileMusicItemProps> = ({
       style={[styles.container, { width: size, aspectRatio: 0.6 }]}
       onPress={onPress}
       activeOpacity={0.85}
+      delayPressIn={150}
     >
       <View style={styles.content}>
         <Image
           source={{ uri: thumbnailUrl || 'https://via.placeholder.com/150/1A1A1A/FFFFFF?text=Music' }}
           style={[styles.image, { width: '80%', aspectRatio: 1, borderRadius: 999 }]}
           resizeMode="cover"
+          {...({ draggable: false } as any)}
         />
         
         <View style={styles.textContainer}>
@@ -37,6 +39,7 @@ export const ProfileMusicItem: React.FC<ProfileMusicItemProps> = ({
             <Image 
               source={{ uri: thumbnailUrl || 'https://via.placeholder.com/150/1A1A1A/FFFFFF?text=A' }} 
               style={styles.artistIcon} 
+              {...({ draggable: false } as any)}
             />
             <Text style={styles.artist} numberOfLines={1}>
               {artist || 'Unknown Artist'}

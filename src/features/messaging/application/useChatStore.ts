@@ -86,12 +86,12 @@ export const useChatStore = create<ChatState>()(
                   isVerified: false, hasStatus: false, isFollowing: false, isMe: false
                 })
               ],
-              lastMessage: row.last_message ? {
+              lastMessage: row.last_message_at ? {
                 id: `last_${row.id}`,
                 threadId: String(row.id),
                 author: { id: row.participant_id } as any,
                 createdAt: new Date(row.last_message_at),
-                text: row.last_message,
+                text: row.last_message || '',
                 type: (row.last_message_type || 'text') as any,
                 status: 'sent' as any,
                 isEncrypted: false,
@@ -164,12 +164,12 @@ export const useChatStore = create<ChatState>()(
                   isVerified: false, hasStatus: false, isFollowing: false, isMe: false
                 } as any
               ],
-              lastMessage: row.last_message ? {
+              lastMessage: row.last_message_at ? {
                 id: `last_${row.id}`,
                 threadId: String(row.id),
                 author: { id: row.participant_id } as any,
                 createdAt: new Date(row.last_message_at),
-                text: row.last_message,
+                text: row.last_message || '',
                 type: (row.last_message_type || 'text') as any,
                 status: 'sent' as any,
                 isEncrypted: false,
@@ -401,11 +401,11 @@ export const useChatStore = create<ChatState>()(
                   let thumbStr = typeof p === 'string' ? undefined : p.thumbnail;
                   let itemType = typeof p === 'string' ? 'image' : p.type;
 
-                  if (urlStr.startsWith('file://') || urlStr.startsWith('/')) {
+                  if (urlStr.startsWith('file://') || urlStr.startsWith('/') || urlStr.startsWith('content://') || urlStr.startsWith('blob:')) {
                     urlStr = await cloudMediaService.uploadMedia(urlStr, 'inbox_media', user.id);
                   }
 
-                  if (thumbStr && (thumbStr.startsWith('file://') || thumbStr.startsWith('/'))) {
+                  if (thumbStr && (thumbStr.startsWith('file://') || thumbStr.startsWith('/') || thumbStr.startsWith('content://') || thumbStr.startsWith('blob:'))) {
                     thumbStr = await cloudMediaService.uploadMedia(thumbStr, 'inbox_media', user.id);
                   }
 
@@ -419,7 +419,7 @@ export const useChatStore = create<ChatState>()(
               }
             } catch (e) {
               // Not a JSON array, check if single file path
-              if (mediaUrl.startsWith('file://') || mediaUrl.startsWith('/')) {
+              if (mediaUrl.startsWith('file://') || mediaUrl.startsWith('/') || mediaUrl.startsWith('content://') || mediaUrl.startsWith('blob:')) {
                 try {
                   finalMediaUrl = await cloudMediaService.uploadMedia(mediaUrl, 'inbox_media', user.id);
                 } catch (uploadError) {
@@ -517,11 +517,14 @@ export const useChatStore = create<ChatState>()(
               const isMe = user ? payload.new.sender_id === user.id : false;
 
               const currentUser = useAuthStore.getState().user;
+              const thread = get().threads.find(t => t.id === threadId);
+              const participant = thread?.participants.find(p => p.id === payload.new.sender_id);
+
               newMsg.author = {
                 id: payload.new.sender_id,
                 isMe,
-                displayName: isMe ? (currentUser?.displayName || currentUser?.username || 'Me') : 'User',
-                profileImageUrl: isMe ? (currentUser?.profileImageUrl || '') : ''
+                displayName: isMe ? (currentUser?.displayName || currentUser?.username || 'Me') : (participant?.displayName || 'User'),
+                profileImageUrl: isMe ? (currentUser?.profileImageUrl || '') : (participant?.profileImageUrl || '')
               } as any;
 
               set(state => {

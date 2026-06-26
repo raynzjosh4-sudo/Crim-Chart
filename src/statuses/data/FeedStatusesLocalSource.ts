@@ -15,7 +15,15 @@ export const feedStatusesLocalSource = {
        ORDER BY created_at DESC`,
       [now]
     );
-    return rows.map(feedStatusFromMap);
+    return rows.map((row) => {
+      let metadata = null;
+      try {
+        metadata = row.metadata ? JSON.parse(row.metadata) : null;
+      } catch (e) {
+        console.warn('Failed to parse metadata from local DB', e);
+      }
+      return feedStatusFromMap({ ...row, metadata });
+    });
   },
 
   /**
@@ -30,8 +38,8 @@ export const feedStatusesLocalSource = {
           id, author_id, author_name, author_avatar_url,
           image_urls, video_url, audio_url, thumbnail_url,
           caption, is_video, is_audio,
-          created_at, expires_at, fetched_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          created_at, expires_at, fetched_at, metadata
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           item.id,
           item.authorId,
@@ -47,6 +55,7 @@ export const feedStatusesLocalSource = {
           item.createdAt.getTime(),
           item.expiresAt ? item.expiresAt.getTime() : null,
           now,
+          item.metadata ? JSON.stringify(item.metadata) : null,
         ]
       );
     }

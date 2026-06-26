@@ -18,6 +18,7 @@ export interface ChannelAndFeedPostModelProps {
   likesCount?: number;
   commentsCount?: number;
   tagsCount?: number;
+  viewsCount?: number;
   isLiked?: boolean;
   onLikeTap?: () => void;
   onCommentTap?: () => void;
@@ -93,6 +94,7 @@ export const ChannelAndFeedPostModel: React.FC<ChannelAndFeedPostModelProps> = (
       metadata={props.metadata}
       isActive={props.isActive}
       canComment={props.canComment ?? true}
+      viewsCount={props.viewsCount}
     />
   );
 };

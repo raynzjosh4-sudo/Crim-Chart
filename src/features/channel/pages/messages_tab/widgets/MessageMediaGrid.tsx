@@ -2,7 +2,7 @@ import { colors } from '@/core/theme/colors';
 import { Image } from 'expo-image';
 import { Play, Sparkles } from 'lucide-react-native';
 import { useState } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MediaGalleryBottomSheet } from '../../../../../channel/pages/messages_tab/bottom_sheets/MediaGalleryBottomSheet';
 import { ShareStatusButton } from '@/components/buttons/ShareStatusButton';
@@ -84,27 +84,15 @@ export const MessageMediaGrid: React.FC<MessageMediaGridProps> = ({
   const ITEM_GAP = 10;
   const totalContentWidth = items.length * ITEM_WIDTH + (items.length - 1) * ITEM_GAP;
 
-  const screenWidth = Dimensions.get('window').width;
-
   const leftOffset = isMe ? 16 : 70;
   const rightOffset = isMe ? 70 : 16;
-
-  const availableWidth = screenWidth - leftOffset - rightOffset;
-
-  let paddingLeft = leftOffset;
-  const paddingRight = rightOffset;
-
-  if (isMe && totalContentWidth < availableWidth) {
-    paddingLeft += (availableWidth - totalContentWidth);
-  }
 
   return (
     <>
       <View
         style={{
           height: 320,
-          width: screenWidth,
-          alignSelf: isMe ? 'flex-end' : 'flex-start',
+          alignSelf: 'stretch',
           marginLeft: isMe ? 0 : -leftOffset,
           marginRight: isMe ? -rightOffset : 0,
         }}
@@ -112,8 +100,13 @@ export const MessageMediaGrid: React.FC<MessageMediaGridProps> = ({
         <FlatList
           data={items}
           horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingLeft, paddingRight }}
+          showsHorizontalScrollIndicator={Platform.OS === 'web'}
+          contentContainerStyle={{ 
+            paddingLeft: leftOffset, 
+            paddingRight: rightOffset,
+            flexGrow: 1,
+            justifyContent: isMe ? 'flex-end' : 'flex-start'
+          }}
           ItemSeparatorComponent={() => <View style={{ width: ITEM_GAP }} />}
           keyExtractor={(_, index) => index.toString()}
           renderItem={({ item, index }) => (

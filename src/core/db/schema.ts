@@ -16,6 +16,8 @@ export const TABLES = {
   COMMENTS: 'comments',
   CHANNEL_REQUESTS: 'channel_requests',
   USER_CONNECTION_STATS: 'user_connection_stats',
+  MAIN_FEED: 'main_feed',
+  CHANNEL_STATUSES: 'channel_statuses',
 };
 
 export const SCHEMA = `
@@ -95,6 +97,21 @@ export const SCHEMA = `
     media_type TEXT,
     created_at TEXT,
     views_count INTEGER DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS ${TABLES.CHANNEL_STATUSES} (
+    id TEXT PRIMARY KEY,
+    channel_id TEXT,
+    author_id TEXT,
+    caption TEXT,
+    image_urls TEXT,
+    video_url TEXT,
+    audio_url TEXT,
+    is_video INTEGER DEFAULT 0,
+    is_audio INTEGER DEFAULT 0,
+    created_at TEXT,
+    expires_at TEXT,
+    thumbnail_url TEXT
   );
 
   CREATE TABLE IF NOT EXISTS ${TABLES.CHANNEL_MEMBERS} (
@@ -306,4 +323,15 @@ export const SCHEMA = `
     is_short INTEGER DEFAULT 0,
     likes INTEGER
   );
+
+  CREATE TABLE IF NOT EXISTS main_feed (
+    id TEXT PRIMARY KEY,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    source_type TEXT NOT NULL,
+    created_at TEXT,
+    prefetched_data TEXT
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_main_feed_created ON main_feed (created_at DESC);
 `;

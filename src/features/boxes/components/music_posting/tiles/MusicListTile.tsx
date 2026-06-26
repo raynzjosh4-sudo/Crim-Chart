@@ -26,11 +26,14 @@ export interface MusicTrackItem {
     id: string;
     name: string;
     avatarUrl: string;
+    crownTitle?: string;
   };
   likesCount?: number;
   commentsCount?: number;
   viewsCount?: number;
   downloadsCount?: number;
+  lyrics?: string;
+  sourceTable?: string;
 }
 
 interface MusicListTileProps {
@@ -45,11 +48,15 @@ interface MusicListTileProps {
   downloadsCount?: number;
   isLiked?: boolean;
   onLikePress?: () => void;
+  hideTagButton?: boolean;
+  hideHeader?: boolean;
+  lyricsPreview?: string;
 }
 
 export const MusicListTile: React.FC<MusicListTileProps> = ({ 
   track, onAddPress, onTagPress, onDownloadPress, isAdded, isCurrentlyPlaying,
-  likesCount, viewsCount, downloadsCount, isLiked, onLikePress
+  likesCount, viewsCount, downloadsCount, isLiked, onLikePress,
+  hideTagButton, hideHeader, lyricsPreview
 }) => {
   const [editedTrack, setEditedTrack] = useState<MusicTrackItem>(track);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
@@ -75,11 +82,11 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
             setSound(newSound);
             
             if (isCurrentlyPlaying) {
-              await newSound.playAsync();
+              await newSound.playAsync().catch(() => {});
               setIsPlaying(true);
             }
           } else {
-            await newSound.unloadAsync();
+            await newSound.unloadAsync().catch(() => {});
           }
         } catch (error) {
           console.error("Audio error", error);
@@ -91,7 +98,7 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
     return () => {
       isMounted = false;
       if (currentSound) {
-        currentSound.unloadAsync();
+        currentSound.unloadAsync().catch(() => {});
       }
     };
   }, [editedTrack.audioUrl, isLocal]);
@@ -100,10 +107,10 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
   useEffect(() => {
     if (!sound) return;
     if (isCurrentlyPlaying) {
-      sound.playAsync();
+      sound.playAsync().catch(() => {});
       setIsPlaying(true);
     } else {
-      sound.pauseAsync();
+      sound.pauseAsync().catch(() => {});
       setIsPlaying(false);
     }
   }, [isCurrentlyPlaying, sound]);
@@ -126,32 +133,34 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
   return (
     <View style={styles.container}>
       {/* Header Row */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <View style={{ marginRight: 10 }}>
-            <UserAvatarImage 
-              size={36} 
-              imageUrl={editedTrack.owner?.avatarUrl} 
-              showStatusRing={false}
-              showActiveDot={false}
-            />
+      {!hideHeader && (
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <View style={{ marginRight: 10 }}>
+              <UserAvatarImage 
+                size={36} 
+                imageUrl={editedTrack.owner?.avatarUrl} 
+                showStatusRing={false}
+                showActiveDot={false}
+              />
+            </View>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Text style={styles.headerName} numberOfLines={1}>{editedTrack.owner?.name || 'User'}</Text>
+              <Text style={styles.headerSubtitle} numberOfLines={1}>Added a track</Text>
+            </View>
           </View>
-          <View style={{ flex: 1, marginRight: 8 }}>
-            <Text style={styles.headerName} numberOfLines={1}>{editedTrack.owner?.name || 'User'}</Text>
-            <Text style={styles.headerSubtitle} numberOfLines={1}>Added a track</Text>
-          </View>
-        </View>
 
-        <View style={styles.headerRight}>
-          {!isLocal && editedTrack.owner?.id && (
-            <FollowUserButton 
-              targetUserId={editedTrack.owner.id} 
-              size="small" 
-              style={{ flex: 0, height: 32, marginRight: 12 }} 
-            />
-          )}
+          <View style={styles.headerRight}>
+            {!isLocal && editedTrack.owner?.id && (
+              <FollowUserButton 
+                targetUserId={editedTrack.owner.id} 
+                size="small" 
+                style={{ flex: 0, height: 32, marginRight: 12 }} 
+              />
+            )}
+          </View>
         </View>
-      </View>
+      )}
 
       {/* Main Content (Disk + Info) */}
       <View style={styles.mainContent}>
@@ -166,10 +175,10 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
             } else {
               if (sound) {
                 if (isPlaying) {
-                  sound.pauseAsync();
+                  sound.pauseAsync().catch(() => {});
                   setIsPlaying(false);
                 } else {
-                  sound.playAsync();
+                  sound.playAsync().catch(() => {});
                   setIsPlaying(true);
                 }
               }
@@ -206,7 +215,7 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
             <Text style={styles.trackArtist} numberOfLines={1}>{editedTrack.artist}</Text>
           )}
           
-          {!isLocal ? (
+          {!isLocal && !hideTagButton ? (
             <TouchableOpacity activeOpacity={1} 
               style={[styles.tagButton, isAdded && styles.tagButtonAdded]} 
               onPress={onTagPress}
@@ -223,7 +232,7 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
                 </>
               )}
             </TouchableOpacity>
-          ) : (
+          ) : isLocal && !hideTagButton ? (
             <AnimatedPostButton 
               title="Post"
               style={styles.tagButton}
@@ -234,7 +243,11 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
                 }
               }}
             />
-          )}
+          ) : lyricsPreview ? (
+            <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, fontStyle: 'italic', lineHeight: 18 }} numberOfLines={3}>
+              {lyricsPreview}
+            </Text>
+          ) : null}
         </View>
       </View>
 
@@ -305,7 +318,7 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    width: width,
+    width: '100%',
     backgroundColor: '#000',
     paddingVertical: 16,
     borderBottomWidth: 1,

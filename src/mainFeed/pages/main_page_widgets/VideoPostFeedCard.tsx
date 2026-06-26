@@ -17,14 +17,16 @@ function resolveCanComment(allowCommentingBy: string | undefined | null, isMembe
 
 interface VideoPostFeedCardProps {
   postId: string;
-  isActive: boolean;
+  preloadStatus?: 'playing' | 'preloading' | 'idle';
+  isActive?: boolean;
   entityType?: 'long_video_post' | 'short_video_post';
   prefetchedData?: any;
 }
 
 export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
   postId,
-  isActive,
+  preloadStatus = 'idle',
+  isActive = false,
   entityType = 'long_video_post',
   prefetchedData
 }) => {
@@ -150,7 +152,7 @@ export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
   }, [postId, prefetchedData, entityType]);
 
   useEffect(() => {
-    if (isActive && videoData) {
+    if (preloadStatus === 'playing' && videoData) {
       // console.log('================================================');
       // console.log(`[DEBUG VideoWidget] FULLY VISIBLE!`);
       // console.log(`-> ID: ${videoData.id}`);
@@ -159,10 +161,12 @@ export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
       // console.log(`-> Full Data:`, JSON.stringify(videoData, null, 2));
       // console.log('================================================');
     }
-  }, [isActive, videoData]);
+  }, [preloadStatus, videoData]);
 
   if (loading) return <VideoCardSkeleton />;
   if (!videoData) return null;
+
+  const effectivePreloadStatus = preloadStatus !== 'idle' ? preloadStatus : (isActive ? 'playing' : 'preloading');
 
   if (videoData.isShort) {
     return (
@@ -173,11 +177,12 @@ export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
           initialViewsCount={videoData.viewsCount}
           initialDownloadsCount={0}
           sourceTable={videoData.sourceTable}
+          forceIsVisible={isActive}
         >
           {({ isLiked, likesCount, viewsCount }) => (
             <ShortVideoPlayer
               video={{ ...videoData, likes: likesCount, viewsCount }}
-              isCurrentlyPlaying={isActive}
+              preloadStatus={effectivePreloadStatus as any}
               disableVideoPlayer={false}
               isLiked={isLiked}
               onLikePress={() => useInteractionStore.getState().toggleLike(videoData.id, undefined, videoData.sourceTable)}
@@ -196,11 +201,12 @@ export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
         initialViewsCount={videoData.viewsCount}
         initialDownloadsCount={0}
         sourceTable={videoData.sourceTable}
+        forceIsVisible={isActive}
       >
-        {({ isLiked, likesCount, viewsCount }) => (
+        {({ isLiked, likesCount, viewsCount, isTagged }) => (
           <GeneralVideoPlayer
             video={{ ...videoData, likes: likesCount, viewsCount }}
-            isCurrentlyPlaying={isActive}
+            preloadStatus={effectivePreloadStatus as any}
             disableVideoPlayer={false}
             isLiked={isLiked}
             onLikePress={() => useInteractionStore.getState().toggleLike(videoData.id, undefined, videoData.sourceTable)}

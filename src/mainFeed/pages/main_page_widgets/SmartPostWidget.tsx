@@ -86,6 +86,7 @@ export const SmartPostWidget: React.FC<SmartPostWidgetProps> = React.memo(({
         metadata: metadata,
         tagsCount: 0, likesCount: Number(data.likes ?? data.likes_count ?? 0),
         commentsCount: Number(data.comments ?? data.comments_count ?? 0),
+        viewsCount: Number(data.views_count ?? data.viewsCount ?? 0),
         timeAgo: new Date(data.created_at || Date.now()).toLocaleDateString(),
         isLiked: false, isSponsored: false,
         hasStatus: false, isActive: false, isPending: 0, localFileCache: '',

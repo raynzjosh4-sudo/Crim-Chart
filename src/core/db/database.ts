@@ -68,11 +68,15 @@ class DatabaseService {
             is_audio INTEGER DEFAULT 0,
             created_at INTEGER,
             expires_at INTEGER,
-            fetched_at INTEGER NOT NULL
+            fetched_at INTEGER NOT NULL,
+            metadata TEXT
           )
         `);
         await this.db.execAsync(`CREATE INDEX IF NOT EXISTS idx_cfs_expires ON cached_feed_statuses (expires_at)`);
         await this.db.execAsync(`CREATE INDEX IF NOT EXISTS idx_cfs_author  ON cached_feed_statuses (author_id)`);
+        try {
+          await this.db.execAsync(`ALTER TABLE cached_feed_statuses ADD COLUMN metadata TEXT`);
+        } catch (e) {}
       } catch (e) {}
 
       // Migrations for box_items extended columns

@@ -3,7 +3,8 @@ import { useChannelPosts } from '@/channel/hooks/useChannelPosts';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { videoPostFromMap } from '@/video/models/VideoPost';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View, Platform, Dimensions } from 'react-native';
+import { useDesktopComposeStore } from '@/core/store/useDesktopComposeStore';
 import { VideoCard } from './widgets/VideoCard';
 import { VideoPromotionBanner } from './widgets/VideoPromotionBanner';
 import { VideoTabShimmer } from './widgets/VideoTabShimmer';
@@ -75,10 +76,17 @@ export const VideoTabView: React.FC<VideoTabViewProps> = ({
           channelName={channelName}
           channelTitle={channelTitle}
           onPostMoment={() => {
-            router.push({
-              pathname: '/first-post',
-              params: { targetChannelId: channelId, isChannelMoment: 'true' },
-            } as any);
+            if (Platform.OS === 'web') {
+              useDesktopComposeStore.getState().openModal({
+                postType: 'channel_moment',
+                targetChannelId: channelId,
+              });
+            } else {
+              router.push({
+                pathname: '/first-post',
+                params: { targetChannelId: channelId, isChannelMoment: 'true' },
+              } as any);
+            }
           }}
           moments={moments}
         />

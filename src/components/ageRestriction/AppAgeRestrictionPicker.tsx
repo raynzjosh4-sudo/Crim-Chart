@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, StyleSheet, View, SafeAreaView, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { Modal, StyleSheet, View, SafeAreaView, Text, TouchableOpacity, ScrollView, Platform, useWindowDimensions } from 'react-native';
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import { colors } from '@/core/theme/colors';
 import { Check } from 'lucide-react-native';
@@ -21,41 +21,82 @@ export const AppAgeRestrictionPicker: React.FC<AppAgeRestrictionPickerProps> = (
   selectedAge,
   onSelect 
 }) => {
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width > 768;
+
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet">
-      <SafeAreaView style={styles.container}>
-        <ChartAppBar 
-          title="Age Restriction" 
-          showBack 
-          onBack={onClose} 
-        />
-        <ScrollView style={styles.content}>
-          <Text style={styles.description}>
-            Select the minimum age required to view this content.
-          </Text>
-          
-          <View style={styles.optionsContainer}>
-            {AGE_OPTIONS.map((age) => {
-              const isSelected = selectedAge === age;
-              return (
-                <TouchableOpacity activeOpacity={1}
-                  key={age}
-                  style={[styles.optionRow, isSelected && styles.optionRowSelected]}
-                  onPress={() => {
-                    onSelect(age);
-                    onClose();
-                  }}
-                >
-                  <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
-                    {age}
-                  </Text>
-                  {isSelected && <Check size={20} color={colors.primary} />}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </ScrollView>
-      </SafeAreaView>
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose} transparent={isDesktop} presentationStyle={isDesktop ? "overFullScreen" : "pageSheet"}>
+      {isDesktop ? (
+        <TouchableOpacity activeOpacity={1} style={styles.desktopContainer} onPress={onClose}>
+          <TouchableOpacity activeOpacity={1} style={styles.desktopCard} onPress={(e) => e.stopPropagation()}>
+            <ChartAppBar 
+              title="Age Restriction" 
+              showBack 
+              onBack={onClose} 
+            />
+            <ScrollView style={styles.content}>
+              <Text style={styles.description}>
+                Select the minimum age required to view this content.
+              </Text>
+              
+              <View style={styles.optionsContainer}>
+                {AGE_OPTIONS.map((age) => {
+                  const isSelected = selectedAge === age;
+                  return (
+                    <TouchableOpacity activeOpacity={1}
+                      key={age}
+                      style={[styles.optionRow, isSelected && styles.optionRowSelected]}
+                      onPress={() => {
+                        onSelect(age);
+                        onClose();
+                      }}
+                    >
+                      <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+                        {age}
+                      </Text>
+                      {isSelected && <Check size={20} color={colors.primary} />}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      ) : (
+        <SafeAreaView style={styles.container}>
+          <ChartAppBar 
+            title="Age Restriction" 
+            showBack 
+            onBack={onClose} 
+          />
+          <ScrollView style={styles.content}>
+            <Text style={styles.description}>
+              Select the minimum age required to view this content.
+            </Text>
+            
+            <View style={styles.optionsContainer}>
+              {AGE_OPTIONS.map((age) => {
+                const isSelected = selectedAge === age;
+                return (
+                  <TouchableOpacity activeOpacity={1}
+                    key={age}
+                    style={[styles.optionRow, isSelected && styles.optionRowSelected]}
+                    onPress={() => {
+                      onSelect(age);
+                      onClose();
+                    }}
+                  >
+                    <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+                      {age}
+                    </Text>
+                    {isSelected && <Check size={20} color={colors.primary} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      )}
     </Modal>
   );
 };
@@ -103,5 +144,26 @@ const styles = StyleSheet.create({
   optionTextSelected: {
     color: colors.primary,
     fontWeight: 'bold',
+  },
+  desktopContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  desktopCard: {
+    width: 320,
+    height: 'auto',
+    maxHeight: 500,
+    backgroundColor: colors.background,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    paddingBottom: 16,
   },
 });

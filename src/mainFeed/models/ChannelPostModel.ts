@@ -39,6 +39,7 @@ export interface ChannelPostModel {
   referenceChannelId?: string;
   likesCount: number;
   commentsCount: number;
+  viewsCount?: number;
   timeAgo: string;
   isLiked: boolean;
   isSponsored: boolean;
@@ -102,6 +103,7 @@ export function channelPostFromMap(map: Record<string, unknown>): ChannelPostMod
     referenceChannelId: map['referenceChannelId'] as string | undefined,
     likesCount: Number(map['likes_count'] ?? map['likesCount'] ?? 0),
     commentsCount: Number(map['comments_count'] ?? map['commentsCount'] ?? 0),
+    viewsCount: Number(map['views_count'] ?? map['viewsCount'] ?? 0),
     timeAgo: String(map['timeAgo'] ?? ''),
     isLiked: Boolean(map['isLiked']),
     isSponsored: Boolean(map['isSponsored']),

@@ -3,7 +3,7 @@ import { useChatStore } from '@/features/messaging/application/useChatStore';
 import { useRouter } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import React, { useEffect, useRef } from 'react';
-import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform, useWindowDimensions } from 'react-native';
 import UserAvatar from '@/components/avatar/UserAvatar';
 import { useProfileCacheStore } from '@/core/store/useProfileCacheStore';
 
@@ -58,6 +58,8 @@ export interface InboxSectionHeaderProps {
 
 export const InboxSectionHeader: React.FC<InboxSectionHeaderProps> = ({ threads }) => {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
 
   const { typingUsers } = useChatStore();
   const cachedProfiles = useProfileCacheStore(state => state.profiles);
@@ -99,7 +101,13 @@ export const InboxSectionHeader: React.FC<InboxSectionHeaderProps> = ({ threads 
           <TouchableOpacity activeOpacity={1}
             key={user.id}
             style={styles.userCol}
-            onPress={() => router.push({ pathname: '/inboxDetail', params: { threadId: user.threadId } })}
+            onPress={() => {
+              if (isDesktop) {
+                router.setParams({ threadId: user.threadId });
+              } else {
+                router.push({ pathname: '/inboxDetail', params: { threadId: user.threadId } });
+              }
+            }}
           >
             <View style={styles.avatarWrapper}>
               <UserAvatar
@@ -108,13 +116,12 @@ export const InboxSectionHeader: React.FC<InboxSectionHeaderProps> = ({ threads 
                 name={user.name}
                 size={68}
               />
-
-              {user.isTyping && (
-                <View style={styles.typingContainer}>
-                  <BouncingTypingIndicator />
-                </View>
-              )}
             </View>
+
+            <View style={{ height: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 2 }}>
+              {user.isTyping && <BouncingTypingIndicator />}
+            </View>
+
             <Text style={styles.nameText} numberOfLines={1}>
               {user.name}
             </Text>
@@ -142,27 +149,27 @@ const styles = StyleSheet.create({
     height: 74,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 0,
   },
   typingContainer: {
-    position: 'absolute',
-    bottom: -4,
+    // Removed
   },
   typingBubble: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: '#000',
     borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#000',
-    paddingHorizontal: 6,
-    paddingVertical: 4,
+    borderWidth: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 2,
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#FFF',
-    marginHorizontal: 1.5,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: '#FFD700',
+    marginHorizontal: 2,
   },
   nameText: {
     width: 64,

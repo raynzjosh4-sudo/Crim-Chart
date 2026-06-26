@@ -518,8 +518,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 12,
-    maxHeight: 120,
-  },
+    maxHeight: 250,
+    outlineStyle: 'none',
+  } as any,
   emojiBtn: {
     padding: 12,
   },

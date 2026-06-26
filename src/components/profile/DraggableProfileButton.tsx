@@ -1,6 +1,6 @@
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { colors } from '@/core/theme/colors';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import { User } from 'lucide-react-native';
 import React, { useRef, useState } from 'react';
 import { Animated, Image, PanResponder, StyleSheet, useWindowDimensions, View, Text, TouchableOpacity } from 'react-native';
@@ -16,8 +16,11 @@ export const DraggableProfileButton = ({
 }) => {
   const user = useAuthStore(s => s.user);
   const router = useRouter();
+  const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+
+
 
   const pan = useRef(new Animated.ValueXY({ x: initialX, y: initialY })).current;
 
@@ -61,7 +64,9 @@ export const DraggableProfileButton = ({
               x: (pan.x as any)._value,
               y: (pan.y as any)._value,
             });
-            setMenuVisible(true);
+            setTimeout(() => {
+              setMenuVisible(true);
+            }, 50);
           } else {
             router.push('/profile');
           }
@@ -83,6 +88,11 @@ export const DraggableProfileButton = ({
 
   const displayImageUrl = user?.profileImageUrl;
   const hasImage = !!displayImageUrl;
+
+  // If on the profile page, don't show the button
+  if (pathname === '/profile' || pathname?.startsWith('/profile/')) {
+    return null;
+  }
 
   return (
     <>

@@ -88,17 +88,32 @@ export default function BoxOptionsPage() {
     }
   };
 
-  const handleAddCountry = (country: Country) => {
+  const handleAddCountry = (countries: Country[]) => {
     if (!box) return;
     let current = box.country_restrictions || ['Global'];
-    // If it's Global, replace it with the new country
+    // If it's Global, replace it with the new country list
     if (current.includes('Global')) {
       current = [];
     }
-    // Prevent duplicates
-    if (!current.includes(country.name as string)) {
-      handleToggle('country_restrictions', [...current, country.name]);
+    
+    // Extract string names from the selected countries array
+    const newCountryNames = countries.map(country => {
+      if (typeof country.name === 'string') return country.name;
+      if (country.name && typeof country.name === 'object') {
+        return (country.name as any).en || (country.name as any).common || Object.values(country.name)[0] || 'Unknown';
+      }
+      return 'Unknown';
+    });
+
+    // Merge and prevent duplicates
+    const combined = Array.from(new Set([...current, ...newCountryNames]));
+    
+    if (combined.length > 0) {
+      handleToggle('country_restrictions', combined);
+    } else {
+      handleToggle('country_restrictions', ['Global']);
     }
+    
     setCountryPickerVisible(false);
   };
 
@@ -246,16 +261,19 @@ export default function BoxOptionsPage() {
             <Text style={styles.label}>Country Restriction</Text>
           </View>
           <View style={styles.chipContainer}>
-            {(box.country_restrictions || ['Global']).map((c: string) => (
-              <View key={c} style={styles.chip}>
-                <Text style={styles.chipText}>{c}</Text>
-                {c !== 'Global' && (
-                  <TouchableOpacity activeOpacity={1} onPress={() => handleRemoveCountry(c)} style={styles.removeChipIcon}>
-                    <X size={12} color="#FFF" />
-                  </TouchableOpacity>
-                )}
-              </View>
-            ))}
+            {(box.country_restrictions || ['Global']).map((c: any, index: number) => {
+              const nameStr = typeof c === 'string' ? c : (c?.en || c?.name || 'Unknown');
+              return (
+                <View key={`${nameStr}-${index}`} style={styles.chip}>
+                  <Text style={styles.chipText}>{nameStr}</Text>
+                  {nameStr !== 'Global' && (
+                    <TouchableOpacity activeOpacity={1} onPress={() => handleRemoveCountry(c)} style={styles.removeChipIcon}>
+                      <X size={12} color="#FFF" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              );
+            })}
             <TouchableOpacity activeOpacity={1} 
               style={styles.addChip}
               onPress={() => setCountryPickerVisible(true)}

@@ -238,13 +238,15 @@ export class ChannelRemoteSource {
     return channel;
   }
 
-  async getChannelStatuses(channelId: string): Promise<any[]> {
+  async getChannelStatuses(channelId: string, page: number = 0, limit: number = 10): Promise<any[]> {
+    const from = page * limit;
     const { data, error } = await supabase
       .from('channel_statuses')
       .select('*, author:author_id(id, display_name, profile_image_url, bio)')
       .eq('channel_id', channelId)
       .gte('expires_at', new Date().toISOString())
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(from, from + limit - 1);
 
     if (error) {
       console.error('Supabase fetch channel statuses error:', error);

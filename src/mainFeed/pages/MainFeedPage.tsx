@@ -15,6 +15,7 @@ import { Bell, Search } from 'lucide-react-native';
 import { MixedFeedItem } from '../models/MixedFeedItem';
 import { MainFeedBody } from './main_page_widgets/MainFeedBody';
 import { MainFeedSkeletonCard } from './main_page_widgets/MainFeedSkeletonCard';
+import { NativeDB } from '@/core/db/NativeDB';
 
 
 const PAGE_SIZE = 15;
@@ -43,14 +44,21 @@ export const MainFeedPage = () => {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
 
-  const [isReady, setIsReady] = useState(false);
+  const [isReady, setIsReady] = useState(true);
 
-  // One-time nuke on first launch
+  // Load from local SQLite cache immediately for instant display on re-navigation
   useEffect(() => {
-    // cache cleared on first launch (AsyncStorage removed)
-    InteractionManager.runAfterInteractions(() => {
-      setIsReady(true);
-    });
+    (async () => {
+      try {
+        const cached = await NativeDB.getMainFeed();
+        if (cached.length > 0) {
+          cardsRef.current = cached;
+          setCards(cached);
+        }
+      } catch (e) {
+        console.warn('[MainFeedPage] Cache load error:', e);
+      }
+    })();
   }, []);
 
   // Initial load when user becomes available
@@ -96,8 +104,11 @@ export const MainFeedPage = () => {
   const loadFeed = useCallback(async (reset = false) => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
-    if (reset) setIsLoading(true);
-    else setIsPaginating(true);
+    // Only show the shimmer on a reset when we have NO cached cards.
+    // If the user has already seen the feed (cached), refresh silently.
+    if (reset && cardsRef.current.length === 0) setIsLoading(true);
+    else if (!reset) setIsPaginating(true);
+
 
     try {
       const currentPage = reset ? 0 : pageRef.current;
@@ -277,6 +288,10 @@ export const MainFeedPage = () => {
         setCards(newCards);
         setPage(1);
         setHasMore(rawRpcCount >= PAGE_SIZE);
+        // Persist fresh page-0 data to SQLite so next navigation is instant
+        NativeDB.upsertMainFeed(newCards).catch(e =>
+          console.warn('[MainFeedPage] upsertMainFeed failed:', e)
+        );
       } else {
         pageRef.current += 1;
         // Deduplicate new cards

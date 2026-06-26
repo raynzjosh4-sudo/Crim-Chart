@@ -11,6 +11,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Platform,
 } from 'react-native';
 import { StickerSheet } from './StickerSheet';
 import { PermissionDialog } from '@/components/ui/PermissionDialog';
@@ -533,6 +534,11 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     minHeight: 48,
     maxHeight: 120, // Prevent infinite growth
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+      },
+    }),
   },
   iconBtn: {
     padding: 12,

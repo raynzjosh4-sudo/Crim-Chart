@@ -15,10 +15,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { VideoPost } from '../../video/models/VideoPost';
 import { LikeButton } from '../../video/widgets/LikeButton';
+import { TagOverlay } from '@/channel/pages/tag/TagOverlay';
 
 interface ShortVideoPlayerCardProps {
   video: VideoPost;
-  isPlaying: boolean;
+  preloadStatus?: 'playing' | 'preloading' | 'idle';
   isShrunken?: boolean;
   onLike?: () => void;
   onComment?: () => void;
@@ -30,11 +31,12 @@ interface ShortVideoPlayerCardProps {
   disableInteractions?: boolean;
 }
 
+
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
 const ShortVideoPlayerCardComponent = ({
   video,
-  isPlaying,
+  preloadStatus = 'idle',
   isShrunken = false,
   onLike,
   onComment,
@@ -47,13 +49,16 @@ const ShortVideoPlayerCardComponent = ({
 }: ShortVideoPlayerCardProps) => {
   const [liked, setLiked] = useState<boolean>(video.isLiked);
   const [likesCount, setLikesCount] = useState<number>(video.likesCount);
+  const [tagOverlayVisible, setTagOverlayVisible] = useState(false);
   const [showPlayPause, setShowPlayPause] = useState(false);
   const [isPausedByUser, setIsPausedByUser] = useState(false);
   const [progress, setProgress] = useState(0);
   const hidePlayPauseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  const player = useVideoPlayer(video.videoUrl, p => {
+  const isPlaying = preloadStatus === 'playing';
+
+  const player = useVideoPlayer(preloadStatus === 'idle' ? null : video.videoUrl, p => {
     p.loop = true;
     if (isPlaying) p.play();
     else p.pause();
@@ -124,16 +129,18 @@ const ShortVideoPlayerCardComponent = ({
   }, [liked, likesCount, onLike]);
 
   return (
-    <Pressable style={[styles.container, isShrunken && styles.shrunken]} onPress={togglePlayPause}>
-      <VideoView
-        player={player}
-        style={[
-          StyleSheet.absoluteFillObject,
-          !hideBottomInput && { bottom: 61 } // End exactly where the progress bar starts (58px bar + 3px progress bar)
-        ]}
-        contentFit="cover"
-        nativeControls={false}
-      />
+    <Pressable style={[styles.container, isShrunken && styles.shrunken]} delayPressIn={150} onPress={togglePlayPause}>
+      {player ? (
+        <VideoView
+          player={player}
+          style={[
+            StyleSheet.absoluteFillObject,
+            !hideBottomInput && { bottom: 61 } // End exactly where the progress bar starts (58px bar + 3px progress bar)
+          ]}
+          contentFit="cover"
+          nativeControls={false}
+        />
+      ) : null}
 
       <SafeAreaView style={StyleSheet.absoluteFill} pointerEvents="box-none">
         {/* Overlay gradient */}
@@ -187,6 +194,7 @@ const ShortVideoPlayerCardComponent = ({
               <ActionBtn
                 icon={<Tag color="#FFF" size={32} />}
                 count={video.tagsCount ?? 0}
+                onPress={() => setTagOverlayVisible(true)}
               />
               <ActionBtn
                 icon={<Eye color="#FFF" size={32} />}
@@ -226,6 +234,13 @@ const ShortVideoPlayerCardComponent = ({
             )}
           </Animated.View>
         )}
+        <TagOverlay
+          visible={tagOverlayVisible}
+          onClose={() => setTagOverlayVisible(false)}
+          postId={video.id ?? ''}
+          sourceChannelId={video.channelId ?? ''}
+          linkChain={[]}
+        />
       </SafeAreaView>
     </Pressable>
   );

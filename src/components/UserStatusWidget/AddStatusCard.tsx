@@ -30,11 +30,10 @@ export const AddStatusCard: React.FC<AddStatusCardProps> = ({ avatarUrl, onPress
 
 const styles = StyleSheet.create({
   container: {
-    width: 100,
-    height: 160,
+    width: '100%',
+    height: '100%',
     borderRadius: 16,
-    backgroundColor: '#1E1E1E', // Dark grey background
-    marginRight: 8,
+    backgroundColor: '#1E1E1E',
     alignItems: 'center',
     position: 'relative',
   },

@@ -29,6 +29,9 @@ export const FinalizePostPage: React.FC = () => {
   const isChannelMoment = params.isChannelMoment === 'true';
   const isGlobalStatus = params.isGlobalStatus === 'true';
 
+  const channelName = params.channelName as string | undefined;
+  const channelAvatarUrl = params.channelAvatarUrl as string | undefined;
+
   const { createPost } = usePostingStore();
 
   const [caption, setCaption] = useState('');
@@ -74,6 +77,8 @@ export const FinalizePostPage: React.FC = () => {
       media: selectedMedia,
       caption,
       channelId: targetChannelId, // Relevant for manifesto, channel post, channel status
+      channelName,
+      channelAvatarUrl,
       postType: primaryPostType,
       shareToStatus: false, // We handle this explicitly below
       allowComments,

@@ -12,6 +12,7 @@ export interface FeedStatusItem {
   isAudio: boolean;
   createdAt: Date;
   expiresAt: Date | null;
+  metadata: Record<string, any> | null;
 }
 
 export function feedStatusFromMap(row: any): FeedStatusItem {
@@ -39,5 +40,6 @@ export function feedStatusFromMap(row: any): FeedStatusItem {
     isAudio: Boolean(row.is_audio),
     createdAt: row.created_at ? new Date(row.created_at) : new Date(),
     expiresAt: row.expires_at ? new Date(row.expires_at) : null,
+    metadata: row.metadata || null,
   };
 }

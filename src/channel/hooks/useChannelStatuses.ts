@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { channelRepository } from '@/channel/data/repositories/ChannelRepositoryImpl';
+import { channelLocalSource } from '@/channel/data/sources/ChannelLocalSource';
 import { channelStatusFromMap, ChannelStatusModel } from '@/channel/models/ChannelStatusModel';
 import { StatusItem } from '@/components/UserStatusWidget/UserStatusWidget';
 
@@ -7,41 +8,82 @@ export function useChannelStatuses(channelId: string | undefined) {
   const [statuses, setStatuses] = useState<StatusItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  
+  // Pagination
+  const page = useRef(0);
+  const hasMore = useRef(true);
+  const rawStatusesMap = useRef<Map<string, any>>(new Map());
 
-  const fetchStatuses = useCallback(async () => {
+  const processAndSetStatuses = (rawData: any[]) => {
+    // Merge new raw data into our map
+    rawData.forEach(item => {
+      rawStatusesMap.current.set(item.id, item);
+    });
+
+    const mappedStatuses = Array.from(rawStatusesMap.current.values())
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .map(channelStatusFromMap);
+
+    const groupedMap = new Map<string, StatusItem>();
+
+    mappedStatuses.forEach((status) => {
+      if (!status.author) return;
+
+      if (!groupedMap.has(status.authorId)) {
+        groupedMap.set(status.authorId, {
+          id: status.authorId,
+          user: status.author,
+          thumbnailUrl: status.thumbnailUrl || status.imageUrls?.[0] || 'https://via.placeholder.com/150',
+          hasUnseen: true,
+          statuses: [status]
+        } as StatusItem & { statuses: ChannelStatusModel[] });
+      } else {
+        const group = groupedMap.get(status.authorId)!;
+        (group as any).statuses.push(status);
+      }
+    });
+
+    setStatuses(Array.from(groupedMap.values()));
+  };
+
+  const loadData = useCallback(async (isRefresh = false) => {
     if (!channelId) {
       setLoading(false);
       return;
     }
 
+    if (isRefresh) {
+      page.current = 0;
+      hasMore.current = true;
+      rawStatusesMap.current.clear();
+      setStatuses([]);
+    }
+
+    if (!hasMore.current && !isRefresh) return;
+
     try {
       setLoading(true);
-      const rawData = await channelRepository.getChannelStatuses(channelId);
-      
-      const mappedStatuses = rawData.map(channelStatusFromMap);
 
-      // Group by author for WhatsApp style (one circle per user)
-      const groupedMap = new Map<string, StatusItem>();
-
-      mappedStatuses.forEach((status) => {
-        if (!status.author) return;
-
-        if (!groupedMap.has(status.authorId)) {
-          groupedMap.set(status.authorId, {
-            id: status.authorId, // Group ID is the user ID
-            user: status.author,
-            thumbnailUrl: status.thumbnailUrl || status.imageUrls?.[0] || 'https://via.placeholder.com/150',
-            hasUnseen: true, // We'd ideally track seen states locally
-            statuses: [status]
-          } as StatusItem & { statuses: ChannelStatusModel[] });
-        } else {
-          // Add subsequent statuses to the group
-          const group = groupedMap.get(status.authorId)!;
-          (group as any).statuses.push(status);
+      // Offline-first approach on initial load
+      if (page.current === 0 && isRefresh) {
+        const localData = await channelLocalSource.getChannelStatuses(channelId, 10, 0);
+        if (localData.length > 0) {
+          processAndSetStatuses(localData);
         }
-      });
+      }
 
-      setStatuses(Array.from(groupedMap.values()));
+      // Fetch remote
+      const remoteData = await channelRepository.getChannelStatuses(channelId, page.current, 10);
+      
+      if (remoteData.length > 0) {
+        // Save to local cache asynchronously
+        channelLocalSource.saveChannelStatuses(remoteData).catch(console.warn);
+        processAndSetStatuses(remoteData);
+        page.current += 1;
+      } else {
+        hasMore.current = false;
+      }
+      
       setError(null);
     } catch (err) {
       console.error('Failed to fetch channel statuses:', err);
@@ -52,13 +94,20 @@ export function useChannelStatuses(channelId: string | undefined) {
   }, [channelId]);
 
   useEffect(() => {
-    fetchStatuses();
-  }, [fetchStatuses]);
+    loadData(true);
+
+    if (typeof window !== 'undefined') {
+      const handleStatusPosted = () => loadData(true);
+      window.addEventListener('channel_status_posted', handleStatusPosted);
+      return () => window.removeEventListener('channel_status_posted', handleStatusPosted);
+    }
+  }, [loadData]);
 
   return {
     statuses,
     loading,
     error,
-    refresh: fetchStatuses,
+    refresh: () => loadData(true),
+    loadMore: () => loadData(false),
   };
 }

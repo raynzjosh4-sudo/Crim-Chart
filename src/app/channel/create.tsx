@@ -9,9 +9,13 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { Calendar, Camera, ChevronRight, Globe } from 'lucide-react-native';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View, Platform, useWindowDimensions } from 'react-native';
 
-export default function CreateChannelPage() {
+import { AppCountryPicker } from '@/components/countryPicker/AppCountryPicker';
+import { AppAgeRestrictionPicker } from '@/components/ageRestriction/AppAgeRestrictionPicker';
+export default function CreateChannelPage({ isInline = false }: { isInline?: boolean }) {
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width > 768 && !isInline;
   const { colors } = useTheme();
   const router = useRouter();
   const { tr } = useLocalization();
@@ -20,7 +24,12 @@ export default function CreateChannelPage() {
   const creationStatus = useChannelCreationController(state => state.status);
   const draftCountries = useChannelCreationController(state => state.draftCountries);
   const draftAge = useChannelCreationController(state => state.draftAge);
+  const setDraftCountries = useChannelCreationController(state => state.setDraftCountries);
+  const setDraftAge = useChannelCreationController(state => state.setDraftAge);
   const isLoading = creationStatus === ChannelCreationStatus.processing;
+
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const [showAgePicker, setShowAgePicker] = useState(false);
 
   const [title, setTitle] = useState('Channel Title');
   const [description, setDescription] = useState('Write about the channel or community...');
@@ -64,24 +73,36 @@ export default function CreateChannelPage() {
       countryRestrictions: draftCountries,
       allowCommentingBy,
     }).then(() => {
-      setTimeout(() => router.back(), 100);
+      setTimeout(() => {
+        if (isInline) {
+          router.setParams({ desktopChannelId: '' });
+        } else {
+          router.back();
+        }
+      }, 100);
     }).catch((e) => {
       console.error('Create channel failed', e);
     });
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.root, { backgroundColor: isDesktop ? 'rgba(0,0,0,0.85)' : colors.background }, isDesktop && styles.desktopBackdrop]}>
+      <View style={[
+        styles.container, 
+        { backgroundColor: colors.background },
+        isDesktop && styles.desktopWindow
+      ]}>
       <ChartAppBar
         title={tr('create_channel')}
         showBack={true}
         centerTitle={true}
         titleStyle={{ fontWeight: '900', textTransform: 'lowercase' }}
+        onBack={isInline ? () => router.setParams({ desktopChannelId: '' }) : undefined}
       />
 
       <ChartLinearLoader isLoading={isLoading} />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent}>
         {/* Interactive Avatar Selector */}
         <View style={styles.avatarContainer}>
           <TouchableOpacity activeOpacity={0.8} onPress={handlePickImage}>
@@ -121,7 +142,16 @@ export default function CreateChannelPage() {
           title={tr('age_restriction')}
           subtitle={draftAge === 'All Ages' ? tr('all') : draftAge}
           icon={<Calendar size={20} color="rgba(255,255,255,0.4)" />}
-          onPress={() => router.push('/channel/age' as any)}
+          onPress={() => setShowAgePicker(true)}
+        />
+        <AppAgeRestrictionPicker
+          visible={showAgePicker}
+          onClose={() => setShowAgePicker(false)}
+          selectedAge={draftAge as any}
+          onSelect={(age) => {
+            setDraftAge(age);
+            setShowAgePicker(false);
+          }}
         />
         <ToggleTile
           title={tr('members_in_my_other_channels')}
@@ -168,7 +198,20 @@ export default function CreateChannelPage() {
           title={tr('which_country_allowed')}
           subtitle={draftCountries.length === 1 && draftCountries[0] === 'Global' ? tr('all') : `${draftCountries.length} Selected`}
           icon={<Globe size={20} color="rgba(255,255,255,0.4)" />}
-          onPress={() => router.push('/channel/country' as any)}
+          onPress={() => setShowCountryPicker(true)}
+        />
+        <AppCountryPicker
+          visible={showCountryPicker}
+          onClose={() => setShowCountryPicker(false)}
+          initialCountries={draftCountries.includes('Global') ? [] : draftCountries.map(c => ({ name: c, cca2: c } as any))}
+          onSelect={(selected) => {
+            if (selected.length === 0) {
+              setDraftCountries(['Global']);
+            } else {
+              setDraftCountries(selected.map(c => typeof c.name === 'string' ? c.name : (c.name as any).en));
+            }
+            setShowCountryPicker(false);
+          }}
         />
         <ToggleTile
           title={tr('allow_members_not_leave')}
@@ -194,6 +237,7 @@ export default function CreateChannelPage() {
         </View>
 
       </ScrollView>
+      </View>
     </View>
   );
 }
@@ -248,6 +292,24 @@ const RadioTile = ({ title, value, groupValue, onChanged }: any) => {
 // ----------------------------------------------------
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
+  desktopBackdrop: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  desktopWindow: {
+    flex: undefined,
+    width: '100%',
+    maxWidth: 680,
+    height: '100%',
+    maxHeight: 850,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    overflow: 'hidden',
+    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' as any,
+  },
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: 24, paddingVertical: 24, paddingBottom: 60 },
   avatarContainer: { alignItems: 'center', marginBottom: 32 },

@@ -4,7 +4,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
 import { DownloadCloud } from 'lucide-react-native';
 import { useState } from 'react';
-import { Linking } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import Toast from 'react-native-toast-message';
 
 export interface MediaDownloadWrapperProps {
@@ -84,7 +84,61 @@ export const MediaDownloadWrapper: React.FC<MediaDownloadWrapperProps> = ({
     if (isDownloading) return;
 
     try {
-      // 1. Request Permissions
+      if (Platform.OS === 'web') {
+        setIsDownloading(true);
+        ChartToast.showInfo(null, { title: 'Downloading...', message: `Starting download for ${title}` });
+
+        const safeTitle = sanitizeFilename(title);
+        let ext = mediaType === 'audio' ? 'mp3' : mediaType === 'video' ? 'mp4' : 'jpg';
+        ext = getFileExtension(mediaUrl, ext);
+        const mediaFileName = `${safeTitle}_${Date.now()}.${ext}`;
+
+        try {
+          const response = await fetch(mediaUrl);
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = url;
+          a.download = mediaFileName;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+
+          if (coverUrl) {
+            const coverExt = getFileExtension(coverUrl, 'jpg');
+            const coverFileName = `${safeTitle}_cover_${Date.now()}.${coverExt}`;
+            const coverResponse = await fetch(coverUrl);
+            const coverBlob = await coverResponse.blob();
+            const coverObjUrl = window.URL.createObjectURL(coverBlob);
+            const aCover = document.createElement('a');
+            aCover.style.display = 'none';
+            aCover.href = coverObjUrl;
+            aCover.download = coverFileName;
+            document.body.appendChild(aCover);
+            aCover.click();
+            window.URL.revokeObjectURL(coverObjUrl);
+            document.body.removeChild(aCover);
+          }
+
+          ChartToast.showSuccess(null, {
+            title: 'Download Started',
+            message: 'Check your browser downloads.'
+          });
+          if (onDownloadSuccess) onDownloadSuccess();
+        } catch (fetchError) {
+          console.error("Web fetch download failed:", fetchError);
+          // Fallback to direct navigation if CORS prevents blob fetch
+          window.open(mediaUrl, '_blank');
+          if (coverUrl) window.open(coverUrl, '_blank');
+        } finally {
+          setIsDownloading(false);
+        }
+        return;
+      }
+
+      // 1. Request Permissions (Native)
       const { status } = await MediaLibrary.requestPermissionsAsync(true);
       if (status !== 'granted') {
         setShowPermissionDialog(true);
@@ -136,7 +190,11 @@ export const MediaDownloadWrapper: React.FC<MediaDownloadWrapperProps> = ({
 
   const handleOpenSettings = () => {
     setShowPermissionDialog(false);
-    Linking.openSettings();
+    if (Platform.OS !== 'web') {
+      Linking.openSettings();
+    } else {
+      alert("Please check your browser settings to allow downloads.");
+    }
   };
 
   return (

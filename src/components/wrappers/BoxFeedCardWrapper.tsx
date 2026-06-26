@@ -200,13 +200,13 @@ export const BoxFeedCardWrapper: React.FC<BoxFeedCardWrapperProps> = React.memo(
   if (loading) return <BoxFeedCardSkeleton />;
   if (!resolvedBoxData) return null;
 
-  if (resolvedBoxData.boxModel.postId) {
-    return (
-      <PostInteractionWrapper postId={resolvedBoxData.boxModel.postId} sourceTable="posts">
-        {(interactionState) => children(resolvedBoxData.rawData, resolvedBoxData.boxModel, resolvedBoxData.ownerModel, interactionState)}
-      </PostInteractionWrapper>
-    );
-  }
+  // Always wrap in PostInteractionWrapper to keep hook count stable.
+  // If no postId, use a dummy fallback so hooks are always called the same number of times.
+  const safePostId = resolvedBoxData.boxModel.postId || `__noop_${resolvedBoxData.boxModel.id}`;
 
-  return <>{children(resolvedBoxData.rawData, resolvedBoxData.boxModel, resolvedBoxData.ownerModel)}</>;
+  return (
+    <PostInteractionWrapper postId={safePostId} sourceTable="posts">
+      {(interactionState) => children(resolvedBoxData.rawData, resolvedBoxData.boxModel, resolvedBoxData.ownerModel, interactionState)}
+    </PostInteractionWrapper>
+  );
 });

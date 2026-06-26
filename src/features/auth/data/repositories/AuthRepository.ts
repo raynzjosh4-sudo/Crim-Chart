@@ -67,6 +67,39 @@ export class AuthRepository {
   async updateOnlineStatus(isOnline: boolean) {
     return AuthRemoteSource.updateOnlineStatus(isOnline);
   }
+
+  async handleWebOAuthSession(session: any) {
+    const authUser = session.user;
+    let profile: any = null;
+    const { data } = await supabase
+      .from('profiles')
+      .select()
+      .eq('id', authUser.id)
+      .maybeSingle();
+
+    if (data) {
+      profile = data;
+      const userModel = CrimChartUserModel.fromMap(profile).copyWith({
+        id: authUser.id,
+        email: authUser.email,
+        displayName: profile.username ?? authUser.email?.split('@')[0] ?? 'User',
+        profileImageUrl: CrimChartUserModel.correctImageUrl(profile.profile_image_url ?? authUser.user_metadata?.avatar_url ?? ''),
+        createdAt: new Date(),
+      });
+      await this.local.saveUser(userModel, session.access_token, session.refresh_token);
+      return { isNewUser: false, user: userModel };
+    } else {
+      const userModel = CrimChartUserModel.empty().copyWith({
+        id: authUser.id,
+        displayName: authUser.user_metadata?.full_name || 'User',
+        username: authUser.email?.split('@')[0] || 'user',
+        email: authUser.email,
+        profileImageUrl: CrimChartUserModel.correctImageUrl(authUser.user_metadata?.avatar_url || ''),
+        createdAt: new Date(),
+      });
+      return { isNewUser: true, user: userModel };
+    }
+  }
 }
 
 export const authRepository = new AuthRepository();

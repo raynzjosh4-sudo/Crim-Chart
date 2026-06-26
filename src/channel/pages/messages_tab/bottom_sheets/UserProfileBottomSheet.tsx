@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, TouchableWithoutFeedback, useWindowDimensions, ScrollView } from 'react-native';
 import { MessageModel } from '../models/MessageModel';
 import { Image as ExpoImage } from 'expo-image';
-import { UserPlus, UserCircle } from 'lucide-react-native';
+import { UserPlus, UserCircle, X } from 'lucide-react-native';
 import { colors } from '@/core/theme/colors';
 import { useRouter } from 'expo-router';
 import { UserAvatarImage } from '@/channel/pages/widgets2/memberimage/UserAvatarImage';
@@ -18,8 +18,11 @@ import { supabase } from '@/core/supabase/client';
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 
+import { Platform } from 'react-native';
+
 export const UserProfileBottomSheet: React.FC<UserProfileBottomSheetProps> = ({ user, visible, onClose }) => {
-  const { height } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
   const router = useRouter();
   const currentUser = useAuthStore(state => state.user);
   
@@ -76,17 +79,35 @@ export const UserProfileBottomSheet: React.FC<UserProfileBottomSheetProps> = ({ 
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType={isDesktop ? "fade" : "slide"}
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, isDesktop && { justifyContent: 'center', alignItems: 'center' }]}>
         <TouchableWithoutFeedback onPress={onClose}>
           <View style={styles.backdrop} />
         </TouchableWithoutFeedback>
 
-        <View style={styles.container}>
-          <View style={styles.dragHandle} />
+        <View style={[styles.container, isDesktop && { 
+          width: 400, 
+          borderRadius: 32, 
+          paddingBottom: 24,
+          paddingTop: 24,
+          maxHeight: height * 0.9,
+          borderWidth: 1,
+          borderColor: 'rgba(255,255,255,0.1)'
+        }]}>
+          {!isDesktop && <View style={styles.dragHandle} />}
           
+          {isDesktop && (
+            <TouchableOpacity 
+              activeOpacity={0.7} 
+              onPress={onClose} 
+              style={{ position: 'absolute', top: 20, right: 20, padding: 8, zIndex: 10 }}
+            >
+              <X size={24} color="rgba(255,255,255,0.5)" />
+            </TouchableOpacity>
+          )}
+
           <ExpoImage
             source={{ uri: displayAvatar }}
             style={styles.avatar}

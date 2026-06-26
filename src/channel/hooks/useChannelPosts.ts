@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { channelRepository } from '@/channel/data/repositories/ChannelRepositoryImpl';
 import { useInteractionStore } from '@/core/store/useInteractionStore';
+import { usePostingStore } from '@/core/store/usePostingStore';
 
 export function useChannelPosts(channelId: string | undefined, limit: number = 10) {
+  const pendingPosts = usePostingStore(state => state.pendingPosts);
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -53,6 +55,9 @@ export function useChannelPosts(channelId: string | undefined, limit: number = 1
 
       if (isRefresh) {
         setPosts(mappedPosts);
+        if (channelId && mappedPosts.length > 0) {
+           usePostingStore.getState().removePendingPostsByChannel(channelId);
+        }
       } else {
         setPosts([...currentPosts, ...mappedPosts]);
       }
@@ -85,7 +90,28 @@ export function useChannelPosts(channelId: string | undefined, limit: number = 1
 
   useEffect(() => {
     refresh();
+
+    const handlePostCreated = () => {
+      refresh();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('channel_post_created', handlePostCreated);
+      window.addEventListener('status_posted', handlePostCreated);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('channel_post_created', handlePostCreated);
+        window.removeEventListener('status_posted', handlePostCreated);
+      }
+    };
   }, [refresh]);
 
-  return { posts, loading, loadingMore, hasMore, error, refresh, loadMore };
+  const combinedPosts = channelId ? [
+    ...pendingPosts.filter(p => p.channel_id === channelId),
+    ...posts
+  ] : posts;
+
+  return { posts: combinedPosts, loading, loadingMore, hasMore, error, refresh, loadMore };
 }

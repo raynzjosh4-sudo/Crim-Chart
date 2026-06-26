@@ -193,6 +193,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.text,
     fontSize: 14,
+    outlineStyle: 'none' as any,
   },
   loginButton: {
     width: '100%',

@@ -154,9 +154,12 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   },
 
   incrementView: (postId, boxId, sourceTable) => {
-    // Sync to backend via RPC. 
-    // We intentionally do NOT optimistically increment the local state because 
-    // the backend may reject duplicate views from the same user, causing the UI to falsely show +1.
+    // Optimistically update the UI to show the view count immediately
+    set((state) => {
+      const key = boxId ? `${boxId}_${postId}` : postId;
+      const count = state.viewsCount[key] || 0;
+      return { viewsCount: { ...state.viewsCount, [key]: count + 1 } };
+    });
 
     // Sync to backend via RPC
     import('@/core/supabase/supabaseConfig').then(({ supabase }) => {

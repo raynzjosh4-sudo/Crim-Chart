@@ -20,35 +20,7 @@ import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
 
-const TileVideoPlayer = ({ videoUrl, isPlaying, isMuted, style, contentFit = "cover", isDesktop = false }: { videoUrl: string; isPlaying: boolean; isMuted: boolean; style: any; contentFit?: "cover" | "contain" | "fill"; isDesktop?: boolean }) => {
-  const player = useVideoPlayer(isPlaying ? videoUrl : null, p => {
-    p.loop = true;
-    p.muted = isMuted;
-  });
-
-  useEffect(() => {
-    if (!player) return;
-    if (isPlaying) player.play();
-    else player.pause();
-  }, [isPlaying, player]);
-
-  useEffect(() => {
-    if (player) {
-      player.muted = isMuted;
-    }
-  }, [isMuted, player]);
-
-  return (
-    <VideoView
-      player={player!}
-      style={style}
-      contentFit={contentFit}
-      allowsFullscreen={isDesktop}
-      allowsPictureInPicture={isDesktop}
-      nativeControls={isDesktop}
-    />
-  );
-};
+import { PreloadableVideoPlayer, PreloadStatus } from '@/video/components/PreloadableVideoPlayer';
 
 export interface ShortVideoPlayerProps {
   video: {
@@ -82,15 +54,18 @@ export interface ShortVideoPlayerProps {
   onVideoPress?: (params: any) => void;
   isAdded?: boolean;
   isLiked?: boolean;
-  isCurrentlyPlaying?: boolean;
+  preloadStatus?: PreloadStatus;
   disableVideoPlayer?: boolean;
 }
 
-export const ShortVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress, onVideoPress, isAdded, isLiked, isCurrentlyPlaying, disableVideoPlayer }: ShortVideoPlayerProps) => {
+import { TagOverlay } from '@/channel/pages/tag/TagOverlay';
+
+export const ShortVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress, onVideoPress, isAdded, isLiked, preloadStatus = 'idle', disableVideoPlayer }: ShortVideoPlayerProps) => {
   const router = useRouter();
   const [showPlayer, setShowPlayer] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [isCommentSheetVisible, setIsCommentSheetVisible] = useState(false);
+  const [tagOverlayVisible, setTagOverlayVisible] = useState(false);
   const [localCommentsCount, setLocalCommentsCount] = useState(Number(video.commentsCount) || 0);
   const styles = useStyles(themeStyles);
   const theme = useCurrentTheme();
@@ -129,6 +104,7 @@ export const ShortVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress, o
             })
           }
           isPersonalPost={video.sourceTable === 'posts' || isLocal}
+          timeAgo={formatTimeAgo(video.createdAt)}
           onAvatarTap={() => {
             if (!isLocal && video.addedBy?.id) {
               router.push(`/profile/${video.addedBy.id}`);
@@ -155,17 +131,16 @@ export const ShortVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress, o
 
       {/* Cinematic Video Header */}
       {isDesktop ? (
-        <View
+        <TouchableOpacity
+          activeOpacity={1}
           style={[
             styles.thumbnailContainer,
             {
               height: 600,
               backgroundColor: theme.colors.background,
-              borderRadius: 16,
-              borderWidth: 1,
-              borderColor: theme.colors.surfaceVariant,
             }
           ]}
+          onPress={() => setIsMuted(!isMuted)}
         >
           <View style={[
             StyleSheet.absoluteFillObject,
@@ -177,10 +152,10 @@ export const ShortVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress, o
                 style={styles.videoThumbnail as any}
                 contentFit="cover"
               />
-              {!disableVideoPlayer && isCurrentlyPlaying && (
-                <TileVideoPlayer
+              {!disableVideoPlayer && preloadStatus !== 'idle' && (
+                <PreloadableVideoPlayer
                   videoUrl={videoToPlay as string}
-                  isPlaying={true}
+                  preloadStatus={preloadStatus}
                   isMuted={isMuted}
                   style={styles.videoThumbnail as any}
                   contentFit="contain"
@@ -189,6 +164,20 @@ export const ShortVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress, o
               )}
             </View>
           </View>
+          <TouchableOpacity
+            style={styles.durationBadge}
+            activeOpacity={0.8}
+            onPress={(e) => {
+              e.stopPropagation();
+              setIsMuted(!isMuted);
+            }}
+          >
+            {isMuted ? (
+              <VolumeX size={16} color={theme.colors.text} />
+            ) : (
+              <Volume2 size={16} color={theme.colors.text} />
+            )}
+          </TouchableOpacity>
           {video.linkedFrom && (
             <View style={styles.linkedFromBadge}>
               <UserAvatarImage
@@ -198,7 +187,7 @@ export const ShortVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress, o
               />
             </View>
           )}
-        </View>
+        </TouchableOpacity>
       ) : (
         <TouchableOpacity
           style={[
@@ -228,10 +217,10 @@ export const ShortVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress, o
                 style={styles.videoThumbnail as any}
                 contentFit="cover"
               />
-              {!disableVideoPlayer && isCurrentlyPlaying && (
-                <TileVideoPlayer
+              {!disableVideoPlayer && preloadStatus !== 'idle' && (
+                <PreloadableVideoPlayer
                   videoUrl={videoToPlay as string}
-                  isPlaying={true}
+                  preloadStatus={preloadStatus}
                   isMuted={isMuted}
                   style={styles.videoThumbnail as any}
                   contentFit="cover"
@@ -269,9 +258,7 @@ export const ShortVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress, o
       )}
 
 
-      <View style={{ paddingHorizontal: 16, alignItems: 'flex-end', marginBottom: 8 }}>
-        <Text style={styles.videoTime}>{formatTimeAgo(video.createdAt)}</Text>
-      </View>
+
 
       {/* Bottom Action Bar */}
       <View style={styles.actionBar}>
@@ -306,7 +293,18 @@ export const ShortVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress, o
           </View>
         </View>
 
-        {!isLocal ? (
+        {isLocal ? (
+          <AnimatedPostButton
+            title="Post"
+            style={styles.tagButton}
+            textStyle={styles.tagButtonText}
+            onPress={async () => {
+              if (onAddPress) {
+                await onAddPress(localTitle);
+              }
+            }}
+          />
+        ) : onTagPress ? (
           <TouchableOpacity activeOpacity={1}
             style={[styles.tagButton, isAdded && styles.tagButtonAdded]}
             onPress={onTagPress}
@@ -324,16 +322,15 @@ export const ShortVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress, o
             )}
           </TouchableOpacity>
         ) : (
-          <AnimatedPostButton
-            title="Post"
-            style={styles.tagButton}
-            textStyle={styles.tagButtonText}
-            onPress={async () => {
-              if (onAddPress) {
-                await onAddPress(localTitle);
-              }
-            }}
-          />
+          <View style={[styles.actionBtn, { marginLeft: 16 }]}>
+            <CommentAction
+              icon={Tag}
+              label={(video.tagsCount || 0).toString()}
+              size={20}
+              direction="row"
+              onPress={() => setTagOverlayVisible(true)}
+            />
+          </View>
         )}
       </View>
 
@@ -350,7 +347,8 @@ export const ShortVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress, o
               isLiked: isLiked || false,
               commentsCount: localCommentsCount,
               viewsCount: video.viewsCount || 0,
-              tagsCount: 0,
+              tagsCount: video.tagsCount || 0,
+              sourceTable: video.sourceTable,
             } as any}
             isPlaying={true}
             onLike={isLocal ? undefined : onLikePress}
@@ -375,6 +373,13 @@ export const ShortVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress, o
         onCommentAdded={() => {
           setLocalCommentsCount(Number(localCommentsCount) + 1);
         }}
+      />
+      <TagOverlay
+        visible={tagOverlayVisible}
+        onClose={() => setTagOverlayVisible(false)}
+        postId={video.id ?? ''}
+        sourceChannelId={video.sourceTable === 'channel_posts' ? (video as any).channelId ?? '' : ''}
+        linkChain={[]}
       />
     </View>
   );

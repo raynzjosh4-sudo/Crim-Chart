@@ -10,6 +10,10 @@ import { Text, View } from 'react-native';
 import { AddStatusCard } from './AddStatusCard';
 import { StatusCard } from './StatusCard';
 import { StatusItem } from './UserStatusWidget';
+import { useDesktopComposeStore } from '@/core/store/useDesktopComposeStore';
+import { PostType } from '@/core/store/usePostingStore';
+import { StatusViewer, StatusGroup } from '@/channel/pages/widgets2/status/StatusViewer';
+import { useState } from 'react';
 
 interface DesktopStatusGridProps {
   isExpanded: boolean;
@@ -21,6 +25,9 @@ export const DesktopStatusGrid = ({ isExpanded, targetUserId }: DesktopStatusGri
   const router = useRouter();
   const theme = useCurrentTheme();
   const styles = useStyles(themeStyles);
+
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const [viewerInitialIndex, setViewerInitialIndex] = useState(0);
 
   const { statuses: flatStatuses, refresh: refreshStatuses } = useFeedStatuses(user?.id);
 
@@ -39,7 +46,7 @@ export const DesktopStatusGrid = ({ isExpanded, targetUserId }: DesktopStatusGri
             username: status.authorName,
             profileImageUrl: status.authorAvatarUrl
           } as any,
-          thumbnailUrl: status.thumbnailUrl || status.imageUrls[0] || status.authorAvatarUrl || '',
+          thumbnailUrl: status.thumbnailUrl || status.imageUrls?.[0] || null,
           hasUnseen: true,
           statuses: []
         });
@@ -50,34 +57,27 @@ export const DesktopStatusGrid = ({ isExpanded, targetUserId }: DesktopStatusGri
     return Array.from(userMap.values());
   }, [flatStatuses]);
 
+  const statusGroups = React.useMemo((): StatusGroup[] => {
+    return groupedStatuses.map((group) => ({
+      id: group.id,
+      channelName: group.user.displayName || group.user.username || 'Unknown',
+      avatarUrl: group.user.profileImageUrl || '',
+      media: group.statuses.map((s: any) => ({
+        id: s.id,
+        url: s.videoUrl || s.audioUrl || s.imageUrls?.[0] || '',
+        type: s.isVideo ? 'video' : s.isAudio ? 'video' : 'image', // Treat audio as video to let expo-video play it
+        isAudio: s.isAudio,
+        caption: s.caption || '',
+        thumbnail: s.thumbnailUrl || s.imageUrls?.[0] || '',
+        title: s.metadata?.title,
+        artist: s.metadata?.artist,
+        lyrics: s.metadata?.lyrics,
+      }))
+    }));
+  }, [groupedStatuses]);
+
   const handleAddStatusPress = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.All,
-        allowsEditing: true,
-        quality: 1,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const selectedMedia = result.assets.map((asset, index) => ({
-          id: `status-media-${Date.now()}-${index}`,
-          path: asset.uri,
-          type: asset.type === 'video' ? 'video' : 'photo',
-          width: asset.width,
-          height: asset.height,
-        }));
-
-        router.push({
-          pathname: '/finalize-post',
-          params: {
-            selectedMediaJson: JSON.stringify(selectedMedia),
-            isGlobalStatus: 'true',
-          }
-        });
-      }
-    } catch (e) {
-      console.error('Error picking status media:', e);
-    }
+    useDesktopComposeStore.getState().openModal({ postType: PostType.status });
   };
 
   // If collapsed, we just don't show the grid to keep it clean, or we could show tiny avatars
@@ -100,21 +100,32 @@ export const DesktopStatusGrid = ({ isExpanded, targetUserId }: DesktopStatusGri
             onPress={handleAddStatusPress}
           />
         </View>
-        {itemsToShow.map((item) => (
+        {itemsToShow.map((item, index) => (
           <View key={item.id} style={styles.gridItem}>
             <StatusCard
               username={item.user.displayName || item.user.username || 'Unknown'}
               avatarUrl={item.user.profileImageUrl}
               statusImageUrl={item.thumbnailUrl}
+              isAudio={item.statuses?.some((s: any) => s.isAudio) ?? false}
               hasUnseen={item.hasUnseen}
               statusCount={item.statuses?.length || 1}
               onPress={() => {
-                // Future: handle viewing desktop statuses
+                setViewerInitialIndex(index);
+                setViewerVisible(true);
               }}
             />
           </View>
         ))}
       </View>
+
+      {viewerVisible && (
+        <StatusViewer
+          visible={viewerVisible}
+          onClose={() => setViewerVisible(false)}
+          statusGroups={statusGroups}
+          initialGroupIndex={viewerInitialIndex}
+        />
+      )}
     </View>
   );
 };
@@ -134,12 +145,10 @@ const themeStyles = (colors: ThemeTokens, scale: number): any => ({
   grid: {
     flexDirection: 'row' as const,
     flexWrap: 'wrap' as const,
-    justifyContent: 'space-between' as const,
+    gap: 8 * scale,
   },
   gridItem: {
-    width: '31%', // Fits 3 per row with space-between
-    marginBottom: 12 * scale,
-    aspectRatio: 100 / 160, // Matches StatusCard ratio
-    alignItems: 'center' as const,
+    width: 90 * scale,
+    height: 144 * scale,
   }
 });

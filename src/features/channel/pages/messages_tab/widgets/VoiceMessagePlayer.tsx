@@ -27,6 +27,7 @@ const pseudoRandom = (seed: number) => {
 export const VoiceMessagePlayer: React.FC<VoiceMessagePlayerProps> = ({ url, duration, isMe }) => {
   const [sound, setSound] = useState<any | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [position, setPosition] = useState(0);
   const [totalDuration, setTotalDuration] = useState(duration || 0);
 
@@ -56,13 +57,23 @@ export const VoiceMessagePlayer: React.FC<VoiceMessagePlayerProps> = ({ url, dur
           return;
         }
         setSound(newSound);
-        if (status.isLoaded && status.durationMillis) {
-          setTotalDuration(status.durationMillis);
+        if (status.isLoaded) {
+          setIsLoaded(true);
+          if (status.durationMillis) {
+            setTotalDuration(status.durationMillis);
+          }
         }
         
         newSound.setOnPlaybackStatusUpdate((status) => {
-          if (!status.isLoaded) return;
+          if (!status.isLoaded) {
+            setIsLoaded(false);
+            if ((status as any).error) {
+              console.log('Playback error:', (status as any).error);
+            }
+            return;
+          }
           if (isMounted) {
+            setIsLoaded(true);
             setIsPlaying(status.isPlaying);
             setPosition(status.positionMillis);
             if (status.didJustFinish) {
@@ -85,18 +96,26 @@ export const VoiceMessagePlayer: React.FC<VoiceMessagePlayerProps> = ({ url, dur
   }, [url]);
 
   const togglePlay = async () => {
-    if (!sound) return;
-    if (isPlaying) {
-      await sound.pauseAsync();
-    } else {
-      await sound.playAsync();
+    if (!sound || !isLoaded) return;
+    try {
+      if (isPlaying) {
+        await sound.pauseAsync();
+      } else {
+        await sound.playAsync();
+      }
+    } catch (e) {
+      console.log('Play error:', e);
     }
   };
 
   const handleSeek = async (percentage: number) => {
-    if (!sound || totalDuration === 0) return;
-    const seekPos = Math.floor(totalDuration * Math.max(0, Math.min(1, percentage)));
-    await sound.setPositionAsync(seekPos);
+    if (!sound || !isLoaded || totalDuration === 0) return;
+    try {
+      const seekPos = Math.floor(totalDuration * Math.max(0, Math.min(1, percentage)));
+      await sound.setPositionAsync(seekPos);
+    } catch (e) {
+      console.log('Seek error:', e);
+    }
   };
 
   const panResponder = useRef(

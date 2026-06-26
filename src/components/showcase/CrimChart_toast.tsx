@@ -1,8 +1,7 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
-import Toast, { ToastConfig, ToastConfigParams } from 'react-native-toast-message';
-import { XCircle, CheckCircle2, Info, X } from 'lucide-react-native';
 import { colors } from '@/core/theme/colors';
+import { CheckCircle2, Info, X, XCircle } from 'lucide-react-native';
+import { Dimensions, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Toast, { ToastConfig, ToastConfigParams } from 'react-native-toast-message';
 
 type ChartToastType = 'error' | 'success' | 'info';
 
@@ -81,6 +80,9 @@ export class ChartToast {
   }
 
   private static _show({ title, message, type, duration }: { title: string; message: string; type: ChartToastType; duration: number }) {
+    if (Platform.OS === 'web' && Dimensions.get('window').width >= 768) {
+      return; // Do not show toast on desktop layout
+    }
     Toast.show({
       type: 'customToast',
       text1: title,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, Image, ScrollView,
+  ActivityIndicator, Alert, Image, ScrollView, Platform, useWindowDimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -13,9 +13,12 @@ import { channelRepository } from '@/channel/data/repositories/ChannelRepository
 import { useChannelData } from '@/channel/hooks/useChannelData';
 import { cloudMediaService } from '@/core/network/cloudMediaService';
 
-export default function ChannelEditPage() {
+export default function ChannelEditPage({ channelIdOverride }: { channelIdOverride?: string }) {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
+  const { id: routeId } = useLocalSearchParams();
+  const id = channelIdOverride || routeId;
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
   const { channel, loading: channelLoading } = useChannelData(id as string);
 
   const [name, setName] = useState('');
@@ -63,7 +66,11 @@ export default function ChannelEditPage() {
       });
 
       Alert.alert('Success', 'Channel updated successfully!');
-      router.back();
+      if (isDesktop && channelIdOverride) {
+        router.setParams({ desktopChannelView: 'settings' });
+      } else {
+        router.back();
+      }
     } catch (e: any) {
       Alert.alert('Update Failed', e?.message ?? 'Failed to update channel');
     } finally {
@@ -76,7 +83,13 @@ export default function ChannelEditPage() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity activeOpacity={1} onPress={() => router.back()} style={styles.headerButton}>
+        <TouchableOpacity activeOpacity={1} onPress={() => {
+          if (isDesktop && channelIdOverride) {
+            router.setParams({ desktopChannelView: 'settings' });
+          } else {
+            router.back();
+          }
+        }} style={styles.headerButton}>
           <ChevronLeft size={28} color="#FFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Channel</Text>

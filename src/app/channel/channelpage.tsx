@@ -20,15 +20,17 @@ import {
   ScrollView,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
+import { useDesktopComposeStore } from "@/core/store/useDesktopComposeStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CustomChannelWidget } from "@/channel/components/CustomChannelWidget";
 import { UserStatusWidget } from "@/components/UserStatusWidget/UserStatusWidget";
-import { ChannelNavBar } from "@/features/channel/pages/discovery_widgets/ChannelNavBar";
-import { useInteractionStore } from "@/core/store/useInteractionStore";
 import { FeedPermissionsWrapper } from "@/components/wrappers/FeedPermissionsWrapper";
+import { useInteractionStore } from "@/core/store/useInteractionStore";
+import { ChannelNavBar } from "@/features/channel/pages/discovery_widgets/ChannelNavBar";
 
 import { ChannelRestrictionOverlay } from "@/channel/components/ChannelRestrictionOverlay";
 import { useChannelData } from "@/channel/hooks/useChannelData";
@@ -36,6 +38,7 @@ import { UserAvatarImage } from "@/channel/pages/widgets2/memberimage/UserAvatar
 import { ChannelRestrictionWrapper } from "@/components/wrappers/ChannelRestrictionWrapper";
 import { MembersTabView } from "@/features/channel/pages/members_tab/MembersTabView";
 import { ActiveUsersBar } from "@/features/channel/pages/messages_tab/widgets/ActiveUsersBar";
+import { StatusViewer, StatusGroup } from '@/channel/pages/widgets2/status/StatusViewer';
 import { ChatBubble } from "@/features/channel/pages/messages_tab/widgets/chartbubble/ChatBubble";
 import { TypingBubble } from "@/features/channel/pages/messages_tab/widgets/chartbubble/TypingBubble";
 import { ChatInputField } from "@/features/channel/pages/messages_tab/widgets/ChatInputField";
@@ -45,16 +48,48 @@ import { DateDivider } from "./widgets/_datedivider";
 import { ChannelTitleBar } from "./widgets/ChannelTitleBar";
 import { InviteCardWidget } from "./widgets/InviteCardWidget";
 
-export default function ChannelPage() {
+export default function ChannelPage({ channelIdOverride }: { channelIdOverride?: string }) {
   const insets = useSafeAreaInsets();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === "web" && width >= 768;
+  const { id: routeId } = useLocalSearchParams<{ id: string }>();
+  const id = channelIdOverride || routeId;
   const router = useRouter();
   const { channel, loading } = useChannelData(id);
   const user = useAuthStore((s) => s.user);
-  const { statuses: channelStatuses } = useChannelStatuses(id as string);
+  const { statuses: channelStatuses, loadMore: loadMoreChannelStatuses } = useChannelStatuses(id as string);
   const { posts: channelPosts } = useChannelPosts(id as string);
+
+  // Status Viewer State
+  const [statusViewerVisible, setStatusViewerVisible] = useState(false);
+  const [statusInitialIndex, setStatusInitialIndex] = useState(0);
+  const [statusViewerGroups, setStatusViewerGroups] = useState<StatusGroup[]>([]);
+
+  const handleStatusPress = (tappedItem: any) => {
+    const mappedGroups: StatusGroup[] = channelStatuses.map(item => ({
+      id: item.id,
+      channelName: item.user.displayName || item.user.username || 'User',
+      avatarUrl: item.user.profileImageUrl || 'https://via.placeholder.com/150',
+      media: item.statuses?.map(s => ({
+        id: s.id,
+        url: s.videoUrl || s.audioUrl || (s.imageUrls && s.imageUrls[0]) || s.thumbnailUrl || '',
+        type: (s.isVideo || s.isAudio) ? 'video' : 'image', // StatusViewer uses 'video' for both and checks isAudio
+        isAudio: s.isAudio,
+        title: s.caption || 'Audio Status',
+        artist: item.user.displayName || item.user.username || 'User',
+        caption: s.caption || '',
+        thumbnail: s.thumbnailUrl || (s.imageUrls && s.imageUrls[0]) || ''
+      })) || []
+    }));
+    
+    const index = mappedGroups.findIndex(g => g.id === tappedItem.id);
+    setStatusViewerGroups(mappedGroups);
+    setStatusInitialIndex(index >= 0 ? index : 0);
+    setStatusViewerVisible(true);
+  };
   const { canPostStatus } = useChannelPermissions(id as string);
   const { members: channelMembers } = useChannelMembers(id as string);
+  const { openModal } = useDesktopComposeStore();
 
   React.useEffect(() => {
     if (channelMembers && channelMembers.length > 0) {
@@ -97,7 +132,11 @@ export default function ChannelPage() {
   const onMessageReceived = useCallback((newMessage: any) => {
     // Check if we already have this message locally to avoid duplicates
     if (!messagesRef.current.some((m) => m.id === newMessage.id)) {
-      setMessages([newMessage, ...messagesRef.current]);
+      const resolvedMessage = {
+        ...newMessage,
+        isMe: newMessage.senderId === user?.id,
+      };
+      setMessages([resolvedMessage, ...messagesRef.current]);
 
       // Also persist the incoming message to the local SQLite database
       import("@/channel/data/sources/ChannelLocalSource").then(
@@ -318,11 +357,11 @@ export default function ChannelPage() {
 
                   const firstTypingUser = typingUsersList[0];
                   const displayName =
-                    firstTypingUser?.display_name ||
+                    firstTypingUser?.displayName ||
                     firstTypingUser?.username ||
                     "Someone";
                   const avatarUrl =
-                    firstTypingUser?.profile_image_url ||
+                    firstTypingUser?.profileImageUrl ||
                     "https://i.pravatar.cc/150?img=13";
                   const othersCount = typingUsersList.length - 1;
 
@@ -372,6 +411,7 @@ export default function ChannelPage() {
                         minute: "2-digit",
                       }),
                       isMe: true,
+                      senderId: user?.id,
                       senderName:
                         user?.displayName || user?.username || "Admin",
                       senderAvatarUrl: user?.profileImageUrl || null,
@@ -417,6 +457,7 @@ export default function ChannelPage() {
                         minute: "2-digit",
                       }),
                       isMe: true,
+                      senderId: user?.id,
                       senderName:
                         user?.displayName || user?.username || "Admin",
                       senderAvatarUrl: user?.profileImageUrl || null,
@@ -491,6 +532,7 @@ export default function ChannelPage() {
                         minute: "2-digit",
                       }),
                       isMe: true,
+                      senderId: user?.id,
                       senderName:
                         user?.displayName || user?.username || "Admin",
                       senderAvatarUrl: user?.profileImageUrl || null,
@@ -539,6 +581,7 @@ export default function ChannelPage() {
                         minute: "2-digit",
                       }),
                       isMe: true,
+                      senderId: user?.id,
                       senderName: user?.displayName || user?.username || "Josh",
                       senderAvatarUrl:
                         user?.profileImageUrl ||
@@ -571,7 +614,8 @@ export default function ChannelPage() {
             <>
               {/* Title Bar at the very top (Facebook style) */}
               <ChannelTitleBar
-                title={channel?.title || "Loading..."}
+                channelId={id as string}
+                title={channel?.title || ""}
                 channelImageUrl={channel?.imageUrl}
                 onBackPress={() => router.back()}
               />
@@ -582,6 +626,7 @@ export default function ChannelPage() {
                 onTabSelected={setActiveTab}
                 totalMembers={channel?.membersCount || 0}
                 pendingRequests={channel?.pendingRequestsCount || 0}
+                unreadMessages={channel?.unreadCount || 0}
               />
 
               {/* Tab Content */}
@@ -604,17 +649,32 @@ export default function ChannelPage() {
                       }
                       channelId={id as string}
                       onPlusPress={() => {
-                        router.push({
-                          pathname: "/first-post",
-                          params: {
-                            targetChannelId: id,
-                            isChannelPost: "true",
-                          },
-                        });
+                        if (Platform.OS === 'web') {
+                          useDesktopComposeStore.getState().openModal({
+                            targetChannelId: id as string,
+                            channelName: channel?.title || '',
+                            channelAvatarUrl: channel?.imageUrl || '',
+                            postType: 'channel_post',
+                          });
+                        } else {
+                          router.push({
+                            pathname: "/first-post",
+                            params: {
+                              targetChannelId: id,
+                              channelName: channel?.title || '',
+                              channelAvatarUrl: channel?.imageUrl || '',
+                              isChannelPost: "true",
+                            },
+                          });
+                        }
                       }}
-                      onMorePress={() =>
-                        router.push(`/channel/settings/${id}` as any)
-                      }
+                      onMorePress={() => {
+                        if (isDesktop && channelIdOverride) {
+                          router.setParams({ desktopChannelView: 'settings' });
+                        } else {
+                          router.push(`/channel/settings/${id}` as any);
+                        }
+                      }}
                     />
 
                     {/* Status Section using the new component */}
@@ -635,14 +695,20 @@ export default function ChannelPage() {
                               channelId={id as string}
                               currentUser={user as any}
                               statuses={channelStatuses}
+                              onEndReached={loadMoreChannelStatuses}
+                              onStatusPress={handleStatusPress}
                               onAddStatusPress={() => {
-                                router.push({
-                                  pathname: "/first-post",
-                                  params: {
-                                    targetChannelId: id,
-                                    isChannelStatus: "true",
-                                  },
-                                });
+                                if (Platform.OS === 'web') {
+                                  openModal({ postType: 'status', targetChannelId: id as string });
+                                } else {
+                                  router.push({
+                                    pathname: "/first-post",
+                                    params: {
+                                      targetChannelId: id,
+                                      isChannelStatus: "true",
+                                    },
+                                  });
+                                }
                               }}
                             />
                           </>
@@ -660,17 +726,33 @@ export default function ChannelPage() {
                         channelId={id as string}
                         currentUser={user as any}
                         statuses={channelStatuses}
+                        onEndReached={loadMoreChannelStatuses}
+                        onStatusPress={handleStatusPress}
                         onAddStatusPress={() => {
-                          router.push({
-                            pathname: "/first-post",
-                            params: {
-                              targetChannelId: id,
-                              isChannelStatus: "true",
-                            },
-                          });
+                          if (Platform.OS === 'web') {
+                            openModal({ postType: 'status', targetChannelId: id as string });
+                          } else {
+                            router.push({
+                              pathname: "/first-post",
+                              params: {
+                                targetChannelId: id,
+                                isChannelStatus: "true",
+                              },
+                            });
+                          }
                         }}
                       />
                     </ChannelRestrictionWrapper>
+
+                    {/* Status Viewer Modal */}
+                    {statusViewerVisible && (
+                      <StatusViewer
+                        visible={statusViewerVisible}
+                        onClose={() => setStatusViewerVisible(false)}
+                        statusGroups={statusViewerGroups}
+                        initialGroupIndex={statusInitialIndex}
+                      />
+                    )}
 
                     {/* Channel Posts Feed */}
                     {channelPosts.map((post) => {

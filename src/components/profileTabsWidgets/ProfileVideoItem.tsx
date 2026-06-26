@@ -21,7 +21,7 @@ export const ProfileVideoItem: React.FC<ProfileVideoItemProps> = ({
   const [isHoverPlaying, setIsHoverPlaying] = useState(false);
 
   return (
-    <TouchableOpacity activeOpacity={1}
+    <TouchableOpacity
       style={[styles.container, { width: size, aspectRatio: 2 / 3 }]}
       onPress={onPress}
       onPressIn={() => setIsHoverPlaying(true)}
@@ -33,6 +33,7 @@ export const ProfileVideoItem: React.FC<ProfileVideoItemProps> = ({
         source={{ uri: thumbnailUrl || 'https://via.placeholder.com/150/1A1A1A/FFFFFF?text=Video' }}
         style={StyleSheet.absoluteFillObject}
         resizeMode="cover"
+        {...({ draggable: false } as any)}
       />
       
       {isHoverPlaying && videoUrl && (

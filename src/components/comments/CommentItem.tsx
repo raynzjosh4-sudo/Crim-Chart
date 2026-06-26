@@ -60,14 +60,14 @@ export const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onLi
         {comment.media_url && comment.media_type === 'image' && (
           <ExpoImage
             source={{ uri: comment.media_url }}
-            style={[styles.commentMedia, { aspectRatio: 1 }]}
+            style={[styles.commentMedia, { width: 200, height: 200 }]}
             contentFit="cover"
           />
         )}
         {comment.media_url && comment.media_type === 'video' && (
           <Video
             source={{ uri: comment.media_url }}
-            style={[styles.commentMedia, { aspectRatio: 16 / 9 }]}
+            style={[styles.commentMedia, { width: 240, height: 135 }]}
             resizeMode={ResizeMode.COVER}
             useNativeControls
             isLooping={false}
@@ -89,7 +89,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onLi
         </View>
       </View>
       <View style={styles.likeContainer}>
-        <TouchableOpacity activeOpacity={1}
+        <TouchableOpacity
           onPress={() => toggleLike(comment.id)}
           style={styles.likeBtn}
           activeOpacity={0.7}
@@ -147,8 +147,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   commentMedia: {
-    width: '75%',
-    maxWidth: 240,
     borderRadius: 12,
     marginTop: 8,
     backgroundColor: '#111',

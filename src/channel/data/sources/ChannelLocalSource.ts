@@ -87,6 +87,53 @@ export class ChannelLocalSource {
       channelIds
     );
   }
+
+  async saveChannelStatuses(statuses: any[]): Promise<void> {
+    if (!statuses || statuses.length === 0) return;
+    const db = dbService.database;
+
+    for (const s of statuses) {
+      try {
+        await db.runAsync(
+          `INSERT OR REPLACE INTO ${TABLES.CHANNEL_STATUSES} (
+            id, channel_id, author_id, caption, image_urls, video_url, audio_url,
+            is_video, is_audio, created_at, expires_at, thumbnail_url
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            s.id, s.channel_id, s.author_id, s.caption || null,
+            s.image_urls ? JSON.stringify(s.image_urls) : null,
+            s.video_url || null, s.audio_url || null,
+            s.is_video ? 1 : 0, s.is_audio ? 1 : 0,
+            s.created_at, s.expires_at || null, s.thumbnail_url || null
+          ]
+        );
+      } catch (err) {
+        console.error('Failed to save channel status silently', err);
+      }
+    }
+  }
+
+  async getChannelStatuses(channelId: string, limit: number, offset: number): Promise<any[]> {
+    const db = dbService.database;
+    try {
+      const rows = await db.getAllAsync(
+        `SELECT * FROM ${TABLES.CHANNEL_STATUSES} 
+         WHERE channel_id = ? AND (expires_at IS NULL OR expires_at >= datetime('now'))
+         ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+        [channelId, limit, offset]
+      );
+      return rows.map((row: any) => ({
+        ...row,
+        image_urls: row.image_urls ? JSON.parse(row.image_urls) : [],
+        is_video: row.is_video === 1,
+        is_audio: row.is_audio === 1,
+      }));
+    } catch (err) {
+      console.error('Failed to get channel statuses from DB', err);
+      return [];
+    }
+  }
+
   async getChannelById(channelId: string): Promise<any | null> {
     const db = dbService.database;
     return await db.getFirstAsync(

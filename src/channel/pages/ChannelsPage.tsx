@@ -4,7 +4,7 @@ import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import { useTheme } from '@react-navigation/native';
 import { useAppRouter } from '@/core/hooks/useAppRouter';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, Text, View, Platform, useWindowDimensions } from 'react-native';
 import { ChannelListSkeleton } from '@/components/skeletons/Skeletons';
 
 // Section Headers and Tab Widgets
@@ -22,6 +22,7 @@ export default function ChannelsPage() {
   const { colors } = useTheme();
   const router = useAppRouter();
   const user = useAuthStore(s => s.user);
+  const { width } = useWindowDimensions();
 
   const [isLoading, setIsLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('Channels');
@@ -119,7 +120,13 @@ export default function ChannelsPage() {
           <ChannelListTile
             channel={item}
             showFollowButton={false}
-            onPress={() => router.push({ pathname: '/channel/channelpage', params: { id: item.id } } as any)}
+            onPress={() => {
+              if (Platform.OS === 'web' && width >= 768) {
+                router.setParams({ desktopChannelId: item.id });
+              } else {
+                router.push({ pathname: '/channel/channelpage', params: { id: item.id } } as any);
+              }
+            }}
             onAvatarTap={(ch) => ch.momentsCount > 0 && setSelectedChannel(ch)}
           />
         )}

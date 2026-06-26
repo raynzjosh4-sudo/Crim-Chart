@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, useWindowDimensions, Platform } from 'react-native';
 import { useTheme } from '@react-navigation/native';
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import { useRouter } from 'expo-router';
@@ -53,8 +53,8 @@ export default function CountrySelectionPage() {
   const renderItem = ({ item }: { item: {name: string, code: string} }) => {
     const isSelected = selected.includes(item.name);
     return (
-      <TouchableOpacity activeOpacity={1} 
-        style={styles.item} 
+      <TouchableOpacity
+        style={styles.item}
         onPress={() => handleSelect(item.name)}
         activeOpacity={0.7}
       >
@@ -64,43 +64,52 @@ export default function CountrySelectionPage() {
     );
   };
 
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width > 768;
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ChartAppBar 
-        title="Country Restrictions" 
-        showBack={true} 
-        centerTitle={true}
-        onBack={handleSave} 
-      />
-      
-      <View style={styles.content}>
-        <View style={styles.searchContainer}>
-          <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search countries..."
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
+    <View style={[styles.root, { backgroundColor: isDesktop ? 'rgba(0,0,0,0.85)' : colors.background }, isDesktop && styles.desktopBackdrop]}>
+      <View style={[
+        styles.container, 
+        { backgroundColor: colors.background },
+        isDesktop && styles.desktopWindow
+      ]}>
+        <ChartAppBar 
+          title="Country Restrictions" 
+          showBack={true} 
+          centerTitle={true}
+          onBack={handleSave} 
+        />
+        
+        <View style={styles.content}>
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={[styles.searchInput, { color: colors.text }]}
+              placeholder="Search countries..."
+              placeholderTextColor="rgba(255,255,255,0.4)"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+
+          <TouchableOpacity
+            style={styles.item}
+            onPress={() => handleSelect('Global')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.itemText, { color: '#FACD11', fontWeight: 'bold' }]}>Global (All Countries)</Text>
+            {selected.includes('Global') && <Check color="#FACD11" size={20} />}
+          </TouchableOpacity>
+          
+          <View style={styles.divider} />
+
+          <FlatList
+            data={filteredCountries}
+            keyExtractor={(item) => item.code}
+            renderItem={renderItem}
+            initialNumToRender={20}
           />
         </View>
-
-        <TouchableOpacity activeOpacity={1} 
-          style={styles.item} 
-          onPress={() => handleSelect('Global')}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.itemText, { color: '#FACD11', fontWeight: 'bold' }]}>Global (All Countries)</Text>
-          {selected.includes('Global') && <Check color="#FACD11" size={20} />}
-        </TouchableOpacity>
-        
-        <View style={styles.divider} />
-
-        <FlatList
-          data={filteredCountries}
-          keyExtractor={(item) => item.code}
-          renderItem={renderItem}
-          initialNumToRender={20}
-        />
       </View>
     </View>
   );
@@ -135,5 +144,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: 44,
     fontSize: 15,
+  },
+  root: {
+    flex: 1,
+  },
+  desktopBackdrop: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  desktopWindow: {
+    width: '100%',
+    maxWidth: 600,
+    height: '90%',
+    maxHeight: 800,
+    borderRadius: 16,
+    overflow: 'hidden',
+    boxShadow: '0px 8px 24px rgba(0,0,0,0.5)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
 });

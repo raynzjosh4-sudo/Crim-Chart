@@ -1,15 +1,24 @@
 import { AppBottomNavBar } from '@/components/navbar/AppBottomNavBar';
 import { DraggableProfileButton } from '@/components/profile/DraggableProfileButton';
-import { Slot, useRouter, useSegments } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
+import { Slot, useGlobalSearchParams, useRouter, useSegments } from 'expo-router';
+import { Platform, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useWindowDimensions } from 'react-native';
+import { DesktopChannelNavigator } from '@/channel/widgets/DesktopChannelNavigator';
+import { UniversalComposeModal } from '@/components/compose/UniversalComposeModal';
 import { AppSideNavBar } from '@/components/navbar/AppSideNavBar';
 import { DesktopRightSidebar } from '@/components/navbar/DesktopRightSidebar';
+import { DesktopVidsRightSidebar } from '@/components/navbar/DesktopVidsRightSidebar';
+import CreateChannelPage from '@/app/channel/create';
+import { useDesktopComposeStore } from '@/core/store/useDesktopComposeStore';
+import { InboxDetailPage } from '@/features/messaging/pages/InboxDetailPage';
+import { DesktopVidsFeedPane } from '@/mainFeed/pages/main_page_widgets/DesktopVidsFeedPane';
+import { MessageSquare } from 'lucide-react-native';
+import { useState } from 'react';
+import { useWindowDimensions } from 'react-native';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
@@ -18,51 +27,77 @@ export default function TabLayout() {
   const styles = useStyles(themeStyles);
   const theme = useCurrentTheme();
   const { width } = useWindowDimensions();
-  
+
   const isDesktop = width >= 768;
+
+  // On desktop, 'vids' is shown inline in the feed column instead of navigating
+  const [desktopView, setDesktopView] = useState<'feed' | 'vids'>('feed');
 
   const bottomPadding = Math.max(8, insets.bottom);
   const tabBarHeight = 60 + insets.bottom;
+  const { threadId, desktopChannelId } = useGlobalSearchParams<{ threadId?: string, desktopChannelId?: string }>();
 
+  // Derive selectedIndex — on desktop, when vids is shown inline keep index=1 for nav highlight
   const last = String(segments[segments.length - 1] ?? '');
   let selectedIndex = 0;
   if (last === 'index' || last === '') selectedIndex = 0;
   else if (last === 'vids' || last === 'explore') selectedIndex = 1;
+  else if (last === 'my-music') selectedIndex = 8;
   else if (last === 'channels') selectedIndex = 3;
   else if (last === 'statuses') selectedIndex = 4;
   else if (last === 'inbox') selectedIndex = 5;
+  // When desktop inline vids view is active, highlight Vids in sidebar
+  if (isDesktop && desktopView === 'vids') selectedIndex = 1;
 
   const onItemTapped = (index: number) => {
     console.log(`[TabsLayout] Tapped tab index: ${index}`);
     try {
       switch (index) {
         case 0:
-          router.navigate('/');
+          if (isDesktop) {
+            setDesktopView('feed');
+            router.navigate('/');
+          } else {
+            router.navigate('/');
+          }
           break;
         case 1:
-          router.navigate('/vids');
+          if (isDesktop) {
+            // Toggle inline vids view on desktop
+            setDesktopView(desktopView === 'vids' ? 'feed' : 'vids');
+          } else {
+            router.navigate('/vids');
+          }
           break;
         case 2:
-          router.navigate('/first-post');
+          if (Platform.OS === 'web') {
+            useDesktopComposeStore.getState().openModal();
+          } else {
+            router.navigate('/first-post');
+          }
           break;
         case 3:
+          setDesktopView('feed');
           router.navigate('/channels');
           break;
         case 4:
           console.log('[TabsLayout] Statuses clicked. Navigating to /statuses');
-          // Add your statuses route here. For now it just logs or tries to push
+          setDesktopView('feed');
           router.navigate('/statuses' as any);
           break;
         case 5:
+          setDesktopView('feed');
           router.navigate('/inbox');
           break;
         case 6:
           console.log('[TabsLayout] Search clicked.');
-          // router.navigate('/search');
           break;
         case 7:
           console.log('[TabsLayout] Notifications clicked.');
-          // router.navigate('/notifications');
+          break;
+        case 8:
+          setDesktopView('feed');
+          router.navigate('/my-music' as any);
           break;
         default:
           break;
@@ -80,12 +115,48 @@ export default function TabLayout() {
       )}
 
       {/* Main Content Area */}
-      <View style={{ flex: 1, maxWidth: isDesktop ? 600 : '100%', width: '100%', marginHorizontal: isDesktop ? 'auto' : undefined }}>
-        <Slot />
+      <View style={{ flex: 1, maxWidth: isDesktop ? ((selectedIndex === 5 || selectedIndex === 3) ? '50%' : 600) : '100%', width: '100%', marginHorizontal: isDesktop && selectedIndex !== 5 && selectedIndex !== 3 ? 'auto' : undefined, borderRightWidth: isDesktop && (selectedIndex === 5 || selectedIndex === 3) ? 1 : 0, borderRightColor: theme.colors.surfaceVariant }}>
+        {isDesktop && desktopView === 'vids' ? (
+          <DesktopVidsFeedPane />
+        ) : (
+          <Slot />
+        )}
       </View>
 
-      {/* Desktop Right Navigation / Status Grid */}
-      {isDesktop && <DesktopRightSidebar />}
+      {/* Desktop Right Navigation / Status Grid / Comments */}
+      {isDesktop && selectedIndex !== 5 && selectedIndex !== 3 && (
+        (desktopView === 'vids' || selectedIndex === 8) ? <DesktopVidsRightSidebar /> : <DesktopRightSidebar />
+      )}
+
+      {/* Desktop Channels Right Pane */}
+      {isDesktop && selectedIndex === 3 && (
+        <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+          {desktopChannelId === 'create' ? (
+            <CreateChannelPage isInline={true} />
+          ) : desktopChannelId ? (
+            <DesktopChannelNavigator channelId={desktopChannelId as string} />
+          ) : (
+            <DesktopRightSidebar />
+          )}
+        </View>
+      )}
+
+      {/* Desktop Inbox Right Pane */}
+      {isDesktop && selectedIndex === 5 && (
+        <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+          {threadId ? (
+            <InboxDetailPage />
+          ) : (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+              <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(255,255,255,0.05)', justifyContent: 'center', alignItems: 'center', marginBottom: 20 }}>
+                <MessageSquare size={40} color="#FFF" />
+              </View>
+              <Text style={{ color: '#FFF', fontSize: 24, fontWeight: 'bold' }}>Start Conversation</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 16, marginTop: 8 }}>Choose from your existing conversations, or start a new one.</Text>
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Mobile Bottom Navigation */}
       {!isDesktop && (
@@ -96,6 +167,9 @@ export default function TabLayout() {
 
       {/* Profile Button - Hidden on Desktop as it's in the Sidebar */}
       {!isDesktop && <DraggableProfileButton />}
+
+      {/* Universal Compose Modal for Web (Desktop & Mobile) */}
+      {Platform.OS === 'web' && <UniversalComposeModal />}
     </View>
   );
 }

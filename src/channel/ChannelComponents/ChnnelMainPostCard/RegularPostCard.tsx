@@ -1,12 +1,11 @@
-import UserAvatar from '@/components/avatar/UserAvatar';
-import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
-import { useRouter } from 'expo-router';
-import { MoreHorizontal, Tag } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
+import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
+import { useRouter } from 'expo-router';
+import { Eye, Tag } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 import { LikeAction } from '@/channel/CRimChartMassageBubble/comment_action/like/LikeAction';
 import { CommentActionWidget } from '@/channel/CRimChartMassageBubble/comments/CommentActionWidget';
@@ -30,6 +29,7 @@ export interface RegularPostCardProps {
   likesCount?: number;
   commentsCount?: number;
   tagsCount?: number;
+  viewsCount?: number;
   isLiked?: boolean;
   postId?: string | null;
   onTagTap?: () => void;
@@ -52,6 +52,7 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
   likesCount = 0,
   commentsCount = 0,
   tagsCount = 0,
+  viewsCount = 0,
   isLiked = false,
   postId,
   onTagTap,
@@ -127,6 +128,11 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
             <Tag size={24} color={theme.colors.text} />
             <Text style={styles.actionText}>{tagsCount}</Text>
           </TouchableOpacity>
+          <View style={{ width: 16 }} />
+          <View style={styles.actionButton}>
+            <Eye size={24} color={theme.colors.text} />
+            <Text style={styles.actionText}>{viewsCount ?? 0}</Text>
+          </View>
         </View>
       </View>
 

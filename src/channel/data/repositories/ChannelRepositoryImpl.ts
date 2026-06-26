@@ -1,5 +1,6 @@
 import { channelLocalSource } from '@/channel/data/sources/ChannelLocalSource';
 import { channelRemoteSource } from '@/channel/data/sources/ChannelRemoteSource';
+import { Platform } from 'react-native';
 
 export class ChannelRepositoryImpl {
   getChannels = (page: number) => channelRemoteSource.getChannels(page);
@@ -20,39 +21,58 @@ export class ChannelRepositoryImpl {
   updateMemberChatPermission = (channelId: string, userId: string, canChat: boolean) =>
     channelRemoteSource.updateMemberChatPermission(channelId, userId, canChat);
   getChannelDetails = (channelId: string, currentUserId?: string) => channelRemoteSource.getChannelDetails(channelId, currentUserId);
-  getChannelStatuses = (channelId: string) => channelRemoteSource.getChannelStatuses(channelId);
+  getChannelStatuses = (channelId: string, page: number = 0, limit: number = 10) => channelRemoteSource.getChannelStatuses(channelId, page, limit);
   getChannelPosts = (channelId: string, page: number = 0, limit: number = 10) => channelRemoteSource.getChannelPosts(channelId, page, limit);
   getChannelMessages = async (channelId: string, page: number) => {
+    let remoteMessages: any[] = [];
     try {
-      const remoteMessages = await channelRemoteSource.getChannelMessages(channelId, page, 50);
+      remoteMessages = await channelRemoteSource.getChannelMessages(channelId, page, 10);
       
-      // If fetching the first page succeeds, clear local cache to remove deleted messages
-      if (page === 0) {
-        await channelLocalSource.clearChannelMessages(channelId);
-      }
+      if (Platform.OS !== 'web') {
+        // If fetching the first page succeeds, clear local cache to remove deleted messages
+        if (page === 0) {
+          await channelLocalSource.clearChannelMessages(channelId);
+        }
 
-      // Sync to local DB
-      for (const msg of remoteMessages) {
-        await channelLocalSource.saveMessage({
-          id: msg.id,
-          channel_id: msg.channel_id,
-          sender_id: msg.sender_id,
-          sender_name: msg.author?.display_name || 'Unknown',
-          sender_avatar_url: msg.author?.profile_image_url || null,
-          text: msg.text_content || '',
-          media_url: msg.media_url,
-          media_type: msg.media_type,
-          metadata: msg.metadata,
-          created_at: msg.created_at,
-          is_pending: 0
-        });
+        // Sync to local DB
+        for (const msg of remoteMessages) {
+          await channelLocalSource.saveMessage({
+            id: msg.id,
+            channel_id: msg.channel_id,
+            sender_id: msg.sender_id,
+            sender_name: msg.author?.display_name || 'Unknown',
+            sender_avatar_url: msg.author?.profile_image_url || null,
+            text: msg.text_content || '',
+            media_url: msg.media_url,
+            media_type: msg.media_type,
+            metadata: msg.metadata,
+            created_at: msg.created_at,
+            is_pending: 0
+          });
+        }
       }
     } catch (err) {
       console.warn('Failed to sync remote messages. Falling back to local cache.', err);
     }
 
+    if (Platform.OS === 'web') {
+      return remoteMessages.map(msg => ({
+        id: msg.id,
+        channel_id: msg.channel_id,
+        sender_id: msg.sender_id,
+        sender_name: msg.author?.display_name || 'Unknown',
+        sender_avatar_url: msg.author?.profile_image_url || null,
+        text: msg.text_content || '',
+        media_url: msg.media_url,
+        media_type: msg.media_type,
+        metadata: msg.metadata,
+        created_at: msg.created_at,
+        is_pending: 0
+      }));
+    }
+
     // Always read from local to maintain unified format
-    return channelLocalSource.getChannelMessages(channelId, 50, page * 50);
+    return channelLocalSource.getChannelMessages(channelId, 10, page * 10);
   };
 
   createChannelMessage = async (channelId: string, authorId: string, text: string, mediaUrls?: any[]) => {

@@ -140,7 +140,7 @@ export default function BirthdayPage() {
                     {genders.map((gender) => {
                         const isSelected = selectedGender === gender.id;
                         return (
-                            <TouchableOpacity activeOpacity={1}
+                            <TouchableOpacity
                                 key={gender.id}
                                 style={styles.genderWrapper}
                                 onPress={() => setSelectedGender(gender.id)}

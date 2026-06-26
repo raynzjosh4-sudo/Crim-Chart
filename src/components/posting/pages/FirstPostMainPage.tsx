@@ -78,6 +78,8 @@ export const FirstPostMainPage: React.FC = () => {
       pathname: '/finalize-post',
       params: { 
         ...(targetChannelId ? { targetChannelId } : {}),
+        ...(params.channelName ? { channelName: params.channelName } : {}),
+        ...(params.channelAvatarUrl ? { channelAvatarUrl: params.channelAvatarUrl } : {}),
         isManifestoContext: String(isManifestoContext),
         ...(isChannelPost ? { isChannelPost: 'true' } : {}),
         ...(isChannelStatus ? { isChannelStatus: 'true' } : {}),

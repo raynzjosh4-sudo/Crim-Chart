@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+import { supabase } from '@/core/supabase/supabaseConfig';
 import { GoogleSignin } from './googleSigninShim';
 
 export class GoogleAuthService {
@@ -5,16 +7,30 @@ export class GoogleAuthService {
 
   static initialize() {
     if (this.initialized) return;
-    // Replace webClientId with your actual Google Client ID if different
+    if (Platform.OS === 'web') return; // Skip configure on web
+    // Initialize with environment variable for credentials
     GoogleSignin.configure({
-      webClientId: '959127069942-l6ikv8q6umcnee9k7kj0e2s85k70j2es.apps.googleusercontent.com',
+      webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || 'your-client-id.apps.googleusercontent.com',
       offlineAccess: true,
     });
     this.initialized = true;
   }
 
   static async signIn() {
+    if (Platform.OS === 'web') {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      if (error) throw error;
+      // On Web, this will redirect the browser. Return a never-resolving promise.
+      return new Promise<{ idToken: string; accessToken: string }>(() => {});
+    }
+
     this.initialize();
+
     await GoogleSignin.hasPlayServices();
     const userInfo = await GoogleSignin.signIn();
 
@@ -29,6 +45,7 @@ export class GoogleAuthService {
   }
 
   static async signOut() {
+    if (Platform.OS === 'web') return;
     try {
       await GoogleSignin.revokeAccess();
     } catch (e) {

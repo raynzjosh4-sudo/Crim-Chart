@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState, useRef } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { useChatStore } from '../application/useChatStore';
 import { InboxSectionHeader, BouncingTypingIndicator } from '@/channel/widgets/sectionHeaders/InboxSectionHeader';
@@ -14,7 +14,7 @@ import { useAuthStore } from '@/features/auth/application/useAuthStore';
 export const InboxFullPage = () => {
   const router = useRouter();
   const { user } = useAuthStore() as any;
-  const { threads, onlineUsers, fetchThreads, loadMoreThreads, isLoadingThreads, subscribeToGlobalPresence } = useChatStore();
+  const { threads, onlineUsers, typingUsers, fetchThreads, loadMoreThreads, isLoadingThreads, subscribeToGlobalPresence, subscribeToThread, unsubscribeFromThread } = useChatStore();
 
   const allThreads = [...threads];
   const profileCache = useProfileCacheStore(state => state.profiles);
@@ -23,10 +23,32 @@ export const InboxFullPage = () => {
   const [selectedThread, setSelectedThread] = useState<string | null>(null);
   const [dialogAnchor, setDialogAnchor] = useState<{ x: number, y: number } | null>(null);
 
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
+
   useEffect(() => {
     fetchThreads();
     subscribeToGlobalPresence();
   }, []);
+
+  useEffect(() => {
+    if (threads.length === 0) return;
+    
+    // Subscribe to the top 15 most recent threads to receive real-time typing indicators
+    // and new messages directly on the Inbox list screen.
+    const topThreads = threads.slice(0, 15);
+    
+    topThreads.forEach(t => {
+      subscribeToThread(t.id);
+    });
+
+    return () => {
+      // Clean up subscriptions when leaving the full page or when threads change significantly
+      topThreads.forEach(t => {
+        unsubscribeFromThread(t.id);
+      });
+    };
+  }, [threads.map(t => t.id).join(',')]); // Re-run only if the actual list of threads changes
 
   // useEffect(() => {
   //   if (allThreads.length === 0) return;
@@ -56,6 +78,7 @@ export const InboxFullPage = () => {
 
       <FlatList
         data={allThreads}
+        showsVerticalScrollIndicator={false}
         keyExtractor={t => t.id}
         refreshing={isLoadingThreads && allThreads.length > 0}
         onRefresh={fetchThreads}
@@ -78,10 +101,17 @@ export const InboxFullPage = () => {
         }
         renderItem={({ item }) => {
           const participant = item.participants.find((p: any) => p.id !== user?.id) || item.participants[0];
+          const isCurrentlyTyping = (typingUsers[item.id] || []).some((id: string) => id === participant?.id);
           return (
             <TouchableOpacity activeOpacity={1}
               style={styles.row}
-              onPress={() => router.push({ pathname: '/inboxDetail', params: { threadId: item.id } })}
+              onPress={() => {
+                if (isDesktop) {
+                  router.setParams({ threadId: item.id });
+                } else {
+                  router.push({ pathname: '/inboxDetail', params: { threadId: item.id } });
+                }
+              }}
               onLongPress={(e) => {
                 // Get page coordinates approximately
                 const { pageX, pageY } = e.nativeEvent;
@@ -100,7 +130,13 @@ export const InboxFullPage = () => {
               </View>
               <View style={styles.content}>
                 <Text style={styles.name}>{participant?.displayName || 'User'}</Text>
-                {item.lastMessage ? (
+                {isCurrentlyTyping ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={[styles.lastMsg, { color: '#FFD700', fontStyle: 'italic', fontWeight: '500' }]} numberOfLines={1}>
+                      typing...
+                    </Text>
+                  </View>
+                ) : item.lastMessage ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     {item.lastMessage.type === 'image' && <ImageLucide size={14} color="rgba(255,255,255,0.6)" style={{ marginRight: 4 }} />}
                     {item.lastMessage.type === 'video' && <Video size={14} color="rgba(255,255,255,0.6)" style={{ marginRight: 4 }} />}

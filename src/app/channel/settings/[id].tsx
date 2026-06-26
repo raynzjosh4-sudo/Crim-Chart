@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Bell, ChevronLeft, Clock, LogOut, Plus, Search, Shield, ThumbsDown, Trash2, UserPlus } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View, Platform, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useChannelPermissions } from '@/channel/hooks/useChannelPermissions';
@@ -13,9 +13,12 @@ import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { SelectUsersBottomSheet } from '@/channel/components/bottom_sheets/SelectUsersBottomSheet';
 import { channelRepository } from '@/channel/data/channelRepository';
 
-export default function ChannelDetailsPage() {
+export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOverride?: string }) {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
+  const { id: routeId } = useLocalSearchParams();
+  const id = channelIdOverride || routeId;
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const { needsLeaveRequest, canLeave, canDelete, canReport, role } = useChannelPermissions(id as string);
   const { channel } = useChannelData(id as string);
@@ -28,7 +31,13 @@ export default function ChannelDetailsPage() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity activeOpacity={1} onPress={() => router.back()} style={styles.headerButton}>
+        <TouchableOpacity activeOpacity={1} onPress={() => {
+          if (isDesktop && channelIdOverride) {
+            router.setParams({ desktopChannelView: '' });
+          } else {
+            router.back();
+          }
+        }} style={styles.headerButton}>
           <ChevronLeft size={28} color="#FFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Channel Details</Text>
@@ -49,7 +58,13 @@ export default function ChannelDetailsPage() {
             <TouchableOpacity
               activeOpacity={1}
               style={styles.editButton}
-              onPress={() => router.push(`/channel/settings/edit/${id}` as any)}
+              onPress={() => {
+                if (isDesktop && channelIdOverride) {
+                  router.setParams({ desktopChannelView: 'edit' });
+                } else {
+                  router.push(`/channel/settings/edit/${id}` as any);
+                }
+              }}
             >
               <Text style={styles.editButtonText}>Edit</Text>
             </TouchableOpacity>
@@ -87,7 +102,13 @@ export default function ChannelDetailsPage() {
           <ChannelRestrictionWrapper channelId={id as string} requiredAction="edit_settings" fallback={null}>
             <TouchableOpacity activeOpacity={1}
               style={styles.settingItem}
-              onPress={() => router.push(`/channel/settings/privacy/${id}` as any)}
+              onPress={() => {
+                if (isDesktop && channelIdOverride) {
+                  router.setParams({ desktopChannelView: 'privacy' });
+                } else {
+                  router.push(`/channel/settings/privacy/${id}` as any);
+                }
+              }}
             >
               <View style={styles.settingIconContainer}>
                 <Shield size={22} color="#FFF" />

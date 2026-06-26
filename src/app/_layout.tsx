@@ -28,6 +28,37 @@ import { LocalizationProvider } from '@/core/localization/LocalizationProvider';
 
 import { useAppPresence } from '@/core/hooks/useAppPresence';
 import { usePresenceSyncWorker } from '@/core/sync/usePresenceSyncWorker';
+import { Platform } from 'react-native';
+
+const injectWebScrollbarStyle = () => {
+  if (Platform.OS === 'web' && typeof document !== 'undefined') {
+    if (document.getElementById('custom-scrollbar-style')) return;
+    const style = document.createElement('style');
+    style.id = 'custom-scrollbar-style';
+    style.textContent = `
+      /* Elegant dark mode scrollbar */
+      ::-webkit-scrollbar {
+        height: 6px;
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 10px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.25);
+      }
+      * {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+};
 
 const customDarkTheme = {
   ...DarkTheme,
@@ -47,6 +78,7 @@ export default function RootLayout() {
   usePresenceSyncWorker();
 
   useEffect(() => {
+    injectWebScrollbarStyle();
     dbService.init().catch(error => {
       console.error('Failed to initialize database:', error);
     });

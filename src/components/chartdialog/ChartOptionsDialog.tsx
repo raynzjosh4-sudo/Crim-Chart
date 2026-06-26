@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, ScrollView, SafeAreaView, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, ScrollView, SafeAreaView, StyleSheet, Dimensions, useWindowDimensions, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { ChevronRight, TriangleAlert, User, RefreshCw } from 'lucide-react-native';
 import { useTheme } from '@react-navigation/native';
@@ -16,9 +16,10 @@ interface ChartOptionsDialogProps {
   themeColor: string;
   onChartTap: () => void;
   onProfileTap: () => void;
+  onSaveTap?: () => void;
 }
 
-const { height: screenHeight } = Dimensions.get('window');
+
 
 export const ChartOptionsDialog: React.FC<ChartOptionsDialogProps> = ({
   visible,
@@ -30,10 +31,14 @@ export const ChartOptionsDialog: React.FC<ChartOptionsDialogProps> = ({
   themeColor,
   onChartTap,
   onProfileTap,
+  onSaveTap,
 }) => {
   const [showChannels, setShowChannels] = useState(false);
   const [selectedChannelIndex, setSelectedChannelIndex] = useState(-1);
   const { colors } = useTheme();
+  
+  const { width, height: screenHeight } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
 
   const ActionButton = ({ title, isDestructive, onTap }: any) => (
     <TouchableOpacity activeOpacity={1}
@@ -52,18 +57,18 @@ export const ChartOptionsDialog: React.FC<ChartOptionsDialogProps> = ({
         {title}
       </Text>
       <View style={{ flex: 1 }} />
-      <ChevronRight size={16} color="rgba(255, 255, 255, 0.3)" />
+      {onTap && <ChevronRight size={16} color="rgba(255, 255, 255, 0.3)" />}
     </TouchableOpacity>
   );
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.overlay}>
+    <Modal visible={visible} animationType={isDesktop ? "fade" : "slide"} transparent>
+      <View style={[styles.overlay, isDesktop && { justifyContent: 'center', alignItems: 'center' }]}>
         <TouchableOpacity style={styles.backdrop} onPress={onClose} activeOpacity={1} />
-        <View style={[styles.sheetContainer, { backgroundColor: colors.background }]}>
+        <View style={[styles.sheetContainer, { backgroundColor: colors.background }, isDesktop && { width: 400, borderRadius: 24, paddingBottom: 16 }]}>
           <SafeAreaView>
             <ScrollView style={{ maxHeight: screenHeight * 0.85 }}>
-              <View style={[styles.handle, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]} />
+              {!isDesktop && <View style={[styles.handle, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]} />}
 
               <View style={styles.headerArea}>
                 <View style={styles.userRow}>
@@ -111,6 +116,7 @@ export const ChartOptionsDialog: React.FC<ChartOptionsDialogProps> = ({
                 <ActionButton title="Report Post" isDestructive />
                 <ActionButton title={`Report ${username}`} isDestructive />
                 <ActionButton title="View Profile" onTap={onProfileTap} />
+                {onSaveTap && <ActionButton title="Save Status" onTap={onSaveTap} />}
                 <ActionButton title="Share Status" />
               </View>
               

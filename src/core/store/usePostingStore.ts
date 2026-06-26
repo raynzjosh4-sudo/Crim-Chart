@@ -43,6 +43,7 @@ export interface CreatePostParams {
   caption: string;
   channelId?: string;
   channelName?: string;
+  channelAvatarUrl?: string;
   isMyChannel?: boolean;
   postType: string;
   shareToStatus?: boolean;
@@ -63,19 +64,60 @@ interface PostingState {
   errorMessage: string | null;
   createPost: (params: CreatePostParams) => Promise<boolean>;
   clearError: () => void;
+  pendingPosts: any[];
+  removePendingPostsByChannel: (channelId: string) => void;
 }
 
 export const usePostingStore = create<PostingState>((set) => ({
   isPosting: false,
   errorMessage: null,
+  pendingPosts: [],
 
   clearError: () => set({ errorMessage: null }),
+  removePendingPostsByChannel: (channelId) => set((state) => ({ 
+    pendingPosts: state.pendingPosts.filter(p => p.channel_id !== channelId) 
+  })),
 
   createPost: async (params) => {
     set({ isPosting: true, errorMessage: null });
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
+
+      // Optimistic Update: inject pending post for offline-first feel
+      if (params.postType === PostType.channel) {
+        const visualMedia = params.media.filter(
+          (m) => m.type === MediaType.photo || m.type === MediaType.video
+        );
+        const isVideo = visualMedia.some((m) => m.type === MediaType.video);
+        
+        const pendingPost = {
+          id: `pending-${Date.now()}`,
+          channel_id: params.channelId ?? 'general',
+          title: params.caption || '',
+          thumbnailUrl: visualMedia.length > 0 ? (visualMedia[0].thumbnailUrl || visualMedia[0].path) : null,
+          imageUrls: isVideo ? [] : visualMedia.map(m => m.path),
+          videoUrl: isVideo ? visualMedia[0].path : null,
+          audioUrl: params.media.find(m => m.type === MediaType.audio)?.path || null,
+          isAudio: params.media.some(m => m.type === MediaType.audio),
+          isVideo: isVideo,
+          type: isVideo ? 'video' : (params.media.some(m => m.type === MediaType.audio) ? 'audio' : 'image'),
+          sourceTable: 'channel_posts',
+          aspectRatio: params.aspectRatio || null,
+          metadata: {},
+          likes: 0,
+          commentsCount: 0,
+          tagsCount: 0,
+          createdAt: new Date().toISOString(),
+          addedBy: {
+            id: user.id,
+            name: user.displayName || user.username || 'User',
+            avatarUrl: user.profileImageUrl || null,
+          },
+          isPending: true,
+        };
+        set((state) => ({ pendingPosts: [pendingPost, ...state.pendingPosts] }));
+      }
 
       const markHasStatusLocally = () => {
         const currentProfile = useProfileCacheStore.getState().profiles[user.id];
@@ -141,8 +183,11 @@ export const usePostingStore = create<PostingState>((set) => ({
           galleryUrls.push(uploadedMainUrl);
           galleryThumbs.push(functionData.thumbnailUrl);
 
-        } else if (m.path.startsWith('file://') || m.path.startsWith('/')) {
+        } else if (m.path.startsWith('file://') || m.path.startsWith('/') || m.path.startsWith('blob:')) {
+          // blob: URLs come from the web image picker — upload to R2
+          console.log('[usePostingStore] ☁️ Uploading image to Cloudflare R2...', m.path.substring(0, 60));
           uploadedMainUrl = await cloudMediaService.uploadMedia(m.path, 'posts_media', user.id);
+          console.log('[usePostingStore] ✅ Uploaded:', uploadedMainUrl);
           galleryUrls.push(uploadedMainUrl);
         } else {
           galleryUrls.push(m.path);
@@ -154,7 +199,7 @@ export const usePostingStore = create<PostingState>((set) => ({
             if (m.type !== MediaType.video) {
               galleryThumbs.push(uploadedMainUrl);
             }
-          } else if (m.thumbnailUrl.startsWith('file://') || m.thumbnailUrl.startsWith('/')) {
+          } else if (m.thumbnailUrl.startsWith('file://') || m.thumbnailUrl.startsWith('/') || m.thumbnailUrl.startsWith('blob:')) {
             const thumbUrl = await cloudMediaService.uploadMedia(m.thumbnailUrl, 'posts_media_thumbs', user.id);
             if (m.type === MediaType.video) {
               if (galleryThumbs.length > 0) {
@@ -185,8 +230,10 @@ export const usePostingStore = create<PostingState>((set) => ({
       }
 
       if (audioMedia) {
-        if (audioMedia.path.startsWith('file://') || audioMedia.path.startsWith('/')) {
+        if (audioMedia.path.startsWith('file://') || audioMedia.path.startsWith('/') || audioMedia.path.startsWith('blob:')) {
+          console.log('[usePostingStore] ☁️ Uploading audio to Cloudflare R2...');
           const url = await cloudMediaService.uploadMedia(audioMedia.path, 'posts_audio', user.id);
+          console.log('[usePostingStore] ✅ Audio uploaded:', url);
           finalAudioUrl = url;
         } else {
           finalAudioUrl = audioMedia.path;
@@ -194,7 +241,7 @@ export const usePostingStore = create<PostingState>((set) => ({
 
         // Upload the audio cover image (thumbnail)
         if (audioMedia.thumbnailUrl) {
-          if (audioMedia.thumbnailUrl.startsWith('file://') || audioMedia.thumbnailUrl.startsWith('/')) {
+          if (audioMedia.thumbnailUrl.startsWith('file://') || audioMedia.thumbnailUrl.startsWith('/') || audioMedia.thumbnailUrl.startsWith('blob:')) {
             const thumbUrl = await cloudMediaService.uploadMedia(audioMedia.thumbnailUrl, 'posts_media_thumbs', user.id);
             galleryThumbs.push(thumbUrl);
           } else {
@@ -236,33 +283,63 @@ export const usePostingStore = create<PostingState>((set) => ({
       }
       // 2. If it's a STATUS
       else if (params.postType === PostType.status) {
-        const statusPayload = {
-          author_id: user.id,
-          caption: params.caption || null,
-          image_urls: finalImageUrls,
-          video_url: finalVideoUrl,
-          audio_url: finalAudioUrl,
-          is_video: isVideo,
-          is_audio: !!finalAudioUrl,
-          privacy: params.isPublicFeed ? 'public' : 'private',
-          allow_comments: params.allowComments ?? true,
-          thumbnail_url: galleryThumbs.length > 0 ? galleryThumbs[0] : null,
-          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        };
-        const { error } = await supabase.from('statuses').insert(statusPayload);
-        if (error) throw error;
-        markHasStatusLocally();
+        if (params.channelId) {
+          const channelStatusPayload = {
+            channel_id: params.channelId,
+            author_id: user.id,
+            caption: params.caption || null,
+            image_urls: finalImageUrls,
+            video_url: finalVideoUrl,
+            audio_url: finalAudioUrl,
+            is_video: isVideo,
+            is_audio: !!finalAudioUrl,
+            thumbnail_url: galleryThumbs.length > 0 ? galleryThumbs[0] : null,
+            expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          };
+          const { error } = await supabase.from('channel_statuses').insert(channelStatusPayload);
+          if (error) throw error;
+          
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event('channel_status_posted'));
+          }
+        } else {
+          const statusPayload = {
+            author_id: user.id,
+            caption: params.caption || null,
+            image_urls: finalImageUrls,
+            video_url: finalVideoUrl,
+            audio_url: finalAudioUrl,
+            is_video: isVideo,
+            is_audio: !!finalAudioUrl,
+            privacy: params.isPublicFeed ? 'public' : 'private',
+            allow_comments: params.allowComments ?? true,
+            thumbnail_url: galleryThumbs.length > 0 ? galleryThumbs[0] : null,
+            expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+            metadata: Object.keys(metadata).length > 0 ? metadata : null,
+          };
+          const { error } = await supabase.from('statuses').insert(statusPayload);
+          if (error) throw error;
+          markHasStatusLocally();
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event('status_posted'));
+          }
+        }
       }
       // 3. If it's a CHANNEL POST
       else if (params.postType === PostType.channel) {
         const cPostPayload = {
           author_id: user.id,
           channel_id: params.channelId ?? 'general',
-          channel_name: params.channelName,
+          channel_name: params.channelName || null,
+          channel_avatar_url: params.channelAvatarUrl || null,
+          author_username: user.displayName || user.username || 'User',
+          author_profile_image_url: user.profileImageUrl || null,
           caption: params.caption,
           is_public: params.isPublicFeed ?? true,
           allow_comments: params.allowComments ?? true,
           post_type: params.postType,
+          widget_type: 'channel_post',
+          type: isVideo ? 'video' : (finalAudioUrl ? 'audio' : 'image'),
           aspect_ratio: params.aspectRatio,
           is_video: isVideo,
           video_url: finalVideoUrl,
@@ -275,6 +352,10 @@ export const usePostingStore = create<PostingState>((set) => ({
         };
         const { error } = await supabase.from('channel_posts').insert(cPostPayload);
         if (error) throw error;
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('channel_post_created'));
+        }
       }
       // 3.5. If it's a CHANNEL STATUS
       else if (params.postType === PostType.channel_status) {

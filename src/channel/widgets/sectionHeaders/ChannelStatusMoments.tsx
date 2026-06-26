@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Plus } from 'lucide-react-native';
 import { colors } from '@/core/theme/colors';
@@ -42,6 +42,7 @@ export const ChannelStatusMoments: React.FC<ChannelStatusMomentsProps> = ({ disp
     channelName: group.channel_name,
     avatarUrl: group.channel_avatar_url || 'https://i.pravatar.cc/151',
     media: group.moments.map(m => ({
+      id: m.id,
       url: m.media_url,
       type: m.media_type as 'image' | 'video',
       caption: m.caption || ''
@@ -63,7 +64,13 @@ export const ChannelStatusMoments: React.FC<ChannelStatusMomentsProps> = ({ disp
     <View style={styles.container}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Create Channel Card */}
-        <TouchableOpacity activeOpacity={1} style={styles.card} onPress={() => router.push('/channel/create' as any)}>
+        <TouchableOpacity activeOpacity={1} style={styles.card} onPress={() => {
+          if (Platform.OS === 'web' && window.innerWidth >= 768) {
+            router.setParams({ desktopChannelId: 'create' });
+          } else {
+            router.push('/channel/create' as any);
+          }
+        }}>
           <View style={styles.createCardContent}>
             <Text style={styles.statusLabelTop}>Create</Text>
             

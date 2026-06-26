@@ -1,20 +1,19 @@
 import UserAvatar from '@/components/avatar/UserAvatar';
 import { CommentSheet } from '@/components/comments/CommentSheet';
 import { FollowUserButton } from '@/components/FollowUserButton';
-import { ChannelTagWrapper } from '@/components/wrappers/ChannelTagWrapper';
 import { PostInteractionWrapper } from '@/components/wrappers/PostInteractionWrapper';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme, useThemeStore } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
 import { CommentAction } from '@/features/feed/components/CommentAction';
 import { LikeAction } from '@/features/feed/components/LikeAction';
-import { UpNextVideoFeed } from './UpNextVideoFeed';
+import { useRouter } from 'expo-router';
 import { createVideoPlayer, VideoPlayer, VideoView } from 'expo-video';
 import { ArrowLeft, Eye, MessageCircle, Search, Tag } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, ListRenderItemInfo, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { UpNextVideoFeed } from './UpNextVideoFeed';
 
 // ─── Isolated video player ────────────────────────────────────────────────────
 // Wrapped in React.memo so it NEVER re-renders when listData / renderItem change.
@@ -87,6 +86,7 @@ export interface LongVideoPlayerLayoutProps {
   commentsCount?: number;
   isLiked?: boolean;
   isAdded?: boolean; // For tags
+  tagsCount?: number;
   sourceTable?: string;
   onTagPress?: () => void;
 }
@@ -108,6 +108,7 @@ export const LongVideoPlayerLayout = ({
   likesCount = 0,
   viewsCount = 0,
   commentsCount = 0,
+  tagsCount = 0,
   isLiked: initialIsLiked = false,
   isAdded = false,
   sourceTable = 'posts',
@@ -120,6 +121,8 @@ export const LongVideoPlayerLayout = ({
   // Only start playback after the slide-in animation has fully completed.
   const [isReady, setIsReady] = useState(false);
   const [isCommentSheetVisible, setIsCommentSheetVisible] = useState(false);
+  const [tagOverlayVisible, setTagOverlayVisible] = useState(false);
+  const { isMuted, setIsMuted } = useVideoMuteState();
   const router = useRouter();
   const styles = useStyles(themeStyles);
   const theme = useCurrentTheme();
@@ -224,12 +227,13 @@ export const LongVideoPlayerLayout = ({
                       </Text>
                     </TouchableOpacity>
                   ) : (
-                    <ChannelTagWrapper postId={videoId} sourceChannelId={sourceTable} targetChannelId="video_feed">
-                      <TouchableOpacity activeOpacity={0.8} style={styles.actionBadge}>
-                        <Tag color={theme.colors.text} size={18} />
-                        <Text style={styles.actionText}>Tag</Text>
-                      </TouchableOpacity>
-                    </ChannelTagWrapper>
+                    <CommentAction
+                      icon={Tag}
+                      label={tagsCount.toString()}
+                      size={20}
+                      direction="row"
+                      onPress={() => setTagOverlayVisible(true)}
+                    />
                   )}
                 </View>
 
@@ -285,8 +289,8 @@ export const LongVideoPlayerLayout = ({
           ListFooterComponent={
             <>
               {(!listData || listData.length === 0) && videoId && !isLocal ? (
-                <UpNextVideoFeed 
-                  currentVideoId={videoId} 
+                <UpNextVideoFeed
+                  currentVideoId={videoId}
                   onVideoPress={(params) => {
                     onClose();
                     setTimeout(() => {
@@ -301,7 +305,7 @@ export const LongVideoPlayerLayout = ({
                         }
                       });
                     }, 300);
-                  }} 
+                  }}
                 />
               ) : null}
               {isLoadingMore ? (
@@ -327,6 +331,13 @@ export const LongVideoPlayerLayout = ({
             }}
           />
         )}
+        <TagOverlay
+          visible={tagOverlayVisible}
+          onClose={() => setTagOverlayVisible(false)}
+          postId={videoId ?? ''}
+          sourceChannelId={sourceTable === 'channel_posts' ? '' : ''}
+          linkChain={[]}
+        />
       </SafeAreaView>
     </Modal>
   );
@@ -461,3 +472,7 @@ const themeStyles = (colors: ThemeTokens, scale: number): any => ({
     marginTop: 2 * scale,
   },
 });
+function useVideoMuteState(): { isMuted: any; setIsMuted: any; } {
+  throw new Error('Function not implemented.');
+}
+

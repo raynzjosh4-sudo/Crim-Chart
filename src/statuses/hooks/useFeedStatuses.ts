@@ -66,6 +66,12 @@ export function useFeedStatuses(userId: string | undefined) {
       // Step 2: sync remote in background
       syncFromRemote();
     });
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const handleStatusPosted = () => syncFromRemote();
+      window.addEventListener('status_posted', handleStatusPosted);
+      return () => window.removeEventListener('status_posted', handleStatusPosted);
+    }
   }, [userId, loadFromCache, syncFromRemote]);
 
   return { statuses, loading, error, refresh: syncFromRemote };

@@ -1,4 +1,5 @@
 import { ChatInputField } from '@/channel/pages/messages_tab/widgets/ChatInputField';
+import { CommentListSkeleton } from '@/components/skeletons/Skeletons';
 import { NativeDB } from '@/core/db/NativeDB';
 import { supabase } from '@/core/supabase/supabaseConfig';
 import { commentSyncManager } from '@/core/sync/CommentSyncManager';
@@ -32,9 +33,11 @@ interface CommentSheetProps {
   visible: boolean;
   onClose: () => void;
   onCommentAdded?: () => void;
+  isEmbedded?: boolean;
+  hideInput?: boolean;
 }
 
-export const CommentSheet: React.FC<CommentSheetProps> = ({ postId, visible, onClose, onCommentAdded }) => {
+export const CommentSheet: React.FC<CommentSheetProps> = ({ postId, visible, onClose, onCommentAdded, isEmbedded = false, hideInput = false }) => {
   const currentUser = useAuthStore(state => state.user);
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -52,6 +55,7 @@ export const CommentSheet: React.FC<CommentSheetProps> = ({ postId, visible, onC
 
   useEffect(() => {
     if (visible && postId) {
+      setComments([]); // Clear previous comments instantly
       loadComments();
       const subscription = commentSyncManager.subscribeToPostComments(postId, (newComment) => {
         // Prevent duplicate rendering by checking if we already have it optimistically
@@ -186,6 +190,55 @@ export const CommentSheet: React.FC<CommentSheetProps> = ({ postId, visible, onC
 
   const isDesktop = Platform.OS === 'web' && width >= 768;
 
+  const content = (
+    <View style={isEmbedded ? styles.embeddedContainer : styles.container}>
+      {!isEmbedded && (
+        <View style={styles.header}>
+          <View style={{ width: 24 }} />
+          <Text style={styles.title}>Comments</Text>
+          <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <X size={24} color="#FFF" />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {isLoading ? (
+        <CommentListSkeleton count={10} />
+      ) : comments.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No comments yet. Be the first!</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={comments}
+          keyExtractor={item => item.id}
+          renderItem={({ item }) => (
+            <CommentItem
+              comment={item}
+              onLike={handleLike}
+              onReply={handleReply}
+            />
+          )}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+
+      {!hideInput && (
+        <View style={{ paddingBottom: isEmbedded ? 12 : Math.max(insets.bottom, 12), backgroundColor: isEmbedded ? 'transparent' : '#000' }}>
+          <ChatInputField
+            onSubmitted={handleSubmit}
+            onChangeText={setInputText}
+          />
+        </View>
+      )}
+    </View>
+  );
+
+  if (isEmbedded) {
+    return content;
+  }
+
   if (isDesktop) {
     return (
       <CreateReplyModal
@@ -214,47 +267,7 @@ export const CommentSheet: React.FC<CommentSheetProps> = ({ postId, visible, onC
           <TouchableWithoutFeedback onPress={onClose}>
             <View style={styles.backdrop} />
           </TouchableWithoutFeedback>
-
-          <View style={styles.container}>
-            <View style={styles.header}>
-              <View style={{ width: 24 }} />
-              <Text style={styles.title}>Comments</Text>
-              <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                <X size={24} color="#FFF" />
-              </TouchableOpacity>
-            </View>
-
-            {isLoading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator color={colors.primary} />
-              </View>
-            ) : comments.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No comments yet. Be the first!</Text>
-              </View>
-            ) : (
-              <FlatList
-                data={comments}
-                keyExtractor={item => item.id}
-                renderItem={({ item }) => (
-                  <CommentItem
-                    comment={item}
-                    onLike={handleLike}
-                    onReply={handleReply}
-                  />
-                )}
-                contentContainerStyle={styles.listContent}
-                showsVerticalScrollIndicator={false}
-              />
-            )}
-
-            <View style={{ paddingBottom: Math.max(insets.bottom, 12), backgroundColor: '#000' }}>
-              <ChatInputField
-                onSubmitted={handleSubmit}
-                onChangeText={setInputText}
-              />
-            </View>
-          </View>
+          {content}
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -276,6 +289,10 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: 'hidden',
+  },
+  embeddedContainer: {
+    flex: 1,
+    backgroundColor: 'transparent',
   },
   header: {
     flexDirection: 'row',

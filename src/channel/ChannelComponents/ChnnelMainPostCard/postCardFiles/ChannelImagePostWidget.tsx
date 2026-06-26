@@ -19,6 +19,7 @@ export const ChannelImagePostWidget: React.FC<ChannelImagePostWidgetProps> = ({ 
           source={{ uri: images[0] }}
           style={[styles.singleImageFull, { height: imgHeight }]}
           resizeMode="contain"
+          {...({ draggable: false } as any)}
         />
       </View>
     );
@@ -37,6 +38,7 @@ export const ChannelImagePostWidget: React.FC<ChannelImagePostWidgetProps> = ({ 
             source={{ uri: item }}
             style={[styles.image, styles.multiImage]}
             resizeMode="cover"
+            {...({ draggable: false } as any)}
           />
         )}
       />

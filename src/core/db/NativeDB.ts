@@ -724,4 +724,61 @@ export class NativeDB {
       likes: row.likes
     }));
   }
+
+  // ─── Main Feed Cache ───────────────────────────────────────────────────────
+
+  /**
+   * Replaces the entire local main feed cache with the freshly loaded page-0
+   * items. Only called on a full reset (pull-to-refresh / first load).
+   */
+  static async upsertMainFeed(items: any[]) {
+    const db = dbService.database;
+    try {
+      // Clear old cached feed first so we never accumulate stale data
+      await db.runAsync(`DELETE FROM ${TABLES.MAIN_FEED}`);
+
+      for (const item of items) {
+        const sql = `
+          INSERT OR REPLACE INTO ${TABLES.MAIN_FEED} (
+            id, entity_type, entity_id, source_type, created_at, prefetched_data
+          ) VALUES (?, ?, ?, ?, ?, ?)
+        `;
+        const params = [
+          String(item.id),
+          item.entity_type || '',
+          item.entity_id || '',
+          item.source_type || '',
+          item.created_at || new Date().toISOString(),
+          item.prefetchedData ? JSON.stringify(item.prefetchedData) : null,
+        ];
+        await db.runAsync(sql, params);
+      }
+    } catch (error) {
+      console.error('🚨 [NativeDB] upsertMainFeed FAILED:', error);
+    }
+  }
+
+  /**
+   * Returns all locally cached main feed items, ordered newest-first.
+   */
+  static async getMainFeed(): Promise<any[]> {
+    try {
+      const sql = `
+        SELECT * FROM ${TABLES.MAIN_FEED}
+        ORDER BY created_at DESC
+      `;
+      const rows = await dbService.query<any>(sql);
+      return rows.map(row => ({
+        id: row.id,
+        entity_type: row.entity_type,
+        entity_id: row.entity_id,
+        source_type: row.source_type,
+        created_at: row.created_at,
+        prefetchedData: row.prefetched_data ? JSON.parse(row.prefetched_data) : null,
+      }));
+    } catch (error) {
+      console.error('🚨 [NativeDB] getMainFeed FAILED:', error);
+      return [];
+    }
+  }
 }

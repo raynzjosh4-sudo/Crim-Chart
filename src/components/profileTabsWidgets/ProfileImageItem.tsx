@@ -12,12 +12,14 @@ export const ProfileImageItem: React.FC<ProfileImageItemProps> = ({ imageUrl, si
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.85}
+      delayPressIn={150}
       style={[styles.container, { width: size, aspectRatio: 2 / 3 }]}
     >
       <Image
         source={{ uri: imageUrl || 'https://via.placeholder.com/150/1A1A1A/FFFFFF?text=Photo' }}
         style={StyleSheet.absoluteFillObject}
         resizeMode="cover"
+        {...({ draggable: false } as any)}
       />
       <View style={styles.overlay} />
     </TouchableOpacity>

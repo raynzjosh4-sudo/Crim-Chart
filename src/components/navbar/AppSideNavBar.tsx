@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions, Platform } from 'react-native';
-import { Home, MessageSquare, Clapperboard, PlusCircle, Compass, Sparkles, Feather, CircleDashed, Search, Bell } from 'lucide-react-native';
-import { BadgeIcon } from '@/mainFeed/features/bottomappbar/iconwithbarge/BadgeIcon';
+import UserAvatar from '@/components/avatar/UserAvatar';
 import { useStyles } from '@/core/hooks/useStyles';
+import { useDesktopComposeStore } from '@/core/store/useDesktopComposeStore';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
-import UserAvatar from '@/components/avatar/UserAvatar';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
-import { useRouter } from 'expo-router';
+import { BadgeIcon } from '@/mainFeed/features/bottomappbar/iconwithbarge/BadgeIcon';
+import { useRouter, usePathname, useGlobalSearchParams } from 'expo-router';
+import { Bell, CircleDashed, Clapperboard, Compass, Feather, Home, MessageSquare, Music, Search, Settings, Sparkles } from 'lucide-react-native';
+import { useState } from 'react';
+import { Platform, ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 
 export interface AppSideNavBarProps {
   selectedIndex: number;
@@ -21,7 +22,9 @@ export const AppSideNavBar = ({ selectedIndex, onItemTapped, homeBadgeCount = 0 
   const colors = theme.colors;
   const { width } = useWindowDimensions();
   const router = useRouter();
-  
+  const pathname = usePathname();
+  const { id } = useGlobalSearchParams();
+
   // X style breakpoints:
   // > 1280px = Full sidebar (275px wide)
   // 768px - 1280px = Icon-only sidebar (88px wide)
@@ -31,7 +34,7 @@ export const AppSideNavBar = ({ selectedIndex, onItemTapped, homeBadgeCount = 0 
 
   return (
     <View style={[styles.container, { width: isExpanded ? 275 : 88, backgroundColor: colors.background, borderRightColor: colors.surfaceVariant }]}>
-      
+
       {/* Top Logo / Branding */}
       <View style={styles.logoContainer}>
         <TouchableOpacity style={styles.logoButton} activeOpacity={0.7} onPress={() => router.navigate('/')}>
@@ -40,7 +43,7 @@ export const AppSideNavBar = ({ selectedIndex, onItemTapped, homeBadgeCount = 0 
       </View>
 
       {/* Navigation Items */}
-      <View style={styles.navItemsContainer}>
+      <ScrollView style={styles.navItemsContainer} showsVerticalScrollIndicator={false}>
         <NavItem
           index={0}
           selectedIndex={selectedIndex}
@@ -78,6 +81,15 @@ export const AppSideNavBar = ({ selectedIndex, onItemTapped, homeBadgeCount = 0 
           isExpanded={isExpanded}
         />
         <NavItem
+          index={8}
+          selectedIndex={selectedIndex}
+          onTap={onItemTapped}
+          icon={<Music size={28} />}
+          selectedIcon={<Music size={28} fill={colors.text} />}
+          label="My Music"
+          isExpanded={isExpanded}
+        />
+        <NavItem
           index={3}
           selectedIndex={selectedIndex}
           onTap={onItemTapped}
@@ -101,16 +113,52 @@ export const AppSideNavBar = ({ selectedIndex, onItemTapped, homeBadgeCount = 0 
           onTap={onItemTapped}
           icon={<MessageSquare size={28} />}
           selectedIcon={<MessageSquare size={28} fill={colors.text} />}
-          label="Charts"
+          label="Chat"
           isExpanded={isExpanded}
         />
-      </View>
+        <NavItem
+          index={-1}
+          selectedIndex={selectedIndex}
+          onTap={() => router.push('/settings')}
+          icon={<Settings size={28} />}
+          selectedIcon={<Settings size={28} fill={colors.text} />}
+          label="Settings"
+          isExpanded={isExpanded}
+        />
+      </ScrollView>
+
+      {/* Global Post Button */}
+      <TouchableOpacity
+        style={[styles.postButton, {
+          width: isExpanded ? '80%' : 50,
+          height: isExpanded ? 50 : 50,
+          borderRadius: 25,
+          backgroundColor: colors.primary
+        }]}
+        activeOpacity={0.8}
+        onPress={() => {
+          if (pathname.includes('/channel/channelpage') && id) {
+            useDesktopComposeStore.getState().openModal({
+              targetChannelId: id as string,
+              postType: 'channel_post',
+            });
+          } else {
+            useDesktopComposeStore.getState().openModal();
+          }
+        }}
+      >
+        {isExpanded ? (
+          <Text style={styles.postButtonText}>Post</Text>
+        ) : (
+          <Feather size={24} color="#000" />
+        )}
+      </TouchableOpacity>
 
       {/* Bottom Profile Button */}
       {user && (
         <View style={styles.profileContainer}>
-          <TouchableOpacity 
-            style={[styles.profileButton, !isExpanded && { justifyContent: 'center', paddingHorizontal: 0 }]} 
+          <TouchableOpacity
+            style={[styles.profileButton, !isExpanded && { justifyContent: 'center', paddingHorizontal: 0 }]}
             activeOpacity={0.8}
             onPress={() => router.navigate('/profile')}
           >
@@ -143,7 +191,7 @@ const NavItem = ({
   const colors = theme.colors;
 
   const itemColor = isSelected ? colors.text : colors.text; // X uses text color for both, boldness changes
-  
+
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -155,8 +203,8 @@ const NavItem = ({
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         style={[
-          styles.navItem, 
-          { 
+          styles.navItem,
+          {
             backgroundColor: isHovered ? (Platform.OS === 'web' ? 'rgba(255,255,255,0.1)' : 'transparent') : 'transparent',
             paddingHorizontal: isExpanded ? 20 : 12,
           }
@@ -172,7 +220,7 @@ const NavItem = ({
             return <Component {...existingProps} color={itemColor} strokeWidth={isSelected ? 3 : 2} />;
           })()}
         </View>
-        
+
         {isExpanded && (
           <Text style={[styles.label, { color: itemColor, fontWeight: isSelected ? '700' : '400' }]}>
             {label}

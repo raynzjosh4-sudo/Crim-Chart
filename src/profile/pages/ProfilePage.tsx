@@ -110,9 +110,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
         <View style={{ flexDirection: 'row', alignItems: 'center', minWidth: 44, justifyContent: 'flex-end', gap: 10 }}>
            {isDesktop && showScrolledActions ? customActions : null}
-           <TouchableOpacity activeOpacity={1} onPress={goToSettings} style={styles.appBarBtn}>
-             {isCurrentUser && <Settings color="#FFF" size={22} />}
-           </TouchableOpacity>
+           {!isDesktop && (
+            <TouchableOpacity activeOpacity={1} onPress={goToSettings} style={styles.appBarBtn}>
+              {isCurrentUser && <Settings color="#FFF" size={22} />}
+            </TouchableOpacity>
+           )}
         </View>
       </View>
 

@@ -10,6 +10,7 @@ import { ChannelAndFeedPostModel } from '@/channel/ChannelComponents/ChnnelMainP
 import { StoryListWidget } from '@/components/statuspagesAndWidgets/StoryListWidget';
 import { EliteCardWidget } from '@/components/hiness/EliteCardWidget';
 import { UserRecommendationCarousel } from '../../pages/main_page_widgets/UserRecommendationCarousel';
+import { PostInteractionWrapper } from '@/components/wrappers/PostInteractionWrapper';
 
 interface MainFeedCardProps {
   card: MainFeedCardModel;
@@ -30,28 +31,40 @@ export const MainFeedCard: React.FC<MainFeedCardProps> = ({ card, isActive }) =>
       const data = card.itemData as ChannelPostModel;
       if (!data || !data.author) return null;
       return (
-        <ChannelAndFeedPostModel
-          content={data.caption || ''}
-          timeAgo={data.timeAgo || ''}
-          imageUrl={data.imageUrls?.[0]}
-          imageUrls={data.imageUrls}
-          videoUrl={data.videoUrl}
-          isVideo={data.isVideo}
-          audioUrl={data.audioUrl}
-          isAudio={data.isAudio}
-          thumbnailUrl={data.thumbnailLinkUrl}
-          metadata={data.metadata}
-          likesCount={data.likesCount}
-          commentsCount={data.commentsCount}
-          tagsCount={data.tagsCount}
-          isLiked={data.isLiked}
-          authorData={data.author}
+        <PostInteractionWrapper
           postId={data.id}
-          channelId={data.channel?.id}
-          channelName={data.channel?.title}
-          widgetType={data.widgetType ?? (card.cardType === MainFeedCardType.socialPost ? 'regular_post' : 'channel_post')}
-          isActive={isActive}
-        />
+          initialLikesCount={data.likesCount}
+          initialViewsCount={data.viewsCount}
+          initialDownloadsCount={0}
+          sourceTable={data.sourceTable || 'posts'}
+          forceIsVisible={isActive}
+        >
+          {({ isLiked, likesCount, viewsCount }) => (
+            <ChannelAndFeedPostModel
+              content={data.caption || ''}
+              timeAgo={data.timeAgo || ''}
+              imageUrl={data.imageUrls?.[0]}
+              imageUrls={data.imageUrls}
+              videoUrl={data.videoUrl}
+              isVideo={data.isVideo}
+              audioUrl={data.audioUrl}
+              isAudio={data.isAudio}
+              thumbnailUrl={data.thumbnailLinkUrl}
+              metadata={data.metadata}
+              likesCount={likesCount}
+              commentsCount={data.commentsCount}
+              tagsCount={data.tagsCount}
+              viewsCount={viewsCount}
+              isLiked={isLiked}
+              authorData={data.author}
+              postId={data.id}
+              channelId={data.channel?.id}
+              channelName={data.channel?.title}
+              widgetType={data.widgetType ?? (card.cardType === MainFeedCardType.socialPost ? 'regular_post' : 'channel_post')}
+              isActive={isActive}
+            />
+          )}
+        </PostInteractionWrapper>
       );
     }
 

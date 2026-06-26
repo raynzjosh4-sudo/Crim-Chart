@@ -1,11 +1,10 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
 import { DesktopStatusGrid } from '@/components/UserStatusWidget/DesktopStatusGrid';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
-import { useSegments, useLocalSearchParams } from 'expo-router';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { useLocalSearchParams, useSegments } from 'expo-router';
+import { View } from 'react-native';
 
 export const DesktopRightSidebar = () => {
   const styles = useStyles(themeStyles);

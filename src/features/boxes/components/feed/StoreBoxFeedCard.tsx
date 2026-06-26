@@ -26,8 +26,6 @@ export const StoreBoxFeedCard = ({ boxId, prefetchedData }: Props) => {
   const styles = useStyles(themeStyles);
   const theme = useCurrentTheme();
 
-  if (!boxId) return null;
-
   const handleOpenBox = () => {
     router.push(`/store-box/${boxId}` as any);
   };
@@ -53,6 +51,8 @@ export const StoreBoxFeedCard = ({ boxId, prefetchedData }: Props) => {
       <Text style={styles.addYoursText}>Sell an Item</Text>
     </TouchableOpacity>
   );
+
+  if (!boxId) return null;
 
   return (
     <BoxFeedCardWrapper boxId={boxId} prefetchedData={prefetchedData}>

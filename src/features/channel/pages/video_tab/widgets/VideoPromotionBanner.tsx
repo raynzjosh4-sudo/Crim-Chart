@@ -5,6 +5,7 @@ import { MomentData } from '@/data/mockVideoData';
 import { Plus } from 'lucide-react-native';
 import React, { useRef } from 'react';
 import { Animated, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
 import { PromotionBannerCard } from './PromotionBannerCard';
 
 const ITEM_WIDTH = 100; // Matching PromotionBannerCard width
@@ -95,7 +96,11 @@ export const VideoPromotionBanner = ({
                       )}
                       <View style={styles.postCardOverlay}>
                         <View style={styles.iconCircle}>
-                          <Plus color="#000" size={24} />
+                          <Image 
+                            source={require('../../../../../../assets/appicon/appicon.png')} 
+                            style={{ width: 32, height: 32, borderRadius: 8 }} 
+                            contentFit="contain" 
+                          />
                         </View>
                         <Text style={styles.postCardText}>Add Moment</Text>
                       </View>

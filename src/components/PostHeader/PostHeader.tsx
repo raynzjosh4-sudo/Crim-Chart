@@ -8,18 +8,19 @@ import { ThemeTokens } from '@/core/theme/themes';
 
 export interface PostHeaderProps {
   author: CrimChartUserModel;
-  isPersonalPost: boolean;
+  isPersonalPost?: boolean;
+  timeAgo?: string;
   onAvatarTap: () => void;
   onMoreTap?: () => void;
 }
 
-export const PostHeader: React.FC<PostHeaderProps> = ({ author, isPersonalPost, onAvatarTap, onMoreTap }) => {
+export const PostHeader: React.FC<PostHeaderProps> = ({ author, isPersonalPost, timeAgo, onAvatarTap, onMoreTap }) => {
   const styles = useStyles(themeStyles);
   const theme = useCurrentTheme();
 
   return (
-    <View style={[styles.header, isPersonalPost && { flexDirection: 'row-reverse' }]}>
-      <View style={[styles.avatarContainer, isPersonalPost ? { marginRight: 0, marginLeft: 12 } : { marginRight: 12 }]}>
+    <View style={styles.header}>
+      <View style={styles.avatarContainer}>
         <UserAvatar
           userId={author.id}
           fallbackUrl={author.profileImageUrl}
@@ -31,11 +32,27 @@ export const PostHeader: React.FC<PostHeaderProps> = ({ author, isPersonalPost, 
           onTap={onAvatarTap}
         />
       </View>
-      <Text style={[styles.displayName, isPersonalPost && { textAlign: 'right' }]} numberOfLines={1}>
-        {author.displayName || 'Unknown User'}
-      </Text>
+      
+      <View style={styles.textContainer}>
+        <View style={styles.nameRow}>
+          <Text style={styles.displayName} numberOfLines={1}>
+            {author.displayName || 'Unknown User'}
+          </Text>
+          {author.username ? (
+            <Text style={styles.handle} numberOfLines={1}>
+              @{author.username}
+            </Text>
+          ) : null}
+          {timeAgo ? (
+            <Text style={styles.timeAgo} numberOfLines={1}>
+              · {timeAgo}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+
       <TouchableOpacity activeOpacity={1} style={styles.moreButton} onPress={onMoreTap}>
-        <MoreHorizontal color={theme.colors.textSecondary} size={24} />
+        <MoreHorizontal color={theme.colors.textSecondary} size={20} />
       </TouchableOpacity>
     </View>
   );
@@ -51,14 +68,33 @@ const themeStyles = (colors: ThemeTokens, scale: number) => ({
   avatarContainer: {
     marginRight: 12 * scale,
   },
-  displayName: {
+  textContainer: {
     flex: 1,
+    justifyContent: 'center' as const,
+  },
+  nameRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+  },
+  displayName: {
     color: colors.text,
     fontSize: 15 * scale,
     fontWeight: '800' as const,
     letterSpacing: 0.3,
+    marginRight: 4 * scale,
+  },
+  handle: {
+    color: colors.textSecondary,
+    fontSize: 14 * scale,
+    marginRight: 4 * scale,
+    flexShrink: 1,
+  },
+  timeAgo: {
+    color: colors.textSecondary,
+    fontSize: 14 * scale,
   },
   moreButton: {
     padding: 4 * scale,
+    marginLeft: 8 * scale,
   },
 });

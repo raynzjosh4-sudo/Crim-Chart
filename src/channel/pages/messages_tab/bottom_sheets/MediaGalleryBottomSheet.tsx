@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, Dimensions, Platform, FlatList } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, useWindowDimensions, Platform, FlatList } from 'react-native';
 import { Image } from 'expo-image';
-import { X, Download } from 'lucide-react-native';
+import { X, Download, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { MessageMediaItem } from '../../../../models/MediaModel';
 
 interface MediaGalleryBottomSheetProps {
@@ -11,8 +11,6 @@ interface MediaGalleryBottomSheetProps {
   initialIndex?: number;
 }
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-
 export const MediaGalleryBottomSheet: React.FC<MediaGalleryBottomSheetProps> = ({
   visible,
   onClose,
@@ -20,10 +18,16 @@ export const MediaGalleryBottomSheet: React.FC<MediaGalleryBottomSheetProps> = (
   initialIndex = 0,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const flatListRef = useRef<any>(null);
+  const { width, height } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
+
+  const viewerWidth = isDesktop ? Math.min(width * 0.85, 1200) : width;
+  const viewerHeight = isDesktop ? Math.min(height * 0.85, 900) : height;
 
   const renderItem = ({ item }: { item: MessageMediaItem }) => {
     return (
-      <View style={styles.page}>
+      <View style={[styles.page, { width: viewerWidth, height: viewerHeight }]}>
         <Image
           source={{ uri: item.url }}
           style={styles.media}
@@ -33,52 +37,109 @@ export const MediaGalleryBottomSheet: React.FC<MediaGalleryBottomSheetProps> = (
     );
   };
 
-  return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.container}>
-        <View style={styles.topBar}>
-          <TouchableOpacity activeOpacity={1} onPress={onClose} style={styles.iconButton}>
-            <X color="#FFF" size={28} />
-          </TouchableOpacity>
-          <Text style={styles.counterText}>
-            {currentIndex + 1} / {items.length}
-          </Text>
-          <TouchableOpacity activeOpacity={1} style={styles.iconButton}>
-            <Download color="#FFF" size={28} />
-          </TouchableOpacity>
-        </View>
+  const handlePrev = () => {
+    if (currentIndex > 0) {
+      flatListRef.current?.scrollToIndex({ index: currentIndex - 1, animated: true });
+      setCurrentIndex(currentIndex - 1);
+    }
+  };
 
-        <FlatList
-          data={items}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(item, index) => `${item.url}-${index}`}
-          renderItem={renderItem}
-          initialScrollIndex={initialIndex}
-          getItemLayout={(_, index) => ({
-            length: screenWidth,
-            offset: screenWidth * index,
-            index,
-          })}
-          onMomentumScrollEnd={(e) => {
-            const index = Math.round(e.nativeEvent.contentOffset.x / screenWidth);
-            setCurrentIndex(index);
-          }}
-        />
+  const handleNext = () => {
+    if (currentIndex < items.length - 1) {
+      flatListRef.current?.scrollToIndex({ index: currentIndex + 1, animated: true });
+      setCurrentIndex(currentIndex + 1);
+    }
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType={isDesktop ? "fade" : "slide"} onRequestClose={onClose}>
+      <View style={[styles.overlay, isDesktop && styles.overlayDesktop]}>
+        {isDesktop && <TouchableOpacity style={styles.backdrop} onPress={onClose} activeOpacity={1} />}
+        
+        <View style={[styles.container, isDesktop && { 
+          width: viewerWidth, 
+          height: viewerHeight, 
+          borderRadius: 24, 
+          overflow: 'hidden',
+          backgroundColor: '#0F1117'
+        }]}>
+          <View style={[styles.topBar, isDesktop && { top: 0, paddingVertical: 16 }]}>
+            <TouchableOpacity activeOpacity={1} onPress={onClose} style={styles.iconButton}>
+              <X color="#FFF" size={28} />
+            </TouchableOpacity>
+            <Text style={styles.counterText}>
+              {currentIndex + 1} / {items.length}
+            </Text>
+            <TouchableOpacity activeOpacity={1} style={styles.iconButton}>
+              <Download color="#FFF" size={28} />
+            </TouchableOpacity>
+          </View>
+
+          <FlatList
+            ref={flatListRef}
+            data={items}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item, index) => `${item.url}-${index}`}
+            renderItem={renderItem}
+            initialScrollIndex={initialIndex}
+            getItemLayout={(_, index) => ({
+              length: viewerWidth,
+              offset: viewerWidth * index,
+              index,
+            })}
+            onMomentumScrollEnd={(e) => {
+              const index = Math.round(e.nativeEvent.contentOffset.x / viewerWidth);
+              setCurrentIndex(index);
+            }}
+          />
+
+          {/* Navigation Arrows */}
+          {isDesktop && items.length > 1 && (
+            <>
+              {currentIndex > 0 && (
+                <TouchableOpacity style={styles.leftArrow} onPress={handlePrev}>
+                  <View style={styles.arrowCircle}>
+                    <ChevronLeft color="#FFF" size={32} />
+                  </View>
+                </TouchableOpacity>
+              )}
+              {currentIndex < items.length - 1 && (
+                <TouchableOpacity style={styles.rightArrow} onPress={handleNext}>
+                  <View style={styles.arrowCircle}>
+                    <ChevronRight color="#FFF" size={32} />
+                  </View>
+                </TouchableOpacity>
+              )}
+            </>
+          )}
+        </View>
       </View>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000',
+  },
+  overlayDesktop: {
+    backgroundColor: 'transparent',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+  },
   container: {
     flex: 1,
+    width: '100%',
     backgroundColor: '#000',
   },
   page: {
-    width: screenWidth,
-    height: screenHeight,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -109,5 +170,27 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  rightArrow: {
+    position: 'absolute',
+    right: 24,
+    top: '50%',
+    marginTop: -24,
+    zIndex: 20,
+  },
+  leftArrow: {
+    position: 'absolute',
+    left: 24,
+    top: '50%',
+    marginTop: -24,
+    zIndex: 20,
+  },
+  arrowCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

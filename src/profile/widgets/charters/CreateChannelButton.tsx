@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
 import { Plus } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
@@ -16,7 +16,11 @@ export const CreateChannelButton: React.FC<CreateChannelButtonProps> = ({
 
   const handlePress = () => {
     if (onPress) onPress();
-    router.push('/channel/create');
+    if (Platform.OS === 'web' && window.innerWidth >= 768) {
+      router.setParams({ desktopChannelId: 'create' });
+    } else {
+      router.push('/channel/create');
+    }
   };
 
   return (

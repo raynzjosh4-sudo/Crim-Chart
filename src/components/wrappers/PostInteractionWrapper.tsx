@@ -36,6 +36,12 @@ interface PostInteractionWrapperProps {
   initialIsTagged?: boolean;
 
   /**
+   * If provided, overrides the default VisibilityTrackerWrapper logic.
+   * Useful when a parent component (like a FlashList) already tracks visibility.
+   */
+  forceIsVisible?: boolean;
+
+  /**
    * Function that renders the child using the merged interaction state.
    */
   children: (state: InteractionState) => React.ReactNode;
@@ -50,6 +56,7 @@ export const PostInteractionWrapper: React.FC<PostInteractionWrapperProps> = ({
   boxId,
   sourceTable,
   initialIsTagged = false,
+  forceIsVisible,
   children
 }) => {
   const store = useInteractionStore();
@@ -79,6 +86,13 @@ export const PostInteractionWrapper: React.FC<PostInteractionWrapperProps> = ({
     }
   }, [postId, boxId, sourceTable, store]);
 
+  // Use explicit prop if provided
+  useEffect(() => {
+    if (forceIsVisible) {
+      handleVisibilityChanged(true);
+    }
+  }, [forceIsVisible, handleVisibilityChanged]);
+
   // 2. Select the current state from the store based on context key
   const contextKey = boxId ? `${boxId}_${postId}` : postId;
   
@@ -94,10 +108,16 @@ export const PostInteractionWrapper: React.FC<PostInteractionWrapperProps> = ({
     ? (store.tags[postId]?.includes(boxId) ?? initialIsTagged)
     : false;
 
+  const renderedChildren = children({ isLiked, likesCount, viewsCount, downloadsCount, isTagged });
+
   // 3. Render child
+  if (forceIsVisible !== undefined) {
+    return <>{renderedChildren}</>;
+  }
+
   return (
     <VisibilityTrackerWrapper onVisibilityChanged={handleVisibilityChanged}>
-      {children({ isLiked, likesCount, viewsCount, downloadsCount, isTagged })}
+      {renderedChildren}
     </VisibilityTrackerWrapper>
   );
 };

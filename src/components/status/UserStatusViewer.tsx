@@ -5,38 +5,49 @@ import { StatusViewer, StatusGroup } from '@/channel/pages/widgets2/status/Statu
 import { useProfileCacheStore } from '@/core/store/useProfileCacheStore';
 
 interface UserStatusViewerProps {
-  userId: string;
-  userName: string;
-  userAvatarUrl: string;
+  userId?: string;
+  channelId?: string;
+  type?: 'user' | 'channel';
+  userName?: string;
+  userAvatarUrl?: string;
   visible: boolean;
   onClose: () => void;
 }
 
-export const UserStatusViewer: React.FC<UserStatusViewerProps> = ({ userId, userName, userAvatarUrl, visible, onClose }) => {
+export const UserStatusViewer: React.FC<UserStatusViewerProps> = ({ userId, channelId, type = 'user', userName, userAvatarUrl, visible, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [statusGroups, setStatusGroups] = useState<StatusGroup[]>([]);
 
   useEffect(() => {
-    if (visible && userId) {
+    const activeId = type === 'channel' ? channelId : userId;
+    if (visible && activeId) {
       const fetchStatuses = async () => {
         setLoading(true);
         try {
-          const { data, error } = await supabase
-            .from('statuses')
+          const tableName = type === 'channel' ? 'channel_statuses' : 'statuses';
+          const columnId = type === 'channel' ? 'channel_id' : 'author_id';
+
+          let query = supabase
+            .from(tableName)
             .select('*')
-            .eq('author_id', userId)
-            .order('created_at', { ascending: true });
+            .eq(columnId, activeId);
+
+          if (type === 'channel') {
+             query = query.gte('expires_at', new Date().toISOString());
+          }
+
+          const { data, error } = await query.order('created_at', { ascending: true });
 
           if (error) {
-            console.error('Error fetching user statuses:', error);
+            console.error('Error fetching statuses:', error);
             setStatusGroups([]);
             return;
           }
 
           if (data && data.length > 0) {
             const group: StatusGroup = {
-              id: userId,
-              channelName: userName || data[0].username || 'User',
+              id: activeId,
+              channelName: userName || data[0].username || (type === 'channel' ? 'Channel' : 'User'),
               avatarUrl: userAvatarUrl || data[0].profile_image_url || 'https://via.placeholder.com/60',
               media: data.map((item: any) => ({
                 id: item.id,
@@ -63,7 +74,7 @@ export const UserStatusViewer: React.FC<UserStatusViewerProps> = ({ userId, user
       setStatusGroups([]);
       setLoading(false);
     }
-  }, [visible, userId]);
+  }, [visible, userId, channelId, type, userName, userAvatarUrl]);
 
   return (
     <>
@@ -74,7 +85,7 @@ export const UserStatusViewer: React.FC<UserStatusViewerProps> = ({ userId, user
           statusGroups={statusGroups}
           initialGroupIndex={0}
           isLoadingData={loading}
-          skeletonUser={{ name: userName, avatar: userAvatarUrl }}
+          skeletonUser={{ name: userName || '', avatar: userAvatarUrl || '' }}
         />
       )}
     </>

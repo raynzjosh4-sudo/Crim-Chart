@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TouchableWithoutFeedback, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TouchableWithoutFeedback, Dimensions, Pressable } from 'react-native';
 import { useTheme } from '@react-navigation/native';
 import { User, Eye } from 'lucide-react-native';
 
@@ -94,7 +94,9 @@ export const StatusViewsMenuDialog: React.FC<StatusViewsMenuDialogProps> = ({
           )}
 
           {/* Menu Box */}
-          <View style={[styles.menu, { 
+          <Pressable 
+            onPress={(e) => { e.stopPropagation?.(); }}
+            style={[styles.menu, { 
             backgroundColor: colors.card, 
             borderColor: colors.border,
             top: anchor ? menuTop : 90,
@@ -113,7 +115,7 @@ export const StatusViewsMenuDialog: React.FC<StatusViewsMenuDialogProps> = ({
               <User size={18} color="#00E5FF" style={styles.icon} />
               <Text style={[styles.menuText, { color: '#00E5FF' }]}>Profile</Text>
             </TouchableOpacity>
-          </View>
+          </Pressable>
         </View>
       </TouchableWithoutFeedback>
     </Modal>

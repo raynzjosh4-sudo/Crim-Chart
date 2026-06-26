@@ -15,7 +15,8 @@ RETURNS TABLE (
   is_audio BOOLEAN,
   thumbnail_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE,
-  expires_at TIMESTAMP WITH TIME ZONE
+  expires_at TIMESTAMP WITH TIME ZONE,
+  metadata JSONB
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -35,12 +36,18 @@ BEGIN
     s.is_audio,
     s.thumbnail_url,
     s.created_at,
-    s.expires_at
+    s.expires_at,
+    s.metadata
   FROM public.statuses s
   JOIN public.profiles p ON s.author_id = p.id
-  JOIN public.follows f ON f.following_id = s.author_id
-  WHERE f.follower_id = p_user_id
-    AND (s.expires_at IS NULL OR s.expires_at > NOW())
+  WHERE (
+    s.author_id = p_user_id
+    OR 
+    s.author_id IN (
+      SELECT following_id FROM public.follows WHERE follower_id = p_user_id
+    )
+  )
+  AND (s.expires_at IS NULL OR s.expires_at > NOW())
   ORDER BY s.created_at DESC
   LIMIT p_limit;
 END;

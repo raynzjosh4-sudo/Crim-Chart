@@ -11,9 +11,9 @@ import { useProfileCacheStore } from '@/core/store/useProfileCacheStore';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { ChatBubble } from '@/features/channel/pages/messages_tab/widgets/chartbubble/ChatBubble';
 import { getStatusColor } from '@/profile/utils/ConnectionStatsUtils';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Alert, FlatList, Keyboard, KeyboardAvoidingView, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useGlobalSearchParams, useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState, useRef } from 'react';
+import { Alert, FlatList, Keyboard, KeyboardAvoidingView, Platform, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChatStore } from '../application/useChatStore';
 
@@ -28,11 +28,14 @@ import { UserConnectionStatsModel } from '@/profile/models/CrimChartUserModel';
 import { supabase } from '@/core/supabase/client';
 
 export const InboxDetailPage: React.FC = () => {
-  const params = useLocalSearchParams();
+  const params = useGlobalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const threadId = params.threadId as string;
   const participantIdParam = params.participantId as string | undefined;
+
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
 
   const { threads, messages, typingUsers, isLoadingMessages, fetchMessages, loadMoreMessages, subscribeToThread, unsubscribeFromThread, markThreadAsRead, sendMessage, startTyping, stopTyping, acceptInboxRequest } = useChatStore();
   const currentThread = threads.find(t => t.id === threadId);
@@ -58,6 +61,19 @@ export const InboxDetailPage: React.FC = () => {
 
   const displayId = activeParticipantId || '';
 
+  const formatLastSeen = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const isToday = date.getDate() === now.getDate() && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const isYesterday = date.getDate() === yesterday.getDate() && date.getMonth() === yesterday.getMonth() && date.getFullYear() === yesterday.getFullYear();
+    
+    const timeString = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (isToday) return `today at ${timeString}`;
+    if (isYesterday) return `yesterday at ${timeString}`;
+    return `${date.toLocaleDateString([], { month: 'short', day: 'numeric' })} at ${timeString}`;
+  };
 
 
   useEffect(() => {
@@ -85,6 +101,9 @@ export const InboxDetailPage: React.FC = () => {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [relSentCount, setRelSentCount] = useState<number | null>(null);
   const [relationshipStatus, setRelationshipStatus] = useState<string>('Unknown');
+
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isTypingRef = useRef(false);
 
   useEffect(() => {
     if (activeParticipantId) {
@@ -180,7 +199,7 @@ export const InboxDetailPage: React.FC = () => {
             centerTitle={false}
             leading={
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <CrimchartBackButton onPress={() => router.back()} />
+                {!isDesktop && <CrimchartBackButton onPress={() => router.back()} />}
                 <TouchableOpacity
                   style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 4 }}
                   activeOpacity={0.7}
@@ -204,7 +223,7 @@ export const InboxDetailPage: React.FC = () => {
                       <Text style={{ color: '#4CAF50', fontSize: 13, marginTop: 2 }}>Online</Text>
                     ) : participantProfile?.lastSeen ? (
                       <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, marginTop: 2 }}>
-                        last seen {new Date(participantProfile.lastSeen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        last seen {formatLastSeen(participantProfile.lastSeen)}
                       </Text>
                     ) : null}
                   </View>
@@ -228,6 +247,7 @@ export const InboxDetailPage: React.FC = () => {
             ) : (
               <FlatList
                 data={threadMessages}
+                showsVerticalScrollIndicator={false}
                 keyExtractor={(m, index) => m.id + '_' + index}
                 inverted
                 bounces={true}
@@ -356,8 +376,24 @@ export const InboxDetailPage: React.FC = () => {
               }}
               onChangeText={(val) => {
                 if (val.trim().length > 0) {
-                  startTyping(threadId);
+                  if (!isTypingRef.current) {
+                    isTypingRef.current = true;
+                    startTyping(threadId);
+                  }
+
+                  if (typingTimerRef.current) {
+                    clearTimeout(typingTimerRef.current);
+                  }
+
+                  typingTimerRef.current = setTimeout(() => {
+                    isTypingRef.current = false;
+                    stopTyping(threadId);
+                  }, 2000);
                 } else {
+                  isTypingRef.current = false;
+                  if (typingTimerRef.current) {
+                    clearTimeout(typingTimerRef.current);
+                  }
                   stopTyping(threadId);
                 }
               }}

@@ -8,6 +8,8 @@ import {
   StyleSheet,
   ActivityIndicator,
   Animated,
+  Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { TagCarousel } from './widgets/TagCarousel';
 import { TagShimmer } from './widgets/TagShimmer';
@@ -34,6 +36,8 @@ interface TagOverlayProps {
 
 type Status = 'loading' | 'loaded' | 'error';
 
+import { DesktopTagOverlay } from './DesktopTagOverlay';
+
 export const TagOverlay: React.FC<TagOverlayProps> = ({
   visible,
   onClose,
@@ -42,6 +46,21 @@ export const TagOverlay: React.FC<TagOverlayProps> = ({
   linkChain,
   channelName,
 }) => {
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
+
+  if (isDesktop) {
+    return (
+      <DesktopTagOverlay
+        visible={visible}
+        onClose={onClose}
+        postId={postId}
+        sourceChannelId={sourceChannelId}
+        linkChain={linkChain}
+      />
+    );
+  }
+
   const [channels, setChannels] = useState<Channel[]>([]);
   const [status, setStatus] = useState<Status>('loading');
   const [isLoadingMore, setIsLoadingMore] = useState(false);

@@ -1,16 +1,18 @@
 import { ChevronLeft } from 'lucide-react-native';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import AppAvatar from '@/components/avatar/AppAvatar';
+import { ChannelAvatar } from '@/channel/components/channelavatarimage/ChannelAvatar';
 
 interface ChannelTitleBarProps {
   title: string;
+  channelId?: string;
   channelImageUrl?: string | null;
   onBackPress?: () => void;
 }
 
 export const ChannelTitleBar: React.FC<ChannelTitleBarProps> = ({
   title,
+  channelId,
   channelImageUrl,
   onBackPress
 }) => {
@@ -22,8 +24,10 @@ export const ChannelTitleBar: React.FC<ChannelTitleBarProps> = ({
             <ChevronLeft size={28} color="#FFF" />
           </TouchableOpacity>
         )}
-        {channelImageUrl && (
-          <AppAvatar imageUrl={channelImageUrl} size={36} style={{ marginRight: 12 }} />
+        {channelId && (
+          <View style={{ marginRight: 12 }}>
+            <ChannelAvatar channelId={channelId} fallbackUrl={channelImageUrl} name={title} size={36} />
+          </View>
         )}
         <Text style={styles.title} numberOfLines={1}>{title}</Text>
       </View>

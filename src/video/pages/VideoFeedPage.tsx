@@ -145,17 +145,26 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
     }
   }, [activeTab, loadVideos, initialVideos, isReady]);
 
-  const renderVideoItem = useCallback(({ item, index }: { item: VideoPost, index: number }) => (
-    <ShortVideoPlayerCard
-      video={item}
-      isPlaying={index === currentIndex && !isCommentsOpen}
-      isShrunken={isCommentsOpen && index === currentIndex}
-      hideBottomInput={!showBack}
-      disableInteractions={disableInteractions}
-      onComment={() => setIsCommentsOpen(true)}
-      onShrunkenTap={() => setIsInputModalOpen(true)}
-    />
-  ), [currentIndex, isCommentsOpen, showBack, disableInteractions]);
+  const renderVideoItem = useCallback(({ item, index }: { item: VideoPost, index: number }) => {
+    let preloadStatus: 'playing' | 'preloading' | 'idle' = 'idle';
+    if (index === currentIndex) {
+       preloadStatus = isCommentsOpen ? 'preloading' : 'playing'; // keeps it buffered but paused when comments are open
+    } else if (index >= currentIndex - 1 && index <= currentIndex + 2) {
+       preloadStatus = 'preloading';
+    }
+
+    return (
+      <ShortVideoPlayerCard
+        video={item}
+        preloadStatus={preloadStatus}
+        isShrunken={isCommentsOpen && index === currentIndex}
+        hideBottomInput={!showBack}
+        disableInteractions={disableInteractions}
+        onComment={() => setIsCommentsOpen(true)}
+        onShrunkenTap={() => setIsInputModalOpen(true)}
+      />
+    );
+  }, [currentIndex, isCommentsOpen, showBack, disableInteractions]);
 
   const onViewableChanged = useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {

@@ -27,9 +27,11 @@ export const ProfileStatusViewsBadge: React.FC<ProfileStatusViewsBadgeProps> = (
     if (viewsCount === 0) {
       onNavigateToProfile();
     } else {
-      triggerRef.current?.measure((x, y, width, height, pageX, pageY) => {
-        setMenuAnchor({ x: pageX, y: pageY });
-        setMenuVisible(true);
+      triggerRef.current?.measureInWindow((x, y, width, height) => {
+        setMenuAnchor({ x, y });
+        setTimeout(() => {
+          setMenuVisible(true);
+        }, 50);
       });
     }
   };

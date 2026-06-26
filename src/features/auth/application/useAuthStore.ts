@@ -68,6 +68,35 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
 
   checkSession: async () => {
     try {
+      if (Platform.OS === 'web') {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const localUser = await authRepository.local.getUser();
+          if (!localUser) {
+            // We have a session but no local user -> just signed in via Web OAuth
+            const result = await authRepository.handleWebOAuthSession(session);
+            if (result.isNewUser) {
+              set({ 
+                isLoading: false, 
+                pendingGoogleOnboarding: true,
+                pendingSignUp: { 
+                  countryCode: '', 
+                  countryName: '', 
+                  phoneNumber: '', 
+                  email: result.user.email || '', 
+                  username: result.user.username || '' 
+                } 
+              });
+              return;
+            } else {
+              set({ status: AuthStatus.AUTHENTICATED, user: result.user });
+              authRepository.updateOnlineStatus(true);
+              return;
+            }
+          }
+        }
+      }
+
       const user = await authRepository.getCurrentUser();
       if (user) {
         set({ status: AuthStatus.AUTHENTICATED, user });
@@ -262,7 +291,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
         return true;
       }
     } catch (e: any) {
-      console.error('Raw Google Signin error:', e);
+      console.warn('Raw Google Signin error:', e);
       set({ isLoading: false, errorMessage: e?.message || e?.code || String(e) || 'Unknown error' });
       return false;
     }

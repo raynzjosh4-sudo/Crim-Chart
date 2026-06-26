@@ -20,10 +20,10 @@ import {
   Type, UserCheck, UserPlus
 } from 'lucide-react-native';
 import React from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
+import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert, Platform } from 'react-native';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 
-export default function SettingsPage() {
+export default function SettingsPage({ isSplitPane = false }: { isSplitPane?: boolean }) {
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -37,7 +37,7 @@ export default function SettingsPage() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ChartAppBar title={t('settings')} showBack />
+      <ChartAppBar title={t('settings')} showBack={!isSplitPane} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {renderSectionHeader(t('who_can_see_content'))}
@@ -167,18 +167,27 @@ export default function SettingsPage() {
         <TouchableOpacity activeOpacity={1} 
           style={styles.textButton}
           onPress={() => {
-            Alert.alert(
-              t('log_out'),
-              'Are you sure you want to log out?',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { text: t('log_out'), style: 'destructive', onPress: () => {
-                  useAuthStore.getState().signOut().then(() => {
-                    router.replace('/login');
-                  });
-                }}
-              ]
-            );
+            if (Platform.OS === 'web') {
+              const confirmed = window.confirm('Are you sure you want to log out?');
+              if (confirmed) {
+                useAuthStore.getState().signOut().then(() => {
+                  router.replace('/login');
+                });
+              }
+            } else {
+              Alert.alert(
+                t('log_out'),
+                'Are you sure you want to log out?',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: t('log_out'), style: 'destructive', onPress: () => {
+                    useAuthStore.getState().signOut().then(() => {
+                      router.replace('/login');
+                    });
+                  }}
+                ]
+              );
+            }
           }}
         >
           <Text style={[styles.textButtonLabel, { color: '#FF453A' }]}>{t('log_out')}</Text>

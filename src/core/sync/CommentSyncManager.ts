@@ -1,7 +1,8 @@
-import { NativeDB } from '../db/NativeDB';
-import { supabase } from '../supabase/supabaseConfig';
-import { cloudMediaService } from '../network/cloudMediaService';
 import * as FileSystem from 'expo-file-system/legacy';
+import { Platform } from 'react-native';
+import { NativeDB } from '../db/NativeDB';
+import { cloudMediaService } from '../network/cloudMediaService';
+import { supabase } from '../supabase/supabaseConfig';
 
 class CommentSyncManager {
   private isSyncing = false;
@@ -25,7 +26,8 @@ class CommentSyncManager {
           if (publicMediaUrl && (publicMediaUrl.startsWith('file://') || publicMediaUrl.startsWith('blob:') || publicMediaUrl.startsWith('data:'))) {
             let isValid = false;
             
-            if (Platform.OS !== 'web' && publicMediaUrl.startsWith('file://')) {
+            const isWeb = typeof window !== 'undefined' && typeof window.document !== 'undefined';
+            if (!isWeb && publicMediaUrl.startsWith('file://')) {
               const fileInfo = await FileSystem.getInfoAsync(publicMediaUrl);
               isValid = fileInfo.exists;
             } else {

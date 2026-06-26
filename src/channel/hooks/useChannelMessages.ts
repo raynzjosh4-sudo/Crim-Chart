@@ -48,7 +48,7 @@ export function useChannelMessages(channelId: string | undefined) {
       // This is exactly what our inverted FlatList needs.
       setMessages(isRefresh ? mappedMessages : [...messagesRef.current, ...mappedMessages]);
 
-      setHasMore(rawData.length === 50);
+      setHasMore(rawData.length === 10);
       setPage(pageNumber);
     } catch (err) {
       console.error('Failed to fetch messages:', err);
