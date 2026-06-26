@@ -41,3 +41,9 @@ if (isValidUrl(supabaseUrl) && supabaseUrl.indexOf('YOUR_SUPABASE') === -1) {
 export const supabase = supabaseClient;
 export { supabaseAnonKey, supabaseUrl };
 
+// FIX: On production Web, Expo Router's static hydration can strip the URL hash 
+// before React components mount. By calling getSession() immediately here in the 
+// global scope, we force Supabase to parse the token from the URL synchronously.
+if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
+    supabase.auth.getSession().catch(() => {});
+}
