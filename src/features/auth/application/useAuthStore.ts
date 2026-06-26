@@ -67,15 +67,22 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   pendingGoogleOnboarding: false,
 
   checkSession: async () => {
+    console.log('[DEBUG] checkSession started');
     try {
       if (Platform.OS === 'web') {
-        const { data: { session } } = await supabase.auth.getSession();
+        console.log('[DEBUG] Platform is web, getting session...');
+        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('[DEBUG] getSession result:', { hasSession: !!session, error });
         if (session) {
           const localUser = await authRepository.local.getUser();
+          console.log('[DEBUG] localUser:', localUser);
           if (!localUser) {
             // We have a session but no local user -> just signed in via Web OAuth
+            console.log('[DEBUG] No local user, calling handleWebOAuthSession...');
             const result = await authRepository.handleWebOAuthSession(session);
+            console.log('[DEBUG] handleWebOAuthSession result:', result);
             if (result.isNewUser) {
+              console.log('[DEBUG] New user detected, setting pendingGoogleOnboarding to true');
               set({ 
                 isLoading: false, 
                 status: AuthStatus.UNAUTHENTICATED,
@@ -90,6 +97,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
               });
               return;
             } else {
+              console.log('[DEBUG] Returning user detected, setting status AUTHENTICATED');
               set({ status: AuthStatus.AUTHENTICATED, user: result.user });
               authRepository.updateOnlineStatus(true);
               return;
@@ -98,14 +106,18 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
         }
       }
 
+      console.log('[DEBUG] Checking local user fallback...');
       const user = await authRepository.getCurrentUser();
       if (user) {
+        console.log('[DEBUG] Found local user:', user.id);
         set({ status: AuthStatus.AUTHENTICATED, user });
         authRepository.updateOnlineStatus(true);
       } else {
+        console.log('[DEBUG] No local user found, setting UNAUTHENTICATED');
         set({ status: AuthStatus.UNAUTHENTICATED });
       }
-    } catch {
+    } catch (e) {
+      console.error('[DEBUG] checkSession error:', e);
       set({ status: AuthStatus.UNAUTHENTICATED });
     }
   },
