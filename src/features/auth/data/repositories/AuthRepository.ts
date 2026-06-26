@@ -70,21 +70,15 @@ export class AuthRepository {
   }
 
   async handleWebOAuthSession(session: any) {
-    console.log('[DEBUG] handleWebOAuthSession called with session for user:', session?.user?.id);
     const authUser = session.user;
     let profile: any = null;
-    
-    console.log('[DEBUG] Querying profiles for id:', authUser.id);
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('profiles')
       .select()
       .eq('id', authUser.id)
       .maybeSingle();
-      
-    console.log('[DEBUG] Profile query result:', { data, error });
 
     if (data) {
-      console.log('[DEBUG] Existing profile found in DB, parsing to userModel...');
       profile = data;
       const userModel = CrimChartUserModel.fromMap(profile).copyWith({
         id: authUser.id,
@@ -93,11 +87,9 @@ export class AuthRepository {
         profileImageUrl: CrimChartUserModel.correctImageUrl(profile.profile_image_url ?? authUser.user_metadata?.avatar_url ?? ''),
         createdAt: new Date(),
       });
-      console.log('[DEBUG] Saving userModel locally:', userModel);
       await this.local.saveUser(userModel, session.access_token, session.refresh_token);
       return { isNewUser: false, user: userModel };
     } else {
-      console.log('[DEBUG] No profile found in DB. Treating as NEW user...');
       const userModel = CrimChartUserModel.empty().copyWith({
         id: authUser.id,
         displayName: authUser.user_metadata?.full_name || 'User',
@@ -106,7 +98,6 @@ export class AuthRepository {
         profileImageUrl: CrimChartUserModel.correctImageUrl(authUser.user_metadata?.avatar_url || ''),
         createdAt: new Date(),
       });
-      console.log('[DEBUG] Created temporary userModel for new user:', userModel);
       return { isNewUser: true, user: userModel };
     }
   }

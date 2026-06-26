@@ -1,5 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createClient } from '@supabase/supabase-js';
+import { Platform } from 'react-native';
 
 // Prefer EXPO_PUBLIC_ environment variables for client-side access in Expo
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
@@ -23,7 +24,7 @@ if (isValidUrl(supabaseUrl) && supabaseUrl.indexOf('YOUR_SUPABASE') === -1) {
                 storage: AsyncStorage,
                 autoRefreshToken: true,
                 persistSession: true,
-                detectSessionInUrl: false,
+                detectSessionInUrl: Platform.OS === 'web',
             },
         });
     } catch (err) {
