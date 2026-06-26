@@ -1,30 +1,29 @@
 // Safe shim for @react-native-google-signin/google-signin
-// Tries to require the native package; if it fails (e.g. running in Expo Go without native module),
-// export a lightweight fallback that avoids throwing during module load.
-let RealGoogleSignin: any = null;
-try {
-    // Use require so bundlers don't eagerly fail; catch any native module errors.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod = require('@react-native-google-signin/google-signin');
-    RealGoogleSignin = mod?.GoogleSignin ?? mod;
-} catch (e) {
-    RealGoogleSignin = null;
-}
+import { Platform } from 'react-native';
 
-const GoogleSignin = RealGoogleSignin ?? {
+const GoogleSigninWebMock = {
     configure: (_opts?: any) => { },
-    hasPlayServices: async () => {
-        // Indicate that play services are not available in this environment.
-        return false;
-    },
-    signIn: async () => {
-        throw new Error(
-            'Google Signin native module unavailable in this environment. Use a dev build or prebuilt app.'
-        );
-    },
+    hasPlayServices: async () => false,
+    signIn: async () => new Promise<any>(() => {}),
     signOut: async () => { },
     revokeAccess: async () => { },
 };
+
+let GoogleSigninNative: any = null;
+
+if (Platform.OS !== 'web') {
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const mod = require('@react-native-google-signin/google-signin');
+        GoogleSigninNative = mod?.GoogleSignin ?? mod;
+    } catch (e) {
+        GoogleSigninNative = null;
+    }
+}
+
+const GoogleSignin = Platform.OS === 'web' 
+    ? GoogleSigninWebMock 
+    : (GoogleSigninNative ?? GoogleSigninWebMock);
 
 export { GoogleSignin };
 
