@@ -54,7 +54,6 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
 }) => {
   const router = useAppRouter();
   const navigation = useNavigation();
-  const [activeTab, setActiveTab] = useState<VideoFeedTab>(initialTab);
   const [videos, setVideos] = useState<VideoPost[]>(initialVideos ?? []);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
@@ -68,10 +67,15 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
   const [isReady, setIsReady] = useState(false);
   const [containerHeight, setContainerHeight] = useState(SCREEN_H);
 
+  console.log(`[VideoFeedPage] 🔄 Render cycle! isReady=${isReady}, isLoading=${isLoading}`);
+
   React.useEffect(() => {
-    InteractionManager.runAfterInteractions(() => {
+    console.log('[VideoFeedPage] ⏳ Component mounted. Starting 100ms timer for isReady...');
+    const timer = setTimeout(() => {
+      console.log('[VideoFeedPage] ⏰ Timer finished, setting isReady to true');
       setIsReady(true);
-    });
+    }, 100);
+    return () => clearTimeout(timer);
   }, []);
 
   const openImagePicker = () => {
@@ -97,20 +101,35 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
   }, [isCommentsOpen]);
 
   const loadVideos = useCallback(async () => {
-    if (!isReady) return;
+    
+    console.error('[VideoFeedPage] 🚀 Starting loadVideos...');
+    const startTime = Date.now();
     setIsLoading(true);
+    
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) return;
+      if (!session?.user?.id) {
+        console.error('[VideoFeedPage] ⚠️ No active session found, aborting load.');
+        return;
+      }
 
+      console.error(`[VideoFeedPage] 📡 Calling supabase.rpc('get_short_video_feed_with_data') for user: ${session.user.id}`);
+      
       const { data, error } = await supabase.rpc('get_short_video_feed_with_data', {
         p_user_id: session.user.id,
-        p_tab: activeTab,
         p_limit: 30,
         p_offset: 0
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[VideoFeedPage] ❌ RPC Error:', error);
+        throw error;
+      }
+
+      console.error(`[VideoFeedPage] ✅ RPC Success! Received ${data?.length || 0} items from database.`);
+      if (data?.length > 0) {
+        console.error('[VideoFeedPage] 📦 First item preview:', JSON.stringify(data[0]).substring(0, 200));
+      }
 
       const mapped = (data ?? []).map((row: any): VideoPost => ({
         id: row.pointer_id, // We use the pointer ID as the unique key in the FlatList
@@ -131,20 +150,23 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
         isCharted: false,
         sharesCount: 0,
         tagsCount: row.tags_count ?? 0,
+        sourceType: row.source_type,
       }));
       setVideos(mapped);
     } catch (e) {
-      console.error('[VideoFeedPage]', e);
+      console.error('[VideoFeedPage] 💥 Fatal Catch Error:', e);
     } finally {
+      const duration = Date.now() - startTime;
+      console.error(`[VideoFeedPage] ⏱️ Shimmer / Loading took ${duration}ms total`);
       setIsLoading(false);
     }
-  }, [channelId, activeTab]);
+  }, [channelId]);
 
   React.useEffect(() => {
     if (isReady && (!initialVideos || initialVideos.length === 0)) {
       loadVideos();
     }
-  }, [activeTab, loadVideos, initialVideos, isReady]);
+  }, [loadVideos, initialVideos, isReady]);
 
   const renderVideoItem = useCallback(({ item, index }: { item: VideoPost, index: number }) => {
     let preloadStatus: 'playing' | 'preloading' | 'idle' = 'idle';
@@ -246,41 +268,11 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
       </Animated.View>
 
       {/* Top overlay */}
-      {!isCommentsOpen && (
+      {!isCommentsOpen && showBack && (
         <View style={[styles.topOverlay, { paddingTop: Math.max(insets.top, 20) + 12 }]} pointerEvents="box-none">
-          {showBack && (
-            <TouchableOpacity activeOpacity={1}
-              style={styles.backBtn}
-              onPress={() => {
-                if (onBack) {
-                  onBack();
-                  return;
-                }
-                if (navigation.canGoBack()) {
-                  navigation.goBack();
-                } else {
-                  router.back();
-                }
-              }}
-            >
-              <ChevronLeft color="#FFF" size={28} />
-            </TouchableOpacity>
-          )}
-          <View style={styles.tabs}>
-            {Object.values(VideoFeedTab).map(tab => (
-              <TouchableOpacity activeOpacity={1} key={tab} onPress={() => setActiveTab(tab as VideoFeedTab)}>
-                <Text style={[styles.tabText, activeTab === tab && styles.tabActive]}>
-                  {tab}
-                </Text>
-                {activeTab === tab && <View style={styles.tabIndicator} />}
-              </TouchableOpacity>
-            ))}
-          </View>
-          {!showBack && (
-            <TouchableOpacity activeOpacity={1} style={styles.backBtn}>
-              <Search color={theme.colors.text} size={24} />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity onPress={onBack || (() => navigation.goBack())} style={styles.backBtn}>
+            <ChevronLeft color={theme.colors.text} size={28} />
+          </TouchableOpacity>
         </View>
       )}
 

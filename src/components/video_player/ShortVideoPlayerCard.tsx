@@ -1,4 +1,5 @@
 import { TagOverlay } from '@/channel/pages/tag/TagOverlay';
+import { useAppRouter } from '@/core/hooks/useAppRouter';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { VideoView, useVideoPlayer } from 'expo-video';
@@ -18,6 +19,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { VideoPost } from '../../video/models/VideoPost';
 import { LikeButton } from '../../video/widgets/LikeButton';
+import { VideoScrubber } from './VideoScrubber';
 
 interface ShortVideoPlayerCardProps {
   video: VideoPost;
@@ -49,18 +51,24 @@ const ShortVideoPlayerCardComponent = ({
   hideBottomInput = false,
   disableInteractions = false,
 }: ShortVideoPlayerCardProps) => {
+  const router = useAppRouter();
   const [liked, setLiked] = useState<boolean>(video.isLiked);
   const [likesCount, setLikesCount] = useState<number>(video.likesCount);
   const [tagOverlayVisible, setTagOverlayVisible] = useState(false);
   const [showPlayPause, setShowPlayPause] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [isScrubbing, setIsScrubbing] = useState(false);
   const hidePlayPauseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const [isPausedByUser, setIsPausedByUser] = useState(false);
   const [currentVideoUrl, setCurrentVideoUrl] = useState(video.videoUrl);
+  const isPausedByUserRef = useRef(isPausedByUser);
 
-  const isPlaying = (preloadStatus === 'playing') && !isPausedByUser;
+  useEffect(() => {
+    isPausedByUserRef.current = isPausedByUser;
+  }, [isPausedByUser]);
+
+  const isPlaying = (preloadStatus === 'playing') && !isPausedByUser && !isScrubbing;
 
   // Initialize player only if it's not idle to save memory
   const player = useVideoPlayer(preloadStatus === 'idle' ? null : currentVideoUrl, p => {
@@ -116,13 +124,15 @@ const ShortVideoPlayerCardComponent = ({
     return () => {
       subscription.remove();
     };
-  }, [player]);
+  }, [player, isScrubbing]);
 
-  const togglePlayPause = () => {
-    if (isShrunken) {
-      onShrunkenTap?.();
+  const handleVideoPress = () => {
+    if (disableInteractions || isShrunken) {
+      if (onShrunkenTap) onShrunkenTap();
       return;
     }
+
+    if (isScrubbing) return; // Don't trigger play/pause while scrubbing
 
     if (!player) return;
 
@@ -137,7 +147,11 @@ const ShortVideoPlayerCardComponent = ({
     } catch (e) { }
 
     setShowPlayPause(true);
-    fadeAnim.setValue(1);
+    Animated.spring(fadeAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 20,
+    }).start();
 
     if (hidePlayPauseTimeout.current) clearTimeout(hidePlayPauseTimeout.current);
     hidePlayPauseTimeout.current = setTimeout(() => {
@@ -146,7 +160,7 @@ const ShortVideoPlayerCardComponent = ({
         duration: 300,
         useNativeDriver: true,
       }).start(() => setShowPlayPause(false));
-    }, 800);
+    }, 1500);
   };
 
   const handleLike = useCallback(() => {
@@ -155,8 +169,16 @@ const ShortVideoPlayerCardComponent = ({
     onLike?.();
   }, [liked, likesCount, onLike]);
 
+  const handleAuthorPress = useCallback(() => {
+    if (video.sourceType === 'channel_post' && video.channelId) {
+      router.push(`/channel/${video.channelId}`);
+    } else if (video.authorId) {
+      router.push(`/profile/${video.authorId}`);
+    }
+  }, [video, router]);
+
   return (
-    <Pressable style={[styles.container, isShrunken && styles.shrunken]} delayPressIn={150} onPress={togglePlayPause}>
+    <Pressable style={[styles.container, isShrunken && styles.shrunken]} delayPressIn={150} onPress={handleVideoPress}>
       {/* Blurred background layer for filler */}
       {video.thumbnailUrl ? (
         <ExpoImage
@@ -170,14 +192,18 @@ const ShortVideoPlayerCardComponent = ({
       {player ? (
         <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
           {Platform.OS === 'web' && (
-            <View dangerouslySetInnerHTML={{ __html: `<style>video { object-fit: contain !important; }</style>` }} />
+            <View dangerouslySetInnerHTML={{
+              __html: `<style>
+              video { 
+                object-fit: contain !important; 
+                width: 100% !important; 
+                height: 100% !important; 
+              }
+            </style>` }} />
           )}
           <VideoView
             player={player}
-            style={[
-              StyleSheet.absoluteFillObject,
-              Platform.OS === 'web' && ({ objectFit: 'contain' } as any)
-            ]}
+            style={{ width: '100%', height: '100%' }}
             contentFit="contain"
             nativeControls={false}
           />
@@ -197,10 +223,10 @@ const ShortVideoPlayerCardComponent = ({
         {!isShrunken && (
           <>
             {/* Bottom info */}
-            <View style={[styles.bottomInfo, hideBottomInput ? { bottom: 90 } : { bottom: 70 }]} pointerEvents="box-none">
+            <View style={[styles.bottomInfo, hideBottomInput ? { bottom: 12 } : { bottom: 70 }]} pointerEvents="box-none">
 
               {/* Author Row */}
-              <View style={styles.authorRow}>
+              <TouchableOpacity style={styles.authorRow} onPress={handleAuthorPress} activeOpacity={0.8}>
                 <Image
                   source={{ uri: video.authorAvatarUrl || undefined }}
                   style={styles.avatar}
@@ -209,7 +235,7 @@ const ShortVideoPlayerCardComponent = ({
                 <TouchableOpacity style={styles.followButton}>
                   <Text style={styles.followButtonText}>Follow</Text>
                 </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
 
               {/* Caption */}
               <Text style={styles.caption} numberOfLines={2}>
@@ -224,12 +250,12 @@ const ShortVideoPlayerCardComponent = ({
 
             {/* Right-side action buttons */}
             <View
-              style={[styles.actions, hideBottomInput ? { bottom: 90 } : { bottom: 70 }]}
+              style={[styles.actions, hideBottomInput ? { bottom: 12 } : { bottom: 70 }]}
               pointerEvents={disableInteractions ? 'none' : 'auto'}
             >
               <ActionBtn
                 icon={<Image source={{ uri: video.authorAvatarUrl || undefined }} style={styles.actionsAvatar} />}
-                onPress={() => { }} // Handle author press if needed
+                onPress={handleAuthorPress} // Handle author press if needed
                 noBackground
               />
               <View style={[styles.actionPill, { marginTop: -16 }]}>
@@ -255,9 +281,13 @@ const ShortVideoPlayerCardComponent = ({
             </View>
 
             {/* Sleek Progress Bar */}
-            <View style={[styles.progressBarContainer, hideBottomInput ? { bottom: 75 } : { bottom: 58 }]} pointerEvents="none">
-              <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
-            </View>
+            <VideoScrubber
+              player={player}
+              hideBottomInput={hideBottomInput}
+              preloadStatus={preloadStatus}
+              isPausedByUserRef={isPausedByUserRef}
+              onScrubbingChange={setIsScrubbing}
+            />
 
             {/* Bottom Input Area */}
             {!hideBottomInput && (
@@ -328,10 +358,11 @@ const ActionBtn = ({ icon, count, label, onPress, noBackground }: ActionBtnProps
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    height: '100%', // Use 100% to fit exactly within the parent container
     width: '100%',
-    height: '100%',
     backgroundColor: '#000',
-    position: 'relative',
+    overflow: 'hidden',
   },
   shrunken: {
     borderRadius: 16,
@@ -442,18 +473,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  progressBarContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: '#FFF',
-  },
   playPauseOverlay: {
     position: 'absolute',
     top: '50%',
@@ -466,3 +485,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
+function setProgress(arg0: number) {
+  throw new Error('Function not implemented.');
+}
+

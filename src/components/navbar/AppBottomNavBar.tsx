@@ -10,16 +10,16 @@ import { ThemeTokens } from '@/core/theme/themes';
 export const AppBottomNavBar = ({
 
   selectedIndex,
-
   onItemTapped,
   homeBadgeCount = 0,
-}: AppBottomNavBarProps) => {
+  hideBorder,
+}: AppBottomNavBarProps & { hideBorder?: boolean }) => {
   const theme = useCurrentTheme();
   const styles = useStyles(themeStyles);
   const colors = theme.colors;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background, borderTopColor: colors.surfaceVariant }]}>
+    <View style={[styles.container, { backgroundColor: colors.background, borderTopColor: colors.surfaceVariant, borderTopWidth: hideBorder ? 0 : (0.5 * (theme.scale || 1)) }]}>
       <SafeAreaView edges={['bottom', 'left', 'right']}>
         <View style={styles.navBar}>
           <NavItem
@@ -115,7 +115,7 @@ const AddButton = ({ onTap, color, styles }: { onTap: () => void; color: string;
 
 const themeStyles = (colors: ThemeTokens, scale: number): any => ({
   container: {
-    borderTopWidth: 0.5 * scale,
+    // borderTopWidth is handled dynamically
   },
   navBar: {
     height: 62 * scale,

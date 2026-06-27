@@ -4,6 +4,7 @@ import { VideoFeedPage } from '@/video/pages/VideoFeedPage';
 
 export default function VidsTabScreen() {
   const params = useLocalSearchParams();
+  console.log('[vids.tsx] 🗺️ Vids tab nav clicked! Params:', params);
 
   return (
     <VideoFeedPage

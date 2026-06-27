@@ -163,8 +163,16 @@ export default function TabLayout() {
 
       {/* Mobile Bottom Navigation */}
       {!isDesktop && (
-        <View style={[styles.tabBar, { height: tabBarHeight, paddingBottom: bottomPadding, backgroundColor: theme.colors.background }]}>
-          <AppBottomNavBar selectedIndex={selectedIndex} onItemTapped={onItemTapped} />
+        <View style={[
+          styles.tabBar, 
+          { 
+            height: tabBarHeight, 
+            paddingBottom: bottomPadding, 
+            backgroundColor: theme.colors.background,
+            borderTopWidth: selectedIndex === 1 ? 0 : 0.5 
+          }
+        ]}>
+          <AppBottomNavBar selectedIndex={selectedIndex} onItemTapped={onItemTapped} hideBorder={selectedIndex === 1} />
         </View>
       )}
 

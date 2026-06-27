@@ -17,6 +17,7 @@ export interface FeedVideoItem {
   durationSeconds?: number;
   createdAt: Date;
   viewsCount?: number;
+  sourceType?: string;
 }
 
 export function feedVideoFromMap(map: Record<string, unknown>): FeedVideoItem {
@@ -39,5 +40,6 @@ export function feedVideoFromMap(map: Record<string, unknown>): FeedVideoItem {
     durationSeconds: map['duration_seconds'] as number | undefined,
     createdAt: map['created_at'] ? new Date(String(map['created_at'])) : new Date(),
     viewsCount: Number(map['views_count'] ?? map['viewsCount'] ?? 0),
+    sourceType: map['source_type'] as string | undefined,
   };
 }

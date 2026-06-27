@@ -48,15 +48,27 @@ export const DesktopVidsFeedPane: React.FC = () => {
     let isMounted = true;
     (async () => {
       try {
+        console.error('[DesktopVidsFeedPane] 🚀 Starting fetch...');
+        const startTime = Date.now();
         setIsLoading(true);
+        
+        console.error(`[DesktopVidsFeedPane] 📡 Calling supabase.rpc('get_short_video_feed_with_data') for user: ${user?.id}`);
         const { data, error } = await supabase.rpc('get_short_video_feed_with_data', {
           p_user_id: user?.id ?? null,
-          p_tab: 'Explore',
           p_limit: 30,
           p_offset: 0,
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error('[DesktopVidsFeedPane] ❌ RPC Error:', error);
+          throw error;
+        }
+        
+        console.error(`[DesktopVidsFeedPane] ✅ RPC Success! Received ${data?.length || 0} items from database.`);
+        if (data && data.length > 0) {
+          console.error('[DesktopVidsFeedPane] 📦 First item preview:', JSON.stringify(data[0]).substring(0, 200));
+        }
+        
         if (!isMounted) return;
 
         // Fetch full post data for each short video so VideoPostFeedCard has prefetchedData
@@ -85,6 +97,10 @@ export const DesktopVidsFeedPane: React.FC = () => {
         }));
 
         if (isMounted) setItems(mapped);
+        
+        const duration = Date.now() - startTime;
+        console.error(`[DesktopVidsFeedPane] ⏱️ Shimmer / Loading took ${duration}ms total`);
+        
       } catch (e) {
         console.error('[DesktopVidsFeedPane] fetch error:', e);
       } finally {

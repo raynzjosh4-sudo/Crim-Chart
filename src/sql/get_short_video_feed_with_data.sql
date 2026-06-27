@@ -4,7 +4,6 @@
 
 CREATE OR REPLACE FUNCTION public.get_short_video_feed_with_data(
     p_user_id uuid, 
-    p_tab text, 
     p_limit int DEFAULT 20, 
     p_offset int DEFAULT 0
 )
@@ -12,13 +11,24 @@ RETURNS json AS $$
 DECLARE
     result json;
 BEGIN
-    WITH pointers AS (
-        SELECT id as pointer_id, entity_id, source_type, created_at 
-        FROM public.short_video_pointers
-        WHERE 
-            (p_tab = 'Explore' AND feed_context = 'explore' AND target_user_id IS NULL)
-            OR (p_tab = 'Friends' AND feed_context = 'friends' AND target_user_id = p_user_id)
-            OR (p_tab = 'Channel' AND feed_context = 'channel' AND target_user_id = p_user_id)
+    WITH all_videos AS (
+        SELECT id::text, 'post' as source_type, created_at
+        FROM public.posts
+        WHERE is_video = true
+
+        UNION ALL
+
+        SELECT id::text, 'channel_post' as source_type, created_at
+        FROM public.channel_posts
+        WHERE is_video = true
+    ),
+    pointers AS (
+        SELECT 
+            id as entity_id, 
+            source_type, 
+            created_at,
+            id as pointer_id -- Since there are no duplicates, we can safely use the post ID as the unique key
+        FROM all_videos
         ORDER BY created_at DESC
         LIMIT p_limit OFFSET p_offset
     ),
