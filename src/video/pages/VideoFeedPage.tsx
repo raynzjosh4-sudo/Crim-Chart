@@ -66,6 +66,7 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
   const styles = useStyles(themeStyles);
   const theme = useCurrentTheme();
   const [isReady, setIsReady] = useState(false);
+  const [containerHeight, setContainerHeight] = useState(SCREEN_H);
 
   React.useEffect(() => {
     InteractionManager.runAfterInteractions(() => {
@@ -154,17 +155,19 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
     }
 
     return (
-      <ShortVideoPlayerCard
-        video={item}
-        preloadStatus={preloadStatus}
-        isShrunken={isCommentsOpen && index === currentIndex}
-        hideBottomInput={!showBack}
-        disableInteractions={disableInteractions}
-        onComment={() => setIsCommentsOpen(true)}
-        onShrunkenTap={() => setIsInputModalOpen(true)}
-      />
+      <View style={{ width: SCREEN_W, height: containerHeight }}>
+        <ShortVideoPlayerCard
+          video={item}
+          preloadStatus={preloadStatus}
+          isShrunken={isCommentsOpen && index === currentIndex}
+          hideBottomInput={!showBack}
+          disableInteractions={disableInteractions}
+          onComment={() => setIsCommentsOpen(true)}
+          onShrunkenTap={() => setIsInputModalOpen(true)}
+        />
+      </View>
     );
-  }, [currentIndex, isCommentsOpen, showBack, disableInteractions]);
+  }, [currentIndex, isCommentsOpen, showBack, disableInteractions, containerHeight]);
 
   const onViewableChanged = useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
@@ -179,7 +182,7 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
 
   const animatedHeight = shrinkAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [SCREEN_H, SCREEN_H * 0.3],
+    outputRange: [containerHeight, containerHeight * 0.3],
   });
 
   const animatedRadius = shrinkAnim.interpolate({
@@ -198,7 +201,7 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
   });
 
   return (
-    <View style={styles.root}>
+    <View style={styles.root} onLayout={(e) => setContainerHeight(e.nativeEvent.layout.height)}>
       <Animated.View style={[styles.playerContainer, {
         width: animatedWidth,
         height: animatedHeight,
@@ -221,8 +224,8 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
             onViewableItemsChanged={onViewableChanged.current}
             viewabilityConfig={{ itemVisiblePercentThreshold: 80 }}
             initialScrollIndex={initialIndex}
-            getItemLayout={(data, index) => ({ length: SCREEN_H, offset: SCREEN_H * index, index })}
-            snapToInterval={SCREEN_H}
+            getItemLayout={(data, index) => ({ length: containerHeight, offset: containerHeight * index, index })}
+            snapToInterval={containerHeight}
             snapToAlignment="start"
             decelerationRate="fast"
           />

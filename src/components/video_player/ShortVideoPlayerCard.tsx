@@ -7,6 +7,7 @@ import {
   Animated,
   Dimensions,
   Image,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -288,8 +289,8 @@ const ActionBtn = ({ icon, count, label, onPress, noBackground }: ActionBtnProps
 
 const styles = StyleSheet.create({
   container: {
-    width: SCREEN_W,
-    height: SCREEN_H,
+    width: '100%',
+    height: '100%',
     backgroundColor: '#000',
     position: 'relative',
   },
