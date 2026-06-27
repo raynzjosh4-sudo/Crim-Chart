@@ -118,12 +118,15 @@ export const DesktopVidsFeedPane: React.FC = () => {
   }
 
   return (
-    <FlatList
-      data={items}
-      keyExtractor={item => item.id}
-      renderItem={renderItem}
-      viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
-      showsVerticalScrollIndicator={false}
-    />
+    <View style={{ flex: 1, backgroundColor: '#000' }}>
+      <FlatList
+        data={items}
+        keyExtractor={item => item.id}
+        renderItem={renderItem}
+        viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1 }}
+      />
+    </View>
   );
 };
