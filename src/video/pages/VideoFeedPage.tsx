@@ -4,13 +4,18 @@ import { MediaData } from '@/components/media/types';
 import { VideoCardSkeleton } from '@/components/skeletons/Skeletons';
 import { ShortVideoPlayerCard } from '@/components/video_player/ShortVideoPlayerCard';
 import { useAppRouter } from '@/core/hooks/useAppRouter';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { supabase } from '@/core/supabase/supabaseConfig';
+import { ThemeTokens } from '@/core/theme/themes';
 import { useNavigation } from '@react-navigation/native';
 import { ChevronLeft, Search } from 'lucide-react-native';
 import React, { useCallback, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
+  FlatList,
+  InteractionManager,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -19,15 +24,10 @@ import {
   Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View,
-  InteractionManager
+  View
 } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoPost } from '../models/VideoPost';
-import { useStyles } from '@/core/hooks/useStyles';
-import { useCurrentTheme } from '@/core/store/useThemeStore';
-import { ThemeTokens } from '@/core/theme/themes';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -148,9 +148,9 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
   const renderVideoItem = useCallback(({ item, index }: { item: VideoPost, index: number }) => {
     let preloadStatus: 'playing' | 'preloading' | 'idle' = 'idle';
     if (index === currentIndex) {
-       preloadStatus = isCommentsOpen ? 'preloading' : 'playing'; // keeps it buffered but paused when comments are open
+      preloadStatus = isCommentsOpen ? 'preloading' : 'playing'; // keeps it buffered but paused when comments are open
     } else if (index >= currentIndex - 1 && index <= currentIndex + 2) {
-       preloadStatus = 'preloading';
+      preloadStatus = 'preloading';
     }
 
     return (
@@ -211,8 +211,8 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
         backgroundColor: isCommentsOpen ? '#111' : '#000',
       }]}>
         {isReady ? (
-          <FlashList
-            ref={flatListRef}
+          <FlatList
+            ref={flatListRef as any}
             data={videos}
             keyExtractor={item => item.id}
             pagingEnabled
@@ -221,6 +221,10 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
             onViewableItemsChanged={onViewableChanged.current}
             viewabilityConfig={{ itemVisiblePercentThreshold: 80 }}
             initialScrollIndex={initialIndex}
+            getItemLayout={(data, index) => ({ length: SCREEN_H, offset: SCREEN_H * index, index })}
+            snapToInterval={SCREEN_H}
+            snapToAlignment="start"
+            decelerationRate="fast"
           />
         ) : null}
         {(!isReady || isLoading) && (
