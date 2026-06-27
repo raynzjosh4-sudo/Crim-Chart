@@ -132,15 +132,24 @@ const ShortVideoPlayerCardComponent = ({
   return (
     <Pressable style={[styles.container, isShrunken && styles.shrunken]} delayPressIn={150} onPress={togglePlayPause}>
       {player ? (
-        <VideoView
-          player={player}
-          style={[
-            StyleSheet.absoluteFillObject,
-            Platform.OS === 'web' && ({ objectFit: 'contain' } as any)
-          ]}
-          contentFit="contain"
-          nativeControls={false}
-        />
+        <>
+          {Platform.OS === 'web' && (
+            <style>{`
+              video {
+                object-fit: contain !important;
+              }
+            `}</style>
+          )}
+          <VideoView
+            player={player}
+            style={[
+              StyleSheet.absoluteFillObject,
+              Platform.OS === 'web' && ({ objectFit: 'contain' } as any)
+            ]}
+            contentFit="contain"
+            nativeControls={false}
+          />
+        </>
       ) : null}
 
       <SafeAreaView style={StyleSheet.absoluteFill} pointerEvents="box-none">
