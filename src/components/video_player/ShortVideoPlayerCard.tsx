@@ -156,17 +156,27 @@ const ShortVideoPlayerCardComponent = ({
           <>
             {/* Bottom info */}
             <View style={[styles.bottomInfo, hideBottomInput ? { bottom: 90 } : { bottom: 70 }]} pointerEvents="box-none">
+              
+              {/* Author Row */}
+              <View style={styles.authorRow}>
+                <Image
+                  source={{ uri: video.authorAvatarUrl || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100&h=100&fit=crop' }}
+                  style={styles.avatar}
+                />
+                <Text style={styles.authorName}>{video.authorName}</Text>
+                <TouchableOpacity style={styles.followButton}>
+                  <Text style={styles.followButtonText}>Follow</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Caption */}
               <Text style={styles.caption} numberOfLines={2}>
                 {video.caption || 'A stunning cinematic short video captured straight from your device.'}
               </Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-                <Image
-                  source={{ uri: video.authorAvatarUrl || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100&h=100&fit=crop' }}
-                  style={{ width: 18, height: 18, borderRadius: 9, marginRight: 6 }}
-                />
-                <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '500', textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 4 }}>
-                  Original audio - {video.authorName}
-                </Text>
+
+              {/* Audio Info */}
+              <View style={styles.audioRow}>
+                <Text style={styles.audioText}>🎵  {video.authorName} • Original audio</Text>
               </View>
             </View>
 
@@ -176,7 +186,7 @@ const ShortVideoPlayerCardComponent = ({
               pointerEvents={disableInteractions ? 'none' : 'auto'}
             >
               <ActionBtn
-                icon={<Image source={{ uri: video.authorAvatarUrl ?? '' }} style={styles.actionsAvatar} />}
+                icon={<Image source={{ uri: video.authorAvatarUrl ?? 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100&h=100&fit=crop' }} style={styles.actionsAvatar} />}
                 onPress={() => { }} // Handle author press if needed
                 noBackground
               />
@@ -187,20 +197,20 @@ const ShortVideoPlayerCardComponent = ({
                 />
               </View>
               <ActionBtn
-                icon={<MessageCircle color="#FFF" size={32} />}
+                icon={<MessageCircle color="#FFF" size={30} />}
                 count={video.commentsCount}
                 onPress={onComment}
               />
               <ActionBtn
-                icon={<Tag color="#FFF" size={32} />}
+                icon={<Tag color="#FFF" size={30} />}
                 count={video.tagsCount ?? 0}
                 onPress={() => setTagOverlayVisible(true)}
               />
               <ActionBtn
-                icon={<Eye color="#FFF" size={32} />}
+                icon={<Eye color="#FFF" size={30} />}
                 count={video.viewsCount ?? 0}
               />
-              <View style={{ marginTop: 4 }}>
+              <View style={{ marginTop: 8 }}>
                 <Image
                   source={{ uri: video.authorAvatarUrl || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100&h=100&fit=crop' }}
                   style={styles.smallAudioAvatar}
@@ -304,40 +314,60 @@ const styles = StyleSheet.create({
     bottom: 70, // Moved down to make room for input
     left: 12,
     right: 80,
-    gap: 6,
+    gap: 8,
   },
   authorRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
   avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#FFF',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
     backgroundColor: '#1A1A1A',
   },
   actionsAvatar: {
-    width: 55,
-    height: 55,
-    borderRadius: 27.5,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     borderWidth: 2,
     borderColor: '#FFF',
     marginBottom: 8,
   },
   smallAudioAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1.5,
-    borderColor: '#FFF',
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
   },
-  authorName: { color: '#FFF', fontWeight: 'bold', fontSize: 18, textShadowColor: '#000', textShadowRadius: 4 },
-  channelName: { color: 'rgba(255,255,255,0.7)', fontSize: 12 },
+  authorName: { color: '#FFF', fontWeight: 'bold', fontSize: 16, textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 4 },
+  followButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.5)',
+    marginLeft: 2,
+  },
+  followButtonText: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
   caption: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 14,
-    lineHeight: 18,
+    color: '#FFF',
+    fontSize: 15,
+    lineHeight: 20,
     textShadowColor: 'rgba(0,0,0,0.8)',
     textShadowRadius: 6,
+  },
+  audioRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  audioText: {
+    color: '#FFF', 
+    fontSize: 13, 
+    fontWeight: '500', 
+    textShadowColor: 'rgba(0,0,0,0.8)', 
+    textShadowRadius: 4 
   },
   actions: {
     position: 'absolute',
