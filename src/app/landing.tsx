@@ -102,7 +102,7 @@ export default function LandingPage() {
             <View style={styles.leftInner}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Text style={styles.hero}>CrimChart.</Text>
-                <View style={{ width: 100, height: 100, borderWidth: 2, borderColor: 'red', marginLeft: 20 }} />
+                <View style={{ width: 100, height: 100, borderWidth: 2, borderColor: 'green', backgroundColor: 'green', marginLeft: 20 }} />
               </View>
 
               <View style={{ height: 52 }} />
