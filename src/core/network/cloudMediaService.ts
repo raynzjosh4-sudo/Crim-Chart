@@ -36,7 +36,10 @@ export class CloudMediaService {
     const id = userId || 'anonymous';
     const timestamp = Date.now();
     
-    const extension = localUri.split('.').pop() || 'jpg';
+    let extension = localUri.split('.').pop() || 'jpg';
+    if (extension.length > 10 || extension.includes('/')) {
+      extension = 'jpg'; // Fallback for blob: URLs or urls without extension
+    }
     const rawFileName = `Chart_${timestamp}.${extension}`;
     const objectKey = `users/${id}/${folderName}/${rawFileName}`;
 
@@ -131,15 +134,34 @@ export class CloudMediaService {
       const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
       await notificationService.showUploadProgress(notificationId, title, 50);
 
-      const uploadRes = await FileSystem.uploadAsync(signedUrl, localUri, {
-        httpMethod: 'PUT',
-        headers: {
-          'Content-Type': 'video/mp4',
-        },
-      });
+      let uploadSuccessful = false;
+      
+      if (Platform.OS === 'web') {
+        const response = await fetch(localUri);
+        const blob = await response.blob();
+        const uploadRes = await fetch(signedUrl, {
+          method: 'PUT',
+          body: blob,
+          headers: {
+            'Content-Type': 'video/mp4',
+          },
+        });
+        if (!uploadRes.ok) {
+          throw new Error(`Cloudflare S3 error: ${uploadRes.status} ${await uploadRes.text()}`);
+        }
+        uploadSuccessful = true;
+      } else {
+        const uploadRes = await FileSystem.uploadAsync(signedUrl, localUri, {
+          httpMethod: 'PUT',
+          headers: {
+            'Content-Type': 'video/mp4',
+          },
+        });
 
-      if (uploadRes.status < 200 || uploadRes.status >= 300) {
-        throw new Error(`Cloudflare S3 error: ${uploadRes.status} ${uploadRes.body}`);
+        if (uploadRes.status < 200 || uploadRes.status >= 300) {
+          throw new Error(`Cloudflare S3 error: ${uploadRes.status} ${uploadRes.body}`);
+        }
+        uploadSuccessful = true;
       }
 
       const baseUrl = process.env.EXPO_PUBLIC_CLOUDFLARE_R2_PUBLIC_BASE || 'https://cdn.crimchart.com';

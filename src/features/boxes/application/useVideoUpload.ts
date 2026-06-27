@@ -20,7 +20,7 @@ export function useVideoUpload() {
       let uploadedThumbnailUrl = videoItem.thumbnailUrl;
       let rawMp4Url = '';
       // 1. Upload video to Cloudflare if it's a local file
-      if (videoItem.videoUrl && (videoItem.videoUrl.startsWith('file://') || videoItem.videoUrl.startsWith('/'))) {
+      if (videoItem.videoUrl && (videoItem.videoUrl.startsWith('file://') || videoItem.videoUrl.startsWith('/') || videoItem.videoUrl.startsWith('blob:'))) {
         console.log(`[useVideoUpload] 1️⃣ Uploading raw video to Cloudflare R2 for Transcoding...`);
         const videoFilename = `${currentUser.id}_${Date.now()}.mp4`;
         
@@ -40,11 +40,11 @@ export function useVideoUpload() {
         console.log(`[useVideoUpload] ✅ Processing Started! Future Stream URL:`, functionData.streamUrl);
         
         uploadedVideoUrl = functionData.streamUrl;
-        rawMp4Url = functionData.thumbnailUrl; // The edge function returns the raw mp4 URL here
+        rawMp4Url = functionData.rawVideoUrl; // The edge function returns the raw mp4 URL here
       }
 
       // 2. Upload thumbnail to Cloudflare if local
-      if (videoItem.thumbnailUrl && (videoItem.thumbnailUrl.startsWith('file://') || videoItem.thumbnailUrl.startsWith('/'))) {
+      if (videoItem.thumbnailUrl && (videoItem.thumbnailUrl.startsWith('file://') || videoItem.thumbnailUrl.startsWith('/') || videoItem.thumbnailUrl.startsWith('blob:'))) {
         console.log(`[useVideoUpload] 📤 Uploading local thumbnail to CloudMediaService...`);
         uploadedThumbnailUrl = await cloudMediaService.uploadMedia(videoItem.thumbnailUrl, 'posts_media_thumbs', currentUser.id);
         console.log(`[useVideoUpload] ✅ Thumbnail uploaded successfully. URL:`, uploadedThumbnailUrl);

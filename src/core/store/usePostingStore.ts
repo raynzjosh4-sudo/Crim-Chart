@@ -158,7 +158,7 @@ export const usePostingStore = create<PostingState>((set) => ({
       for (const m of visualMedia) {
         let uploadedMainUrl = m.path;
 
-        if (m.type === MediaType.video && (m.path.startsWith('file://') || m.path.startsWith('/'))) {
+        if (m.type === MediaType.video && (m.path.startsWith('file://') || m.path.startsWith('/') || m.path.startsWith('blob:'))) {
           console.log('[usePostingStore] 1️⃣ Uploading raw video to Cloudflare R2 for Coconut...');
           const videoFilename = `${user.id}_${Date.now()}.mp4`;
           

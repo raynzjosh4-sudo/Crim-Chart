@@ -60,7 +60,7 @@ serve(async (req) => {
       jobId: `gh_${Date.now()}`,
       // HLS will be ready in ~1-3 minutes as GitHub Actions processes it
       streamUrl: `https://cdn.crimchart.com/processed/${userId}/videos/${cleanFolderName}/hls/playlist.m3u8`,
-      thumbnailUrl: `https://cdn.crimchart.com/raw/${videoFilename}`
+      rawVideoUrl: `https://cdn.crimchart.com/raw/${videoFilename}`
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (error) {

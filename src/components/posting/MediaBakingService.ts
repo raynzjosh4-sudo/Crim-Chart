@@ -73,8 +73,7 @@ export class MediaBakingService {
             console.log('[MediaBakingService] ✅ Processing Started! Future Stream URL:', data.streamUrl);
             
             hdVideoUrls.push(data.streamUrl);
-            sdVideoUrls.push(data.streamUrl);
-            thumbnailUrls.push(data.thumbnailUrl);
+            sdVideoUrls.push(data.rawVideoUrl || data.streamUrl);
             isVideo = true;
           } else if (item.type === MediaType.photo) {
             // ── Photo: upload directly to R2 ──────────────────────────────────
@@ -92,7 +91,7 @@ export class MediaBakingService {
       }
 
       // ── Thumbnail: upload directly to R2 ──────────────────────────────────
-      if (item.type !== MediaType.video && item.thumbnailUrl) {
+      if (item.thumbnailUrl) {
         if (item.thumbnailUrl.startsWith('http')) {
           thumbnailUrls.push(item.thumbnailUrl);
         } else {
