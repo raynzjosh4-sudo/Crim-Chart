@@ -53,65 +53,46 @@ const ShortVideoPlayerCardComponent = ({
   const [likesCount, setLikesCount] = useState<number>(video.likesCount);
   const [tagOverlayVisible, setTagOverlayVisible] = useState(false);
   const [showPlayPause, setShowPlayPause] = useState(false);
-  const [isPausedByUser, setIsPausedByUser] = useState(false);
   const [progress, setProgress] = useState(0);
   const hidePlayPauseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const isPlaying = preloadStatus === 'playing';
 
+  // Initialize player only if it's not idle to save memory
   const player = useVideoPlayer(preloadStatus === 'idle' ? null : video.videoUrl, p => {
     p.loop = true;
-    if (isPlaying) p.play();
-    else p.pause();
+    p.timeUpdateEventInterval = 0.25; // Trigger timeUpdate 4 times a second
   });
 
-  // Aggressive DOM override for web to prevent extreme zooming
+  // Handle external play/pause state from FlatList
   useEffect(() => {
-    if (Platform.OS === 'web') {
-      const interval = setInterval(() => {
-        const videos = document.getElementsByTagName('video');
-        for (let i = 0; i < videos.length; i++) {
-          if (videos[i].style.objectFit !== 'contain') {
-            videos[i].style.setProperty('object-fit', 'contain', 'important');
-          }
-        }
-      }, 500);
-      return () => clearInterval(interval);
-    }
-  }, []);
-
-  // Keep play state in sync with parent but allow user overrides
-  useEffect(() => {
-    // Reset user pause state when video comes into view
-    if (isPlaying) {
-      setIsPausedByUser(false);
-    }
-
+    if (!player) return;
     try {
-      if (isPlaying && !isPausedByUser) player.play();
-      else player.pause();
+      if (isPlaying) {
+        player.play();
+      } else {
+        player.pause();
+      }
     } catch (e) { }
-  }, [isPlaying, isPausedByUser, player]);
+  }, [isPlaying, player]);
 
-  // Track video progress
+  // Efficient Progress Tracking (Runs natively, less React thread blocking)
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    if (isPlaying && !isPausedByUser) {
-      interval = setInterval(() => {
-        try {
-          if (player && player.duration > 0) {
-            setProgress((player.currentTime / player.duration) * 100);
-          }
-        } catch (e) {
-          // player might be released if unmounted
+    if (!player) return;
+    const subscription = player.addListener('timeUpdate', (event: any) => {
+      try {
+        if (player.duration > 0) {
+          // In expo-video, event payload has `currentTime` on web/iOS, or use player.currentTime
+          const current = event.currentTime ?? player.currentTime;
+          setProgress((current / player.duration) * 100);
         }
-      }, 50);
-    }
+      } catch (e) { }
+    });
     return () => {
-      if (interval) clearInterval(interval);
+      subscription.remove();
     };
-  }, [isPlaying, isPausedByUser, player]);
+  }, [player]);
 
   const togglePlayPause = () => {
     if (isShrunken) {
@@ -119,11 +100,14 @@ const ShortVideoPlayerCardComponent = ({
       return;
     }
 
-    const nextState = !isPausedByUser;
-    setIsPausedByUser(nextState);
+    if (!player) return;
+
     try {
-      if (nextState) player.pause();
-      else player.play();
+      if (player.playing) {
+        player.pause();
+      } else {
+        player.play();
+      }
     } catch (e) { }
 
     setShowPlayPause(true);
@@ -158,13 +142,9 @@ const ShortVideoPlayerCardComponent = ({
       ) : null}
 
       {player ? (
-        <>
+        <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
           {Platform.OS === 'web' && (
-            <style>{`
-              video {
-                object-fit: contain !important;
-              }
-            `}</style>
+            <View dangerouslySetInnerHTML={{ __html: `<style>video { object-fit: contain !important; }</style>` }} />
           )}
           <VideoView
             player={player}
@@ -175,7 +155,7 @@ const ShortVideoPlayerCardComponent = ({
             contentFit="contain"
             nativeControls={false}
           />
-        </>
+        </View>
       ) : null}
 
       <SafeAreaView style={StyleSheet.absoluteFill} pointerEvents="box-none">
