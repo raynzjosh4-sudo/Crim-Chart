@@ -65,6 +65,21 @@ const ShortVideoPlayerCardComponent = ({
     else p.pause();
   });
 
+  // Aggressive DOM override for web to prevent extreme zooming
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      const interval = setInterval(() => {
+        const videos = document.getElementsByTagName('video');
+        for (let i = 0; i < videos.length; i++) {
+          if (videos[i].style.objectFit !== 'contain') {
+            videos[i].style.setProperty('object-fit', 'contain', 'important');
+          }
+        }
+      }, 500);
+      return () => clearInterval(interval);
+    }
+  }, []);
+
   // Keep play state in sync with parent but allow user overrides
   useEffect(() => {
     // Reset user pause state when video comes into view
