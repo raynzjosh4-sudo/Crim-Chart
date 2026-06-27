@@ -40,6 +40,9 @@ jobs:
       - name: Add CNAME for custom domain
         run: echo "crimchart.com" > dist/CNAME
 
+      - name: Create 404 fallback for SPA routing
+        run: cp dist/index.html dist/404.html
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
