@@ -210,12 +210,6 @@ const ShortVideoPlayerCardComponent = ({
                 icon={<Eye color="#FFF" size={30} />}
                 count={video.viewsCount ?? 0}
               />
-              <View style={{ marginTop: 8 }}>
-                <Image
-                  source={{ uri: video.authorAvatarUrl || undefined }}
-                  style={styles.smallAudioAvatar}
-                />
-              </View>
             </View>
 
             {/* Sleek Progress Bar */}
@@ -332,13 +326,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFF',
     marginBottom: 8,
-  },
-  smallAudioAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)',
   },
   authorName: { color: '#FFF', fontWeight: 'bold', fontSize: 16, textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 4 },
   followButton: {
