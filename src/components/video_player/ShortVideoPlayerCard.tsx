@@ -135,9 +135,10 @@ const ShortVideoPlayerCardComponent = ({
           player={player}
           style={[
             StyleSheet.absoluteFillObject,
-            !hideBottomInput && { bottom: 61 } // End exactly where the progress bar starts (58px bar + 3px progress bar)
+            !hideBottomInput && { bottom: 61 }, // End exactly where the progress bar starts (58px bar + 3px progress bar)
+            Platform.OS === 'web' && ({ objectFit: 'contain' } as any)
           ]}
-          contentFit="cover"
+          contentFit="contain"
           nativeControls={false}
         />
       ) : null}
