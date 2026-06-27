@@ -155,7 +155,7 @@ const ShortVideoPlayerCardComponent = ({
         {!isShrunken && (
           <>
             {/* Bottom info */}
-            <View style={[styles.bottomInfo, hideBottomInput ? { bottom: 90 } : { bottom: 70 }]} pointerEvents="box-none">
+            <View style={[styles.bottomInfo, hideBottomInput ? { bottom: 20 } : { bottom: 70 }]} pointerEvents="box-none">
 
               {/* Author Row */}
               <View style={styles.authorRow}>
@@ -182,7 +182,7 @@ const ShortVideoPlayerCardComponent = ({
 
             {/* Right-side action buttons */}
             <View
-              style={[styles.actions, hideBottomInput ? { bottom: 90 } : { bottom: 70 }, { paddingBottom: 16 }]}
+              style={[styles.actions, hideBottomInput ? { bottom: 20 } : { bottom: 70 }, { paddingBottom: 16 }]}
               pointerEvents={disableInteractions ? 'none' : 'auto'}
             >
               <ActionBtn
