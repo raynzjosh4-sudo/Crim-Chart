@@ -1,4 +1,5 @@
 import { TagOverlay } from '@/channel/pages/tag/TagOverlay';
+import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { Eye, MessageCircle, Pause, Play, Tag } from 'lucide-react-native';
@@ -146,6 +147,16 @@ const ShortVideoPlayerCardComponent = ({
 
   return (
     <Pressable style={[styles.container, isShrunken && styles.shrunken]} delayPressIn={150} onPress={togglePlayPause}>
+      {/* Blurred background layer for filler */}
+      {video.thumbnailUrl ? (
+        <ExpoImage
+          source={{ uri: video.thumbnailUrl }}
+          style={[StyleSheet.absoluteFillObject, { opacity: 0.8 }]}
+          contentFit="cover"
+          blurRadius={25}
+        />
+      ) : null}
+
       {player ? (
         <>
           {Platform.OS === 'web' && (
