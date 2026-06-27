@@ -213,22 +213,30 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
         elevation: isCommentsOpen ? 10 : 0,
         backgroundColor: isCommentsOpen ? '#111' : '#000',
       }]}>
+        {Platform.OS === 'web' && (
+          <View dangerouslySetInnerHTML={{ __html: `<style>
+            [style*="scroll-snap-align"] {
+              scroll-snap-stop: always !important;
+            }
+          </style>` }} />
+        )}
         {isReady ? (
-          <FlatList
-            ref={flatListRef as any}
-            data={videos}
-            keyExtractor={item => item.id}
-            pagingEnabled
-            showsVerticalScrollIndicator={false}
-            renderItem={renderVideoItem}
-            onViewableItemsChanged={onViewableChanged.current}
-            viewabilityConfig={{ itemVisiblePercentThreshold: 80 }}
-            initialScrollIndex={initialIndex}
-            getItemLayout={(data, index) => ({ length: containerHeight, offset: containerHeight * index, index })}
-            snapToInterval={containerHeight}
-            snapToAlignment="start"
-            decelerationRate="fast"
-          />
+            <FlatList
+              ref={flatListRef as any}
+              data={videos}
+              keyExtractor={item => item.id}
+              pagingEnabled
+              showsVerticalScrollIndicator={false}
+              renderItem={renderVideoItem}
+              onViewableItemsChanged={onViewableChanged.current}
+              viewabilityConfig={{ itemVisiblePercentThreshold: 80 }}
+              initialScrollIndex={initialIndex}
+              getItemLayout={(data, index) => ({ length: containerHeight, offset: containerHeight * index, index })}
+              snapToInterval={containerHeight}
+              snapToAlignment="start"
+              decelerationRate="fast"
+              disableIntervalMomentum={true}
+            />
         ) : null}
         {(!isReady || isLoading) && (
           <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#000' }]}>
