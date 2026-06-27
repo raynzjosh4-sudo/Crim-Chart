@@ -1,3 +1,4 @@
+import { TagOverlay } from '@/channel/pages/tag/TagOverlay';
 import { LinearGradient } from 'expo-linear-gradient';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { Eye, MessageCircle, Pause, Play, Tag } from 'lucide-react-native';
@@ -15,7 +16,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { VideoPost } from '../../video/models/VideoPost';
 import { LikeButton } from '../../video/widgets/LikeButton';
-import { TagOverlay } from '@/channel/pages/tag/TagOverlay';
 
 interface ShortVideoPlayerCardProps {
   video: VideoPost;
@@ -70,11 +70,11 @@ const ShortVideoPlayerCardComponent = ({
     if (isPlaying) {
       setIsPausedByUser(false);
     }
-    
+
     try {
       if (isPlaying && !isPausedByUser) player.play();
       else player.pause();
-    } catch (e) {}
+    } catch (e) { }
   }, [isPlaying, isPausedByUser, player]);
 
   // Track video progress
@@ -107,7 +107,7 @@ const ShortVideoPlayerCardComponent = ({
     try {
       if (nextState) player.pause();
       else player.play();
-    } catch (e) {}
+    } catch (e) { }
 
     setShowPlayPause(true);
     fadeAnim.setValue(1);
@@ -156,11 +156,11 @@ const ShortVideoPlayerCardComponent = ({
           <>
             {/* Bottom info */}
             <View style={[styles.bottomInfo, hideBottomInput ? { bottom: 90 } : { bottom: 70 }]} pointerEvents="box-none">
-              
+
               {/* Author Row */}
               <View style={styles.authorRow}>
                 <Image
-                  source={{ uri: video.authorAvatarUrl || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100&h=100&fit=crop' }}
+                  source={{ uri: video.authorAvatarUrl || undefined }}
                   style={styles.avatar}
                 />
                 <Text style={styles.authorName}>{video.authorName}</Text>
@@ -186,7 +186,7 @@ const ShortVideoPlayerCardComponent = ({
               pointerEvents={disableInteractions ? 'none' : 'auto'}
             >
               <ActionBtn
-                icon={<Image source={{ uri: video.authorAvatarUrl ?? 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100&h=100&fit=crop' }} style={styles.actionsAvatar} />}
+                icon={<Image source={{ uri: video.authorAvatarUrl || undefined }} style={styles.actionsAvatar} />}
                 onPress={() => { }} // Handle author press if needed
                 noBackground
               />
@@ -212,7 +212,7 @@ const ShortVideoPlayerCardComponent = ({
               />
               <View style={{ marginTop: 8 }}>
                 <Image
-                  source={{ uri: video.authorAvatarUrl || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100&h=100&fit=crop' }}
+                  source={{ uri: video.authorAvatarUrl || undefined }}
                   style={styles.smallAudioAvatar}
                 />
               </View>
@@ -363,11 +363,11 @@ const styles = StyleSheet.create({
   },
   audioRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
   audioText: {
-    color: '#FFF', 
-    fontSize: 13, 
-    fontWeight: '500', 
-    textShadowColor: 'rgba(0,0,0,0.8)', 
-    textShadowRadius: 4 
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '500',
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowRadius: 4
   },
   actions: {
     position: 'absolute',
