@@ -155,7 +155,7 @@ const ShortVideoPlayerCardComponent = ({
         {!isShrunken && (
           <>
             {/* Bottom info */}
-            <View style={[styles.bottomInfo, hideBottomInput ? { bottom: 30 } : { bottom: 80 }]} pointerEvents="box-none">
+            <View style={[styles.bottomInfo, hideBottomInput ? { bottom: 90 } : { bottom: 70 }]} pointerEvents="box-none">
 
               {/* Author Row */}
               <View style={styles.authorRow}>
@@ -182,7 +182,7 @@ const ShortVideoPlayerCardComponent = ({
 
             {/* Right-side action buttons */}
             <View
-              style={[styles.actions, hideBottomInput ? { bottom: 30 } : { bottom: 80 }]}
+              style={[styles.actions, hideBottomInput ? { bottom: 90 } : { bottom: 70 }]}
               pointerEvents={disableInteractions ? 'none' : 'auto'}
             >
               <ActionBtn
@@ -213,7 +213,7 @@ const ShortVideoPlayerCardComponent = ({
             </View>
 
             {/* Sleek Progress Bar */}
-            <View style={[styles.progressBarContainer, !hideBottomInput && { bottom: 58 }]} pointerEvents="none">
+            <View style={[styles.progressBarContainer, hideBottomInput ? { bottom: 75 } : { bottom: 58 }]} pointerEvents="none">
               <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
             </View>
 
