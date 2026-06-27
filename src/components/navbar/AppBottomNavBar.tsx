@@ -19,7 +19,7 @@ export const AppBottomNavBar = ({
   const colors = theme.colors;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background, borderTopColor: colors.surfaceVariant, borderTopWidth: hideBorder ? 0 : (0.5 * (theme.scale || 1)) }]}>
+    <View style={[styles.container, { backgroundColor: colors.background, borderTopColor: colors.surfaceVariant, borderTopWidth: hideBorder ? 0 : 0.5 }]}>
       <SafeAreaView edges={['bottom', 'left', 'right']}>
         <View style={styles.navBar}>
           <NavItem

@@ -16,11 +16,14 @@ interface InteractionState {
   // Comment Interactions
   commentLikes: Record<string, boolean>;
   commentLikesCount: Record<string, number>;
+  postCommentsCount: Record<string, number>;
 
   // Actions to seed initial state
-  seedPost: (postId: string, initialLikesCount: number, initialViewsCount: number, initialIsLiked: boolean, initialDownloadsCount?: number, boxId?: string) => void;
+  seedPost: (postId: string, initialLikesCount: number, initialViewsCount: number, initialIsLiked: boolean, initialDownloadsCount?: number, boxId?: string, initialCommentsCount?: number) => void;
   seedTag: (postId: string, boxId: string, isTagged: boolean) => void;
   seedChannelTagCount: (postId: string, count: number) => void;
+  incrementPostCommentsCount: (postId: string) => void;
+  setPostCommentsCount: (postId: string, count: number) => void;
 
   // Actions to interact
   toggleLike: (postId: string, boxId?: string, sourceTable?: string) => void;
@@ -33,6 +36,7 @@ interface InteractionState {
   seedCommentInteraction: (commentId: string, initialLikesCount: number, initialIsLiked: boolean) => void;
   toggleCommentLike: (commentId: string, isPending?: boolean) => void;
   syncPostInteractions: (postIds: string[], boxId?: string) => Promise<void>;
+  syncCommentInteractions: (commentIds: string[]) => Promise<void>;
 }
 
 export const useInteractionStore = create<InteractionState>((set) => ({
@@ -44,8 +48,9 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   channelTagsCount: {},
   commentLikes: {},
   commentLikesCount: {},
+  postCommentsCount: {},
 
-  seedPost: (postId, initialLikesCount, initialViewsCount, initialIsLiked, initialDownloadsCount, boxId) =>
+  seedPost: (postId, initialLikesCount, initialViewsCount, initialIsLiked, initialDownloadsCount, boxId, initialCommentsCount) =>
     set((state) => {
       const key = boxId ? `${boxId}_${postId}` : postId;
       // Only seed if not already present in the store (preserves optimistic updates)
@@ -55,8 +60,18 @@ export const useInteractionStore = create<InteractionState>((set) => ({
         likesCount: { ...state.likesCount, [key]: initialLikesCount },
         viewsCount: { ...state.viewsCount, [key]: initialViewsCount },
         downloadsCount: { ...state.downloadsCount, [key]: initialDownloadsCount || 0 },
+        postCommentsCount: { ...state.postCommentsCount, [postId]: initialCommentsCount || 0 },
       };
     }),
+
+  incrementPostCommentsCount: (postId) =>
+    set((state) => {
+      const current = state.postCommentsCount[postId] || 0;
+      return { postCommentsCount: { ...state.postCommentsCount, [postId]: current + 1 } };
+    }),
+
+  setPostCommentsCount: (postId, count) =>
+    set((state) => ({ postCommentsCount: { ...state.postCommentsCount, [postId]: count } })),
 
   seedTag: (postId, boxId, isTagged) =>
     set((state) => {
@@ -331,14 +346,58 @@ export const useInteractionStore = create<InteractionState>((set) => ({
         }
       }
 
-      // 4. Batch update state
+      // 4. Fetch Global Like Counts & Comment Counts from the source tables
+      const { data: postsData } = await supabase
+        .from('posts')
+        .select('id, likes_count, comments_count, views_count')
+        .in('id', postIds);
+
+      const { data: channelPostsData } = await supabase
+        .from('channel_posts')
+        .select('id, likes, comments, views')
+        .in('id', postIds);
+
+      const trueCountsMap = new Map<string, number>();
+      const trueCommentsMap = new Map<string, number>();
+      const trueViewsMap = new Map<string, number>();
+
+      if (postsData) postsData.forEach(p => {
+        trueCountsMap.set(p.id, p.likes_count);
+        trueCommentsMap.set(p.id, p.comments_count);
+        trueViewsMap.set(p.id, p.views_count);
+      });
+      if (channelPostsData) channelPostsData.forEach(p => {
+        trueCountsMap.set(p.id, p.likes);
+        trueCommentsMap.set(p.id, p.comments);
+        trueViewsMap.set(p.id, p.views);
+      });
+
+      // 5. Batch update state
       set((state) => {
         const newLikes = { ...state.likes };
+        const newLikesCount = { ...state.likesCount };
+        const newViewsCount = { ...state.viewsCount };
+        const newPostCommentsCount = { ...state.postCommentsCount };
         const newTags = { ...state.tags };
 
         postIds.forEach(postId => {
           // Update global like status
           newLikes[postId] = globalLikedSet.has(postId);
+
+          // Update global like count if we fetched it
+          if (trueCountsMap.has(postId)) {
+            newLikesCount[postId] = trueCountsMap.get(postId)!;
+          }
+
+          // Update global comments count if we fetched it
+          if (trueCommentsMap.has(postId)) {
+            newPostCommentsCount[postId] = trueCommentsMap.get(postId)!;
+          }
+
+          // Update global views count if we fetched it
+          if (trueViewsMap.has(postId)) {
+            newViewsCount[postId] = trueViewsMap.get(postId)!;
+          }
 
           // Update box-specific like status
           if (boxId) {
@@ -367,6 +426,9 @@ export const useInteractionStore = create<InteractionState>((set) => ({
 
         return {
           likes: newLikes,
+          likesCount: newLikesCount,
+          postCommentsCount: newPostCommentsCount,
+          viewsCount: newViewsCount,
           tags: newTags
         };
       });
@@ -400,4 +462,56 @@ export const useInteractionStore = create<InteractionState>((set) => ({
         commentLikesCount: { ...state.commentLikesCount, [commentId]: newCount },
       };
     }),
+
+  syncCommentInteractions: async (commentIds: string[]) => {
+    if (!commentIds || commentIds.length === 0) return;
+
+    const { supabase } = await import('@/core/supabase/supabaseConfig');
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    if (!userId) return;
+
+    try {
+      // 1. Fetch Global Comment Likes
+      const { data: likedData, error: likedError } = await supabase
+        .from('comment_likes')
+        .select('comment_id')
+        .in('comment_id', commentIds)
+        .eq('user_id', userId);
+
+      if (likedError) console.error("[InteractionStore] ❌ syncCommentInteractions comment_likes error:", likedError);
+
+      const globalLikedSet = new Set(likedData?.map(d => d.comment_id) || []);
+
+      // 2. Fetch True Comment Likes Counts
+      const { data: commentsData } = await supabase
+        .from('comments')
+        .select('id, likes_count')
+        .in('id', commentIds);
+
+      const trueCountsMap = new Map<string, number>();
+      if (commentsData) commentsData.forEach(c => trueCountsMap.set(c.id, c.likes_count));
+
+      // 3. Batch update state
+      set((state) => {
+        const newCommentLikes = { ...state.commentLikes };
+        const newCommentLikesCount = { ...state.commentLikesCount };
+
+        commentIds.forEach(commentId => {
+          newCommentLikes[commentId] = globalLikedSet.has(commentId);
+
+          if (trueCountsMap.has(commentId)) {
+            newCommentLikesCount[commentId] = trueCountsMap.get(commentId)!;
+          }
+        });
+
+        return {
+          commentLikes: newCommentLikes,
+          commentLikesCount: newCommentLikesCount,
+        };
+      });
+    } catch (e) {
+      console.error("[InteractionStore] ❌ syncCommentInteractions failed:", e);
+    }
+  },
 }));

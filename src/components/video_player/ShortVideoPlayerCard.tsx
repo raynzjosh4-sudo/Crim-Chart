@@ -1,10 +1,12 @@
-import { TagOverlay } from '@/channel/pages/tag/TagOverlay';
+import { LikeButtonWrapper } from '@/components/wrappers/LikeButtonWrapper';
 import { useAppRouter } from '@/core/hooks/useAppRouter';
+import { TagOverlay } from '@/channel/pages/tag/TagOverlay';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { Eye, MessageCircle, Pause, Play, Tag } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useInteractionStore } from '@/core/store/useInteractionStore';
 import {
   Animated,
   Dimensions,
@@ -52,8 +54,31 @@ const ShortVideoPlayerCardComponent = ({
   disableInteractions = false,
 }: ShortVideoPlayerCardProps) => {
   const router = useAppRouter();
-  const [liked, setLiked] = useState<boolean>(video.isLiked);
-  const [likesCount, setLikesCount] = useState<number>(video.likesCount);
+  
+  // Seed the global store on mount with this video's initial data
+  useEffect(() => {
+    useInteractionStore.getState().seedPost(
+      video.postId,
+      video.likesCount,
+      video.viewsCount || 0,
+      video.isLiked,
+      0, // initial downloads count
+      undefined, // boxId
+      video.commentsCount || 0
+    );
+  }, [video.postId, video.likesCount, video.viewsCount, video.isLiked, video.commentsCount]);
+
+  // Read from the global store (fallback to props if not seeded yet)
+  const globalLiked = useInteractionStore(s => s.likes[video.postId]);
+  const globalLikesCount = useInteractionStore(s => s.likesCount[video.postId]);
+  const globalCommentsCount = useInteractionStore(s => s.postCommentsCount[video.postId]);
+  const globalViewsCount = useInteractionStore(s => s.viewsCount[video.postId]);
+  
+  const liked = globalLiked !== undefined ? globalLiked : video.isLiked;
+  const likesCount = globalLikesCount !== undefined ? globalLikesCount : video.likesCount;
+  const commentsCount = globalCommentsCount !== undefined ? globalCommentsCount : (video.commentsCount ?? 0);
+  const viewsCount = globalViewsCount !== undefined ? globalViewsCount : (video.viewsCount ?? 0);
+
   const [tagOverlayVisible, setTagOverlayVisible] = useState(false);
   const [showPlayPause, setShowPlayPause] = useState(false);
   const [isScrubbing, setIsScrubbing] = useState(false);
@@ -98,17 +123,27 @@ const ShortVideoPlayerCardComponent = ({
     setIsPausedByUser(false);
   }, [video.videoUrl]);
 
+  // Keep track of whether we've counted a view for this session
+  const hasViewedRef = useRef(false);
+
   // Handle external play/pause state from FlatList
   useEffect(() => {
     if (!player) return;
     try {
       if (isPlaying) {
         player.play();
+        
+        // Track the view if we haven't already
+        if (!hasViewedRef.current && video.postId) {
+          hasViewedRef.current = true;
+          // Increment the view in the interaction store
+          useInteractionStore.getState().incrementView(video.postId, undefined, video.sourceType);
+        }
       } else {
         player.pause();
       }
     } catch (e) { }
-  }, [isPlaying, player]);
+  }, [isPlaying, player, video.postId, video.sourceType]);
 
   // Efficient Progress Tracking (Runs natively, less React thread blocking)
   useEffect(() => {
@@ -136,24 +171,23 @@ const ShortVideoPlayerCardComponent = ({
 
     if (!player) return;
 
-    try {
-      if (isPlaying) {
-        player.pause();
-        setIsPausedByUser(true);
-      } else {
-        player.play();
-        setIsPausedByUser(false);
-      }
-    } catch (e) { }
+    if (player.playing) {
+      isPausedByUserRef.current = true;
+      setIsPausedByUser(true);
+      player.pause();
+      setShowPlayPause(true);
+    } else {
+      isPausedByUserRef.current = false;
+      setIsPausedByUser(false);
+      player.play();
+      setShowPlayPause(true);
+    }
 
-    setShowPlayPause(true);
-    Animated.spring(fadeAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-      speed: 20,
-    }).start();
-
-    if (hidePlayPauseTimeout.current) clearTimeout(hidePlayPauseTimeout.current);
+    if (hidePlayPauseTimeout.current) {
+      clearTimeout(hidePlayPauseTimeout.current);
+    }
+    
+    fadeAnim.setValue(1);
     hidePlayPauseTimeout.current = setTimeout(() => {
       Animated.timing(fadeAnim, {
         toValue: 0,
@@ -163,11 +197,17 @@ const ShortVideoPlayerCardComponent = ({
     }, 1500);
   };
 
-  const handleLike = useCallback(() => {
-    setLiked(!liked);
-    setLikesCount(likesCount + (liked ? -1 : 1));
+  const toggleLike = useInteractionStore(s => s.toggleLike);
+
+  const handleLike = useCallback((e?: any) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    
+    // The store toggleLike will instantly update globalLiked and globalLikesCount, 
+    // which triggers a re-render.
+    toggleLike(video.postId, undefined, video.sourceType);
+    
     onLike?.();
-  }, [liked, likesCount, onLike]);
+  }, [onLike, video.postId, video.sourceType, toggleLike]);
 
   const handleAuthorPress = useCallback(() => {
     if (video.sourceType === 'channel_post' && video.channelId) {
@@ -178,37 +218,39 @@ const ShortVideoPlayerCardComponent = ({
   }, [video, router]);
 
   return (
-    <Pressable style={[styles.container, isShrunken && styles.shrunken]} delayPressIn={150} onPress={handleVideoPress}>
-      {/* Blurred background layer for filler */}
-      {video.thumbnailUrl ? (
-        <ExpoImage
-          source={{ uri: video.thumbnailUrl }}
-          style={[StyleSheet.absoluteFillObject, { opacity: 0.8 }]}
-          contentFit="cover"
-          blurRadius={25}
-        />
-      ) : null}
-
-      {player ? (
-        <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
-          {Platform.OS === 'web' && (
-            <View dangerouslySetInnerHTML={{
-              __html: `<style>
-              video { 
-                object-fit: contain !important; 
-                width: 100% !important; 
-                height: 100% !important; 
-              }
-            </style>` }} />
-          )}
-          <VideoView
-            player={player}
-            style={{ width: '100%', height: '100%' }}
-            contentFit="contain"
-            nativeControls={false}
+    <View style={[styles.container, isShrunken && styles.shrunken]}>
+      <Pressable style={StyleSheet.absoluteFillObject} delayPressIn={150} onPress={handleVideoPress}>
+        {/* Blurred background layer for filler */}
+        {video.thumbnailUrl ? (
+          <ExpoImage
+            source={{ uri: video.thumbnailUrl }}
+            style={[StyleSheet.absoluteFillObject, { opacity: 0.8 }]}
+            contentFit="cover"
+            blurRadius={25}
           />
-        </View>
-      ) : null}
+        ) : null}
+
+        {player ? (
+          <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+            {Platform.OS === 'web' && (
+              <View dangerouslySetInnerHTML={{
+                __html: `<style>
+                video { 
+                  object-fit: contain !important; 
+                  width: 100% !important; 
+                  height: 100% !important; 
+                }
+              </style>` }} />
+            )}
+            <VideoView
+              player={player}
+              style={{ width: '100%', height: '100%' }}
+              contentFit="contain"
+              nativeControls={false}
+            />
+          </View>
+        ) : null}
+      </Pressable>
 
       <SafeAreaView style={StyleSheet.absoluteFill} pointerEvents="box-none">
         {/* Overlay gradient */}
@@ -259,14 +301,17 @@ const ShortVideoPlayerCardComponent = ({
                 noBackground
               />
               <View style={[styles.actionPill, { marginTop: -16 }]}>
-                <LikeButton
-                  initialLikes={video.likesCount}
-                  isLiked={video.isLiked}
+                <LikeButtonWrapper
+                  postId={video.postId}
+                  sourceTable={video.sourceType}
+                  initialLikesCount={video.likesCount}
+                  initialIsLiked={video.isLiked}
+                  onLike={onLike}
                 />
               </View>
               <ActionBtn
                 icon={<MessageCircle color="#FFF" size={30} />}
-                count={video.commentsCount}
+                count={commentsCount}
                 onPress={onComment}
               />
               <ActionBtn
@@ -276,7 +321,7 @@ const ShortVideoPlayerCardComponent = ({
               />
               <ActionBtn
                 icon={<Eye color="#FFF" size={30} />}
-                count={video.viewsCount ?? 0}
+                count={viewsCount}
               />
             </View>
 
@@ -317,7 +362,7 @@ const ShortVideoPlayerCardComponent = ({
           linkChain={[]}
         />
       </SafeAreaView>
-    </Pressable>
+    </View>
   );
 };
 

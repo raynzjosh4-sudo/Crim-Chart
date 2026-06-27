@@ -18,10 +18,14 @@ import { MainFeedSkeletonCard } from './main_page_widgets/MainFeedSkeletonCard';
 import { NativeDB } from '@/core/db/NativeDB';
 
 
+import { useRealtimePostInteractions } from '@/hooks/useRealtimePostInteractions';
+
 const PAGE_SIZE = 15;
 const NUKE_KEY = 'db_nuke_v1_done';
 
 export const MainFeedPage = () => {
+  useRealtimePostInteractions();
+  
   const navigation = useNavigation();
   const router = useRouter();
   const user = useAuthStore(s => s.user);

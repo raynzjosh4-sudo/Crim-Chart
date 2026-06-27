@@ -6,7 +6,7 @@ import { commentSyncManager } from '@/core/sync/CommentSyncManager';
 import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { colors } from '@/core/theme/colors';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
-import { X } from 'lucide-react-native';
+import { X, MessageSquare } from 'lucide-react-native';
 import { useEffect, useState, useRef } from 'react';
 import {
   ActivityIndicator,
@@ -87,22 +87,15 @@ export const CommentSheet: React.FC<CommentSheetProps> = ({ postId, visible, onC
         .order('created_at', { ascending: false });
 
       if (!error && data) {
-        // Fetch liked status for these comments
-        let likedCommentIds = new Set<string>();
-        if (currentUser && data.length > 0) {
-          const { data: likedData } = await supabase
-            .from('comment_likes')
-            .select('comment_id')
-            .in('comment_id', data.map(c => c.id))
-            .eq('user_id', currentUser.id);
-            
-          likedCommentIds = new Set(likedData?.map(d => d.comment_id) || []);
+        // Fetch liked status and real counts for these comments via the store action
+        if (data.length > 0) {
+          useInteractionStore.getState().syncCommentInteractions(data.map(c => c.id));
         }
-
-        // Seed interaction store
+        
+        // Seed initial interactions as fallback
         const seedCommentInteraction = useInteractionStore.getState().seedCommentInteraction;
         data.forEach(comment => {
-          seedCommentInteraction(comment.id, comment.likes_count, likedCommentIds.has(comment.id));
+          seedCommentInteraction(comment.id, comment.likes_count, false);
         });
 
         // 3. Upsert remote comments to local DB to update cache
@@ -154,6 +147,7 @@ export const CommentSheet: React.FC<CommentSheetProps> = ({ postId, visible, onC
     try {
       // Optimistic UI update
       setComments([newComment, ...comments]);
+      useInteractionStore.getState().incrementPostCommentsCount(postId);
       setInputText('');
       Keyboard.dismiss();
 
@@ -191,22 +185,21 @@ export const CommentSheet: React.FC<CommentSheetProps> = ({ postId, visible, onC
   const isDesktop = Platform.OS === 'web' && width >= 768;
 
   const content = (
-    <View style={isEmbedded ? styles.embeddedContainer : styles.container}>
-      {!isEmbedded && (
-        <View style={styles.header}>
-          <View style={{ width: 24 }} />
-          <Text style={styles.title}>Comments</Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-            <X size={24} color="#FFF" />
-          </TouchableOpacity>
-        </View>
-      )}
+    <View style={[styles.container, isEmbedded && styles.embeddedContainer]}>
+      <View style={styles.header}>
+        <View style={{ width: 24 }} />
+        <Text style={styles.title}>{comments.length} comments</Text>
+        <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+          <X size={24} color="#FFF" />
+        </TouchableOpacity>
+      </View>
 
       {isLoading ? (
         <CommentListSkeleton count={10} />
       ) : comments.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No comments yet. Be the first!</Text>
+          <MessageSquare size={48} color="rgba(255,255,255,0.1)" style={{ marginBottom: 12 }} />
+          <Text style={styles.emptyText}>Be the first to speak</Text>
         </View>
       ) : (
         <FlatList
@@ -292,7 +285,7 @@ const styles = StyleSheet.create({
   },
   embeddedContainer: {
     flex: 1,
-    backgroundColor: 'transparent',
+    height: '100%',
   },
   header: {
     flexDirection: 'row',

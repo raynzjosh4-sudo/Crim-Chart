@@ -1,6 +1,6 @@
-import React, { useEffect, useCallback } from 'react';
-import { useInteractionStore } from '@/core/store/useInteractionStore';
 import VisibilityTrackerWrapper from '@/components/cardButton/VisibilityTrackerWrapper';
+import { useInteractionStore } from '@/core/store/useInteractionStore';
+import { useCallback, useEffect } from 'react';
 
 // Track which posts have been viewed in this session so we only increment once per session
 const viewedPostsSession = new Set<string>();
@@ -19,7 +19,7 @@ interface PostInteractionWrapperProps {
   initialViewsCount?: number;
   initialDownloadsCount?: number;
   initialIsLiked?: boolean;
-  
+
   /**
    * If provided, the wrapper will track if this post is tagged to this specific box.
    */
@@ -29,7 +29,7 @@ interface PostInteractionWrapperProps {
    * Identifies if the post is from 'posts' or 'channel_posts' for DB routing.
    */
   sourceTable?: string;
-  
+
   /**
    * Initial tag state for the specific box.
    */
@@ -77,7 +77,7 @@ export const PostInteractionWrapper: React.FC<PostInteractionWrapperProps> = ({
       const viewKey = boxId ? `${boxId}_${postId}` : postId;
       if (!viewedPostsSession.has(viewKey)) {
         viewedPostsSession.add(viewKey);
-        
+
         // Delay slightly to ensure it's actually an intentional view
         setTimeout(() => {
           store.incrementView(postId, boxId, sourceTable);
@@ -95,7 +95,7 @@ export const PostInteractionWrapper: React.FC<PostInteractionWrapperProps> = ({
 
   // 2. Select the current state from the store based on context key
   const contextKey = boxId ? `${boxId}_${postId}` : postId;
-  
+
   const globalLiked = store.likes[postId] ?? initialIsLiked;
   const boxLiked = boxId ? (store.likes[contextKey] ?? false) : false;
   const isLiked = globalLiked || boxLiked;
@@ -103,8 +103,8 @@ export const PostInteractionWrapper: React.FC<PostInteractionWrapperProps> = ({
   const likesCount = store.likesCount[contextKey] ?? initialLikesCount;
   const viewsCount = store.viewsCount[contextKey] ?? initialViewsCount;
   const downloadsCount = store.downloadsCount[contextKey] ?? initialDownloadsCount;
-  
-  const isTagged = boxId 
+
+  const isTagged = boxId
     ? (store.tags[postId]?.includes(boxId) ?? initialIsTagged)
     : false;
 

@@ -1,4 +1,4 @@
-import ThreadDiscussionSheet from '@/channel/channelmemberdata/thread/ThreadDiscussionSheet';
+import { CommentSheet } from '@/components/comments/CommentSheet';
 import CommentInputField from '@/commentingsheets/widgets/CommentInputField';
 import { MediaData } from '@/components/media/types';
 import { VideoCardSkeleton } from '@/components/skeletons/Skeletons';
@@ -7,9 +7,10 @@ import { useAppRouter } from '@/core/hooks/useAppRouter';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { supabase } from '@/core/supabase/supabaseConfig';
+import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { ThemeTokens } from '@/core/theme/themes';
 import { useNavigation } from '@react-navigation/native';
-import { ChevronLeft, Search } from 'lucide-react-native';
+import { ChevronLeft, Search, Camera } from 'lucide-react-native';
 import React, { useCallback, useRef, useState } from 'react';
 import {
   Animated,
@@ -43,6 +44,8 @@ interface VideoFeedPageProps {
   disableInteractions?: boolean;
 }
 
+import { useRealtimePostInteractions } from '@/hooks/useRealtimePostInteractions';
+
 export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
   initialIndex = 0,
   initialVideos,
@@ -52,6 +55,8 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
   onBack,
   disableInteractions = false,
 }) => {
+  useRealtimePostInteractions();
+  
   const router = useAppRouter();
   const navigation = useNavigation();
   const [videos, setVideos] = useState<VideoPost[]>(initialVideos ?? []);
@@ -101,20 +106,14 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
   }, [isCommentsOpen]);
 
   const loadVideos = useCallback(async () => {
-    
-    console.error('[VideoFeedPage] 🚀 Starting loadVideos...');
-    const startTime = Date.now();
     setIsLoading(true);
     
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user?.id) {
-        console.error('[VideoFeedPage] ⚠️ No active session found, aborting load.');
         return;
       }
 
-      console.error(`[VideoFeedPage] 📡 Calling supabase.rpc('get_short_video_feed_with_data') for user: ${session.user.id}`);
-      
       const { data, error } = await supabase.rpc('get_short_video_feed_with_data', {
         p_user_id: session.user.id,
         p_limit: 30,
@@ -122,13 +121,7 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
       });
 
       if (error) {
-        console.error('[VideoFeedPage] ❌ RPC Error:', error);
         throw error;
-      }
-
-      console.error(`[VideoFeedPage] ✅ RPC Success! Received ${data?.length || 0} items from database.`);
-      if (data?.length > 0) {
-        console.error('[VideoFeedPage] 📦 First item preview:', JSON.stringify(data[0]).substring(0, 200));
       }
 
       const mapped = (data ?? []).map((row: any): VideoPost => ({
@@ -153,11 +146,14 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
         sourceType: row.source_type,
       }));
       setVideos(mapped);
+
+      const postIds = mapped.map(v => v.postId);
+      if (postIds.length > 0) {
+        useInteractionStore.getState().syncPostInteractions(postIds);
+      }
     } catch (e) {
-      console.error('[VideoFeedPage] 💥 Fatal Catch Error:', e);
+      console.error('[VideoFeedPage] Fatal Error loading videos:', e);
     } finally {
-      const duration = Date.now() - startTime;
-      console.error(`[VideoFeedPage] ⏱️ Shimmer / Loading took ${duration}ms total`);
       setIsLoading(false);
     }
   }, [channelId]);
@@ -268,12 +264,24 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
       </Animated.View>
 
       {/* Top overlay */}
-      {!isCommentsOpen && showBack && (
-        <View style={[styles.topOverlay, { paddingTop: Math.max(insets.top, 20) + 12 }]} pointerEvents="box-none">
-          <TouchableOpacity onPress={onBack || (() => navigation.goBack())} style={styles.backBtn}>
-            <ChevronLeft color={theme.colors.text} size={28} />
-          </TouchableOpacity>
+      {!isCommentsOpen && (
+        <View style={[styles.topOverlay, { paddingTop: Math.max(insets.top, 10), justifyContent: 'flex-start' }]} pointerEvents="box-none">
+          {showBack && (
+            <TouchableOpacity onPress={onBack || (() => navigation.goBack())} style={styles.backBtn}>
+              <ChevronLeft color={theme.colors.text} size={28} />
+            </TouchableOpacity>
+          )}
         </View>
+      )}
+
+      {/* Top Right Camera Icon */}
+      {!isCommentsOpen && (
+        <TouchableOpacity 
+          onPress={() => (navigation as any).navigate('FirstPostMainPage', { isManifestoContext: false })} 
+          style={{ position: 'absolute', top: Math.max(insets.top, 10) + 10, right: 16, zIndex: 10, padding: 8, elevation: 10 }}
+        >
+          <Camera color={theme.colors.primary} size={30} />
+        </TouchableOpacity>
       )}
 
       {/* Comment dismiss backdrop */}
@@ -291,10 +299,9 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
         { bottom: animatedCommentsBottom }
       ]}>
         {videos.length > 0 && (
-          <ThreadDiscussionSheet
-            threadId={videos[currentIndex].id}
-            channelId={channelId as string}
-            channelName={videos[currentIndex].channelName}
+          <CommentSheet
+            postId={videos[currentIndex].postId}
+            visible={isCommentsOpen}
             isEmbedded={true}
             onClose={() => setIsCommentsOpen(false)}
           />

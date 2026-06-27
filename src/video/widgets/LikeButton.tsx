@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, StyleSheet, Text, TouchableOpacity, View, Pressable } from 'react-native';
 import { Heart } from 'lucide-react-native';
 
 interface LikeButtonProps {
@@ -18,7 +18,10 @@ export const LikeButton = ({ initialLikes, isLiked = false, onTap }: LikeButtonP
     setLikes(initialLikes);
   }, [initialLikes, isLiked]);
 
-  const handleTap = () => {
+  const handleTap = (e?: any) => {
+    if (e && e.stopPropagation) {
+      e.stopPropagation();
+    }
     const newLiked = !liked;
     setLiked(newLiked);
     
@@ -45,7 +48,7 @@ export const LikeButton = ({ initialLikes, isLiked = false, onTap }: LikeButtonP
   };
 
   return (
-    <TouchableOpacity style={styles.container} onPress={handleTap} activeOpacity={0.8}>
+    <Pressable style={styles.container} onPress={handleTap}>
       <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
         <Heart 
           size={38} 
@@ -54,7 +57,7 @@ export const LikeButton = ({ initialLikes, isLiked = false, onTap }: LikeButtonP
         />
       </Animated.View>
       <Text style={styles.countText}>{likes}</Text>
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
