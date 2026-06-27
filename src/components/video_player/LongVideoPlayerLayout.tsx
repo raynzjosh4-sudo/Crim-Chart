@@ -1,3 +1,4 @@
+import { TagOverlay } from '@/channel/pages/tag/TagOverlay';
 import UserAvatar from '@/components/avatar/UserAvatar';
 import { CommentSheet } from '@/components/comments/CommentSheet';
 import { FollowUserButton } from '@/components/FollowUserButton';

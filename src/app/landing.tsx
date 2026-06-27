@@ -100,7 +100,10 @@ export default function LandingPage() {
           {/* ── LEFT: actions ── */}
           <View style={styles.leftCol}>
             <View style={styles.leftInner}>
-              <Text style={styles.hero}>CrimChart.</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={styles.hero}>CrimChart.</Text>
+                <View style={{ width: 100, height: 100, borderWidth: 2, borderColor: 'red', marginLeft: 20 }} />
+              </View>
 
               <View style={{ height: 52 }} />
               <Text style={styles.sub}>Join today.</Text>
