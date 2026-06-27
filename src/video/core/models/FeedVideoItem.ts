@@ -2,6 +2,7 @@ export interface FeedVideoItem {
   id: string;
   postId: string;
   videoUrl: string;
+  videoUrls?: string[];
   thumbnailUrl?: string;
   caption?: string;
   authorId: string;
@@ -23,6 +24,7 @@ export function feedVideoFromMap(map: Record<string, unknown>): FeedVideoItem {
     id: String(map['id'] ?? ''),
     postId: String(map['post_id'] ?? map['postId'] ?? map['id'] ?? ''),
     videoUrl: String(map['video_url'] ?? map['videoUrl'] ?? ''),
+    videoUrls: Array.isArray(map['video_urls']) ? map['video_urls'].map(String) : undefined,
     thumbnailUrl: map['thumbnail_url'] as string | undefined,
     caption: map['caption'] as string | undefined,
     authorId: String(map['author_id'] ?? map['authorId'] ?? ''),

@@ -162,7 +162,7 @@ export const usePostingStore = create<PostingState>((set) => ({
           console.log('[usePostingStore] 1️⃣ Uploading raw video to Cloudflare R2 for Coconut...');
           const videoFilename = `${user.id}_${Date.now()}.mp4`;
           
-          await cloudMediaService.uploadRawVideoForCoconut(m.path, videoFilename);
+          await cloudMediaService.uploadRawVideoForTranscoding(m.path, videoFilename);
 
           console.log('[usePostingStore] 2️⃣ Triggering Coconut Video Processor Edge Function...');
           const { data: functionData, error: functionError } = await supabase.functions.invoke('process-video', {

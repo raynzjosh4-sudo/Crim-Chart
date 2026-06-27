@@ -57,13 +57,38 @@ const ShortVideoPlayerCardComponent = ({
   const hidePlayPauseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  const isPlaying = preloadStatus === 'playing';
+  const [isPausedByUser, setIsPausedByUser] = useState(false);
+  const [currentVideoUrl, setCurrentVideoUrl] = useState(video.videoUrl);
+
+  const isPlaying = (preloadStatus === 'playing') && !isPausedByUser;
 
   // Initialize player only if it's not idle to save memory
-  const player = useVideoPlayer(preloadStatus === 'idle' ? null : video.videoUrl, p => {
+  const player = useVideoPlayer(preloadStatus === 'idle' ? null : currentVideoUrl, p => {
     p.loop = true;
     p.timeUpdateEventInterval = 0.25; // Trigger timeUpdate 4 times a second
   });
+
+  // Fallback from HLS to MP4 if HLS is still processing (returns 404)
+  useEffect(() => {
+    if (!player) return;
+    const subscription = player.addListener('statusChange', (event: any) => {
+      if (event.status === 'error' && currentVideoUrl === video.videoUrl) {
+        if (video.videoUrls && video.videoUrls.length > 1) {
+          console.log('[ShortVideoPlayer] HLS not ready, falling back to raw MP4:', video.videoUrls[1]);
+          setCurrentVideoUrl(video.videoUrls[1]);
+        }
+      }
+    });
+    return () => {
+      subscription.remove();
+    };
+  }, [player, currentVideoUrl, video.videoUrl, video.videoUrls]);
+
+  // Keep currentVideoUrl in sync if video prop changes (FlatList recycling)
+  useEffect(() => {
+    setCurrentVideoUrl(video.videoUrl);
+    setIsPausedByUser(false);
+  }, [video.videoUrl]);
 
   // Handle external play/pause state from FlatList
   useEffect(() => {
@@ -83,7 +108,6 @@ const ShortVideoPlayerCardComponent = ({
     const subscription = player.addListener('timeUpdate', (event: any) => {
       try {
         if (player.duration > 0) {
-          // In expo-video, event payload has `currentTime` on web/iOS, or use player.currentTime
           const current = event.currentTime ?? player.currentTime;
           setProgress((current / player.duration) * 100);
         }
@@ -103,10 +127,12 @@ const ShortVideoPlayerCardComponent = ({
     if (!player) return;
 
     try {
-      if (player.playing) {
+      if (isPlaying) {
         player.pause();
+        setIsPausedByUser(true);
       } else {
         player.play();
+        setIsPausedByUser(false);
       }
     } catch (e) { }
 
@@ -244,7 +270,6 @@ const ShortVideoPlayerCardComponent = ({
           </>
         )}
 
-        {/* Play/Pause icon */}
         {showPlayPause && (
           <Animated.View style={[styles.playPauseOverlay, { opacity: fadeAnim }]} pointerEvents="none">
             {isPausedByUser ? (

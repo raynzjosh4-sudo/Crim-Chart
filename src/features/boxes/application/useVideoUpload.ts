@@ -18,12 +18,29 @@ export function useVideoUpload() {
     try {
       let uploadedVideoUrl = videoItem.videoUrl;
       let uploadedThumbnailUrl = videoItem.thumbnailUrl;
-
+      let rawMp4Url = '';
       // 1. Upload video to Cloudflare if it's a local file
       if (videoItem.videoUrl && (videoItem.videoUrl.startsWith('file://') || videoItem.videoUrl.startsWith('/'))) {
-        console.log(`[useVideoUpload] 📤 Uploading local video file to CloudMediaService...`);
-        uploadedVideoUrl = await cloudMediaService.uploadMedia(videoItem.videoUrl, 'posts_video', currentUser.id);
-        console.log(`[useVideoUpload] ✅ Video uploaded successfully. URL:`, uploadedVideoUrl);
+        console.log(`[useVideoUpload] 1️⃣ Uploading raw video to Cloudflare R2 for Transcoding...`);
+        const videoFilename = `${currentUser.id}_${Date.now()}.mp4`;
+        
+        await cloudMediaService.uploadRawVideoForTranscoding(videoItem.videoUrl, videoFilename);
+
+        console.log(`[useVideoUpload] 2️⃣ Triggering Video Processor Edge Function...`);
+        const { data: functionData, error: functionError } = await supabase.functions.invoke('process-video', {
+          body: { 
+            videoFilename: videoFilename,
+            userId: currentUser.id 
+          }
+        });
+
+        if (functionData?.error) throw new Error(functionData.error); 
+        if (functionError) throw new Error("Network failed");
+
+        console.log(`[useVideoUpload] ✅ Processing Started! Future Stream URL:`, functionData.streamUrl);
+        
+        uploadedVideoUrl = functionData.streamUrl;
+        rawMp4Url = functionData.thumbnailUrl; // The edge function returns the raw mp4 URL here
       }
 
       // 2. Upload thumbnail to Cloudflare if local
@@ -47,7 +64,7 @@ export function useVideoUpload() {
         privacy: 'public',
         allow_comments: true,
         video_url: uploadedVideoUrl,
-        video_urls: uploadedVideoUrl ? [uploadedVideoUrl] : [],
+        video_urls: uploadedVideoUrl ? (rawMp4Url ? [uploadedVideoUrl, rawMp4Url] : [uploadedVideoUrl]) : [],
         is_video: true,
         type: videoItem.isShort ? 'short' : 'long',
         thumbnail_urls: uploadedThumbnailUrl ? [uploadedThumbnailUrl] : [],

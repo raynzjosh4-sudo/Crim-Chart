@@ -106,7 +106,7 @@ export class CloudMediaService {
     }
   }
 
-  async uploadRawVideoForCoconut(
+  async uploadRawVideoForTranscoding(
     localUri: string,
     videoFilename: string
   ): Promise<string> {

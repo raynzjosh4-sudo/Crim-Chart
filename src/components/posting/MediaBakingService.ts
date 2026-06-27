@@ -55,7 +55,7 @@ export class MediaBakingService {
             // ── Video: transcode via Coconut API Edge Function ──
             console.log('[MediaBakingService] 1️⃣ Uploading raw video to Cloudflare R2 for Coconut...');
             const videoFilename = `${userId}_${Date.now()}.mp4`;
-            await cloudMediaService.uploadRawVideoForCoconut(item.path, videoFilename);
+            await cloudMediaService.uploadRawVideoForTranscoding(item.path, videoFilename);
 
             console.log('[MediaBakingService] 2️⃣ Triggering Coconut Video Processor Edge Function...');
             const { data, error } = await supabase.functions.invoke('process-video', {
