@@ -1,35 +1,33 @@
-import { CommentSheet } from '@/components/comments/CommentSheet';
 import CommentInputField from '@/commentingsheets/widgets/CommentInputField';
+import { CommentSheet } from '@/components/comments/CommentSheet';
 import { MediaData } from '@/components/media/types';
 import { VideoCardSkeleton } from '@/components/skeletons/Skeletons';
 import { ShortVideoPlayerCard } from '@/components/video_player/ShortVideoPlayerCard';
 import { useAppRouter } from '@/core/hooks/useAppRouter';
 import { useStyles } from '@/core/hooks/useStyles';
+import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { supabase } from '@/core/supabase/supabaseConfig';
-import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { ThemeTokens } from '@/core/theme/themes';
 import { useNavigation } from '@react-navigation/native';
-import { ChevronLeft, Search, Camera } from 'lucide-react-native';
-import { VideoNetworkWidget } from '../components/VideoNetworkWidget';
+import { Camera, ChevronLeft } from 'lucide-react-native';
 import React, { useCallback, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
-  InteractionManager,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
   StyleSheet,
-  Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
   View
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { VideoPost } from '../models/VideoPost';
 import { FeedScrollList } from '../components/FeedScrollList';
+import { VideoNetworkWidget } from '../components/VideoNetworkWidget';
+import { VideoPost } from '../models/VideoPost';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -57,7 +55,7 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
   disableInteractions = false,
 }) => {
   useRealtimePostInteractions();
-  
+
   const router = useAppRouter();
   const navigation = useNavigation();
   const [videos, setVideos] = useState<VideoPost[]>(initialVideos ?? []);
@@ -108,7 +106,7 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
 
   const loadVideos = useCallback(async () => {
     setIsLoading(true);
-    
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user?.id) {
@@ -220,8 +218,8 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
   });
 
   return (
-    <View 
-      style={[styles.root, Platform.OS === 'web' ? { touchAction: 'none' } as any : {}]} 
+    <View
+      style={[styles.root, Platform.OS === 'web' ? { touchAction: 'none' } as any : {}]}
       onLayout={(e) => {
         // Only update if height changed significantly to prevent micro-stutters
         const h = e.nativeEvent.layout.height;
@@ -243,17 +241,17 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
         backgroundColor: isCommentsOpen ? '#111' : '#000',
       }]}>
         {isReady ? (
-            <FeedScrollList
-              ref={flatListRef as any}
-              data={videos}
-              itemHeight={containerHeight}
-              keyExtractor={item => item.id}
-              renderItem={renderVideoItem}
-              onViewableItemsChanged={onViewableChanged.current}
-              viewabilityConfig={{ itemVisiblePercentThreshold: 80 }}
-              initialScrollIndex={initialIndex}
-              getItemLayout={(data, index) => ({ length: containerHeight, offset: containerHeight * index, index })}
-            />
+          <FeedScrollList
+            ref={flatListRef as any}
+            data={videos}
+            itemHeight={containerHeight}
+            keyExtractor={item => item.id}
+            renderItem={renderVideoItem}
+            onViewableItemsChanged={onViewableChanged.current}
+            viewabilityConfig={{ itemVisiblePercentThreshold: 80 }}
+            initialScrollIndex={initialIndex}
+            getItemLayout={(data, index) => ({ length: containerHeight, offset: containerHeight * index, index })}
+          />
         ) : null}
         {(!isReady || isLoading) && (
           <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#000' }]}>
@@ -275,8 +273,16 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
 
       {/* Top Right Camera Icon */}
       {!isCommentsOpen && (
-        <TouchableOpacity 
-          onPress={() => (navigation as any).navigate('FirstPostMainPage', { isManifestoContext: false })} 
+        <TouchableOpacity
+          onPress={() => {
+            // Using useRouter if available, otherwise fallback to React Navigation
+            try {
+              const { router } = require('expo-router');
+              router.push('/short-creator');
+            } catch (e) {
+              (navigation as any).navigate('short-creator');
+            }
+          }}
           style={{ position: 'absolute', top: Math.max(insets.top, 10) + 10, right: 16, zIndex: 10, padding: 8, elevation: 10 }}
         >
           <Camera color={theme.colors.primary} size={30} />

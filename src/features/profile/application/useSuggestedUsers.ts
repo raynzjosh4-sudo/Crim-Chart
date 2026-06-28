@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
 import { supabase } from '@/core/supabase/supabaseConfig';
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
+import { useEffect, useState } from 'react';
 
 export function useSuggestedUsers(currentUserId?: string) {
   const [users, setUsers] = useState<CrimChartUserModel[]>([]);

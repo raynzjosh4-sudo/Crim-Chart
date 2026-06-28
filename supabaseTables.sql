@@ -24,6 +24,8 @@ CREATE TABLE public.profiles (
   posts_count integer DEFAULT 0,
   inbox_count integer DEFAULT 0,
   unread_interactions_count integer DEFAULT 0,
+  country text,
+  inbox_permission text DEFAULT 'everyone'::text CHECK (inbox_permission = ANY (ARRAY['everyone'::text, 'require_approval'::text, 'followers_only'::text, 'only_me'::text])),
   CONSTRAINT profiles_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.channels (
@@ -52,6 +54,17 @@ CREATE TABLE public.channels (
   likes_count integer DEFAULT 0,
   unread_count integer DEFAULT 0,
   has_active_members boolean DEFAULT false,
+  invite_link text UNIQUE,
+  category text,
+  rules_text text,
+  is_paid boolean DEFAULT false,
+  subscription_price numeric,
+  pinned_message_id uuid,
+  is_youtube_claimed boolean DEFAULT false,
+  allow_posting_by text DEFAULT 'all'::text,
+  pending_requests_count integer DEFAULT 0,
+  allow_chatting_by text DEFAULT 'all'::text,
+  isActive boolean DEFAULT false,
   CONSTRAINT channels_pkey PRIMARY KEY (id),
   CONSTRAINT channels_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES public.profiles(id)
 );
@@ -63,6 +76,7 @@ CREATE TABLE public.channel_members (
   joined_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
   unread_moments_count integer NOT NULL DEFAULT 0,
   is_following boolean DEFAULT true,
+  can_chat boolean DEFAULT true,
   CONSTRAINT channel_members_pkey PRIMARY KEY (channel_id, user_id),
   CONSTRAINT channel_members_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id),
   CONSTRAINT channel_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
@@ -104,20 +118,6 @@ CREATE TABLE public.crown_votes (
   CONSTRAINT crown_votes_option_id_fkey FOREIGN KEY (option_id) REFERENCES public.crown_options(id),
   CONSTRAINT crown_votes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
-CREATE TABLE public.all_post_comments (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  post_id uuid NOT NULL,
-  author_id uuid NOT NULL,
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
-  channel_id uuid,
-  message text,
-  image_urls jsonb DEFAULT '[]'::jsonb,
-  likes integer DEFAULT 0,
-  is_pending boolean DEFAULT false,
-  CONSTRAINT all_post_comments_pkey PRIMARY KEY (id),
-  CONSTRAINT channel_post_comments_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.profiles(id),
-  CONSTRAINT channel_post_comments_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id)
-);
 CREATE TABLE public.channel_gifts (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   channel_id uuid NOT NULL,
@@ -147,6 +147,7 @@ CREATE TABLE public.statuses (
   created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
   expires_at timestamp with time zone,
   thumbnail_url text,
+  metadata jsonb,
   CONSTRAINT statuses_pkey PRIMARY KEY (id),
   CONSTRAINT statuses_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.profiles(id)
 );
@@ -239,15 +240,6 @@ CREATE TABLE public.channel_posts (
   CONSTRAINT channel_posts_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id),
   CONSTRAINT channel_posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.profiles(id)
 );
-CREATE TABLE public.all_post_tags (
-  id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
-  post_id uuid NOT NULL,
-  tag_name text NOT NULL,
-  tag_value text,
-  tag_color text,
-  CONSTRAINT all_post_tags_pkey PRIMARY KEY (id),
-  CONSTRAINT channel_post_tags_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.channel_posts(id)
-);
 CREATE TABLE public.channel_moments (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   channel_id uuid NOT NULL,
@@ -291,14 +283,6 @@ CREATE TABLE public.channel_invitations (
   CONSTRAINT channel_invitations_source_channel_id_fkey FOREIGN KEY (source_channel_id) REFERENCES public.channels(id),
   CONSTRAINT channel_invitations_target_channel_id_fkey FOREIGN KEY (target_channel_id) REFERENCES public.channels(id)
 );
-CREATE TABLE public.all_posts_likes (
-  user_id uuid NOT NULL,
-  post_id uuid NOT NULL,
-  created_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT all_posts_likes_pkey PRIMARY KEY (user_id, post_id),
-  CONSTRAINT channel_post_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
-  CONSTRAINT channel_post_likes_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.channel_posts(id)
-);
 CREATE TABLE public.comment_counts (
   post_id uuid NOT NULL,
   user_id uuid NOT NULL,
@@ -316,7 +300,6 @@ CREATE TABLE public.channel_content_tags (
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
   link_chain ARRAY DEFAULT '{}'::text[],
   CONSTRAINT channel_content_tags_pkey PRIMARY KEY (id),
-  CONSTRAINT channel_content_tags_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.channel_posts(id),
   CONSTRAINT channel_content_tags_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
   CONSTRAINT channel_content_tags_source_channel_id_fkey FOREIGN KEY (source_channel_id) REFERENCES public.channels(id),
   CONSTRAINT channel_content_tags_target_channel_id_fkey FOREIGN KEY (target_channel_id) REFERENCES public.channels(id)
@@ -350,8 +333,12 @@ CREATE TABLE public.inbox (
   metadata jsonb,
   unread_count integer DEFAULT 0,
   last_message_type text DEFAULT 'text'::text,
+  connection_intent text CHECK (connection_intent = ANY (ARRAY['friendship'::text, 'relationship'::text, 'business'::text, 'family'::text, 'other'::text])),
+  status text DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'accepted'::text, 'rejected'::text])),
+  initiated_by uuid,
   CONSTRAINT inbox_pkey PRIMARY KEY (id, user_id),
-  CONSTRAINT inbox_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+  CONSTRAINT inbox_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
+  CONSTRAINT inbox_initiated_by_fkey FOREIGN KEY (initiated_by) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.inbox_messages (
   id text NOT NULL,
@@ -362,6 +349,7 @@ CREATE TABLE public.inbox_messages (
   message_type text DEFAULT 'text'::text,
   created_at timestamp with time zone DEFAULT now(),
   isRead boolean,
+  metadata jsonb,
   CONSTRAINT inbox_messages_pkey PRIMARY KEY (id),
   CONSTRAINT fk_sender FOREIGN KEY (sender_id) REFERENCES auth.users(id)
 );
@@ -428,8 +416,10 @@ CREATE TABLE public.boxes (
   country_restrictions jsonb DEFAULT '["Global"]'::jsonb,
   visible_to_followed_users boolean DEFAULT true,
   views_count integer DEFAULT 0,
+  post_id uuid,
   CONSTRAINT boxes_pkey PRIMARY KEY (id),
-  CONSTRAINT boxes_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.profiles(id)
+  CONSTRAINT boxes_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.profiles(id),
+  CONSTRAINT boxes_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.posts(id)
 );
 CREATE TABLE public.box_items (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -518,4 +508,70 @@ CREATE TABLE public.post_tags (
   CONSTRAINT post_tags_pkey PRIMARY KEY (id),
   CONSTRAINT post_tags_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.posts(id),
   CONSTRAINT post_tags_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.user_feed_pointers (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  target_user_id uuid NOT NULL,
+  entity_type text NOT NULL,
+  entity_id text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  source_type text NOT NULL,
+  CONSTRAINT user_feed_pointers_pkey PRIMARY KEY (id),
+  CONSTRAINT user_feed_pointers_target_user_fkey FOREIGN KEY (target_user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.channel_requests (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  channel_id uuid NOT NULL,
+  target_user_id uuid NOT NULL,
+  request_type text NOT NULL CHECK (request_type = ANY (ARRAY['admin_invite'::text, 'member_invite'::text, 'join_request'::text, 'leave_request'::text])),
+  requested_by_id uuid NOT NULL,
+  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'canceled'::text])),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT channel_requests_pkey PRIMARY KEY (id),
+  CONSTRAINT channel_requests_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id),
+  CONSTRAINT channel_requests_target_user_id_fkey FOREIGN KEY (target_user_id) REFERENCES public.profiles(id),
+  CONSTRAINT channel_requests_requested_by_id_fkey FOREIGN KEY (requested_by_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.user_connection_stats (
+  user_id uuid NOT NULL,
+  rel_sent_count integer DEFAULT 0,
+  rel_accepted_count integer DEFAULT 0,
+  relationship_status text DEFAULT 'Unknown'::text,
+  preferred_countries ARRAY DEFAULT '{}'::text[],
+  preferred_age_ranges ARRAY DEFAULT '{}'::text[],
+  show_status_circle boolean DEFAULT true,
+  show_status_text boolean DEFAULT true,
+  show_country_pref boolean DEFAULT true,
+  show_age_pref boolean DEFAULT true,
+  locked_intent boolean DEFAULT false,
+  CONSTRAINT user_connection_stats_pkey PRIMARY KEY (user_id),
+  CONSTRAINT user_connection_stats_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.blocked_users (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  blocker_id uuid,
+  blocked_id uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT blocked_users_pkey PRIMARY KEY (id),
+  CONSTRAINT blocked_users_blocker_id_fkey FOREIGN KEY (blocker_id) REFERENCES public.profiles(id),
+  CONSTRAINT blocked_users_blocked_id_fkey FOREIGN KEY (blocked_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.channel_post_likes (
+  user_id uuid NOT NULL,
+  post_id uuid NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT channel_post_likes_pkey PRIMARY KEY (user_id, post_id),
+  CONSTRAINT channel_post_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT channel_post_likes_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.channel_posts(id)
+);
+CREATE TABLE public.short_video_pointers (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  target_user_id uuid,
+  entity_id text NOT NULL,
+  source_type text NOT NULL,
+  feed_context text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT short_video_pointers_pkey PRIMARY KEY (id),
+  CONSTRAINT short_video_pointers_target_user_id_fkey FOREIGN KEY (target_user_id) REFERENCES public.profiles(id)
 );

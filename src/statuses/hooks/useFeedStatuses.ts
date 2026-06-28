@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Platform } from 'react-native';
+import { Platform, DeviceEventEmitter } from 'react-native';
 import { feedStatusesLocalSource } from '../data/FeedStatusesLocalSource';
 import { feedStatusesRemoteSource } from '../data/FeedStatusesRemoteSource';
 import { FeedStatusItem } from '../models/FeedStatusItem';
@@ -71,6 +71,9 @@ export function useFeedStatuses(userId: string | undefined) {
       const handleStatusPosted = () => syncFromRemote();
       window.addEventListener('status_posted', handleStatusPosted);
       return () => window.removeEventListener('status_posted', handleStatusPosted);
+    } else {
+      const sub = DeviceEventEmitter.addListener('status_posted', () => syncFromRemote());
+      return () => sub.remove();
     }
   }, [userId, loadFromCache, syncFromRemote]);
 

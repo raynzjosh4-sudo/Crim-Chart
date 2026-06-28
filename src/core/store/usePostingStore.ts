@@ -3,6 +3,7 @@ import { cloudMediaService } from '@/core/network/cloudMediaService';
 import { useProfileCacheStore } from '@/core/store/useProfileCacheStore';
 import { supabase } from '@/core/supabase/client';
 import { create } from 'zustand';
+import { DeviceEventEmitter, Platform } from 'react-native';
 
 export enum MediaType {
   photo = 'photo',
@@ -299,9 +300,10 @@ export const usePostingStore = create<PostingState>((set) => ({
           const { error } = await supabase.from('channel_statuses').insert(channelStatusPayload);
           if (error) throw error;
           
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new Event('channel_status_posted'));
+          if (typeof window !== 'undefined' && Platform.OS === 'web') {
+            window.dispatchEvent(new CustomEvent('channel_status_posted'));
           }
+          DeviceEventEmitter.emit('channel_status_posted');
         } else {
           const statusPayload = {
             author_id: user.id,
@@ -320,9 +322,10 @@ export const usePostingStore = create<PostingState>((set) => ({
           const { error } = await supabase.from('statuses').insert(statusPayload);
           if (error) throw error;
           markHasStatusLocally();
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new Event('status_posted'));
+          if (typeof window !== 'undefined' && Platform.OS === 'web') {
+            window.dispatchEvent(new CustomEvent('status_posted'));
           }
+          DeviceEventEmitter.emit('status_posted');
         }
       }
       // 3. If it's a CHANNEL POST
@@ -353,9 +356,10 @@ export const usePostingStore = create<PostingState>((set) => ({
         const { error } = await supabase.from('channel_posts').insert(cPostPayload);
         if (error) throw error;
 
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new Event('channel_post_created'));
+        if (typeof window !== 'undefined' && Platform.OS === 'web') {
+          window.dispatchEvent(new CustomEvent('channel_post_created'));
         }
+        DeviceEventEmitter.emit('channel_post_created');
       }
       // 3.5. If it's a CHANNEL STATUS
       else if (params.postType === PostType.channel_status) {

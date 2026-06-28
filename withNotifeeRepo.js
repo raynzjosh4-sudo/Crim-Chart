@@ -15,6 +15,8 @@ module.exports = function withNotifeeRepo(config) {
         `allprojects {\n    repositories {${mavenUrl}`
       );
     }
+    
+    // Removed JitPack hack
     return config;
   });
 };

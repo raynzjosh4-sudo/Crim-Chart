@@ -52,7 +52,8 @@ export const UserRecommendationCarousel = () => {
   const currentUser = useAuthStore(state => state.user);
   const { users, isLoading } = useSuggestedUsers(currentUser?.id);
 
-  if (isLoading || users.length === 0) return null;
+  if (isLoading) return <View style={{ height: 100, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: 'white' }}>Loading recommendations...</Text></View>;
+  if (users.length === 0) return <View style={{ height: 100, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: 'white' }}>No recommendations found!</Text></View>;
 
   return (
     <View style={styles.container}>

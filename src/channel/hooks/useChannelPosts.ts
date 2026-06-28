@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { channelRepository } from '@/channel/data/repositories/ChannelRepositoryImpl';
+import { DeviceEventEmitter } from 'react-native';
 import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { usePostingStore } from '@/core/store/usePostingStore';
 
@@ -95,16 +96,12 @@ export function useChannelPosts(channelId: string | undefined, limit: number = 1
       refresh();
     };
 
-    if (typeof window !== 'undefined') {
-      window.addEventListener('channel_post_created', handlePostCreated);
-      window.addEventListener('status_posted', handlePostCreated);
-    }
+    const sub1 = DeviceEventEmitter.addListener('channel_post_created', handlePostCreated);
+    const sub2 = DeviceEventEmitter.addListener('status_posted', handlePostCreated);
 
     return () => {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('channel_post_created', handlePostCreated);
-        window.removeEventListener('status_posted', handlePostCreated);
-      }
+      sub1.remove();
+      sub2.remove();
     };
   }, [refresh]);
 

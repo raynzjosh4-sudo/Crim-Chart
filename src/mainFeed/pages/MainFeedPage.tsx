@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, AppState, Dimensions, InteractionManager, useWindowDimensions, DeviceEventEmitter } from 'react-native';
+import { AppState, DeviceEventEmitter, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 
 import { ChannelButton } from '@/components/ChannelButton/ChannelButton';
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
-import { supabase } from '@/core/supabase/supabaseConfig';
-import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { NativeDB } from '@/core/db/NativeDB';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
+import { supabase } from '@/core/supabase/supabaseConfig';
 import { ThemeTokens } from '@/core/theme/themes';
+import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
 import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
@@ -15,17 +16,16 @@ import { Bell, Search } from 'lucide-react-native';
 import { MixedFeedItem } from '../models/MixedFeedItem';
 import { MainFeedBody } from './main_page_widgets/MainFeedBody';
 import { MainFeedSkeletonCard } from './main_page_widgets/MainFeedSkeletonCard';
-import { NativeDB } from '@/core/db/NativeDB';
 
 
 import { useRealtimePostInteractions } from '@/hooks/useRealtimePostInteractions';
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 11;
 const NUKE_KEY = 'db_nuke_v1_done';
 
 export const MainFeedPage = () => {
   useRealtimePostInteractions();
-  
+
   const navigation = useNavigation();
   const router = useRouter();
   const user = useAuthStore(s => s.user);
@@ -45,7 +45,7 @@ export const MainFeedPage = () => {
 
   const styles = useStyles(themeStyles);
   const theme = useCurrentTheme();
-  
+
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
 
@@ -76,7 +76,7 @@ export const MainFeedPage = () => {
 
   // Tab refresh listener
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  
+
   useEffect(() => {
     const sub = DeviceEventEmitter.addListener('tabRefresh', (tab) => {
       if (tab === 'feed') {
@@ -148,18 +148,30 @@ export const MainFeedPage = () => {
         throw error;
       }
 
-      // console.log('[MainFeedPage] get_mixed_feed first row:', data && data.length > 0 ? data[0] : 'No data');
-      // console.log('[MainFeedPage] get_mixed_feed RAW DATA (' + (data?.length ?? 0) + ' items):', JSON.stringify(data, null, 2));
+      console.log(`[MainFeedPage] get_mixed_feed returned ${data?.length || 0} rows for offset ${currentPage * PAGE_SIZE}`);
+      console.log(`[MainFeedPage] DATA FOR OFFSET ${currentPage * PAGE_SIZE}:`, JSON.stringify(data, null, 2));
 
       const rawRpcCount = data?.length ?? 0; // Track the real DB row count for hasMore
 
-      const rawCards: MixedFeedItem[] = (data ?? []).map((row: any) => ({
+      let rawCards: MixedFeedItem[] = (data ?? []).map((row: any) => ({
         id: row.id,
         entity_type: row.entity_type,
         entity_id: row.entity_id,
         source_type: row.source_type,
         created_at: row.created_at,
       }));
+
+      // 0. Deduplicate internally by entity_id to prevent the RPC from showing the same content twice
+      const seenEntities = new Set<string>();
+      if (!reset) {
+        // If paginating, also ignore anything we already have
+        cardsRef.current.forEach(c => seenEntities.add(c.entity_id));
+      }
+      rawCards = rawCards.filter(c => {
+        if (seenEntities.has(c.entity_id)) return false;
+        seenEntities.add(c.entity_id);
+        return true;
+      });
 
       // 1. Gather all unique IDs by source type
       const postIds = new Set<string>();
@@ -251,6 +263,7 @@ export const MainFeedPage = () => {
       }
 
       // 4. Attach formatted trendingTracks to the box objects
+      const seenMediaUrls = new Set<string>();
       for (const box of (boxesRes.data || [])) {
         if (box.trending_items) {
           box.trendingTracks = box.trending_items.map((item: any) => {
@@ -315,14 +328,16 @@ export const MainFeedPage = () => {
         setPage(1);
         setHasMore(rawRpcCount >= PAGE_SIZE);
         // Persist fresh page-0 data to SQLite so next navigation is instant
-        NativeDB.upsertMainFeed(newCards).catch(e =>
+        // Filter out carousels because their created_at is now(), which makes SQLite push them to the top!
+        const cacheableCards = newCards.filter(c => !c.entity_type.includes('carousel'));
+        NativeDB.upsertMainFeed(cacheableCards).catch(e =>
           console.warn('[MainFeedPage] upsertMainFeed failed:', e)
         );
       } else {
         pageRef.current += 1;
-        // Deduplicate new cards
-        const existingIds = new Set(cardsRef.current.map(c => c.id));
-        const uniqueNewCards = newCards.filter(c => !existingIds.has(c.id));
+        // Deduplicate new cards by entity_id
+        const existingIds = new Set(cardsRef.current.map(c => c.entity_id));
+        const uniqueNewCards = newCards.filter(c => !existingIds.has(c.entity_id));
 
         cardsRef.current = [...cardsRef.current, ...uniqueNewCards];
         setCards(cardsRef.current);
@@ -451,17 +466,17 @@ const themeStyles = (colors: ThemeTokens, scale: number) => ({
   appBarTitle: { color: colors.primary, fontSize: 22 * scale, fontWeight: '900' as const, letterSpacing: -1, marginLeft: 8 },
   headerIconBtn: { padding: 8 },
   notificationBadge: {
-    position: 'absolute' as const, 
-    top: 4, 
+    position: 'absolute' as const,
+    top: 4,
     right: 4,
-    backgroundColor: colors.error, 
+    backgroundColor: colors.error,
     borderRadius: 10 * scale,
-    minWidth: 18 * scale, 
-    height: 18 * scale, 
-    justifyContent: 'center' as const, 
+    minWidth: 18 * scale,
+    height: 18 * scale,
+    justifyContent: 'center' as const,
     alignItems: 'center' as const,
-    paddingHorizontal: 4, 
-    borderWidth: 1.5, 
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
     borderColor: colors.background
   },
   notificationBadgeText: { color: colors.text, fontSize: 10 * scale, fontWeight: '800' as const }

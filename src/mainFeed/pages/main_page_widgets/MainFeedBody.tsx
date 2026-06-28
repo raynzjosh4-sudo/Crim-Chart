@@ -7,27 +7,25 @@ import { SportsBoxFeedCard } from '@/features/boxes/components/feed/SportsBoxFee
 import { StoreBoxFeedCard } from '@/features/boxes/components/feed/StoreBoxFeedCard';
 import { VotingBoxFeedCard } from '@/features/boxes/components/feed/VotingBoxFeedCard';
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
+import { FlashList } from '@shopify/flash-list';
 import React, { useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  RefreshControl, StyleSheet,
+  RefreshControl,
   Text, TouchableOpacity,
   View,
-  useWindowDimensions,
+  useWindowDimensions
 } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
 import { MixedFeedItem } from '../../models/MixedFeedItem';
 import { MainFeedSkeletonCard } from './MainFeedSkeletonCard';
 import { SmartPostWidget } from './SmartPostWidget';
 import { UserRecommendationCarousel } from './UserRecommendationCarousel';
 import { VideoPostFeedCard } from './VideoPostFeedCard';
 
+import { useAppRouter } from '@/core/hooks/useAppRouter';
+import { useStyles } from '@/core/hooks/useStyles';
+import { ThemeTokens } from '@/core/theme/themes';
 import { useFeedStatuses } from '@/statuses/hooks/useFeedStatuses';
 import * as ImagePicker from 'expo-image-picker';
-import { useStyles } from '@/core/hooks/useStyles';
-import { useCurrentTheme } from '@/core/store/useThemeStore';
-import { ThemeTokens } from '@/core/theme/themes';
-import { useAppRouter } from '@/core/hooks/useAppRouter';
 
 
 const MemoizedFeedItem = React.memo(({
@@ -41,6 +39,9 @@ const MemoizedFeedItem = React.memo(({
 }) => {
   if (item.entity_type.includes('box')) {
     // console.log('[FEED DEBUG] MemoizedFeedItem rendering box:', item.entity_type, '| prefetchedData.id:', item.prefetchedData?.id ?? 'MISSING');
+  }
+  if (item.entity_type.includes('carousel')) {
+    console.log('[MainFeedPage] FlashList is actively trying to render the carousel:', item.entity_type);
   }
   switch (item.entity_type) {
     case 'long_video_post':
@@ -71,14 +72,11 @@ const MemoizedFeedItem = React.memo(({
     case 'user_recommendation_carousel':
       return <UserRecommendationCarousel />;
     case 'channel_recommendation_carousel':
-      return discoveredChannels.length > 0 ? (
+      return (
         <View style={{ marginVertical: 24, width: '100%' }}>
-          <DiscoverChannelWidget
-            userId={discoveredChannels[0].id}
-            channelCount={0}
-          />
+          <DiscoverChannelWidget channelCount={0} userId={useAuthStore.getState().user?.id} />
         </View>
-      ) : null;
+      );
     default:
       return null;
   }
@@ -223,6 +221,7 @@ export const MainFeedBody = ({
       <FlashList
         ref={listRef}
         data={cards}
+        estimatedItemSize={400}
         keyExtractor={item => item.id}
         viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
         renderItem={renderCard}

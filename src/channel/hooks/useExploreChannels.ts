@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react';
-import { ChannelModel } from '@/channel/models/ChannelModel';
 import { channelRepository } from '@/channel/data/channelRepository';
+import { ChannelModel } from '@/channel/models/ChannelModel';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { useCallback, useState } from 'react';
 
 const PAGE_LIMIT = 20;
 

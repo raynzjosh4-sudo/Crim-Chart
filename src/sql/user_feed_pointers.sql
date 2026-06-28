@@ -179,7 +179,23 @@ RETURNS TABLE (
     source_type text,
     created_at timestamp with time zone
 ) AS $$
+DECLARE
+    start_i int;
+    end_i int;
+    start_post_index int;
+    end_post_index int;
+    req_limit int;
+    req_offset int;
 BEGIN
+    -- Math to determine how many actual posts we need from the DB 
+    -- accounting for the synthetic carousels we inject every 10 posts.
+    start_i := p_offset + 1;
+    end_i := p_offset + p_limit;
+    start_post_index := start_i - (start_i / 11);
+    end_post_index := end_i - (end_i / 11);
+    req_limit := end_post_index - start_post_index + 1;
+    req_offset := start_post_index - 1;
+
     RETURN QUERY
     WITH deduplicated_pointers AS (
         SELECT DISTINCT ON (ufp.entity_id)
@@ -199,13 +215,11 @@ BEGIN
             d.entity_id, 
             d.source_type,
             d.created_at,
-            -- Give each real post a row number (1, 2, 3, 4...)
-            ROW_NUMBER() OVER (ORDER BY d.created_at DESC, d.id DESC) as rn
+            (ROW_NUMBER() OVER (ORDER BY d.created_at DESC, d.id DESC)) as base_rn
         FROM deduplicated_pointers d
         ORDER BY d.created_at DESC, d.id DESC
-        LIMIT p_limit OFFSET p_offset
+        LIMIT req_limit OFFSET req_offset
     ),
-    -- COLD START FALLBACK: If real_feed is empty for this page, fetch global posts
     global_fallback AS (
         SELECT 
             'fallback_' || p.id AS id,
@@ -219,22 +233,60 @@ BEGIN
             p.id::text AS entity_id,
             'post'::text AS source_type,
             p.created_at,
-            ROW_NUMBER() OVER (ORDER BY p.created_at DESC, p.id DESC) as rn
+            (ROW_NUMBER() OVER (ORDER BY p.created_at DESC, p.id DESC)) as base_rn
         FROM public.posts p
-        WHERE NOT EXISTS (SELECT 1 FROM deduplicated_pointers LIMIT 1) -- Only use if NO pointers exist at all
+        WHERE NOT EXISTS (SELECT 1 FROM deduplicated_pointers LIMIT 1)
           AND p.privacy = 'public'
-        ORDER BY p.created_at DESC
-        LIMIT p_limit OFFSET p_offset
+        ORDER BY p.created_at DESC, p.id DESC
+        LIMIT req_limit OFFSET req_offset
     ),
-    final_real_feed AS (
+    base_feed AS (
         SELECT * FROM real_feed
         UNION ALL
         SELECT * FROM global_fallback WHERE NOT EXISTS (SELECT 1 FROM real_feed LIMIT 1)
+    ),
+    page_indices AS (
+        SELECT i
+        FROM generate_series(start_i, end_i) AS i
+    ),
+    final_combined AS (
+        SELECT 
+            i.i AS sort_rn,
+            CASE 
+                WHEN i.i % 11 = 0 AND (i.i / 11) % 2 = 1 THEN 'synthetic_channel_carousel_' || i.i
+                WHEN i.i % 11 = 0 AND (i.i / 11) % 2 = 0 THEN 'synthetic_user_carousel_' || i.i
+                ELSE b.id 
+            END AS id,
+            CASE 
+                WHEN i.i % 11 = 0 AND (i.i / 11) % 2 = 1 THEN 'channel_recommendation_carousel'
+                WHEN i.i % 11 = 0 AND (i.i / 11) % 2 = 0 THEN 'user_recommendation_carousel'
+                ELSE b.entity_type 
+            END AS entity_type,
+            CASE 
+                WHEN i.i % 11 = 0 AND (i.i / 11) % 2 = 1 THEN 'carousel_channel_' || i.i
+                WHEN i.i % 11 = 0 AND (i.i / 11) % 2 = 0 THEN 'carousel_user_' || i.i
+                ELSE b.entity_id 
+            END AS entity_id,
+            CASE 
+                WHEN i.i % 11 = 0 THEN 'carousel'::text
+                ELSE b.source_type 
+            END AS source_type,
+            CASE 
+                WHEN i.i % 11 = 0 THEN now()
+                ELSE b.created_at 
+            END AS created_at
+        FROM page_indices i
+        LEFT JOIN base_feed b 
+            ON b.base_rn = i.i - (i.i / 11)
+        WHERE b.id IS NOT NULL 
+           OR (i.i % 11 = 0 AND EXISTS (
+                  SELECT 1 FROM base_feed 
+                  WHERE base_rn >= i.i - (i.i / 11) - 1
+              ))
     )
-    -- Return the final feed ordered by date
-    SELECT r.id, r.entity_type, r.entity_id, r.source_type, r.created_at
-    FROM final_real_feed r
-    ORDER BY r.rn ASC;
+    SELECT fc.id, fc.entity_type, fc.entity_id, fc.source_type, fc.created_at
+    FROM final_combined fc
+    ORDER BY fc.sort_rn ASC;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

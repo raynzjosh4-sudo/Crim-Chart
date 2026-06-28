@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { DeviceEventEmitter } from 'react-native';
 import { channelRepository } from '@/channel/data/repositories/ChannelRepositoryImpl';
 import { channelLocalSource } from '@/channel/data/sources/ChannelLocalSource';
 import { channelStatusFromMap, ChannelStatusModel } from '@/channel/models/ChannelStatusModel';
@@ -96,11 +97,9 @@ export function useChannelStatuses(channelId: string | undefined) {
   useEffect(() => {
     loadData(true);
 
-    if (typeof window !== 'undefined') {
-      const handleStatusPosted = () => loadData(true);
-      window.addEventListener('channel_status_posted', handleStatusPosted);
-      return () => window.removeEventListener('channel_status_posted', handleStatusPosted);
-    }
+    const handleStatusPosted = () => loadData(true);
+    const sub = DeviceEventEmitter.addListener('channel_status_posted', handleStatusPosted);
+    return () => sub.remove();
   }, [loadData]);
 
   return {
