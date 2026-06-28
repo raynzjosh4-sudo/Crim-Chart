@@ -11,11 +11,11 @@ import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { ThemeTokens } from '@/core/theme/themes';
 import { useNavigation } from '@react-navigation/native';
 import { ChevronLeft, Search, Camera } from 'lucide-react-native';
+import { VideoNetworkWidget } from '../components/VideoNetworkWidget';
 import React, { useCallback, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
-  FlatList,
   InteractionManager,
   Keyboard,
   KeyboardAvoidingView,
@@ -29,6 +29,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoPost } from '../models/VideoPost';
+import { FeedScrollList } from '../components/FeedScrollList';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -219,7 +220,17 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
   });
 
   return (
-    <View style={styles.root} onLayout={(e) => setContainerHeight(e.nativeEvent.layout.height)}>
+    <View 
+      style={[styles.root, Platform.OS === 'web' ? { touchAction: 'none' } as any : {}]} 
+      onLayout={(e) => {
+        // Only update if height changed significantly to prevent micro-stutters
+        const h = e.nativeEvent.layout.height;
+        if (Math.abs(h - containerHeight) > 10) {
+          setContainerHeight(h);
+        }
+      }}
+    >
+      <VideoNetworkWidget />
       <Animated.View style={[styles.playerContainer, {
         width: animatedWidth,
         height: animatedHeight,
@@ -231,29 +242,17 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
         elevation: isCommentsOpen ? 10 : 0,
         backgroundColor: isCommentsOpen ? '#111' : '#000',
       }]}>
-        {Platform.OS === 'web' && (
-          <View dangerouslySetInnerHTML={{ __html: `<style>
-            [style*="scroll-snap-align"] {
-              scroll-snap-stop: always !important;
-            }
-          </style>` }} />
-        )}
         {isReady ? (
-            <FlatList
+            <FeedScrollList
               ref={flatListRef as any}
               data={videos}
+              itemHeight={containerHeight}
               keyExtractor={item => item.id}
-              pagingEnabled
-              showsVerticalScrollIndicator={false}
               renderItem={renderVideoItem}
               onViewableItemsChanged={onViewableChanged.current}
               viewabilityConfig={{ itemVisiblePercentThreshold: 80 }}
               initialScrollIndex={initialIndex}
               getItemLayout={(data, index) => ({ length: containerHeight, offset: containerHeight * index, index })}
-              snapToInterval={containerHeight}
-              snapToAlignment="start"
-              decelerationRate="fast"
-              disableIntervalMomentum={true}
             />
         ) : null}
         {(!isReady || isLoading) && (

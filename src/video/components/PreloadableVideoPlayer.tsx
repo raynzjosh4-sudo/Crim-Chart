@@ -1,6 +1,7 @@
 import { useVideoPlayer, VideoView } from 'expo-video';
 import React, { useEffect } from 'react';
-import { StyleProp, ViewStyle } from 'react-native';
+import { StyleProp, ViewStyle, View, Platform } from 'react-native';
+import { VideoBufferingSpinner } from './VideoBufferingSpinner';
 
 export type PreloadStatus = 'playing' | 'preloading' | 'idle';
 
@@ -27,8 +28,21 @@ export const PreloadableVideoPlayer: React.FC<PreloadableVideoPlayerProps> = ({
   contentFit = 'cover',
   isDesktop = false,
 }) => {
+  // Fallback to raw mp4 on Web because Chrome/Firefox do not natively support HLS (.m3u8)
+  let activeUrl = videoUrl;
+  if (Platform.OS === 'web' && activeUrl?.includes('.m3u8')) {
+    // Attempt to parse out the clean name to construct the raw mp4 URL
+    const match = activeUrl.match(/\/processed\/([^/]+)\/videos\/([^/]+)\/hls\/playlist\.m3u8/);
+    if (match) {
+      const baseUrl = activeUrl.split('/processed/')[0];
+      const cleanName = match[2];
+      activeUrl = `${baseUrl}/raw/${cleanName}.mp4`;
+      console.log('[PreloadableVideoPlayer] Web HLS fallback applied. Using raw mp4:', activeUrl);
+    }
+  }
+
   // Pass null to useVideoPlayer when idle to completely free up memory
-  const player = useVideoPlayer(preloadStatus === 'idle' ? null : videoUrl, (p) => {
+  const player = useVideoPlayer(preloadStatus === 'idle' ? null : activeUrl, (p) => {
     p.loop = true;
     p.muted = isMuted;
   });
@@ -54,13 +68,16 @@ export const PreloadableVideoPlayer: React.FC<PreloadableVideoPlayerProps> = ({
   }
 
   return (
-    <VideoView
-      player={player}
-      style={[style, { backgroundColor: 'transparent' }]}
-      contentFit={contentFit}
-      allowsFullscreen={isDesktop}
-      allowsPictureInPicture={isDesktop}
-      nativeControls={isDesktop}
-    />
+    <View style={[{ flex: 1 }, style]}>
+      <VideoView
+        player={player}
+        style={[{ flex: 1, backgroundColor: 'transparent' }]}
+        contentFit={contentFit}
+        allowsFullscreen={isDesktop}
+        allowsPictureInPicture={isDesktop}
+        nativeControls={isDesktop}
+      />
+      <VideoBufferingSpinner player={player} />
+    </View>
   );
 };
