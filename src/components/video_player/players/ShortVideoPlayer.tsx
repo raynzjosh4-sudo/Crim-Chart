@@ -1,12 +1,7 @@
-import { UserAvatarImage } from '@/channel/pages/widgets2/memberimage/UserAvatarImage';
+import UserAvatar from '@/components/avatar/UserAvatar';
 import { AnimatedPostButton } from '@/components/buttons/AnimatedPostButton';
 import { CommentSheet } from '@/components/comments/CommentSheet';
-import { FollowUserButton } from '@/components/FollowUserButton';
-import { PostHeader } from '@/components/PostHeader/PostHeader';
-import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
-import { formatTimeAgo } from '@/components/formatTimeAgo';
 import { VideoPlayerScreen } from '@/components/video/VideoPlayerScreen';
-import { useCurrentUserProfile, useUserProfile } from '@/features/auth/application/useUserProfile';
 import { CommentAction } from '@/features/feed/components/CommentAction';
 import { LikeAction } from '@/features/feed/components/LikeAction';
 import { Image } from 'expo-image';
@@ -34,9 +29,11 @@ export interface ShortVideoPlayerProps {
     dislikes: number;
     commentsCount?: number;
     viewsCount?: number;
+    tagsCount?: number;
     createdAt?: string;
     videoUrl?: string;
     sourceTable?: string;
+    source_type?: string;
     addedBy?: {
       id: string;
       name: string;
@@ -78,11 +75,7 @@ export const ShortVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress, o
 
   const isLocal = video.addedBy?.id === 'local_user';
 
-  const otherProfile = useUserProfile(isLocal ? undefined : video.addedBy?.id);
-  const currentUserProfile = useCurrentUserProfile();
-  const profile = isLocal ? currentUserProfile : otherProfile;
-
-  const realName = isLocal ? (profile?.displayName || 'You') : (profile?.displayName || video.addedBy?.name || 'Unknown User');
+  const realName = isLocal ? 'You' : (video.addedBy?.name || 'Unknown User');
 
   const [localTitle, setLocalTitle] = useState(video.title || '');
 
@@ -90,30 +83,6 @@ export const ShortVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress, o
 
   return (
     <View style={styles.container}>
-      {/* Facebook-style Post Header */}
-      {video.addedBy ? (
-        <PostHeader
-          author={
-            new CrimChartUserModel({
-              id: video.addedBy.id,
-              displayName: realName,
-              profileImageUrl: profile?.profileImageUrl || video.addedBy.avatarUrl,
-              isActive: profile?.isActive,
-              hasStatus: profile?.hasStatus,
-              statusCount: profile?.statusCount,
-            })
-          }
-          isPersonalPost={video.sourceTable === 'posts' || isLocal}
-          timeAgo={formatTimeAgo(video.createdAt)}
-          onAvatarTap={() => {
-            if (!isLocal && video.addedBy?.id) {
-              router.push(`/profile/${video.addedBy.id}`);
-            }
-          }}
-        />
-      ) : (
-        <View style={styles.postHeader} />
-      )}
 
       <View style={styles.videoInfo}>
         {isLocal ? (
@@ -180,8 +149,9 @@ export const ShortVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress, o
           </TouchableOpacity>
           {video.linkedFrom && (
             <View style={styles.linkedFromBadge}>
-              <UserAvatarImage
-                imageUrl={video.linkedFrom.avatarUrl}
+              <UserAvatar
+                userId={video.linkedFrom.id || ''}
+                fallbackUrl={video.linkedFrom.avatarUrl}
                 name={video.linkedFrom.name}
                 size={44}
               />
@@ -201,7 +171,7 @@ export const ShortVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress, o
                 id: video.id,
                 videoUrl: videoToPlay as string,
                 title: isLocal ? localTitle : video.title,
-                description: isLocal ? (profile?.crownTitle || '') : (video.description || 'A short cinematic video.'),
+                description: isLocal ? (video.description || '') : (video.description || 'A short cinematic video.'),
                 isLocal: isLocal,
                 isShort: true
               });
@@ -247,8 +217,9 @@ export const ShortVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress, o
           </View>
           {video.linkedFrom && (
             <View style={styles.linkedFromBadge}>
-              <UserAvatarImage
-                imageUrl={video.linkedFrom.avatarUrl}
+              <UserAvatar
+                userId={video.linkedFrom.id || ''}
+                fallbackUrl={video.linkedFrom.avatarUrl}
                 name={video.linkedFrom.name}
                 size={44}
               />
@@ -342,7 +313,7 @@ export const ShortVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress, o
               videoUrl: (videoToPlay as string) || '',
               caption: isLocal ? localTitle : video.title,
               authorName: realName,
-              authorAvatarUrl: profile?.profileImageUrl || video.addedBy?.avatarUrl || '',
+              directorAvatarUrl: video.addedBy?.avatarUrl || '',
               likesCount: video.likes || 0,
               isLiked: isLiked || false,
               commentsCount: localCommentsCount,

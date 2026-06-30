@@ -160,10 +160,10 @@ export class AuthRemoteSource {
         .eq('id', authUser.id)
         .maybeSingle();
 
-      if (data) {
+      if (data && data.birthday) {
         profile = data;
       } else {
-        // Instead of automatically creating the profile here, we flag it as a new user
+        // If no profile or incomplete profile (missing birthday), flag it as a new user
         // so the UI can redirect to the onboarding screens.
         profile = {
           id: authUser.id,
@@ -216,12 +216,18 @@ export class AuthRemoteSource {
 
   static async checkUsernameAvailable(username: string): Promise<boolean> {
     try {
-      const { data } = await supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+
+      const query = supabase
         .from('profiles')
         .select('id')
-        .eq('display_name', username)
-        .maybeSingle();
-      return !data;
+        .eq('display_name', username);
+      
+      const { data } = await query.maybeSingle();
+      
+      // It is available if no one has it, OR if the person who has it is the current user
+      return !data || (userId ? data.id === userId : false);
     } catch (_) {
       return true;
     }

@@ -1,8 +1,8 @@
 import { ChannelPostCard } from '@/channel/ChannelComponents/ChnnelMainPostCard/ChannelPostCard';
 import { RegularPostCard } from '@/channel/ChannelComponents/ChnnelMainPostCard/RegularPostCard'; // TS Server: please refresh!
 import { InvitePostCard } from '@/components/inviteCard/InvitePostCard';
-import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
 import { GenericBoxFeedCard } from '@/features/boxes/components/feed/GenericBoxFeedCard';
+import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
 
 export interface ChannelAndFeedPostModelProps {
   content: string;
@@ -46,15 +46,16 @@ export interface ChannelAndFeedPostModelProps {
   metadata?: any;
   isActive?: boolean;
   canComment?: boolean;
+  source_type?: string | null;
 }
 
 export const ChannelAndFeedPostModel: React.FC<ChannelAndFeedPostModelProps> = (props) => {
   // 0. Check for Box Shadow Post
   if (props.metadata?.is_box_shadow_post && props.metadata?.box_id) {
     return (
-      <GenericBoxFeedCard 
-        boxId={props.metadata.box_id} 
-        boxTypeHint={props.metadata.box_type} 
+      <GenericBoxFeedCard
+        boxId={props.metadata.box_id}
+        boxTypeHint={props.metadata.box_type}
       />
     );
   }
@@ -76,7 +77,7 @@ export const ChannelAndFeedPostModel: React.FC<ChannelAndFeedPostModelProps> = (
 
   // 2. Check for Channel Post
   const isActuallyChannelPost = props.widgetType === 'channel_post' || (props.channelId && props.channelId.length > 0 && props.channelId !== 'user_feed');
-  
+
   if (isActuallyChannelPost) {
     return (
       <ChannelPostCard

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { ChannelModel } from '@/channel/models/ChannelModel';
 import { channelRepository } from '@/channel/data/channelRepository';
 
@@ -14,14 +14,22 @@ export const useUserChannels = (
   const [channels, setChannels] = useState<ChannelData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [page, setPage] = useState(0);
+  
+  // Use refs to avoid unstable dependencies in useCallback
+  const isLoadingRef = React.useRef(false);
+  const hasMoreRef = React.useRef(true);
+  const pageRef = React.useRef(0);
+
+  // Sync refs with state for UI
+  React.useEffect(() => { isLoadingRef.current = isLoading; }, [isLoading]);
+  React.useEffect(() => { hasMoreRef.current = hasMore; }, [hasMore]);
 
   const loadMore = useCallback(async (refresh = false) => {
-    if ((!hasMore && !refresh) || isLoading || !userId) return;
+    if ((!hasMoreRef.current && !refresh) || isLoadingRef.current || !userId) return;
     if (filterType === 'similar' && !targetUserId) return;
 
     setIsLoading(true);
-    const currentPage = refresh ? 0 : page;
+    const currentPage = refresh ? 0 : pageRef.current;
     
     try {
       const data = await channelRepository.fetchUserChannels(userId, filterType, currentPage, targetUserId, PAGE_LIMIT);
@@ -43,14 +51,16 @@ export const useUserChannels = (
         channelLocalSource.saveChannels(channelsToSave).catch(console.error);
       }
       
-      setHasMore(data.length === PAGE_LIMIT);
-      setPage(currentPage + 1);
+      const moreToLoad = data.length === PAGE_LIMIT;
+      setHasMore(moreToLoad);
+      hasMoreRef.current = moreToLoad;
+      pageRef.current = currentPage + 1;
     } catch (e) {
       console.error(`Error fetching ${filterType} channels:`, e);
     } finally {
       setIsLoading(false);
     }
-  }, [userId, filterType, targetUserId, page, hasMore, isLoading]);
+  }, [userId, filterType, targetUserId]);
 
   return { channels, isLoading, hasMore, loadMore };
 };

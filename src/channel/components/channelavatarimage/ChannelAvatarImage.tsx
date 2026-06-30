@@ -1,6 +1,7 @@
 import { colors } from '@/core/theme/colors';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export interface ChannelAvatarImageProps {
@@ -12,6 +13,7 @@ export interface ChannelAvatarImageProps {
   statusCount?: number;
   showActiveDot?: boolean;
   onImageTap?: () => void;
+  onLongPress?: () => void;
   ringColor?: string;
   hasStatus?: boolean;
 }
@@ -53,11 +55,13 @@ export const ChannelAvatarImage: React.FC<ChannelAvatarImageProps> = ({
   statusCount = 0,
   showActiveDot = true,
   onImageTap,
+  onLongPress,
   ringColor = themeColors.primary,
   hasStatus = false,
 }) => {
   const initials = getInitials(name);
   const bgColors = getColorsForInitials(initials);
+  const [imageError, setImageError] = useState(false);
 
   // If we don't have status, we don't render the ring at all
   const actualShowStatusRing = showStatusRing && hasStatus;
@@ -78,12 +82,13 @@ export const ChannelAvatarImage: React.FC<ChannelAvatarImageProps> = ({
         }
       ]}>
         <View style={{ width: '100%', height: '100%', borderRadius: size / 2, overflow: 'hidden', backgroundColor: '#1E1E2D' }}>
-          {imageUrl && imageUrl.trim().length > 0 ? (
+          {imageUrl && imageUrl.trim().length > 0 && !imageError ? (
             <Image
               source={{ uri: imageUrl.trim() }}
               style={{ width: '100%', height: '100%' }}
               contentFit="cover"
               transition={300}
+              onError={() => setImageError(true)}
             />
           ) : (
             <LinearGradient
@@ -117,7 +122,7 @@ export const ChannelAvatarImage: React.FC<ChannelAvatarImageProps> = ({
   );
 
   return (
-    <TouchableOpacity onPress={onImageTap} activeOpacity={0.8}>
+    <TouchableOpacity onPress={onImageTap} onLongPress={onLongPress} activeOpacity={0.8}>
       {content}
     </TouchableOpacity>
   );

@@ -27,7 +27,7 @@ export default function LoginPage() {
       const success = await useAuthStore.getState().loginWithGoogle();
       if (success) {
         if (useAuthStore.getState().pendingGoogleOnboarding) {
-          router.push('/signup/username' as any);
+          router.push('/signup/country' as any);
         } else {
           router.replace('/(tabs)/channels' as any);
         }

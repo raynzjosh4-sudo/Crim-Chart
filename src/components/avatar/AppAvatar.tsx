@@ -1,7 +1,7 @@
 import { colors } from '@/core/theme/colors';
 import { Image as ExpoImage } from 'expo-image';
 import { User } from 'lucide-react-native';
-import React from 'react';
+import React, { useState } from 'react';
 import {
   StyleSheet,
   TouchableOpacity,
@@ -47,6 +47,7 @@ export default function AppAvatar({
   style,
 }: AppAvatarProps) {
   const resolvedUrl = imageUrl ?? url ?? null;
+  const [imageError, setImageError] = useState(false);
   const resolvedHasStatus = hasStatus || showStatusRing || false;
   const resolvedIsOnline = isOnline || showActiveDot || false;
   const resolvedOnTap = onTap ?? onImageTap;
@@ -177,12 +178,13 @@ export default function AppAvatar({
           },
         ]}
       >
-        {resolvedUrl ? (
+        {resolvedUrl && !imageError ? (
           <ExpoImage
             source={{ uri: resolvedUrl }}
             contentFit="cover"
             style={{ width: size, height: size, borderRadius: size / 2 }}
             placeholder={'LGF5]+Yk^6#M@-5c,1Ex@@or[Q6.'}
+            onError={() => setImageError(true)}
           />
         ) : (
           Fallback

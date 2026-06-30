@@ -1,16 +1,14 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { MainFeedCardModel, MainFeedCardType } from '../../models/MainFeedCardTypeModel';
-import { ChannelPostModel } from '../../models/ChannelPostModel';
-import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
-import { Mainfeedcard } from './subfeedCards/Mainfeedcard';
-import { ChannelsWidget } from '../charts_stars/ChannelsWidget';
-import { ThumbnailLinkCard } from './ThumbnailLinkCard';
 import { ChannelAndFeedPostModel } from '@/channel/ChannelComponents/ChnnelMainPostCard/ChannelAndFeedPostModel';
-import { StoryListWidget } from '@/components/statuspagesAndWidgets/StoryListWidget';
 import { EliteCardWidget } from '@/components/hiness/EliteCardWidget';
-import { UserRecommendationCarousel } from '../../pages/main_page_widgets/UserRecommendationCarousel';
+import { StoryListWidget } from '@/components/statuspagesAndWidgets/StoryListWidget';
 import { PostInteractionWrapper } from '@/components/wrappers/PostInteractionWrapper';
+import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
+import { StyleSheet, View } from 'react-native';
+import { ChannelPostModel } from '../../models/ChannelPostModel';
+import { MainFeedCardModel, MainFeedCardType } from '../../models/MainFeedCardTypeModel';
+import { UserRecommendationCarousel } from '../../pages/main_page_widgets/UserRecommendationCarousel';
+import { ChannelsWidget } from '../charts_stars/ChannelsWidget';
+import { Mainfeedcard } from './subfeedCards/Mainfeedcard';
 
 interface MainFeedCardProps {
   card: MainFeedCardModel;
@@ -60,7 +58,9 @@ export const MainFeedCard: React.FC<MainFeedCardProps> = ({ card, isActive }) =>
               postId={data.id}
               channelId={data.channel?.id}
               channelName={data.channel?.title}
+              channelDescription={data.channel?.description}
               widgetType={data.widgetType ?? (card.cardType === MainFeedCardType.socialPost ? 'regular_post' : 'channel_post')}
+              source_type={data.source_type}
               isActive={isActive}
             />
           )}

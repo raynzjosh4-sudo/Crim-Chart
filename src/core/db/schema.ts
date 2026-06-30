@@ -18,6 +18,7 @@ export const TABLES = {
   USER_CONNECTION_STATS: 'user_connection_stats',
   MAIN_FEED: 'main_feed',
   CHANNEL_STATUSES: 'channel_statuses',
+  MUSIC_FEED: 'music_feed',
 };
 
 export const SCHEMA = `
@@ -334,4 +335,25 @@ export const SCHEMA = `
   );
 
   CREATE INDEX IF NOT EXISTS idx_main_feed_created ON main_feed (created_at DESC);
+
+  CREATE TABLE IF NOT EXISTS ${TABLES.MUSIC_FEED} (
+    id TEXT PRIMARY KEY,
+    title TEXT,
+    artist TEXT,
+    coverUrl TEXT,
+    audioUrl TEXT,
+    likesCount INTEGER DEFAULT 0,
+    commentsCount INTEGER DEFAULT 0,
+    viewsCount INTEGER DEFAULT 0,
+    downloadsCount INTEGER DEFAULT 0,
+    lyrics TEXT,
+    sourceTable TEXT,
+    caption TEXT,
+    created_at TEXT,
+    owner_id TEXT,
+    owner_name TEXT,
+    owner_avatarUrl TEXT,
+    owner_crownTitle TEXT,
+    fetched_at INTEGER NOT NULL
+  );
 `;

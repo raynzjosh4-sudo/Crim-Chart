@@ -1,56 +1,80 @@
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import { colors } from '@/core/theme/colors';
 import { useRouter } from 'expo-router';
-import { Check } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useDiscoveryChannels } from '@/features/feed/application/useDiscoveryChannels';
+import ChannelFollowButton from '@/channel/widgets/ChannelFollowButton';
+import { ShimmerEffect } from '@/channel/pages/widgets2/shimmer/ShimmerEffect';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 
-const CHANNELS = Array.from({ length: 15 }, (_, i) => ({
-  id: i,
-  name: `Channel ${i + 1}`,
-  members: (i + 1) * 123,
-  icon: `https://i.pravatar.cc/150?u=channel${i}`,
-}));
+const SuggestionsShimmer = () => {
+  return (
+    <View style={{ flex: 1, paddingHorizontal: 20 }}>
+      <ShimmerEffect>
+        {[1, 2, 3, 4, 5].map((key) => (
+          <View key={key} style={styles.channelItem}>
+            <View style={[styles.channelIcon, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
+            <View style={styles.channelInfo}>
+              <View style={{ width: '60%', height: 16, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 4, marginBottom: 8 }} />
+              <View style={{ width: '40%', height: 12, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 4 }} />
+            </View>
+            <View style={{ width: 80, height: 32, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 16 }} />
+          </View>
+        ))}
+      </ShimmerEffect>
+    </View>
+  );
+};
 
 export default function ChannelSuggestionsPage() {
   const router = useRouter();
-  const [selectedChannels, setSelectedChannels] = useState<Set<number>>(new Set());
+  const { channels, isLoading, loadInitial } = useDiscoveryChannels();
+  const [followCount, setFollowCount] = useState(0);
+  const [isFinishing, setIsFinishing] = useState(false);
+  const { startLoading, stopLoading } = useGlobalProgress();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
 
   useEffect(() => {
-    // Select first 10 by default
-    const initial = new Set<number>();
-    for (let i = 0; i < 10; i++) initial.add(i);
-    setSelectedChannels(initial);
-  }, []);
+    loadInitial();
+  }, [loadInitial]);
 
-  const toggleChannel = (id: number) => {
-    const next = new Set(selectedChannels);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedChannels(next);
+  const handleToggle = (isFollowing: boolean) => {
+    setFollowCount(followCount + (isFollowing ? 1 : -1));
   };
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
+    if (isFinishing) return;
+    setIsFinishing(true);
+    startLoading();
+    await new Promise(resolve => setTimeout(resolve, 600));
+    stopLoading();
     router.replace('/' as any);
+    setTimeout(() => setIsFinishing(false), 500);
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ChartAppBar
-        title=""
-        showBorder
-        actions={[
-          <TouchableOpacity activeOpacity={1}
-            key="skip"
-            onPress={handleFinish}
-          >
-            <Text style={styles.skipText}>Skip</Text>
-          </TouchableOpacity>
-        ]}
-      />
+      {!isDesktop && (
+        <ChartAppBar
+          title=""
+          showBorder
+          actions={[
+            <TouchableOpacity activeOpacity={1}
+              key="skip"
+              onPress={handleFinish}
+              disabled={isFinishing}
+            >
+              <Text style={styles.skipText}>Skip</Text>
+            </TouchableOpacity>
+          ]}
+        />
+      )}
 
-      <View style={styles.content}>
+      <View style={isDesktop ? styles.desktopWrapper : styles.flexOne}>
+        <View style={[styles.content, isDesktop && styles.desktopModal]}>
         <Text style={styles.title}>Channels for you</Text>
         <Text style={styles.subtitle}>
           Based on your interests, we think you'll love these channels. Select at least 3 to get started.
@@ -58,38 +82,46 @@ export default function ChannelSuggestionsPage() {
 
         <View style={styles.spacerMedium} />
 
-        <FlatList
-          data={CHANNELS}
-          keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={styles.listPadding}
-          renderItem={({ item }) => {
-            const isSelected = selectedChannels.has(item.id);
-            return (
-              <TouchableOpacity activeOpacity={1}
-                style={[styles.channelItem, isSelected && styles.channelItemSelected]}
-                onPress={() => toggleChannel(item.id)}
-              >
-                <Image source={{ uri: item.icon }} style={styles.channelIcon} />
-                <View style={styles.channelInfo}>
-                  <Text style={styles.channelName}>{item.name}</Text>
-                  <Text style={styles.memberCount}>{item.members} members</Text>
+        {isLoading ? (
+          <SuggestionsShimmer />
+        ) : (
+          <FlatList
+            data={channels}
+            keyExtractor={(item) => String(item.id)}
+            contentContainerStyle={channels.length === 0 ? [styles.listPadding, { flex: 1 }] : styles.listPadding}
+            ListEmptyComponent={
+              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 40 }}>
+                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 16 }}>No channels available to follow right now.</Text>
+              </View>
+            }
+            renderItem={({ item }) => {
+              return (
+                <View style={styles.channelItem}>
+                  {item.profileImageUrl ? (
+                    <Image source={{ uri: item.profileImageUrl }} style={styles.channelIcon} />
+                  ) : (
+                    <View style={[styles.channelIcon, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
+                  )}
+                  <View style={styles.channelInfo}>
+                    <Text style={styles.channelName}>{item.displayName}</Text>
+                    <Text style={styles.memberCount} numberOfLines={1}>{item.bio || `@${item.username}`}</Text>
+                  </View>
+                  <ChannelFollowButton channelId={item.id} onToggle={handleToggle} />
                 </View>
-                <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                  {isSelected && <Check size={14} color="#000" />}
-                </View>
-              </TouchableOpacity>
-            );
-          }}
-        />
+              );
+            }}
+          />
+        )}
 
         <View style={styles.footer}>
           <TouchableOpacity activeOpacity={1}
-            style={[styles.finishButton, selectedChannels.size < 3 && styles.finishButtonDisabled]}
+            style={[styles.finishButton, followCount < 3 && styles.finishButtonDisabled]}
             onPress={handleFinish}
-            disabled={selectedChannels.size < 3}
+            disabled={followCount < 3 || isFinishing}
           >
             <Text style={styles.finishButtonText}>Finish</Text>
           </TouchableOpacity>
+        </View>
         </View>
       </View>
     </SafeAreaView>
@@ -100,6 +132,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  desktopWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+  },
+  desktopModal: {
+    width: '100%',
+    maxWidth: 600,
+    backgroundColor: '#16181c',
+    borderRadius: 16,
+    paddingVertical: 40,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  flexOne: {
+    flex: 1,
   },
   content: {
     flex: 1,

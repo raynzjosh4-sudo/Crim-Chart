@@ -34,7 +34,7 @@ import { ChannelNavBar } from "@/features/channel/pages/discovery_widgets/Channe
 
 import { ChannelRestrictionOverlay } from "@/channel/components/ChannelRestrictionOverlay";
 import { useChannelData } from "@/channel/hooks/useChannelData";
-import { UserAvatarImage } from "@/channel/pages/widgets2/memberimage/UserAvatarImage";
+import UserAvatar from "@/components/avatar/UserAvatar";
 import { ChannelRestrictionWrapper } from "@/components/wrappers/ChannelRestrictionWrapper";
 import { MembersTabView } from "@/features/channel/pages/members_tab/MembersTabView";
 import { ActiveUsersBar } from "@/features/channel/pages/messages_tab/widgets/ActiveUsersBar";
@@ -317,13 +317,13 @@ export default function ChannelPage({ channelIdOverride }: { channelIdOverride?:
                         marginTop: 40,
                       }}
                     >
-                      <UserAvatarImage
-                        imageUrl={
+                      <UserAvatar
+                        userId={channel?.creatorUser?.id || ''}
+                        fallbackUrl={
                           channel?.creatorUser?.profileImageUrl ||
                           "https://i.pravatar.cc/150"
                         }
                         size={80}
-                        showStatusRing={false}
                       />
                       <Text
                         style={{

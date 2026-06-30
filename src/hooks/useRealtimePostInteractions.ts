@@ -1,11 +1,13 @@
-import { useEffect } from 'react';
-import { supabase } from '@/core/supabase/supabaseConfig';
 import { useInteractionStore } from '@/core/store/useInteractionStore';
+import { supabase } from '@/core/supabase/supabaseConfig';
+import { useEffect } from 'react';
 
 export function useRealtimePostInteractions() {
   useEffect(() => {
-    // We create a single channel for listening to likes_count updates on posts and channel_posts
-    const channelName = 'public:post_likes_updates';
+    // We create a single channel for listening to likes_count updates on posts and channel_posts.
+    // Using a unique channel name prevents errors during React Strict Mode or rapid remounts 
+    // where supabase-js might return a cached channel that is already subscribed.
+    const channelName = `public:post_likes_updates_${Math.random().toString(36).substring(7)}`;
     
     const channel = supabase.channel(channelName)
       .on(

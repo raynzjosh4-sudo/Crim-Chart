@@ -1,8 +1,7 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import Toast from 'react-native-toast-message';
-import { XCircle, CheckCircle, Info, X } from 'lucide-react-native';
 import { useTheme } from '@react-navigation/native';
+import { CheckCircle, Info, X, XCircle } from 'lucide-react-native';
+import { Platform, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 export enum ChartToastType {
   Error = 'error',
@@ -51,6 +50,8 @@ export const toastConfig = {
 
 const ChartToastWidget = ({ title, message, type, onClose }: any) => {
   const { colors } = useTheme();
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width > 768;
 
   let primaryColor = colors.primary;
   let IconComponent = Info;
@@ -71,7 +72,16 @@ const ChartToastWidget = ({ title, message, type, onClose }: any) => {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.card, borderColor: primaryColor }]}>
+    <View style={[
+      styles.container,
+      { backgroundColor: colors.card, borderColor: primaryColor },
+      isDesktop && {
+        width: 380,
+        alignSelf: 'flex-start',
+        marginLeft: 24,
+        marginTop: 24,
+      }
+    ]}>
       <View style={styles.contentRow}>
         <View style={[styles.iconContainer, { backgroundColor: `${primaryColor}20` }]}>
           <IconComponent color={primaryColor} size={20} />

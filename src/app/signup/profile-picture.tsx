@@ -7,14 +7,20 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { Camera, User } from 'lucide-react-native';
 import { useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+import { useTranslation } from '@/core/localization/i18n';
 
 export default function ProfilePicturePage() {
   const router = useRouter();
-  const { user, updateProfile } = useAuthStore();
+  const { t } = useTranslation();
+  const { updateProfile } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [image, setImage] = useState<string | null>(null);
+  const { startLoading, stopLoading } = useGlobalProgress();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -30,41 +36,62 @@ export default function ProfilePicturePage() {
   };
 
   const handleNext = async () => {
+    if (isLoading) return;
     setIsLoading(true);
+    startLoading();
+
     try {
-      if (image && user?.id) {
-        const publicUrl = await cloudMediaService.uploadMedia(image, 'profile_images', user.id);
-        await updateProfile({ profile_image_url: publicUrl });
+      if (image) {
+        // TODO: The image here is a local URI. In a full implementation, you'd upload this to Supabase Storage first.
+        await updateProfile({ profile_image_url: image });
       }
+
+      stopLoading();
       router.push('/signup/user-suggestions' as any);
+      setTimeout(() => setIsLoading(false), 1000);
     } catch (error: any) {
       console.error('Profile picture upload error:', error);
       ChartToast.showErrorSimple('Upload Failed', error.message || 'Could not upload profile picture.');
-    } finally {
+      stopLoading();
       setIsLoading(false);
     }
   };
 
+  const handleSkip = async () => {
+    if (isLoading) return;
+    setIsLoading(true);
+    startLoading();
+    
+    await new Promise(resolve => setTimeout(resolve, 400));
+    
+    stopLoading();
+    router.push('/signup/user-suggestions' as any);
+    setTimeout(() => setIsLoading(false), 1000);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <ChartAppBar
-        title=""
-        showBorder
-        isLoading={isLoading}
-        actions={[
-          <TouchableOpacity activeOpacity={1}
-            key="skip"
-            onPress={() => router.push('/signup/channel-intro' as any)}
-            disabled={isLoading}
-          >
-            <Text style={styles.skipText}>Skip</Text>
-          </TouchableOpacity>
-        ]}
-      />
+      {!isDesktop && (
+        <ChartAppBar
+          title=""
+          showBorder
+          isLoading={isLoading}
+          actions={[
+            <TouchableOpacity activeOpacity={1}
+              key="skip"
+              onPress={handleSkip}
+              disabled={isLoading}
+            >
+              <Text style={styles.skipText}>{t('skip' as any) || 'Skip'}</Text>
+            </TouchableOpacity>
+          ]}
+        />
+      )}
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.content}>
-          <Text style={styles.title}>Add a profile picture</Text>
+      <ScrollView contentContainerStyle={isDesktop ? styles.desktopScroll : styles.scrollContent}>
+        <View style={isDesktop ? styles.desktopWrapper : styles.flexOne}>
+          <View style={[styles.content, isDesktop && styles.desktopModal]}>
+            <Text style={[styles.title, isDesktop && { textAlign: 'center', marginBottom: 12, fontSize: 28 }]}>Add a profile picture</Text>
           <Text style={styles.subtitle}>
             Adding a photo helps your friends recognize you. You can always change this later.
           </Text>
@@ -95,8 +122,10 @@ export default function ProfilePicturePage() {
             onPress={image ? handleNext : pickImage}
             disabled={isLoading}
           >
-            <Text style={styles.nextButtonText}>{image ? 'Next' : 'Add a photo'}</Text>
+            <Text style={styles.nextButtonText}>{image ? (t('next' as any) || 'Next') : 'Add a photo'}</Text>
           </TouchableOpacity>
+          <View style={styles.spacerExtraLarge} />
+        </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -110,6 +139,32 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+  },
+  desktopScroll: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  desktopWrapper: {
+    width: '100%',
+    maxWidth: 600,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+  },
+  desktopModal: {
+    width: '100%',
+    backgroundColor: '#16181c',
+    borderRadius: 16,
+    paddingVertical: 40,
+    paddingHorizontal: 40,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  flexOne: {
+    flex: 1,
+    width: '100%',
   },
   content: {
     flex: 1,

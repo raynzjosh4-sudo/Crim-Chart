@@ -2,7 +2,7 @@ import { useTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { Search } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, View, useWindowDimensions, Platform } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useExploreChannels } from '../hooks/useExploreChannels';
 import ChannelListTile from '../widgets/ChannelListTile';
@@ -32,8 +32,11 @@ export const ExploreChannelsPage: React.FC = () => {
     return <ChannelListSkeleton count={4} />;
   };
 
-  return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+  const { width } = useWindowDimensions();
+  const isDesktop = width > 768 && Platform.OS === 'web';
+
+  const content = (
+    <View style={[styles.container, { backgroundColor: colors.background, borderRadius: isDesktop ? 16 : 0, overflow: 'hidden' }]}>
 
       {/* Header Row */}
       <View style={styles.headerContainer}>
@@ -83,8 +86,20 @@ export const ExploreChannelsPage: React.FC = () => {
           ) : null
         }
       />
-    </SafeAreaView>
+    </View>
   );
+
+  if (isDesktop) {
+    return (
+      <View style={styles.desktopOverlay}>
+        <View style={styles.desktopModalContainer}>
+          {content}
+        </View>
+      </View>
+    );
+  }
+
+  return <SafeAreaView style={styles.container}>{content}</SafeAreaView>;
 };
 
 const styles = StyleSheet.create({
@@ -127,5 +142,19 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
+  },
+  desktopOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  desktopModalContainer: {
+    width: 600,
+    maxWidth: '90%',
+    height: '80%',
+    maxHeight: 800,
+    borderRadius: 16,
+    overflow: 'hidden',
   },
 });

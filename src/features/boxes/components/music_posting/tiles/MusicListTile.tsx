@@ -1,19 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { Image } from 'expo-image';
-import { Download, Eye, Heart, MessageCircle, Pause, Play, Tag, Check } from 'lucide-react-native';
-import { Dimensions, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { CommentSheet } from '@/components/comments/CommentSheet';
-import * as ImagePicker from 'expo-image-picker';
-import { Audio } from 'expo-av';
-import { UserAvatarImage } from '@/channel/pages/widgets2/memberimage/UserAvatarImage';
 import { AnimatedDisk } from '@/components/AnimatedDisk';
-import { Ionicons } from '@expo/vector-icons';
-import { MediaDownloadWrapper } from '@/components/wrappers/MediaDownloadWrapper';
-import { DownloadButton } from '@/components/buttons/DownloadButton';
+import UserAvatar from '@/components/avatar/UserAvatar';
 import { AnimatedPostButton } from '@/components/buttons/AnimatedPostButton';
+import { DownloadButton } from '@/components/buttons/DownloadButton';
+import { CommentSheet } from '@/components/comments/CommentSheet';
 import { FollowUserButton } from '@/components/FollowUserButton';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+import { LyricsSheet } from '@/components/lyrics/LyricsSheet';
+import { MediaDownloadWrapper } from '@/components/wrappers/MediaDownloadWrapper';
+import { Audio } from 'expo-av';
+import * as ImagePicker from 'expo-image-picker';
+import { Check, Eye, Heart, MessageCircle, Tag } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import { Dimensions, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const { width } = Dimensions.get('window');
+
+const formatRelativeTime = (dateString?: string) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  if (isNaN(diffInSeconds)) return '';
+  if (diffInSeconds < 60) return 'just now';
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+  return `${Math.floor(diffInSeconds / 86400)}d ago`;
+};
 
 export interface MusicTrackItem {
   id: string;
@@ -34,6 +46,8 @@ export interface MusicTrackItem {
   downloadsCount?: number;
   lyrics?: string;
   sourceTable?: string;
+  caption?: string;
+  createdAt?: string;
 }
 
 interface MusicListTileProps {
@@ -53,15 +67,22 @@ interface MusicListTileProps {
   lyricsPreview?: string;
 }
 
-export const MusicListTile: React.FC<MusicListTileProps> = ({ 
+export const MusicListTile: React.FC<MusicListTileProps> = ({
   track, onAddPress, onTagPress, onDownloadPress, isAdded, isCurrentlyPlaying,
-  likesCount, viewsCount, downloadsCount, isLiked, onLikePress,
+  likesCount: propsLikes, viewsCount: propsViews, downloadsCount: propsDownloads, isLiked, onLikePress,
   hideTagButton, hideHeader, lyricsPreview
 }) => {
   const [editedTrack, setEditedTrack] = useState<MusicTrackItem>(track);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isCommentSheetVisible, setIsCommentSheetVisible] = useState(false);
+  const [isLyricsSheetVisible, setIsLyricsSheetVisible] = useState(false);
+
+  const { startLoading, stopLoading } = useGlobalProgress();
+
+  const [likesCount, setLikesCount] = useState(propsLikes || 0);
+  const [downloadsCount, setDownloadsCount] = useState(propsDownloads || 0);
+  const [viewsCount, setViewsCount] = useState(propsViews || 0);
 
   const isLocal = track.owner?.id === 'local_user';
 
@@ -69,7 +90,7 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
   useEffect(() => {
     let currentSound: Audio.Sound | null = null;
     let isMounted = true;
-    
+
     const setupAudio = async () => {
       if (editedTrack.audioUrl) {
         try {
@@ -80,13 +101,13 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
           if (isMounted) {
             currentSound = newSound;
             setSound(newSound);
-            
+
             if (isCurrentlyPlaying) {
-              await newSound.playAsync().catch(() => {});
+              await newSound.playAsync().catch(() => { });
               setIsPlaying(true);
             }
           } else {
-            await newSound.unloadAsync().catch(() => {});
+            await newSound.unloadAsync().catch(() => { });
           }
         } catch (error) {
           console.error("Audio error", error);
@@ -98,7 +119,7 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
     return () => {
       isMounted = false;
       if (currentSound) {
-        currentSound.unloadAsync().catch(() => {});
+        currentSound.unloadAsync().catch(() => { });
       }
     };
   }, [editedTrack.audioUrl, isLocal]);
@@ -107,17 +128,17 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
   useEffect(() => {
     if (!sound) return;
     if (isCurrentlyPlaying) {
-      sound.playAsync().catch(() => {});
+      sound.playAsync().catch(() => { });
       setIsPlaying(true);
     } else {
-      sound.pauseAsync().catch(() => {});
+      sound.pauseAsync().catch(() => { });
       setIsPlaying(false);
     }
   }, [isCurrentlyPlaying, sound]);
 
   const handlePickImage = async () => {
     if (!isLocal) return;
-    
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -137,11 +158,11 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <View style={{ marginRight: 10 }}>
-              <UserAvatarImage 
-                size={36} 
-                imageUrl={editedTrack.owner?.avatarUrl} 
-                showStatusRing={false}
-                showActiveDot={false}
+              <UserAvatar
+                size={36}
+                userId={editedTrack.owner?.id || ''}
+                fallbackUrl={editedTrack.owner?.avatarUrl}
+                name={editedTrack.owner?.name}
               />
             </View>
             <View style={{ flex: 1, marginRight: 8 }}>
@@ -152,10 +173,10 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
 
           <View style={styles.headerRight}>
             {!isLocal && editedTrack.owner?.id && (
-              <FollowUserButton 
-                targetUserId={editedTrack.owner.id} 
-                size="small" 
-                style={{ flex: 0, height: 32, marginRight: 12 }} 
+              <FollowUserButton
+                targetUserId={editedTrack.owner.id}
+                size="small"
+                style={{ flex: 0, height: 32, marginRight: 12 }}
               />
             )}
           </View>
@@ -165,7 +186,7 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
       {/* Main Content (Disk + Info) */}
       <View style={styles.mainContent}>
         {/* The Disk */}
-        <AnimatedDisk 
+        <AnimatedDisk
           imageUrl={editedTrack.coverUrl || undefined}
           size={180}
           isPlaying={isPlaying}
@@ -175,10 +196,10 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
             } else {
               if (sound) {
                 if (isPlaying) {
-                  sound.pauseAsync().catch(() => {});
+                  sound.pauseAsync().catch(() => { });
                   setIsPlaying(false);
                 } else {
-                  sound.playAsync().catch(() => {});
+                  sound.playAsync().catch(() => { });
                   setIsPlaying(true);
                 }
               }
@@ -199,9 +220,9 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
               selectionColor="#FACD11"
             />
           ) : (
-            <Text style={styles.trackTitle} numberOfLines={1}>{editedTrack.title}</Text>
+            <Text style={styles.trackTitle} numberOfLines={2}>{editedTrack.title}</Text>
           )}
-          
+
           {isLocal ? (
             <TextInput
               style={[styles.trackArtist, { padding: 0, margin: 0, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.2)' }]}
@@ -214,10 +235,10 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
           ) : (
             <Text style={styles.trackArtist} numberOfLines={1}>{editedTrack.artist}</Text>
           )}
-          
+
           {!isLocal && !hideTagButton ? (
-            <TouchableOpacity activeOpacity={1} 
-              style={[styles.tagButton, isAdded && styles.tagButtonAdded]} 
+            <TouchableOpacity activeOpacity={1}
+              style={[styles.tagButton, isAdded && styles.tagButtonAdded]}
               onPress={onTagPress}
             >
               {isAdded ? (
@@ -233,7 +254,7 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
               )}
             </TouchableOpacity>
           ) : isLocal && !hideTagButton ? (
-            <AnimatedPostButton 
+            <AnimatedPostButton
               title="Post"
               style={styles.tagButton}
               textStyle={styles.tagButtonText}
@@ -243,35 +264,52 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
                 }
               }}
             />
-          ) : lyricsPreview ? (
-            <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, fontStyle: 'italic', lineHeight: 18 }} numberOfLines={3}>
-              {lyricsPreview}
-            </Text>
-          ) : null}
+          ) : (
+            <View style={{ marginTop: 4 }}>
+              {lyricsPreview ? (
+                <TouchableOpacity onPress={async () => {
+                  startLoading();
+                  // Simulate brief network fetch for smooth UX
+                  await new Promise(r => setTimeout(r, 400));
+                  setIsLyricsSheetVisible(true);
+                  stopLoading();
+                }}>
+                  <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, fontStyle: 'italic', lineHeight: 18, marginBottom: 4 }} numberOfLines={3}>
+                    {lyricsPreview}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+              {editedTrack.createdAt ? (
+                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>
+                  {formatRelativeTime(editedTrack.createdAt)}
+                </Text>
+              ) : null}
+            </View>
+          )}
         </View>
       </View>
 
       {/* Bottom Action Bar */}
       <View style={styles.actionBar}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity activeOpacity={1} 
-            style={[styles.actionItem, isLocal && { opacity: 0.3 }]} 
+          <TouchableOpacity activeOpacity={1}
+            style={[styles.actionItem, isLocal && { opacity: 0.3 }]}
             disabled={isLocal}
             onPress={onLikePress}
           >
             <Heart size={20} color={isLiked ? "#E21" : "#FFF"} fill={isLiked ? "#E21" : "transparent"} />
             <Text style={styles.actionText}>{likesCount ?? editedTrack.likesCount ?? 0}</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity activeOpacity={1} 
-            style={[styles.actionItem, isLocal && { opacity: 0.3 }]} 
+
+          <TouchableOpacity activeOpacity={1}
+            style={[styles.actionItem, isLocal && { opacity: 0.3 }]}
             disabled={isLocal}
             onPress={() => setIsCommentSheetVisible(true)}
           >
             <MessageCircle size={20} color="#FFF" />
             <Text style={styles.actionText}>{editedTrack.commentsCount ?? 0}</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity activeOpacity={1} style={[styles.actionItem, isLocal && { opacity: 0.3 }]} disabled={isLocal}>
             <Eye size={20} color="#FFF" />
             <Text style={styles.actionText}>{viewsCount ?? editedTrack.viewsCount ?? 0}</Text>
@@ -311,6 +349,12 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
           };
           setEditedTrack(updatedTrack);
         }}
+      />
+
+      <LyricsSheet
+        visible={isLyricsSheetVisible}
+        onClose={() => setIsLyricsSheetVisible(false)}
+        lyrics={editedTrack.lyrics || ''}
       />
     </View>
   );

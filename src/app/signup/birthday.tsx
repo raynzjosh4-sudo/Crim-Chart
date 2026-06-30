@@ -5,61 +5,83 @@ import { colors } from '@/core/theme/colors';
 import RNDateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { Mars, User as UserIcon, Venus } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+import { useTranslation } from '@/core/localization/i18n';
 
 export default function BirthdayPage() {
   const router = useRouter();
-  const { pendingSignUp } = useAuthStore();
+  const { t } = useTranslation();
+  const { pendingSignUp, updateProfile } = useAuthStore();
+  const { startLoading, stopLoading } = useGlobalProgress();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
 
   const now = new Date();
   const maxDate = new Date(now.getFullYear() - 13, now.getMonth(), now.getDate());
 
-  const [selectedDate, setSelectedDate] = useState(maxDate);
+  const [month, setMonth] = useState('');
+  const [day, setDay] = useState('');
+  const [year, setYear] = useState('');
+  
+  const monthRef = useRef<TextInput | null>(null);
+  const dayRef = useRef<TextInput | null>(null);
+  const yearRef = useRef<TextInput | null>(null);
+
   const [selectedGender, setSelectedGender] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(Platform.OS === 'ios');
+
+  const validateBirthday = () => {
+    const m = parseInt(month, 10);
+    const d = parseInt(day, 10);
+    const y = parseInt(year, 10);
+    
+    if (!m || !d || !y || m < 1 || m > 12 || d < 1 || d > 31 || y < 1900 || y > now.getFullYear()) {
+      return false;
+    }
+    
+    const date = new Date(y, m - 1, d);
+    if (date.getMonth() !== m - 1 || date.getDate() !== d) {
+      return false; 
+    }
+    
+    if (date > maxDate) {
+      return 'too_young';
+    }
+    return date;
+  };
 
   const handleNext = async () => {
-    if (!selectedGender) return;
-    setIsLoading(true);
+    if (!selectedGender || isLoading) return;
+    
+    const validDate = validateBirthday();
+    if (validDate === false) {
+      ChartToast.showError(null, { title: 'Invalid Date', message: 'Please enter a valid birthday (MM/DD/YYYY).' });
+      return;
+    }
+    if (validDate === 'too_young') {
+      ChartToast.showError(null, { title: 'Age Restriction', message: 'You must be at least 13 years old to use CrimChart.' });
+      return;
+    }
 
+    setIsLoading(true);
+    startLoading();
+
+    const selectedDate = validDate as Date;
     const authStore = useAuthStore.getState();
     authStore.setBirthday(selectedDate);
     authStore.setGender(selectedGender);
 
-    if (authStore.pendingGoogleOnboarding) {
-      const success = await authStore.completeGoogleOnboarding();
-      setIsLoading(false);
-      if (success) {
-        router.push('/signup/profile-picture' as any);
-      } else {
-        const errorMsg = useAuthStore.getState().errorMessage || 'Failed to complete setup';
-        console.error('Google Onboarding Error:', errorMsg);
-        ChartToast.showError(null, {
-          title: 'Error',
-          message: errorMsg,
-        });
-      }
-    } else {
-      // If it's email/phone signup, we update the profile since they are already authenticated
-      const success = await authStore.updateProfile({ 
-        birthday: selectedDate.toISOString(), 
-        gender: selectedGender 
-      });
-      setIsLoading(false);
-      if (success) {
-        router.push('/signup/profile-picture' as any);
-      } else {
-        const errorMsg = useAuthStore.getState().errorMessage || 'Failed to complete setup';
-        console.error('Update Profile Error:', errorMsg);
-        ChartToast.showError(null, {
-          title: 'Error',
-          message: errorMsg,
-        });
-      }
-    }
+    await updateProfile({
+      birthday: selectedDate.toISOString(),
+      gender: selectedGender
+    });
+
+    stopLoading();
+    router.push('/signup/bio' as any);
+    setTimeout(() => setIsLoading(false), 1000);
   };
 
   const genders = [
@@ -70,10 +92,11 @@ export default function BirthdayPage() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ChartAppBar title="" showBorder isLoading={isLoading} />
+      {!isDesktop && <ChartAppBar title="" showBorder isLoading={isLoading} />}
 
-      <View style={styles.content}>
-        <Text style={styles.title}>When's your birthday?</Text>
+      <View style={isDesktop ? styles.desktopWrapper : styles.flexOne}>
+        <View style={isDesktop ? styles.desktopModal : styles.content}>
+          <Text style={[styles.title, isDesktop && { textAlign: 'center', marginBottom: 12, fontSize: 28 }]}>When's your birthday?</Text>
         <Text style={styles.subtitle}>
           Your birthday won't be shown publicly. You must be at least 13 years old to use CrimChart.
         </Text>
@@ -81,29 +104,53 @@ export default function BirthdayPage() {
         <View style={styles.spacerLarge} />
 
         <View style={styles.datePickerContainer}>
-          {Platform.OS === 'android' && (
-            <TouchableOpacity activeOpacity={1}
-              style={styles.dateButton}
-              onPress={() => setShowDatePicker(true)}
-            >
-              <Text style={styles.dateButtonText}>{selectedDate.toLocaleDateString()}</Text>
-            </TouchableOpacity>
-          )}
-
-          {(showDatePicker || Platform.OS === 'ios') && (
-            <RNDateTimePicker
-              value={selectedDate}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              maximumDate={maxDate}
-              onChange={(event, date) => {
-                setShowDatePicker(Platform.OS === 'ios');
-                if (date) setSelectedDate(date);
+          <View style={styles.dateInputRow}>
+            <TextInput
+              ref={monthRef}
+              style={[styles.dateInput, Platform.OS === 'web' ? { outlineStyle: 'none' } as any : {}]}
+              placeholder="MM"
+              placeholderTextColor="rgba(255, 255, 255, 0.2)"
+              keyboardType="number-pad"
+              maxLength={2}
+              value={month}
+              onChangeText={(text) => {
+                const clean = text.replace(/[^0-9]/g, '');
+                setMonth(clean);
+                if (clean.length === 2) dayRef.current?.focus();
               }}
-              textColor="#FFF"
-              style={styles.picker}
             />
-          )}
+            <Text style={styles.dateSeparator}>/</Text>
+            <TextInput
+              ref={dayRef}
+              style={[styles.dateInput, Platform.OS === 'web' ? { outlineStyle: 'none' } as any : {}]}
+              placeholder="DD"
+              placeholderTextColor="rgba(255, 255, 255, 0.2)"
+              keyboardType="number-pad"
+              maxLength={2}
+              value={day}
+              onChangeText={(text) => {
+                const clean = text.replace(/[^0-9]/g, '');
+                setDay(clean);
+                if (clean.length === 2) yearRef.current?.focus();
+                if (clean.length === 0) monthRef.current?.focus();
+              }}
+            />
+            <Text style={styles.dateSeparator}>/</Text>
+            <TextInput
+              ref={yearRef}
+              style={[styles.dateInput, styles.yearInput, Platform.OS === 'web' ? { outlineStyle: 'none' } as any : {}]}
+              placeholder="YYYY"
+              placeholderTextColor="rgba(255, 255, 255, 0.2)"
+              keyboardType="number-pad"
+              maxLength={4}
+              value={year}
+              onChangeText={(text) => {
+                const clean = text.replace(/[^0-9]/g, '');
+                setYear(clean);
+                if (clean.length === 0) dayRef.current?.focus();
+              }}
+            />
+          </View>
         </View>
 
         <View style={styles.spacerLarge} />
@@ -132,17 +179,18 @@ export default function BirthdayPage() {
           })}
         </View>
 
-        <View style={styles.flexOne} />
+        {isDesktop ? <View style={{ height: 40 }} /> : <View style={styles.flexOne} />}
 
         <TouchableOpacity activeOpacity={1}
-          style={[styles.nextButton, (!selectedGender) && styles.nextButtonDisabled]}
+          style={[styles.nextButton, (!selectedGender || month.length < 1 || day.length < 1 || year.length < 4) && styles.nextButtonDisabled]}
           onPress={handleNext}
-          disabled={!selectedGender || isLoading}
+          disabled={!selectedGender || month.length < 1 || day.length < 1 || year.length < 4 || isLoading}
         >
-          <Text style={styles.nextButtonText}>Next</Text>
+          <Text style={styles.nextButtonText}>{t('next') || 'Next'}</Text>
         </TouchableOpacity>
 
         <View style={styles.spacerLarge} />
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -152,6 +200,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  desktopWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+  },
+  desktopModal: {
+    width: '100%',
+    maxWidth: 600,
+    backgroundColor: '#16181c',
+    borderRadius: 16,
+    paddingVertical: 40,
+    paddingHorizontal: 40,
+    minHeight: 500,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   content: {
     flex: 1,
@@ -175,22 +241,32 @@ const styles = StyleSheet.create({
   datePickerContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    height: 160,
+    height: 120,
   },
-  picker: {
-    width: '100%',
-    height: 160,
+  dateInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 10,
+    gap: 12,
   },
-  dateButton: {
+  dateInput: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
     borderRadius: 12,
-  },
-  dateButtonText: {
     color: colors.text,
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: '600',
+    textAlign: 'center',
+    width: 70,
+    height: 70,
+  },
+  yearInput: {
+    width: 100,
+  },
+  dateSeparator: {
+    color: 'rgba(255, 255, 255, 0.3)',
+    fontSize: 28,
+    fontWeight: '300',
   },
   sectionTitle: {
     color: colors.text,

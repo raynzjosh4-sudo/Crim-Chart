@@ -83,9 +83,9 @@ export const FollowUserButton: React.FC<FollowUserButtonProps> = ({ targetUserId
   }
 
   // Adjust styles based on size
-  const buttonHeight = size === 'small' ? 36 : size === 'large' ? 56 : 50;
+  const buttonHeight = size === 'small' ? 32 : size === 'large' ? 48 : 40;
   const iconSize = size === 'small' ? 14 : size === 'large' ? 20 : 18;
-  const fontSize = size === 'small' ? 12 : size === 'large' ? 16 : 14;
+  const fontSize = size === 'small' ? 14 : size === 'large' ? 16 : 14;
 
   return (
     <TouchableOpacity
@@ -121,8 +121,7 @@ export const FollowUserButton: React.FC<FollowUserButtonProps> = ({ targetUserId
 
 const styles = StyleSheet.create({
   button: {
-    flex: 1,
-    borderRadius: 16,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
     flexDirection: 'row',
@@ -130,7 +129,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   followBtn: {
-    backgroundColor: '#FFC400',
+    backgroundColor: colors.primary,
   },
   followingBtn: {
     backgroundColor: 'transparent',

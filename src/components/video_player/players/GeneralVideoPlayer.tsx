@@ -1,12 +1,8 @@
-import { UserAvatarImage } from '@/channel/pages/widgets2/memberimage/UserAvatarImage';
+import UserAvatar from '@/components/avatar/UserAvatar';
 import { AnimatedPostButton } from '@/components/buttons/AnimatedPostButton';
 import { CommentSheet } from '@/components/comments/CommentSheet';
-import { formatTimeAgo } from '@/components/formatTimeAgo';
-import { PostHeader } from '@/components/PostHeader/PostHeader';
-import { useCurrentUserProfile, useUserProfile } from '@/features/auth/application/useUserProfile';
 import { CommentAction } from '@/features/feed/components/CommentAction';
 import { LikeAction } from '@/features/feed/components/LikeAction';
-import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
@@ -36,6 +32,7 @@ export interface GeneralVideoPlayerProps {
     createdAt?: string;
     videoUrl?: string;
     sourceTable?: string;
+    source_type?: string;
     addedBy?: {
       id: string;
       name: string;
@@ -77,11 +74,7 @@ export const GeneralVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress,
 
   const isLocal = video.addedBy?.id === 'local_user';
 
-  const otherProfile = useUserProfile(isLocal ? undefined : video.addedBy?.id);
-  const currentUserProfile = useCurrentUserProfile();
-  const profile = isLocal ? currentUserProfile : otherProfile;
-
-  const realName = isLocal ? (profile?.displayName || 'You') : (profile?.displayName || video.addedBy?.name || 'Unknown User');
+  const realName = isLocal ? 'You' : (video.addedBy?.name || 'Unknown User');
 
   const [localTitle, setLocalTitle] = useState(video.title || '');
 
@@ -89,30 +82,6 @@ export const GeneralVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress,
 
   return (
     <View style={styles.container}>
-      {/* Facebook-style Post Header */}
-      {video.addedBy ? (
-        <PostHeader
-          author={
-            new CrimChartUserModel({
-              id: video.addedBy.id,
-              displayName: realName,
-              profileImageUrl: profile?.profileImageUrl || video.addedBy.avatarUrl,
-              isActive: profile?.isActive,
-              hasStatus: profile?.hasStatus,
-              statusCount: profile?.statusCount,
-            })
-          }
-          isPersonalPost={video.sourceTable === 'posts' || isLocal}
-          timeAgo={formatTimeAgo(video.createdAt)}
-          onAvatarTap={() => {
-            if (!isLocal && video.addedBy?.id) {
-              router.push(`/profile/${video.addedBy.id}`);
-            }
-          }}
-        />
-      ) : (
-        <View style={styles.postHeader} />
-      )}
 
       <View style={styles.videoInfo}>
         {isLocal ? (
@@ -170,8 +139,9 @@ export const GeneralVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress,
           </TouchableOpacity>
           {video.linkedFrom && (
             <View style={styles.linkedFromBadge}>
-              <UserAvatarImage
-                imageUrl={video.linkedFrom.avatarUrl}
+              <UserAvatar
+                userId={video.linkedFrom.id || ''}
+                fallbackUrl={video.linkedFrom.avatarUrl}
                 name={video.linkedFrom.name}
                 size={44}
               />
@@ -192,11 +162,11 @@ export const GeneralVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress,
                   id: video.id,
                   videoUrl: videoToPlay as string,
                   title: isLocal ? localTitle : video.title,
-                  description: isLocal ? (profile?.crownTitle || '') : (video.description || 'A cinematic video.'),
+                  description: isLocal ? (video.description || '') : (video.description || 'A cinematic video.'),
                   isLocal: isLocal,
                   isShort: false,
                   directorId: video.addedBy?.id,
-                  directorAvatarUrl: profile?.profileImageUrl || video.addedBy?.avatarUrl,
+                  directorAvatarUrl: video.addedBy?.avatarUrl,
                   likesCount: video.likes,
                   viewsCount: video.viewsCount,
                   commentsCount: localCommentsCount,
@@ -243,8 +213,9 @@ export const GeneralVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress,
           </View>
           {video.linkedFrom && (
             <View style={styles.linkedFromBadge}>
-              <UserAvatarImage
-                imageUrl={video.linkedFrom.avatarUrl}
+              <UserAvatar
+                userId={video.linkedFrom.id || ''}
+                fallbackUrl={video.linkedFrom.avatarUrl}
                 name={video.linkedFrom.name}
                 size={44}
               />
@@ -342,7 +313,7 @@ export const GeneralVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress,
           renderItem={() => null}
           videoId={video.id}
           directorId={video.addedBy?.id}
-          directorAvatarUrl={profile?.profileImageUrl || video.addedBy?.avatarUrl}
+          directorAvatarUrl={video.addedBy?.avatarUrl}
           likesCount={video.likes}
           viewsCount={video.viewsCount}
           commentsCount={localCommentsCount}

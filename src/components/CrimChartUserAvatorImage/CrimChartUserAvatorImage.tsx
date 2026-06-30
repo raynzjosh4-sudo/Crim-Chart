@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, StyleProp, ViewStyle, ImageStyle } from 'react-native';
 import { Image, ImageContentFit } from 'expo-image';
 import { Image as ImageIcon } from 'lucide-react-native';
@@ -23,7 +23,9 @@ export const CrimchartUserAvatorImage: React.FC<CrimChartUserAvatorImageProps> =
   borderRadius,
   style,
 }) => {
-  if (!url || url.length === 0) {
+  const [imageError, setImageError] = useState(false);
+
+  if (!url || url.length === 0 || imageError) {
     return (
       <View style={[{ width, height, borderRadius }, styles.fallback, style as ViewStyle]}>
         <ImageIcon color="rgba(255,255,255,0.2)" size={24} />
@@ -39,6 +41,7 @@ export const CrimchartUserAvatorImage: React.FC<CrimChartUserAvatorImageProps> =
         contentFit={fit}
         transition={300}
         style={{ width: '100%', height: '100%' }}
+        onError={() => setImageError(true)}
       />
     </View>
   );

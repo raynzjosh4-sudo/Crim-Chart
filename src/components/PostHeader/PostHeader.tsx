@@ -1,44 +1,79 @@
 import UserAvatar from '@/components/avatar/UserAvatar';
-import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
-import { MoreHorizontal } from 'lucide-react-native';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
+import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
+import { MoreHorizontal } from 'lucide-react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 export interface PostHeaderProps {
   author: CrimChartUserModel;
-  isPersonalPost?: boolean;
+  source_type?: string | null;
   timeAgo?: string;
   onAvatarTap: () => void;
   onMoreTap?: () => void;
+  channelId?: string | null;
+  channelAvatarUrl?: string | null;
+  channelName?: string | null;
+  channelDescription?: string | null;
+  onChannelAvatarTap?: () => void;
 }
 
-export const PostHeader: React.FC<PostHeaderProps> = ({ author, isPersonalPost, timeAgo, onAvatarTap, onMoreTap }) => {
+import { ChannelAvatar } from '@/channel/components/channelavatarimage/ChannelAvatar';
+
+export const PostHeader: React.FC<PostHeaderProps> = ({ author, source_type, timeAgo, onAvatarTap, onMoreTap, channelId, channelAvatarUrl, channelName, channelDescription, onChannelAvatarTap }) => {
   const styles = useStyles(themeStyles);
   const theme = useCurrentTheme();
+
+  const isChannelPost = source_type === 'channel_post';
 
   return (
     <View style={styles.header}>
       <View style={styles.avatarContainer}>
-        <UserAvatar
-          userId={author.id}
-          fallbackUrl={author.profileImageUrl}
-          name={author.displayName}
-          size={44}
-          forceOnline={author.isActive}
-          forceHasStatus={author.hasStatus}
-          forceStatusCount={author.statusCount}
-          onTap={onAvatarTap}
-        />
+        {isChannelPost && channelId ? (
+          <ChannelAvatar
+            channelId={channelId}
+            fallbackUrl={channelAvatarUrl}
+            name={channelName || 'Channel'}
+            size={48}
+            onTap={() => {
+              if (onChannelAvatarTap) onChannelAvatarTap();
+            }}
+            onLongPress={() => {
+              console.log(source_type);
+            }}
+          />
+        ) : (
+          <UserAvatar
+            userId={author.id}
+            fallbackUrl={author.profileImageUrl}
+            name={author.displayName}
+            size={48}
+            forceOnline={author.isActive}
+            forceHasStatus={author.hasStatus}
+            forceStatusCount={author.statusCount}
+            onTap={() => {
+              if (onAvatarTap) onAvatarTap();
+            }}
+            onLongPress={() => {
+              console.log(source_type);
+            }}
+          />
+        )}
       </View>
-      
-      <View style={styles.textContainer}>
+
+      <TouchableOpacity
+        style={styles.textContainer}
+        activeOpacity={1}
+        onLongPress={() => {
+          console.log(source_type);
+        }}
+      >
         <View style={styles.nameRow}>
           <Text style={styles.displayName} numberOfLines={1}>
-            {author.displayName || 'Unknown User'}
+            {isChannelPost ? (channelName || 'Channel') : (author.displayName || 'Unknown User')}
           </Text>
-          {author.username ? (
+          {!isChannelPost && author.username ? (
             <Text style={styles.handle} numberOfLines={1}>
               @{author.username}
             </Text>
@@ -49,7 +84,12 @@ export const PostHeader: React.FC<PostHeaderProps> = ({ author, isPersonalPost, 
             </Text>
           ) : null}
         </View>
-      </View>
+        {isChannelPost && channelDescription ? (
+          <Text style={styles.channelDescription} numberOfLines={1}>
+            {channelDescription}
+          </Text>
+        ) : null}
+      </TouchableOpacity>
 
       <TouchableOpacity activeOpacity={1} style={styles.moreButton} onPress={onMoreTap}>
         <MoreHorizontal color={theme.colors.textSecondary} size={20} />
@@ -62,6 +102,7 @@ const themeStyles = (colors: ThemeTokens, scale: number) => ({
   header: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
+
     paddingHorizontal: 16 * scale,
     marginBottom: 8 * scale,
   },
@@ -93,8 +134,22 @@ const themeStyles = (colors: ThemeTokens, scale: number) => ({
     color: colors.textSecondary,
     fontSize: 14 * scale,
   },
+  channelDescription: {
+    color: colors.textSecondary,
+    fontSize: 13 * scale,
+    marginTop: 2 * scale,
+  },
   moreButton: {
     padding: 4 * scale,
     marginLeft: 8 * scale,
+  },
+  channelAvatarContainer: {
+    marginLeft: 8 * scale,
+  },
+  channelAvatar: {
+    width: 32 * scale,
+    height: 32 * scale,
+    borderRadius: 16 * scale,
+    backgroundColor: colors.surfaceVariant,
   },
 });

@@ -13,6 +13,8 @@ import { ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View
 
 import { AppCountryPicker } from '@/components/countryPicker/AppCountryPicker';
 import { AppAgeRestrictionPicker } from '@/components/ageRestriction/AppAgeRestrictionPicker';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+import { ChartToast } from '@/components/showcase/CrimChartToast';
 export default function CreateChannelPage({ isInline = false }: { isInline?: boolean }) {
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width > 768 && !isInline;
@@ -27,6 +29,7 @@ export default function CreateChannelPage({ isInline = false }: { isInline?: boo
   const setDraftCountries = useChannelCreationController(state => state.setDraftCountries);
   const setDraftAge = useChannelCreationController(state => state.setDraftAge);
   const isLoading = creationStatus === ChannelCreationStatus.processing;
+  const { startLoading, stopLoading } = useGlobalProgress();
 
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [showAgePicker, setShowAgePicker] = useState(false);
@@ -56,11 +59,26 @@ export default function CreateChannelPage({ isInline = false }: { isInline?: boo
 
   const handleCreate = () => {
     if (isLoading) return;
-    if (title.trim().length === 0) {
-      console.log('Validation failed: Name is empty');
+    
+    const finalTitle = title.trim();
+    const finalDescription = description.trim();
+    
+    if (finalTitle.length === 0 || finalTitle === 'Channel Title') {
+      ChartToast.showError(tr('error') || 'Error', 'Please enter a valid channel title.');
+      return;
+    }
+    
+    if (finalDescription.length === 0 || finalDescription === 'Write about the channel or community...') {
+      ChartToast.showError(tr('error') || 'Error', 'Please enter a valid channel description.');
+      return;
+    }
+    
+    if (!selectedMedia?.contentUrl) {
+      ChartToast.showError(tr('error') || 'Error', 'Please select a channel image.');
       return;
     }
 
+    startLoading();
     createChannel({
       name: title.trim(),
       description: description.trim(),
@@ -73,6 +91,7 @@ export default function CreateChannelPage({ isInline = false }: { isInline?: boo
       countryRestrictions: draftCountries,
       allowCommentingBy,
     }).then(() => {
+      stopLoading();
       setTimeout(() => {
         if (isInline) {
           router.setParams({ desktopChannelId: '' });
@@ -81,6 +100,7 @@ export default function CreateChannelPage({ isInline = false }: { isInline?: boo
         }
       }, 100);
     }).catch((e) => {
+      stopLoading();
       console.error('Create channel failed', e);
     });
   };
@@ -118,14 +138,14 @@ export default function CreateChannelPage({ isInline = false }: { isInline?: boo
 
         {/* Essential Identity Fields */}
         <TextInput
-          style={[styles.input, { color: colors.text, backgroundColor: 'rgba(255,255,255,0.05)' }]}
+          style={[styles.input, { color: colors.text, backgroundColor: 'rgba(255,255,255,0.05)' }, Platform.OS === 'web' ? { outlineStyle: 'none' } as any : {}]}
           placeholder={tr('channel_title_hint')}
           placeholderTextColor="rgba(255,255,255,0.3)"
           value={title}
           onChangeText={setTitle}
         />
         <TextInput
-          style={[styles.input, styles.textArea, { color: colors.text, backgroundColor: 'rgba(255,255,255,0.05)' }]}
+          style={[styles.input, styles.textArea, { color: colors.text, backgroundColor: 'rgba(255,255,255,0.05)' }, Platform.OS === 'web' ? { outlineStyle: 'none' } as any : {}]}
           placeholder={tr('channel_description_hint')}
           placeholderTextColor="rgba(255,255,255,0.3)"
           multiline
@@ -227,10 +247,10 @@ export default function CreateChannelPage({ isInline = false }: { isInline?: boo
 
         {/* Right-Aligned Premium Action Box */}
         <View style={styles.createButtonContainer}>
-          <TouchableOpacity onPress={handleCreate} activeOpacity={0.7}>
+          <TouchableOpacity onPress={handleCreate} activeOpacity={0.7} disabled={isLoading}>
             <View style={[styles.createButton, isLoading ? styles.createButtonLoading : styles.createButtonActive]}>
               <Text style={[styles.createButtonText, isLoading ? { color: 'rgba(250, 205, 17, 0.5)' } : {}]}>
-                {isLoading ? tr('wait') : tr('create')}
+                {tr('create')}
               </Text>
             </View>
           </TouchableOpacity>

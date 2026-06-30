@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
-import { UserAvatarImage } from '@/channel/pages/widgets2/memberimage/UserAvatarImage';
+import AppAvatar from '@/components/avatar/AppAvatar';
 
 interface OverscrollStatusRevealProps {
   overscroll: number;
@@ -51,8 +51,8 @@ export const OverscrollStatusReveal: React.FC<OverscrollStatusRevealProps> = ({ 
         <Text style={styles.title}>Release to view status</Text>
         <TouchableOpacity activeOpacity={0.8} onPress={handlePress}>
           <View style={styles.avatarWrapper}>
-            <UserAvatarImage
-              imageUrl={user.profileImageUrl}
+            <AppAvatar
+              url={user.profileImageUrl}
               size={64}
               showStatusRing={true}
               showActiveDot={false}

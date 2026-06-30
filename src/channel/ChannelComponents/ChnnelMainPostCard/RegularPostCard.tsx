@@ -11,6 +11,7 @@ import { LikeAction } from '@/channel/CRimChartMassageBubble/comment_action/like
 import { CommentActionWidget } from '@/channel/CRimChartMassageBubble/comments/CommentActionWidget';
 import { TagOverlay } from '@/channel/pages/tag/TagOverlay';
 import { PostHeader } from '@/components/PostHeader/PostHeader';
+import { PostOptionsSheet } from '@/components/postOptionsSheet/PostOptionsSheet';
 import { useFeedPermissions } from '@/components/wrappers/FeedPermissionsWrapper';
 import { ChannelAudioPostWidget } from './postCardFiles/ChannelAudioPostWidget';
 import { ChannelImagePostWidget } from './postCardFiles/ChannelImagePostWidget';
@@ -37,7 +38,10 @@ export interface RegularPostCardProps {
   metadata?: any;
   isActive?: boolean;
   widgetType?: string | null;
+  source_type?: string | null;
   canComment?: boolean;
+  channelAvatarUrl?: string | null;
+  channelName?: string | null;
 }
 
 export const RegularPostCard: React.FC<RegularPostCardProps> = ({
@@ -58,15 +62,19 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
   onTagTap,
   thumbnailUrl,
   metadata,
-  isActive,
+  isActive = false,
   widgetType,
+  source_type,
   channelId,
   canComment: canCommentProp = true,
+  channelAvatarUrl,
+  channelName,
 }) => {
   const { canComment: contextCanComment } = useFeedPermissions();
   const canComment = canCommentProp && contextCanComment;
   const router = useRouter();
   const [tagOverlayVisible, setTagOverlayVisible] = useState(false);
+  const [postOptionsVisible, setPostOptionsVisible] = useState(false);
   const styles = useStyles(themeStyles);
   const theme = useCurrentTheme();
 
@@ -91,8 +99,18 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
       {/* Header */}
       <PostHeader
         author={author}
-        isPersonalPost={isPersonalPost}
+        source_type={source_type}
+        timeAgo={timeAgo}
         onAvatarTap={goToProfile}
+        onMoreTap={() => setPostOptionsVisible(true)}
+        channelId={channelId}
+        channelAvatarUrl={channelAvatarUrl}
+        channelName={channelName}
+        onChannelAvatarTap={() => {
+          if (channelId) {
+            router.push(`/channel/${channelId}` as any);
+          }
+        }}
       />
 
       {/* Content */}
@@ -142,6 +160,12 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
         postId={postId ?? ''}
         sourceChannelId={channelId ?? ''}
         linkChain={[]}
+      />
+
+      <PostOptionsSheet
+        postId={postId ?? ''}
+        visible={postOptionsVisible}
+        onClose={() => setPostOptionsVisible(false)}
       />
     </View>
   );

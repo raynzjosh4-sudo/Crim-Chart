@@ -547,7 +547,6 @@ export class NativeDB {
   }
 
   static async upsertComments(comments: any[]) {
-    const db = dbService.database;
     const sql = `
       INSERT OR REPLACE INTO ${TABLES.COMMENTS} (
         id, post_id, author_id, author_username, author_avatar_url,
@@ -570,7 +569,7 @@ export class NativeDB {
           Number(comment.likes_count || comment.likesCount || 0),
           comment.is_pending ? 1 : 0
         ];
-        await db.runAsync(sql, params);
+        await dbService.execute(sql, params);
       } catch (err) {
         console.error('🚨 [NativeDB] upsertComment FAILED:', err);
       }
@@ -579,12 +578,12 @@ export class NativeDB {
 
   static async getComments(postId: string) {
     try {
-      const db = dbService.database;
-      const rows = await db.getAllAsync(`
-      SELECT * FROM ${TABLES.COMMENTS} 
-      WHERE post_id = ? 
-      ORDER BY created_at DESC
-      `, [postId]) as any[];
+      if (!postId) return [];
+      const rows = await dbService.query<any>(`
+        SELECT * FROM ${TABLES.COMMENTS} 
+        WHERE post_id = ? 
+        ORDER BY created_at DESC
+      `, [String(postId)]);
       return rows.map(r => ({ ...r, is_pending: r.is_pending === 1 }));
     } catch (err) {
       console.error('🚨 [NativeDB] getComments FAILED:', err);
@@ -594,12 +593,11 @@ export class NativeDB {
 
   static async getPendingComments() {
     try {
-      const db = dbService.database;
-      const rows = await db.getAllAsync(`
-      SELECT * FROM ${TABLES.COMMENTS} 
-      WHERE is_pending = 1 
-      ORDER BY created_at ASC
-      `) as any[];
+      const rows = await dbService.query<any>(`
+        SELECT * FROM ${TABLES.COMMENTS} 
+        WHERE is_pending = 1 
+        ORDER BY created_at ASC
+      `);
       return rows.map(r => ({ ...r, is_pending: r.is_pending === 1 }));
     } catch (err) {
       console.error('🚨 [NativeDB] getPendingComments FAILED:', err);
@@ -751,7 +749,7 @@ export class NativeDB {
           item.created_at || new Date().toISOString(),
           item.prefetchedData ? JSON.stringify(item.prefetchedData) : null,
         ];
-        await db.runAsync(sql, params);
+        await dbService.execute(sql, params);
       }
     } catch (error) {
       console.error('🚨 [NativeDB] upsertMainFeed FAILED:', error);
@@ -778,6 +776,82 @@ export class NativeDB {
       }));
     } catch (error) {
       console.error('🚨 [NativeDB] getMainFeed FAILED:', error);
+      return [];
+    }
+  }
+
+  static async saveMusicFeed(tracks: any[], reset: boolean = true) {
+    try {
+      if (reset) {
+        await dbService.execute(`DELETE FROM ${TABLES.MUSIC_FEED}`);
+      }
+
+      for (const track of tracks) {
+        const sql = `
+          INSERT OR REPLACE INTO ${TABLES.MUSIC_FEED} (
+            id, title, artist, coverUrl, audioUrl, likesCount, commentsCount,
+            viewsCount, downloadsCount, lyrics, sourceTable, caption, created_at, owner_id,
+            owner_name, owner_avatarUrl, owner_crownTitle, fetched_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        const params = [
+          String(track.id || ''),
+          track.title ?? '',
+          track.artist ?? '',
+          track.coverUrl ?? '',
+          track.audioUrl ?? '',
+          Number(track.likesCount) || 0,
+          Number(track.commentsCount) || 0,
+          Number(track.viewsCount) || 0,
+          Number(track.downloadsCount) || 0,
+          track.lyrics ?? '',
+          track.sourceTable ?? 'posts',
+          track.caption ?? '',
+          track.createdAt ?? '',
+          track.owner?.id ?? '',
+          track.owner?.name ?? '',
+          track.owner?.avatarUrl ?? '',
+          track.owner?.crownTitle ?? '',
+          Date.now()
+        ];
+        await dbService.execute(sql, params);
+      }
+    } catch (error) {
+      console.error('🚨 [NativeDB] saveMusicFeed FAILED:', error);
+    }
+  }
+
+  static async getMusicFeed(limit: number = 10, offset: number = 0): Promise<any[]> {
+    try {
+      const sql = `
+        SELECT * FROM ${TABLES.MUSIC_FEED}
+        ORDER BY fetched_at ASC
+        LIMIT ? OFFSET ?
+      `;
+      const rows = await dbService.query<any>(sql, [limit, offset]);
+      return rows.map(row => ({
+        id: row.id,
+        title: row.title,
+        artist: row.artist,
+        coverUrl: row.coverUrl,
+        audioUrl: row.audioUrl,
+        likesCount: row.likesCount,
+        commentsCount: row.commentsCount,
+        viewsCount: row.viewsCount,
+        downloadsCount: row.downloadsCount,
+        lyrics: row.lyrics,
+        sourceTable: row.sourceTable,
+        caption: row.caption,
+        createdAt: row.created_at,
+        owner: {
+          id: row.owner_id,
+          name: row.owner_name,
+          avatarUrl: row.owner_avatarUrl,
+          crownTitle: row.owner_crownTitle,
+        }
+      }));
+    } catch (error) {
+      console.error('🚨 [NativeDB] getMusicFeed FAILED:', error);
       return [];
     }
   }

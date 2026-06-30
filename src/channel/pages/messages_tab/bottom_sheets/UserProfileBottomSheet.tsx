@@ -5,7 +5,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { UserPlus, UserCircle, X } from 'lucide-react-native';
 import { colors } from '@/core/theme/colors';
 import { useRouter } from 'expo-router';
-import { UserAvatarImage } from '@/channel/pages/widgets2/memberimage/UserAvatarImage';
+import AppAvatar from '@/components/avatar/AppAvatar';
 import { FollowUserButton } from '@/components/FollowUserButton';
 
 interface UserProfileBottomSheetProps {
@@ -151,12 +151,11 @@ export const UserProfileBottomSheet: React.FC<UserProfileBottomSheetProps> = ({ 
                 >
                 {commonChannels.map((channel) => (
                   <View key={channel.id} style={{ marginRight: 16, alignItems: 'center' }}>
-                    <UserAvatarImage 
-                      imageUrl={channel.avatar_url || 'https://via.placeholder.com/60'} 
+                    <AppAvatar 
+                      url={channel.avatar_url || 'https://via.placeholder.com/60'} 
                       size={60} 
                       showStatusRing={false}
                       showActiveDot={false}
-                      name={channel.name}
                     />
                     <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: '600', marginTop: 8, maxWidth: 64 }} numberOfLines={1}>
                       {channel.name}

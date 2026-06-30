@@ -3,16 +3,22 @@ import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-nat
 import { useTheme } from '@react-navigation/native';
 import { useChannelEngagement } from '@/channel/hooks/useChannelEngagement';
 
-interface Props { channelId: string; joinMethod?: string; }
+interface Props { channelId: string; joinMethod?: string; onToggle?: (isFollowing: boolean) => void; }
 
-export default function ChannelFollowButton({ channelId, joinMethod = 'open' }: Props) {
+export default function ChannelFollowButton({ channelId, joinMethod = 'open', onToggle }: Props) {
   const { colors } = useTheme();
   const { isFollowing, isLoading, followChannel, unfollowChannel, requestJoin } = useChannelEngagement(channelId);
 
-  const handlePress = () => {
-    if (isFollowing) unfollowChannel();
-    else if (joinMethod === 'request') requestJoin();
-    else followChannel();
+  const handlePress = async () => {
+    if (isFollowing) {
+      await unfollowChannel();
+      if (onToggle) onToggle(false);
+    } else if (joinMethod === 'request') {
+      await requestJoin();
+    } else {
+      await followChannel();
+      if (onToggle) onToggle(true);
+    }
   };
 
   if (isLoading) return <ActivityIndicator color={colors.primary} />;

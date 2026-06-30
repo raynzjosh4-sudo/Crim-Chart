@@ -55,6 +55,14 @@ export class AuthRepository {
     if (!session) {
       return null;
     }
+
+    // Validate token against backend in case account was deleted or revoked
+    const { data: { user: authUser }, error } = await supabase.auth.getUser();
+    if (error || !authUser) {
+      await this.signOut();
+      return null;
+    }
+
     return user;
   }
 

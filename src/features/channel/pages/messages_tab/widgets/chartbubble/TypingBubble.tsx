@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
-import { UserAvatarImage } from '../../../../../../channel/pages/widgets2/memberimage/UserAvatarImage';
+import AppAvatar from '@/components/avatar/AppAvatar';
 
 const BouncingDots = () => {
   const anim1 = useRef(new Animated.Value(0)).current;
@@ -44,8 +44,8 @@ interface TypingBubbleProps {
 export const TypingBubble: React.FC<TypingBubbleProps> = ({ avatarUrl }) => {
   return (
     <View style={styles.container}>
-      <UserAvatarImage
-        imageUrl={avatarUrl}
+      <AppAvatar
+        url={avatarUrl}
         size={42}
         showStatusRing={false}
       />

@@ -37,6 +37,7 @@ interface InteractionState {
   toggleCommentLike: (commentId: string, isPending?: boolean) => void;
   syncPostInteractions: (postIds: string[], boxId?: string) => Promise<void>;
   syncCommentInteractions: (commentIds: string[]) => Promise<void>;
+  syncRealtimeLikeCount: (postId: string, count: number) => void;
 }
 
 export const useInteractionStore = create<InteractionState>((set) => ({
@@ -49,6 +50,17 @@ export const useInteractionStore = create<InteractionState>((set) => ({
   commentLikes: {},
   commentLikesCount: {},
   postCommentsCount: {},
+
+  syncRealtimeLikeCount: (postId, count) => set((state) => {
+    const newLikesCount = { ...state.likesCount };
+    // Update count for the global post and any box-context keys for this post
+    Object.keys(newLikesCount).forEach(key => {
+      if (key === postId || key.endsWith(`_${postId}`)) {
+        newLikesCount[key] = count;
+      }
+    });
+    return { likesCount: newLikesCount };
+  }),
 
   seedPost: (postId, initialLikesCount, initialViewsCount, initialIsLiked, initialDownloadsCount, boxId, initialCommentsCount) =>
     set((state) => {

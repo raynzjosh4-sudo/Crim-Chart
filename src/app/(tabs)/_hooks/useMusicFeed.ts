@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
 import { supabase } from '@/core/supabase/supabaseConfig';
 import { MusicTrackItem } from '@/features/boxes/components/music_posting/tiles/MusicListTile';
+import { useEffect, useState } from 'react';
+import { useMusicFeedStore } from '@/core/store/useMusicFeedStore';
+import { NativeDB } from '@/core/db/NativeDB';
 
 export function useMusicFeed(searchQuery?: string) {
   const [tracks, setTracks] = useState<MusicTrackItem[]>([]);
@@ -12,7 +14,31 @@ export function useMusicFeed(searchQuery?: string) {
 
   const fetchMusicFeed = async (reset: boolean = false) => {
     if (reset) {
-      setIsLoading(true);
+      const store = useMusicFeedStore.getState();
+      if (store.isPrefetched && (!searchQuery || searchQuery.trim() === '')) {
+        setTracks(store.prefetchedTracks);
+        setOffset(LIMIT);
+        setHasMore(store.prefetchedTracks.length === LIMIT);
+        setIsLoading(false);
+        store.clearPrefetch();
+        return; // Prefetch gives us fresh data, no need to fetch again immediately
+      }
+
+      // If no prefetch, try to load from SQLite for instant UI
+      if (!searchQuery || searchQuery.trim() === '') {
+        const localTracks = await NativeDB.getMusicFeed(LIMIT, 0);
+        if (localTracks && localTracks.length > 0) {
+          setTracks(localTracks);
+          setOffset(LIMIT);
+          setIsLoading(false); // Stop loading indicator instantly
+        }
+      }
+
+      // Even if we loaded from SQLite, we continue to fetch fresh data from Supabase below
+      // unless we already returned from the prefetch block.
+      if (tracks.length === 0) {
+        setIsLoading(true);
+      }
       setOffset(0);
       setHasMore(true);
     } else {
@@ -41,18 +67,33 @@ export function useMusicFeed(searchQuery?: string) {
       }
 
       if (data) {
+        if (data.length > 0) {
+          console.log('\n\n--- MUSIC FEED RAW DATA DEBUG ---');
+          console.log(JSON.stringify(data[0], null, 2));
+          console.log('----------------------------------\n\n');
+        }
+
         const mappedTracks: MusicTrackItem[] = data.map((row: any) => {
           const postData = row.post_data || {};
           const authorData = row.author || {};
           
           // channel_posts uses 'likes', 'comments', 'image_urls' whereas 'posts' might use 'likes_count', etc.
           // Parse image_urls if it's a string array, or use thumbnail_url
-          let coverUrl = postData.thumbnail_url || authorData.profile_image_url || '';
-          if (!postData.thumbnail_url && postData.image_urls) {
+          let coverUrl = postData.cover_url || postData.thumbnail_url || '';
+          
+          if (!coverUrl && Array.isArray(postData.thumbnail_urls) && postData.thumbnail_urls.length > 0) {
+            coverUrl = postData.thumbnail_urls[0];
+          }
+
+          if (!coverUrl && postData.image_urls) {
             try {
               const urls = typeof postData.image_urls === 'string' ? JSON.parse(postData.image_urls) : postData.image_urls;
               if (Array.isArray(urls) && urls.length > 0) coverUrl = urls[0];
             } catch (e) {}
+          }
+          
+          if (!coverUrl && postData.image_url) {
+            coverUrl = postData.image_url;
           }
 
           let metadata: any = {};
@@ -64,6 +105,10 @@ export function useMusicFeed(searchQuery?: string) {
 
           if (metadata.coverUrl) {
             coverUrl = metadata.coverUrl;
+          }
+          
+          if (!coverUrl) {
+            coverUrl = authorData.profile_image_url || '';
           }
 
           return {
@@ -82,8 +127,10 @@ export function useMusicFeed(searchQuery?: string) {
               avatarUrl: authorData.profile_image_url || '',
               crownTitle: authorData.crown_title || '',
             },
-            lyrics: postData.lyrics || '',
+            lyrics: metadata.lyrics || postData.lyrics || '',
             sourceTable: row.source_table || 'posts',
+            caption: postData.caption || '',
+            createdAt: postData.created_at || postData.time || new Date().toISOString(),
           };
         });
         

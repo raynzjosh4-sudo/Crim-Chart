@@ -1,11 +1,12 @@
-import { create } from 'zustand';
+import { useProfileCacheStore } from '@/core/store/useProfileCacheStore';
 import { supabase } from '@/core/supabase/supabaseConfig';
-import { authRepository } from '../data/repositories/AuthRepository';
-import { SignUpParams, LoginParams } from '../types/AuthTypes';
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
-import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import { create } from 'zustand';
+import { authRepository } from '../data/repositories/AuthRepository';
+import { LoginParams, SignUpParams } from '../types/AuthTypes';
 
 const Storage = {
   setItemAsync: async (key: string, value: string) => {
@@ -21,7 +22,6 @@ const Storage = {
     return SecureStore.deleteItemAsync(key);
   }
 };
-import { useProfileCacheStore } from '@/core/store/useProfileCacheStore';
 
 export enum AuthStatus {
   UNKNOWN = 'unknown',
@@ -48,8 +48,10 @@ interface AuthActions {
   setGender: (gender: string) => void;
   setCountryName: (countryName: string) => void;
   setUsernameAndCheck: (username: string) => Promise<boolean>;
+  createAccountInitial: () => Promise<boolean | 'OTP_REQUIRED'>;
   completeSignUp: () => Promise<boolean>;
   verifyOtp: (token: string) => Promise<boolean>;
+  resendOtp: () => Promise<boolean>;
   updateProfile: (updates: any) => Promise<boolean>;
   login: (params: LoginParams) => Promise<boolean>;
   loginWithGoogle: () => Promise<boolean>;
@@ -185,22 +187,50 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   }),
 
   setUsernameAndCheck: async (username) => {
-    const { pendingSignUp } = get();
-    if (!pendingSignUp) return false;
-
     set({ isLoading: true, errorMessage: null });
     try {
       const available = await authRepository.checkUsernameAvailable(username);
       if (available) {
-        const updated = { ...pendingSignUp, username };
-        set({ isLoading: false, pendingSignUp: updated });
-        Storage.setItemAsync('saved_pending_signup', JSON.stringify(updated));
+        const { pendingSignUp } = get();
+        if (pendingSignUp) {
+          const updated = { ...pendingSignUp, username };
+          set({ isLoading: false, pendingSignUp: updated });
+          Storage.setItemAsync('saved_pending_signup', JSON.stringify(updated));
+        } else {
+          set({ isLoading: false });
+        }
         return true;
       } else {
         set({ isLoading: false, errorMessage: 'This username is already taken' });
         return false;
       }
     } catch (e: any) {
+      set({ isLoading: false, errorMessage: e.message });
+      return false;
+    }
+  },
+
+  createAccountInitial: async () => {
+    const { pendingSignUp } = get();
+    if (!pendingSignUp || !pendingSignUp.email || !pendingSignUp.password) {
+      set({ errorMessage: 'Email and Password are required.' });
+      return false;
+    }
+    
+    set({ isLoading: true, errorMessage: null });
+    try {
+      const user = await authRepository.signUp({
+        ...pendingSignUp,
+        username: pendingSignUp.username || 'User' // Provide a placeholder for the initial creation if needed by the payload.
+      });
+      // We do not delete pendingSignUp yet, because we need it for subsequent screens
+      set({ isLoading: false, status: AuthStatus.AUTHENTICATED, user });
+      return true;
+    } catch (e: any) {
+      if (e.message === 'OTP_REQUIRED') {
+        set({ isLoading: false });
+        return 'OTP_REQUIRED';
+      }
       set({ isLoading: false, errorMessage: e.message });
       return false;
     }
@@ -267,6 +297,28 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
       }
     } catch (e: any) {
       set({ isLoading: false, errorMessage: 'Verification failed. Please check the code and try again.' });
+      return false;
+    }
+  },
+
+  resendOtp: async () => {
+    const { pendingSignUp } = get();
+    if (!pendingSignUp) return false;
+
+    set({ isLoading: true, errorMessage: null });
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: pendingSignUp.email,
+      });
+
+      if (error) throw error;
+      
+      set({ isLoading: false });
+      return true;
+    } catch (e: any) {
+      console.log('Resend OTP Error:', e);
+      set({ isLoading: false, errorMessage: e.message || 'Failed to resend code.' });
       return false;
     }
   },
@@ -363,6 +415,11 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
 // Setup listener outside
 if (supabase.auth) {
   supabase.auth.onAuthStateChange(async (event, session) => {
-    // Update internal tokens/status if needed automatically
+    if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+      const store = useAuthStore.getState();
+      if (store.status === AuthStatus.AUTHENTICATED) {
+        await store.signOut();
+      }
+    }
   });
 }

@@ -2,8 +2,8 @@ import { NativeDB } from '@/core/db/NativeDB';
 import { cloudMediaService } from '@/core/network/cloudMediaService';
 import { useProfileCacheStore } from '@/core/store/useProfileCacheStore';
 import { supabase } from '@/core/supabase/client';
-import { create } from 'zustand';
 import { DeviceEventEmitter, Platform } from 'react-native';
+import { create } from 'zustand';
 
 export enum MediaType {
   photo = 'photo',

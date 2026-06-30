@@ -1,6 +1,6 @@
 import { LikeAction } from '@/channel/CRimChartMassageBubble/comment_action/like/LikeAction';
 import { CommentActionWidget } from '@/channel/CRimChartMassageBubble/comments/CommentActionWidget';
-import { UserAvatarImage } from '@/channel/pages/widgets2/memberimage/UserAvatarImage';
+import UserAvatar from '@/components/avatar/UserAvatar';
 import { BoxFeedCardWrapper } from '@/components/wrappers/BoxFeedCardWrapper';
 import { FeedPermissionsWrapper } from '@/components/wrappers/FeedPermissionsWrapper';
 import { Image } from 'expo-image';
@@ -40,12 +40,11 @@ export const MusicBoxFeedCard = ({ boxId, prefetchedData }: Props) => {
             <View style={styles.header}>
               <View style={[styles.userInfo, { flex: 1 }]}>
                 <View style={{ marginRight: 12 }}>
-                  <UserAvatarImage
+                  <UserAvatar
                     size={48}
-                    imageUrl={ownerModel?.profileImageUrl}
+                    userId={ownerModel?.id || ''}
+                    fallbackUrl={ownerModel?.profileImageUrl}
                     name={shortenedName}
-                    showStatusRing={false}
-                    showActiveDot={false}
                   />
                 </View>
                 <View style={{ flex: 1, paddingRight: 8 }}>

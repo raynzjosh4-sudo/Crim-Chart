@@ -6,6 +6,7 @@ import { MusicBoxFeedCard } from '@/features/boxes/components/feed/MusicBoxFeedC
 import { SportsBoxFeedCard } from '@/features/boxes/components/feed/SportsBoxFeedCard';
 import { StoreBoxFeedCard } from '@/features/boxes/components/feed/StoreBoxFeedCard';
 import { VotingBoxFeedCard } from '@/features/boxes/components/feed/VotingBoxFeedCard';
+import { NoInternetFooter } from '@/components/internetcontionwidgets/NoInternetFooter';
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
 import { FlashList } from '@shopify/flash-list';
 import React, { useRef, useState } from 'react';
@@ -45,9 +46,9 @@ const MemoizedFeedItem = React.memo(({
   }
   switch (item.entity_type) {
     case 'long_video_post':
-      return <VideoPostFeedCard postId={item.entity_id} isActive={isActive} entityType="long_video_post" prefetchedData={item.prefetchedData} />;
+      return <VideoPostFeedCard postId={item.entity_id} isActive={isActive} entityType="long_video_post" sourceType={item.source_type} prefetchedData={item.prefetchedData} />;
     case 'short_video_post':
-      return <VideoPostFeedCard postId={item.entity_id} isActive={isActive} entityType="short_video_post" prefetchedData={item.prefetchedData} />;
+      return <VideoPostFeedCard postId={item.entity_id} isActive={isActive} entityType="short_video_post" sourceType={item.source_type} prefetchedData={item.prefetchedData} />;
     case 'audio_post':
     case 'image_post':
     case 'standard_post':
@@ -221,7 +222,6 @@ export const MainFeedBody = ({
       <FlashList
         ref={listRef}
         data={cards}
-        estimatedItemSize={400}
         keyExtractor={item => item.id}
         viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
         renderItem={renderCard}
@@ -247,11 +247,10 @@ export const MainFeedBody = ({
           />
         }
         ListFooterComponent={
-          isPaginating ? (
-            <View style={{ paddingTop: 10 }}>
-              <MainFeedSkeletonCard />
-            </View>
-          ) : null
+          <>
+            <NoInternetFooter isPaginating={isPaginating} onRetry={onLoadMore} />
+            <View style={{ height: 100 }} />
+          </>
         }
         showsVerticalScrollIndicator={false}
       />

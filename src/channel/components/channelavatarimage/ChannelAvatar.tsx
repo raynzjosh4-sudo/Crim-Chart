@@ -12,6 +12,7 @@ interface ChannelAvatarProps {
   name?: string;
   size?: number;
   onTap?: () => void;
+  onLongPress?: () => void;
   // Let the caller override statuses if needed
   forceHasStatus?: boolean;
   forceStatusCount?: number;
@@ -24,6 +25,7 @@ export const ChannelAvatar: React.FC<ChannelAvatarProps> = ({
   name,
   size = 40,
   onTap,
+  onLongPress,
   forceHasStatus,
   forceStatusCount,
   forceHasActiveMembers,
@@ -80,6 +82,7 @@ export const ChannelAvatar: React.FC<ChannelAvatarProps> = ({
         statusCount={statusCount}
         showActiveDot={hasActiveMembers}
         onImageTap={handleTap}
+        onLongPress={onLongPress}
       />
 
       <ChannelAvatarActionBottomSheet

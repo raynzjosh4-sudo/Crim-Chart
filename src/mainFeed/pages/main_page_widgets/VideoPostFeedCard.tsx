@@ -1,3 +1,5 @@
+import { formatTimeAgo } from '@/components/formatTimeAgo';
+import { PostHeader } from '@/components/PostHeader/PostHeader';
 import { VideoCardSkeleton } from '@/components/skeletons/Skeletons';
 import { GeneralVideoPlayer } from '@/components/video_player/players/GeneralVideoPlayer';
 import { ShortVideoPlayer } from '@/components/video_player/players/ShortVideoPlayer';
@@ -5,7 +7,11 @@ import { FeedPermissionsWrapper } from '@/components/wrappers/FeedPermissionsWra
 import { PostInteractionWrapper } from '@/components/wrappers/PostInteractionWrapper';
 import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { supabase } from '@/core/supabase/supabaseConfig';
+import { useCurrentUserProfile, useUserProfile } from '@/features/auth/application/useUserProfile';
+import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
+import { View } from 'react-native';
 
 function resolveCanComment(allowCommentingBy: string | undefined | null, isMember: boolean, isFollower: boolean): boolean {
   const policy = (allowCommentingBy ?? 'all').toLowerCase();
@@ -20,6 +26,7 @@ interface VideoPostFeedCardProps {
   preloadStatus?: 'playing' | 'preloading' | 'idle';
   isActive?: boolean;
   entityType?: 'long_video_post' | 'short_video_post';
+  sourceType?: string;
   prefetchedData?: any;
 }
 
@@ -28,8 +35,11 @@ export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
   preloadStatus = 'idle',
   isActive = false,
   entityType = 'long_video_post',
+  sourceType = 'post',
   prefetchedData
 }) => {
+  const router = useRouter();
+
   const constructInitialState = (data: any, eType?: string) => {
     let sourceTable = data.channel_id ? 'channel_posts' : 'posts';
 
@@ -84,6 +94,7 @@ export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
       videoUrl: data.video_url,
       isShort: isShortMeta,
       sourceTable,
+      source_type: data.source_type ?? sourceType,
       addedBy: {
         id: String(data.author_id ?? ''),
         name: data.author?.display_name || data.author_username || 'User',
@@ -101,6 +112,11 @@ export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
   const videoData = state.videoData;
   const canComment = state.canComment;
   const [loading, setLoading] = useState(!state.videoData);
+
+  const isLocal = videoData?.addedBy?.id === 'local_user';
+  const otherProfileId = isLocal || !videoData?.addedBy?.id ? undefined : videoData.addedBy?.id;
+  const otherProfile = useUserProfile(otherProfileId);
+  const currentUserProfile = useCurrentUserProfile();
 
   useEffect(() => {
     let isMounted = true;
@@ -168,6 +184,36 @@ export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
 
   const effectivePreloadStatus = preloadStatus !== 'idle' ? preloadStatus : (isActive ? 'playing' : 'preloading');
 
+  const profile = isLocal ? currentUserProfile : otherProfile;
+
+  const realName = isLocal ? (profile?.displayName || 'You') : (profile?.displayName || videoData.addedBy?.name || 'Unknown User');
+
+  const headerNode = (
+    <View style={{ paddingVertical: 12 }}>
+      {videoData.addedBy ? (
+        <PostHeader
+          author={
+            new CrimChartUserModel({
+              id: videoData.addedBy.id,
+              displayName: realName,
+              profileImageUrl: profile?.profileImageUrl || videoData.addedBy.avatarUrl,
+              isActive: profile?.isActive,
+              hasStatus: profile?.hasStatus,
+              statusCount: profile?.statusCount,
+            })
+          }
+          source_type={videoData.source_type}
+          timeAgo={formatTimeAgo(videoData.createdAt)}
+          onAvatarTap={() => {
+            if (!isLocal && videoData.addedBy?.id) {
+              router.push(`/profile/${videoData.addedBy.id}`);
+            }
+          }}
+        />
+      ) : null}
+    </View>
+  );
+
   if (videoData.isShort) {
     return (
       <FeedPermissionsWrapper permissions={{ canComment }}>
@@ -180,13 +226,16 @@ export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
           forceIsVisible={isActive}
         >
           {({ isLiked, likesCount, viewsCount }) => (
-            <ShortVideoPlayer
-              video={{ ...videoData, likes: likesCount, viewsCount }}
-              preloadStatus={effectivePreloadStatus as any}
-              disableVideoPlayer={false}
-              isLiked={isLiked}
-              onLikePress={() => useInteractionStore.getState().toggleLike(videoData.id, undefined, videoData.sourceTable)}
-            />
+            <View>
+              {headerNode}
+              <ShortVideoPlayer
+                video={{ ...videoData, likes: likesCount, viewsCount }}
+                preloadStatus={effectivePreloadStatus as any}
+                disableVideoPlayer={false}
+                isLiked={isLiked}
+                onLikePress={() => useInteractionStore.getState().toggleLike(videoData.id, undefined, videoData.sourceTable)}
+              />
+            </View>
           )}
         </PostInteractionWrapper>
       </FeedPermissionsWrapper>
@@ -204,13 +253,16 @@ export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
         forceIsVisible={isActive}
       >
         {({ isLiked, likesCount, viewsCount, isTagged }) => (
-          <GeneralVideoPlayer
-            video={{ ...videoData, likes: likesCount, viewsCount }}
-            preloadStatus={effectivePreloadStatus as any}
-            disableVideoPlayer={false}
-            isLiked={isLiked}
-            onLikePress={() => useInteractionStore.getState().toggleLike(videoData.id, undefined, videoData.sourceTable)}
-          />
+          <View>
+            {headerNode}
+            <GeneralVideoPlayer
+              video={{ ...videoData, likes: likesCount, viewsCount }}
+              preloadStatus={effectivePreloadStatus as any}
+              disableVideoPlayer={false}
+              isLiked={isLiked}
+              onLikePress={() => useInteractionStore.getState().toggleLike(videoData.id, undefined, videoData.sourceTable)}
+            />
+          </View>
         )}
       </PostInteractionWrapper>
     </FeedPermissionsWrapper>

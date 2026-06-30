@@ -1,6 +1,6 @@
+import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { supabase } from '@/core/supabase/supabaseConfig';
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
-import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { PostEntity } from '../../domain/entities/PostEntity';
 import { SocialFeedItem } from '../../domain/entities/SocialFeedItem';
 
@@ -40,30 +40,28 @@ export class FeedRemoteSource {
   }
 
   static async getDiscoveryChannels(limit = 20, offset = 0): Promise<CrimChartUserModel[]> {
-    const { data: { session } } = await supabase.auth.getSession();
-    const userId = session?.user?.id;
-
-    if (!userId) return [];
-
     try {
-      const { data, error } = await supabase.rpc('get_social_discovery_channels', {
-        p_user_id: userId,
-        p_limit: limit,
-        p_offset: offset
-      });
+      const { data, error } = await supabase
+        .from('channels')
+        .select('*')
+        .range(offset, offset + limit - 1);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [Channels Remote] Supabase Error:', error);
+        throw error;
+      }
 
       const list = data as any[];
+      console.log('✅ [Channels Remote] Fetched channels count:', list?.length);
       if (!list || list.length === 0) return [];
 
       return list.map((m: any) =>
         CrimChartUserModel.empty().copyWith({
           id: String(m.id || ''),
-          displayName: String(m.name || 'Channel'),
-          profileImageUrl: String(m.avatar_url || ''),
+          displayName: String(m.name || m.title || 'Channel'),
+          profileImageUrl: String(m.avatar_url || m.imageUrl || ''),
           bio: m.description,
-          followersCount: Number(m.members_count || 0),
+          followersCount: Number(m.members_count || m.followers_count || 0),
         })
       );
     } catch (e) {

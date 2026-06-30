@@ -41,7 +41,8 @@ BEGIN
         jsonb_build_object(
             'id', pr.id,
             'display_name', pr.display_name,
-            'profile_image_url', pr.profile_image_url
+            'profile_image_url', pr.profile_image_url,
+            'crown_title', pr.crown_title
         ) as author
     FROM combined_music cm
     LEFT JOIN profiles pr ON pr.id = cm.author_id

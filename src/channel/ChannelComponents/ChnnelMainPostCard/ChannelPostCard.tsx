@@ -1,16 +1,16 @@
-import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
-import { MoreHorizontal, Tag } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
+import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
+import { useRouter } from 'expo-router';
+import { MoreHorizontal, Tag } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 import { LikeAction } from '@/channel/CRimChartMassageBubble/comment_action/like/LikeAction';
 import { CommentActionWidget } from '@/channel/CRimChartMassageBubble/comments/CommentActionWidget';
 import { TagOverlay } from '@/channel/pages/tag/TagOverlay';
-import { AvatarWithStatus } from './postCardFiles/AvatarWithStatus';
+import { PostHeader } from '@/components/PostHeader/PostHeader';
 import { useFeedPermissions } from '@/components/wrappers/FeedPermissionsWrapper';
 import { ChannelAudioPostWidget } from './postCardFiles/ChannelAudioPostWidget';
 import { ChannelImagePostWidget } from './postCardFiles/ChannelImagePostWidget';
@@ -45,6 +45,8 @@ export interface ChannelPostCardProps {
   thumbnailUrl?: string | null;
   metadata?: any;
   canComment?: boolean;
+  source_type?: string | null;
+  channelDescription?: string | null;
 }
 
 export const ChannelPostCard: React.FC<ChannelPostCardProps> = ({
@@ -74,6 +76,8 @@ export const ChannelPostCard: React.FC<ChannelPostCardProps> = ({
   showCreatorBadge,
   thumbnailUrl,
   metadata,
+  source_type,
+  channelDescription,
 }) => {
   const { canComment: contextCanComment } = useFeedPermissions();
   const canComment = canCommentProp && contextCanComment;
@@ -101,30 +105,22 @@ export const ChannelPostCard: React.FC<ChannelPostCardProps> = ({
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        {hasChannel && (
-          <AvatarWithStatus
-            channelId={channelId}
-            currentChannelAvatar={currentChannelAvatar}
-            sourceChannelAvatar={sourceChannelAvatar}
-            authorAvatar={author.profileImageUrl}
-            onTap={goToProfile}
-          />
-        )}
-        <View style={styles.authorInfoContainer}>
-          <Text style={styles.displayName} numberOfLines={1}>
-            {author.displayName || 'Unknown User'}
-          </Text>
-          {sourceChannelName ? (
-            <Text style={styles.taggedText}>
-              Tagged from {sourceChannelName}
-            </Text>
-          ) : null}
-        </View>
-        <TouchableOpacity activeOpacity={1} style={styles.moreButton}>
-          <MoreHorizontal color={theme.colors.textSecondary} size={20} />
-        </TouchableOpacity>
-      </View>
+      <PostHeader
+        author={author}
+        source_type={source_type}
+        timeAgo={timeAgo}
+        onAvatarTap={goToProfile}
+        onMoreTap={() => {}} // TODO: add more options
+        channelId={channelId}
+        channelAvatarUrl={currentChannelAvatar || sourceChannelAvatar}
+        channelName={channelName}
+        channelDescription={channelDescription}
+        onChannelAvatarTap={() => {
+          if (channelId) {
+            router.push(`/channel/${channelId}` as any);
+          }
+        }}
+      />
 
       {/* Content */}
       <PostContent content={content} />
@@ -147,7 +143,7 @@ export const ChannelPostCard: React.FC<ChannelPostCardProps> = ({
         <View style={{ flex: 1 }} />
 
         <LikeAction initialLikesCount={likesCount} initialIsLiked={isLiked} onLikeTap={onLikeTap} />
-        
+
         {canComment ? (
           <CommentActionWidget commentsCount={commentsCount} postId={postId || ''} />
         ) : (
@@ -207,6 +203,18 @@ const themeStyles = (colors: ThemeTokens, scale: number) => ({
   },
   moreButton: {
     padding: 4 * scale,
+  },
+  userAvatarContainer: {
+    marginRight: 12 * scale,
+  },
+  channelAvatarContainer: {
+    marginLeft: 8 * scale,
+  },
+  channelAvatar: {
+    width: 32 * scale,
+    height: 32 * scale,
+    borderRadius: 16 * scale,
+    backgroundColor: colors.surfaceVariant,
   },
   footer: {
     flexDirection: 'row' as const,

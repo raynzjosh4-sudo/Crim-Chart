@@ -90,6 +90,35 @@ class DatabaseService {
       try { await _db.execAsync(`ALTER TABLE box_items ADD COLUMN post_type TEXT`); } catch (e) {}
       try { await _db.execAsync(`ALTER TABLE box_items ADD COLUMN aspect_ratio REAL`); } catch (e) {}
 
+      // Migration: music_feed table
+      try {
+        await _db.execAsync(`
+          CREATE TABLE IF NOT EXISTS music_feed (
+            id TEXT PRIMARY KEY,
+            title TEXT,
+            artist TEXT,
+            coverUrl TEXT,
+            audioUrl TEXT,
+            likesCount INTEGER DEFAULT 0,
+            commentsCount INTEGER DEFAULT 0,
+            viewsCount INTEGER DEFAULT 0,
+            downloadsCount INTEGER DEFAULT 0,
+            lyrics TEXT,
+            sourceTable TEXT,
+            caption TEXT,
+            created_at TEXT,
+            owner_id TEXT,
+            owner_name TEXT,
+            owner_avatarUrl TEXT,
+            owner_crownTitle TEXT,
+            fetched_at INTEGER NOT NULL
+          )
+        `);
+        // Add columns if they don't exist yet (for devices that already ran the creation without them)
+        try { await _db.execAsync(`ALTER TABLE music_feed ADD COLUMN caption TEXT`); } catch (e) {}
+        try { await _db.execAsync(`ALTER TABLE music_feed ADD COLUMN created_at TEXT`); } catch (e) {}
+      } catch (e) {}
+
       this.db = _db;
       console.log('✅ [SQLite] Database initialized successfully');
       } catch (error) {
@@ -117,19 +146,22 @@ class DatabaseService {
   async execute(sql: string, params: any[] = []) {
     if (Platform.OS === 'web') return;
     if (!this.db) await this.init();
-    return await this.db!.runAsync(sql, params);
+    const safeParams = params.map(p => p === undefined ? null : p);
+    return await this.db!.runAsync(sql, ...safeParams);
   }
 
   async query<T>(sql: string, params: any[] = []): Promise<T[]> {
     if (Platform.OS === 'web') return [];
     if (!this.db) await this.init();
-    return await this.db!.getAllAsync<T>(sql, params);
+    const safeParams = params.map(p => p === undefined ? null : p);
+    return await this.db!.getAllAsync<T>(sql, ...safeParams);
   }
 
   async querySingle<T>(sql: string, params: any[] = []): Promise<T | null> {
     if (Platform.OS === 'web') return null;
     if (!this.db) await this.init();
-    return await this.db!.getFirstAsync<T>(sql, params);
+    const safeParams = params.map(p => p === undefined ? null : p);
+    return await this.db!.getFirstAsync<T>(sql, ...safeParams);
   }
 }
 

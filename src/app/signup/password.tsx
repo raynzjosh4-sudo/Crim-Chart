@@ -4,27 +4,58 @@ import { colors } from '@/core/theme/colors';
 import { useRouter } from 'expo-router';
 import { Eye, EyeOff, Key } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+import { useTranslation } from '@/core/localization/i18n';
 
 export default function PasswordPage() {
   const router = useRouter();
-  const { setPassword, completeSignUp } = useAuthStore();
+  const { t } = useTranslation();
+  const { setPassword, createAccountInitial, status, pendingSignUp } = useAuthStore();
   const [password, setPasswordText] = useState('');
   const [obscureText, setObscureText] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorText, setErrorText] = useState<string | null>(null);
+  const { startLoading, stopLoading } = useGlobalProgress();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
 
   const isPasswordValid = password.length >= 8;
 
   const handleNext = async () => {
-    if (!isPasswordValid) return;
+    if (!isPasswordValid || isLoading) return;
     setIsLoading(true);
+    startLoading();
+    
     setPassword(password);
-    const success = await completeSignUp();
-    setIsLoading(false);
-    if (success) {
-      router.push('/signup/birthday' as any);
+    
+    setErrorText(null);
+
+    if (status === 'authenticated') {
+      if (password !== pendingSignUp?.password) {
+        setErrorText('Account already created. You cannot change password here.');
+        stopLoading();
+        setIsLoading(false);
+        return;
+      }
+      stopLoading();
+      router.push('/signup/username' as any);
+      setTimeout(() => setIsLoading(false), 1000);
+      return;
     }
+
+    const result = await createAccountInitial();
+    
+    stopLoading();
+    if (result === true) {
+      router.push('/signup/username' as any);
+    } else if (result === 'OTP_REQUIRED') {
+      router.push('/signup/otp' as any);
+    } else {
+      setErrorText(useAuthStore.getState().errorMessage || 'Failed to create account.');
+    }
+    setTimeout(() => setIsLoading(false), 1000);
   };
 
   const generateStrongPassword = () => {
@@ -39,10 +70,11 @@ export default function PasswordPage() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ChartAppBar title="" showBorder isLoading={isLoading} />
+      {!isDesktop && <ChartAppBar title="" showBorder isLoading={isLoading} />}
 
-      <View style={styles.content}>
-        <Text style={styles.title}>Create a password</Text>
+      <View style={isDesktop ? styles.desktopWrapper : styles.flexOne}>
+        <View style={[styles.content, isDesktop && styles.desktopModal]}>
+          <Text style={[styles.title, isDesktop && { textAlign: 'center', marginBottom: 12, fontSize: 28 }]}>Create a password</Text>
         <Text style={styles.subtitle}>
           Your password must be at least 8 characters long. Use a mix of letters, numbers, and symbols for better security.
         </Text>
@@ -51,18 +83,28 @@ export default function PasswordPage() {
 
         <View style={styles.inputContainer}>
           <TextInput
-            style={styles.input}
-            placeholder="Password"
-            placeholderTextColor="rgba(255, 255, 255, 0.2)"
-            secureTextEntry={obscureText}
-            value={password}
-            onChangeText={setPasswordText}
-            autoFocus
-          />
+            style={[styles.input, Platform.OS === 'web' ? { outlineStyle: 'none' } as any : {}]}
+                placeholder="Enter password"
+                placeholderTextColor="rgba(255, 255, 255, 0.2)"
+                secureTextEntry={obscureText}
+                autoCapitalize="none"
+                value={password}
+                onChangeText={(text) => {
+                  setPasswordText(text);
+                  if (errorText) setErrorText(null);
+                }}
+                autoFocus
+              />
           <TouchableOpacity activeOpacity={1} onPress={() => setObscureText(!obscureText)}>
             {obscureText ? <Eye size={20} color="rgba(255, 255, 255, 0.5)" /> : <EyeOff size={20} color="rgba(255, 255, 255, 0.5)" />}
           </TouchableOpacity>
         </View>
+
+        {errorText && (
+          <Text style={{ color: '#ef4444', fontSize: 13, marginTop: 8, marginLeft: 4 }}>
+            {errorText}
+          </Text>
+        )}
 
         <View style={styles.spacerSmall} />
 
@@ -74,17 +116,18 @@ export default function PasswordPage() {
           <Text style={styles.autoGenerateText}>Auto-generate strong password</Text>
         </TouchableOpacity>
 
-        <View style={styles.flexOne} />
+        {isDesktop ? <View style={{ height: 40 }} /> : <View style={styles.flexOne} />}
 
         <TouchableOpacity activeOpacity={1}
           style={[styles.nextButton, !isPasswordValid && styles.nextButtonDisabled]}
           onPress={handleNext}
           disabled={!isPasswordValid || isLoading}
         >
-          <Text style={styles.nextButtonText}>Next</Text>
+          <Text style={styles.nextButtonText}>{t('next' as any) || 'Next'}</Text>
         </TouchableOpacity>
 
         <View style={styles.spacerLarge} />
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -94,6 +137,21 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  desktopWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+  },
+  desktopModal: {
+    width: '100%',
+    maxWidth: 600,
+    backgroundColor: '#16181c',
+    borderRadius: 16,
+    paddingVertical: 40,
+    paddingHorizontal: 40,
   },
   content: {
     flex: 1,
@@ -123,7 +181,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    height: 56,
   },
   input: {
     flex: 1,

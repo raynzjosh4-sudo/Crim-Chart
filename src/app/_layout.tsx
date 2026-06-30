@@ -16,7 +16,8 @@ if (TouchableOpacity.defaultProps) {
 }
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { dbService } from '@/core/db/database';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
+import { ThemeProvider as AppThemeProvider } from '@/core/theme/theme_provider';
 import { Stack } from 'expo-router';
 import React, { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
@@ -30,6 +31,8 @@ import { LocalizationProvider } from '@/core/localization/LocalizationProvider';
 import { useAppPresence } from '@/core/hooks/useAppPresence';
 import { usePresenceSyncWorker } from '@/core/sync/usePresenceSyncWorker';
 import { Platform } from 'react-native';
+import { ProgressProvider } from '@/components/globalProgressBar/GlobalProgressBar';
+import { OfflineStateWidget } from '@/components/offline/OfflineStateWidget';
 
 const injectWebScrollbarStyle = () => {
   if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -88,15 +91,21 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider style={{ flex: 1, backgroundColor: '#000' }}>
       <LocalizationProvider>
-        <ThemeProvider value={customDarkTheme}>
-          <AnimatedSplashOverlay />
-          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#000' } }}>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="landing" options={{ headerShown: false }} />
-            <Stack.Screen name="login" options={{ headerShown: false }} />
-          </Stack>
-          <Toast config={{ ...chartToastConfig, ...toastConfig }} />
-        </ThemeProvider>
+        <AppThemeProvider>
+          <NavThemeProvider value={customDarkTheme}>
+            <ProgressProvider>
+              <AnimatedSplashOverlay />
+              <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#000' } }}>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="landing" options={{ headerShown: false }} />
+                <Stack.Screen name="login" options={{ headerShown: false }} />
+                <Stack.Screen name="recover" options={{ headerShown: false }} />
+              </Stack>
+              <OfflineStateWidget />
+              <Toast config={{ ...chartToastConfig, ...toastConfig }} />
+            </ProgressProvider>
+          </NavThemeProvider>
+        </AppThemeProvider>
       </LocalizationProvider>
     </SafeAreaProvider>
   );

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { ChannelAvatar } from '@/channel/pages/widgets2/memberimage/ChannelAvatar';
-import { UserAvatarImage } from '@/channel/pages/widgets2/memberimage/UserAvatarImage';
+import AppAvatar from '@/components/avatar/AppAvatar';
 import { colors as defaultColors } from '@/core/theme/colors';
 import { useTheme } from '@react-navigation/native';
 
@@ -38,12 +38,11 @@ export const ActiveChannelCircle: React.FC<ActiveChannelCircleProps> = ({
             isActive={hasUpdate}
           />
         ) : (
-          <UserAvatarImage
+          <AppAvatar
             size={size}
-            imageUrl={imageUrl}
+            url={imageUrl}
             showStatusRing={hasUpdate}
             showActiveDot={hasUpdate}
-            borderWidth={2.5}
           />
         )}
       </View>

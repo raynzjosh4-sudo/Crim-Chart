@@ -74,6 +74,7 @@ export const SmartPostWidget: React.FC<SmartPostWidgetProps> = React.memo(({
           id: String(data.channel_id ?? 'user_feed'),
           title: String(data.channel_name ?? 'Personal Post'),
           imageUrl: data.channel_avatar_url || '',
+          description: data.channel?.description || data.channel_description || '',
         },
         imageUrls: images,
         caption: String(data.caption ?? ''),
@@ -91,6 +92,8 @@ export const SmartPostWidget: React.FC<SmartPostWidgetProps> = React.memo(({
         isLiked: false, isSponsored: false,
         hasStatus: false, isActive: false, isPending: 0, localFileCache: '',
         widgetType: type === 'post' ? 'regular_post' : (data.widget_type ?? 'channel_post'),
+        source_type: data.source_type ?? type,
+        sourceTable: data.source_table ?? (type === 'channel_post' ? 'channel_posts' : 'posts'),
       },
     };
 

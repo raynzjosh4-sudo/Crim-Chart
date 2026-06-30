@@ -3,6 +3,7 @@ import { AppState, DeviceEventEmitter, Text, TouchableOpacity, useWindowDimensio
 
 import { ChannelButton } from '@/components/ChannelButton/ChannelButton';
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
+import { MusicButton } from '@/components/musicbutton/MusicButton';
 import { NativeDB } from '@/core/db/NativeDB';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
@@ -12,7 +13,7 @@ import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
 import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { Bell, Search } from 'lucide-react-native';
+import { Bell, User } from 'lucide-react-native';
 import { MixedFeedItem } from '../models/MixedFeedItem';
 import { MainFeedBody } from './main_page_widgets/MainFeedBody';
 import { MainFeedSkeletonCard } from './main_page_widgets/MainFeedSkeletonCard';
@@ -418,11 +419,9 @@ export const MainFeedPage = () => {
         showBorder={false}
         actions={!isDesktop ? [
           <ChannelButton key="channels" />,
-          <TouchableOpacity activeOpacity={1} key="search" onPress={() => (navigation as any).navigate('Search')} style={styles.headerIconBtn}>
-            <Search color={theme.colors.text} size={24} />
-          </TouchableOpacity>,
+          <MusicButton key="my-music" />,
           <TouchableOpacity activeOpacity={1} key="bell" onPress={() => { }} style={[styles.headerIconBtn, { position: 'relative' }]}>
-            <Bell color={theme.colors.text} size={24} />
+            <Bell color={theme.colors.primary} size={24} />
             {newItemCount > 0 && (
               <View style={styles.notificationBadge}>
                 <Text style={styles.notificationBadgeText}>
@@ -481,5 +480,3 @@ const themeStyles = (colors: ThemeTokens, scale: number) => ({
   },
   notificationBadgeText: { color: colors.text, fontSize: 10 * scale, fontWeight: '800' as const }
 });
-
-

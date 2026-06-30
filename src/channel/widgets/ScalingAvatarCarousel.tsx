@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { View, Text, StyleSheet, Dimensions, Animated, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
-import { UserAvatarImage } from '@/channel/pages/widgets2/memberimage/UserAvatarImage';
+import AppAvatar from '@/components/avatar/AppAvatar';
 import { GivenGiftsDisplay } from '@/profile/widgets/ratings/GivenGiftsDisplay';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -81,11 +81,10 @@ export const ScalingAvatarCarousel: React.FC<ScalingAvatarCarouselProps> = ({
             return (
               <View key={member.id} style={{ width: ITEM_WIDTH, justifyContent: 'center', alignItems: 'center' }}>
                 <Animated.View style={{ transform: [{ scale }], opacity }}>
-                  <UserAvatarImage
+                  <AppAvatar
                     size={240}
-                    imageUrl={member.avatarUrl}
+                    url={member.avatarUrl}
                     showStatusRing={true}
-                    borderWidth={4}
                     showActiveDot={false}
                   />
                 </Animated.View>

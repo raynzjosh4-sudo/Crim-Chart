@@ -1,22 +1,48 @@
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
+import { FollowUserButton } from '@/components/FollowUserButton';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+import { useTranslation } from '@/core/localization/i18n';
 import { colors } from '@/core/theme/colors';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { useSuggestedUsers } from '@/features/profile/application/useSuggestedUsers';
-import { FollowUserButton } from '@/components/FollowUserButton';
+import { useRouter } from 'expo-router';
 import { User } from 'lucide-react-native';
+import { ActivityShimmer } from '@/components/shimmers/ActivityShimmer';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, Image, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function UserSuggestionsPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const currentUser = useAuthStore(state => state.user);
-  const { users, isLoading } = useSuggestedUsers(currentUser?.id);
+  const { users, isLoading: usersLoading } = useSuggestedUsers(currentUser?.id);
   const [followCount, setFollowCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const { startLoading, stopLoading } = useGlobalProgress();
 
-  const handleFinish = () => {
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
+
+  useEffect(() => {
+    if (usersLoading) {
+      startLoading();
+    } else {
+      stopLoading();
+    }
+    return () => {
+      if (usersLoading) stopLoading();
+    };
+  }, [usersLoading, startLoading, stopLoading]);
+
+  const handleFinish = async () => {
+    if (isLoading) return;
+    setIsLoading(true);
+    startLoading();
+    await new Promise(resolve => setTimeout(resolve, 600));
+    stopLoading();
     router.replace('/signup/channel-intro' as any);
+    setTimeout(() => setIsLoading(false), 1000);
   };
 
   const handleToggle = (isFollowing: boolean) => {
@@ -25,75 +51,79 @@ export default function UserSuggestionsPage() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ChartAppBar
-        title=""
-        showBorder
-        actions={[
-          <TouchableOpacity activeOpacity={1}
-            key="skip"
-            onPress={handleFinish}
-          >
-            <Text style={styles.skipText}>Skip</Text>
-          </TouchableOpacity>
-        ]}
-      />
+      {!isDesktop && (
+        <ChartAppBar
+          title=""
+          showBorder
+          isLoading={isLoading}
+          actions={[
+            <TouchableOpacity activeOpacity={1}
+              key="skip"
+              onPress={handleFinish}
+              disabled={isLoading}
+            >
+              <Text style={styles.skipText}>{t('skip' as any) || 'Skip'}</Text>
+            </TouchableOpacity>
+          ]}
+        />
+      )}
 
-      <View style={styles.content}>
-        <Text style={styles.title}>People you may know</Text>
-        <Text style={styles.subtitle}>
-          Follow people to see their posts and moments in your main feed. Follow at least 2 people to get started.
-        </Text>
+      <View style={isDesktop ? styles.desktopWrapper : styles.flexOne}>
+        <View style={[styles.content, isDesktop && styles.desktopModal]}>
+          <Text style={[styles.title, isDesktop && { textAlign: 'center', marginTop: 40 }]}>People you may know</Text>
+          <Text style={[styles.subtitle, isDesktop && { textAlign: 'center' }]}>
+            Follow people to see their posts and moments in your main feed. Follow at least 2 people to get started.
+          </Text>
 
-        <View style={styles.spacerMedium} />
+          <View style={styles.spacerMedium} />
 
-        {isLoading ? (
-          <View style={styles.centerBox}>
-            <ActivityIndicator color={colors.primary} size="large" />
-          </View>
-        ) : users.length === 0 ? (
-          <View style={styles.centerBox}>
-            <Text style={styles.subtitle}>No suggestions found right now.</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={users}
-            keyExtractor={(item) => String(item.id)}
-            contentContainerStyle={styles.listPadding}
-            renderItem={({ item }) => (
-              <View style={styles.userItem}>
-                {item.profileImageUrl ? (
-                  <Image source={{ uri: item.profileImageUrl }} style={styles.userIcon} />
-                ) : (
-                  <View style={[styles.userIcon, styles.placeholderIcon]}>
-                    <User color="rgba(255,255,255,0.3)" size={24} />
+          {usersLoading ? (
+            <ActivityShimmer />
+          ) : users.length === 0 ? (
+            <View style={styles.centerBox}>
+              <Text style={styles.subtitle}>No suggestions found right now.</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={users}
+              keyExtractor={(item) => String(item.id)}
+              contentContainerStyle={styles.listPadding}
+              renderItem={({ item }) => (
+                <View style={styles.userItem}>
+                  {item.profileImageUrl ? (
+                    <Image source={{ uri: item.profileImageUrl }} style={styles.userIcon} />
+                  ) : (
+                    <View style={[styles.userIcon, styles.placeholderIcon]}>
+                      <User color="rgba(255,255,255,0.3)" size={24} />
+                    </View>
+                  )}
+
+                  <View style={styles.userInfo}>
+                    <Text style={styles.userName} numberOfLines={2}>{item.displayName}</Text>
+                    <Text style={styles.userSubtitle} numberOfLines={1}>@{item.username}</Text>
                   </View>
-                )}
-                
-                <View style={styles.userInfo}>
-                  <Text style={styles.userName}>{item.displayName}</Text>
-                  <Text style={styles.userSubtitle}>@{item.username}</Text>
-                </View>
-                
-                <View style={styles.buttonContainer}>
-                  <FollowUserButton 
-                    targetUserId={item.id} 
-                    size="small" 
-                    onToggle={handleToggle}
-                  />
-                </View>
-              </View>
-            )}
-          />
-        )}
 
-        <View style={styles.footer}>
-          <TouchableOpacity activeOpacity={1}
-            style={[styles.finishButton, followCount < 2 && styles.finishButtonDisabled]}
-            onPress={handleFinish}
-            disabled={followCount < 2}
-          >
-            <Text style={styles.finishButtonText}>Next</Text>
-          </TouchableOpacity>
+                  <View style={styles.buttonContainer}>
+                    <FollowUserButton
+                      targetUserId={item.id}
+                      size="small"
+                      onToggle={handleToggle}
+                    />
+                  </View>
+                </View>
+              )}
+            />
+          )}
+
+          <View style={styles.footer}>
+            <TouchableOpacity activeOpacity={1}
+              style={[styles.finishButton, followCount < 2 && styles.finishButtonDisabled]}
+              onPress={handleFinish}
+              disabled={followCount < 2}
+            >
+              <Text style={styles.finishButtonText}>Next</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -104,6 +134,26 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  desktopWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+  },
+  desktopModal: {
+    width: '100%',
+    maxWidth: 600,
+    maxHeight: 800,
+    backgroundColor: '#16181c',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    overflow: 'hidden',
+  },
+  flexOne: {
+    flex: 1,
   },
   content: {
     flex: 1,

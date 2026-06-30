@@ -1,6 +1,6 @@
 import { LikeAction } from '@/channel/CRimChartMassageBubble/comment_action/like/LikeAction';
 import { CommentActionWidget } from '@/channel/CRimChartMassageBubble/comments/CommentActionWidget';
-import { UserAvatarImage } from '@/channel/pages/widgets2/memberimage/UserAvatarImage';
+import UserAvatar from '@/components/avatar/UserAvatar';
 import { FollowUserButton } from '@/components/FollowUserButton';
 import { AnimatedPostButton } from '@/components/buttons/AnimatedPostButton';
 import { BoxReactions } from '@/components/reactions/BoxReactions';
@@ -56,11 +56,11 @@ export function StoreItemTile({ item, likesCount, isLiked, viewsCount, onLikePre
       {/* Seller Header */}
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-          <UserAvatarImage
+          <UserAvatar
             size={36}
-            imageUrl={displayAvatar}
-            showStatusRing={false}
-            showActiveDot={false}
+            userId={item.seller.id || ''}
+            fallbackUrl={displayAvatar}
+            name={displayName || undefined}
           />
           <View style={styles.headerText}>
             <Text style={styles.sellerName}>{displayName}</Text>

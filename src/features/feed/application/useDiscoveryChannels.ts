@@ -1,5 +1,5 @@
-import { create } from 'zustand';
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
+import { create } from 'zustand';
 import { FeedRemoteSource } from '../data/sources/FeedRemoteSource';
 
 interface DiscoveryChannelsState {

@@ -102,7 +102,7 @@ export default function LandingPage() {
             <View style={styles.leftInner}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Text style={styles.hero}>CrimChart.</Text>
-                <View style={{ width: 100, height: 100, borderWidth: 2, borderColor: 'green', backgroundColor: 'green', marginLeft: 20 }} />
+
               </View>
 
               <View style={{ height: 52 }} />
@@ -130,7 +130,7 @@ export default function LandingPage() {
 
               {/* Create account */}
               <Pressable
-                onPress={() => router.push('/signup/phone' as any)}
+                onPress={() => router.push('/signup/country' as any)}
                 style={({ pressed }) => [
                   styles.brandPill,
                   { backgroundColor: colors.primary },
@@ -221,7 +221,7 @@ export default function LandingPage() {
         </TouchableOpacity>
         <View style={{ height: 60 }} />
         <View style={{ paddingHorizontal: 24 }}>
-          <TouchableOpacity activeOpacity={0.8} style={{ backgroundColor: colors.primary, height: 52, borderRadius: 12, justifyContent: 'center', alignItems: 'center' }} onPress={() => router.push('/signup/phone' as any)}>
+          <TouchableOpacity activeOpacity={0.8} style={{ backgroundColor: colors.primary, height: 52, borderRadius: 12, justifyContent: 'center', alignItems: 'center' }} onPress={() => router.push('/signup/country' as any)}>
             <Text style={{ color: '#000', fontSize: 16, fontWeight: 'bold' }}>{t('create_account')}</Text>
           </TouchableOpacity>
         </View>

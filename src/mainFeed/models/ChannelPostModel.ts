@@ -8,6 +8,7 @@ export interface ChannelModel {
   creatorId?: string;
   memberCount?: number;
   newMessageCount?: number;
+  description?: string;
 }
 
 export function createEmptyChannel(): ChannelModel {
@@ -49,6 +50,8 @@ export interface ChannelPostModel {
   isPending: number; // 0 = not pending
   localFileCache: string;
   widgetType?: string;
+  source_type?: string;
+  sourceTable?: string;
   metadata?: any;
 }
 
@@ -69,6 +72,8 @@ export function createEmptyChannelPost(): ChannelPostModel {
     hasStatus: false, isActive: false,
     isPending: 0, localFileCache: '',
     widgetType: 'channel_post',
+    source_type: undefined,
+    sourceTable: undefined,
     metadata: {},
   };
 }
@@ -113,6 +118,8 @@ export function channelPostFromMap(map: Record<string, unknown>): ChannelPostMod
     isPending: Number(map['isPending'] ?? 0),
     localFileCache: String(map['localFileCache'] ?? ''),
     widgetType: map['widget_type'] as string | undefined ?? map['widgetType'] as string | undefined,
+    source_type: map['source_type'] as string | undefined,
+    sourceTable: map['source_table'] as string | undefined ?? map['sourceTable'] as string | undefined,
     metadata: typeof map['metadata'] === 'string' ? JSON.parse(map['metadata'] as string) : (map['metadata'] || {}),
   };
 }
