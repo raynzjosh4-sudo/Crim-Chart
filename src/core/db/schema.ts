@@ -349,6 +349,7 @@ export const SCHEMA = `
     lyrics TEXT,
     sourceTable TEXT,
     caption TEXT,
+    category TEXT,
     created_at TEXT,
     owner_id TEXT,
     owner_name TEXT,

@@ -272,13 +272,17 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
       if (error) throw error;
       if (data.session && data.user) {
         try {
+          // Explicitly create profile to ensure it exists for subsequent updates,
+          // in case the database trigger isn't installed.
+          const defaultName = pendingSignUp.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '');
           await supabase.from('profiles').insert([{
             id: data.user.id,
-            username: pendingSignUp.username,
-            birthday: pendingSignUp.birthday?.toISOString(),
-            gender: pendingSignUp.gender,
+            display_name: defaultName || 'User',
+            username: defaultName + '_' + Math.floor(Math.random() * 10000)
           }]);
-        } catch {}
+        } catch (e) {
+          console.log("Profile insert skipped (likely already created by trigger):", e);
+        }
 
         const user = new CrimChartUserModel({
           id: data.user.id,

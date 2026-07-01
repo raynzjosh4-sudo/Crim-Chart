@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useMusicFeedStore } from '@/core/store/useMusicFeedStore';
 import { NativeDB } from '@/core/db/NativeDB';
 
-export function useMusicFeed(searchQuery?: string) {
+export function useMusicFeed(searchQuery?: string, category?: string) {
   const [tracks, setTracks] = useState<MusicTrackItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
@@ -54,6 +54,10 @@ export function useMusicFeed(searchQuery?: string) {
         p_limit: LIMIT,
         p_offset: currentOffset
       };
+
+      if (category && category !== 'All') {
+        rpcParams.p_category = category;
+      }
 
       if (searchQuery && searchQuery.trim() !== '') {
         rpcName = 'search_music_feed';
@@ -162,7 +166,7 @@ export function useMusicFeed(searchQuery?: string) {
 
   useEffect(() => {
     fetchMusicFeed(true);
-  }, [searchQuery]);
+  }, [searchQuery, category]);
 
   return { tracks, isLoading, isFetchingMore, hasMore, fetchMore, refetch: () => fetchMusicFeed(true) };
 }

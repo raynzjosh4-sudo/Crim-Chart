@@ -106,6 +106,7 @@ class DatabaseService {
             lyrics TEXT,
             sourceTable TEXT,
             caption TEXT,
+            category TEXT,
             created_at TEXT,
             owner_id TEXT,
             owner_name TEXT,
@@ -116,6 +117,7 @@ class DatabaseService {
         `);
         // Add columns if they don't exist yet (for devices that already ran the creation without them)
         try { await _db.execAsync(`ALTER TABLE music_feed ADD COLUMN caption TEXT`); } catch (e) {}
+        try { await _db.execAsync(`ALTER TABLE music_feed ADD COLUMN category TEXT`); } catch (e) {}
         try { await _db.execAsync(`ALTER TABLE music_feed ADD COLUMN created_at TEXT`); } catch (e) {}
       } catch (e) {}
 

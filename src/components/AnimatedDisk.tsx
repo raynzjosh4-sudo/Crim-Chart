@@ -23,6 +23,12 @@ export const AnimatedDisk: React.FC<AnimatedDiskProps> = ({
   const rotation = useRef(new Animated.Value(0)).current;
   const [rotationDirection, setRotationDirection] = useState<number>(1);
   const currentRotation = useRef(0);
+  const [imageLoadError, setImageLoadError] = useState(false);
+
+  // Reset error state whenever the image URL changes (new song selected)
+  useEffect(() => {
+    setImageLoadError(false);
+  }, [imageUrl]);
 
   useEffect(() => {
     // Keep track of the current value so we can resume from it
@@ -86,8 +92,13 @@ export const AnimatedDisk: React.FC<AnimatedDiskProps> = ({
         styles.diskWrapper, 
         { width: size, height: size, borderRadius: size / 2, transform: [{ rotate: spin }] }
       ]}>
-        {imageUrl ? (
-          <Image source={{ uri: imageUrl }} style={{ width: '100%', height: '100%', borderRadius: size / 2 }} contentFit="cover" />
+        {imageUrl && !imageLoadError ? (
+          <Image
+            source={{ uri: imageUrl }}
+            style={{ width: '100%', height: '100%', borderRadius: size / 2 }}
+            contentFit="cover"
+            onError={() => setImageLoadError(true)}
+          />
         ) : (
           <View style={[styles.placeholder, { borderRadius: size / 2 }]}>
             <Text style={styles.placeholderText}>{placeholderText}</Text>

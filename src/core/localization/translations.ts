@@ -75,6 +75,10 @@ export const translations = {
     privacy_security_help: 'Privacy and security help',
     support_requests: 'Support requests',
     login: 'Login',
+    what_is_happening: "What's happening?",
+    add_media: "Add Media",
+    posting: "Posting...",
+    post: "Post",
   },
   es: {
     select_language: 'Selecciona tu idioma',
@@ -112,6 +116,10 @@ export const translations = {
     account_privacy: 'Privacidad de la cuenta',
     blocked: 'Bloqueados',
     hide_story: 'Ocultar historia y directo',
+    what_is_happening: "¿Qué está pasando?",
+    add_media: "Añadir archivo",
+    posting: "Publicando...",
+    post: "Publicar",
   },
   sw: {
     select_language: 'Chagua lugha yako',
@@ -145,6 +153,10 @@ export const translations = {
     switch: 'Badilisha',
     start_posting_growth: 'Anza kuchapisha katika {channel} ili kukuza chaneli yako.',
     members: 'Wanachama',
+    what_is_happening: "Kuna nini?",
+    add_media: "Ongeza Media",
+    posting: "Inachapisha...",
+    post: "Chapisha",
   },
   lg: {
     select_language: 'Londa olulimi lwo',
@@ -178,6 +190,10 @@ export const translations = {
     switch: 'Kyusa',
     start_posting_growth: 'Tandika okuteekamu obubaka mu {channel} okukuza akaunti yo.',
     members: 'Bammemba',
+    what_is_happening: "Kiki ekigenda mu maaso?",
+    add_media: "Gatako obutambi",
+    posting: "Kisindikibwa...",
+    post: "Sindika",
   },
 };
 

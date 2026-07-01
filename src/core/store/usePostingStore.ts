@@ -58,6 +58,7 @@ export interface CreatePostParams {
   linkedThumbnailUrls?: string[];
   aspectRatio?: number;
   isShortClip?: boolean;
+  category?: string;
 }
 
 interface PostingState {
@@ -352,6 +353,7 @@ export const usePostingStore = create<PostingState>((set) => ({
           audio_url: finalAudioUrl,
           is_audio: !!finalAudioUrl,
           metadata,
+          category: params.category,
         };
         const { error } = await supabase.from('channel_posts').insert(cPostPayload);
         if (error) throw error;
@@ -416,6 +418,7 @@ export const usePostingStore = create<PostingState>((set) => ({
           audio_url: finalAudioUrl,
           is_audio: !!finalAudioUrl,
           metadata,
+          category: params.category,
         };
         const { error } = await supabase.from('posts').insert(postPayload);
         if (error) throw error;

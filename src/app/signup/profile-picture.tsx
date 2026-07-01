@@ -15,7 +15,7 @@ import { useTranslation } from '@/core/localization/i18n';
 export default function ProfilePicturePage() {
   const router = useRouter();
   const { t } = useTranslation();
-  const { updateProfile } = useAuthStore();
+  const { updateProfile, user } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [image, setImage] = useState<string | null>(null);
   const { startLoading, stopLoading } = useGlobalProgress();
@@ -42,8 +42,9 @@ export default function ProfilePicturePage() {
 
     try {
       if (image) {
-        // TODO: The image here is a local URI. In a full implementation, you'd upload this to Supabase Storage first.
-        await updateProfile({ profile_image_url: image });
+        // Upload the image to Cloudflare R2 / S3 first
+        const publicUrl = await cloudMediaService.uploadMedia(image, 'profile_images', user?.id || 'new_user');
+        await updateProfile({ profile_image_url: publicUrl });
       }
 
       stopLoading();

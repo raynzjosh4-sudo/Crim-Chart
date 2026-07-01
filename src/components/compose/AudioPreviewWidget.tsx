@@ -1,18 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
+import { colors } from '@/core/theme/colors';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { Audio } from 'expo-av';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { Audio } from 'expo-av';
-import { Play, Pause, Plus, FileText, X } from 'lucide-react-native';
-import { colors } from '@/core/theme/colors';
+import { FileText, Pause, Play, Plus, X } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import { DeviceEventEmitter, KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { LyricsEditorPanel } from './LyricsEditorPanel';
 
 interface AudioPreviewWidgetProps {
   media: any;
-  onRemove: (id: string) => void;
+  onRemove?: (id: string) => void;
   onUpdate: (id: string, updates: any) => void;
+  onSelect?: (media: any) => void;
+  isSelected?: boolean;
 }
 
-export const AudioPreviewWidget: React.FC<AudioPreviewWidgetProps> = ({ media, onRemove, onUpdate }) => {
+export const AudioPreviewWidget: React.FC<AudioPreviewWidgetProps> = ({ media, onRemove, onUpdate, onSelect, isSelected }) => {
+  const user = useAuthStore(s => s.user);
+  const { startLoading, stopLoading } = useGlobalProgress();
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -23,14 +30,31 @@ export const AudioPreviewWidget: React.FC<AudioPreviewWidgetProps> = ({ media, o
   const [lyricsModalVisible, setLyricsModalVisible] = useState(false);
   const [lyrics, setLyrics] = useState(media.lyrics || '');
 
-  // Cleanup audio on unmount
+  const displayImage = thumbnail || user?.profileImageUrl;
+
+  // Cleanup audio on unmount — stop THEN unload so playback halts immediately
   useEffect(() => {
     return () => {
       if (sound) {
-        sound.unloadAsync();
+        sound.stopAsync().finally(() => sound.unloadAsync());
       }
     };
   }, [sound]);
+
+  // Pause when another audio starts playing
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('play_audio', async (playingId) => {
+      if (playingId !== media.id && isPlaying && sound) {
+        try {
+          await sound.pauseAsync();
+          setIsPlaying(false);
+        } catch (error) {
+          console.error("Error pausing other audio", error);
+        }
+      }
+    });
+    return () => sub.remove();
+  }, [sound, isPlaying, media.id]);
 
   const togglePlayback = async () => {
     if (!media.uri) return;
@@ -40,11 +64,13 @@ export const AudioPreviewWidget: React.FC<AudioPreviewWidgetProps> = ({ media, o
         await sound.pauseAsync();
         setIsPlaying(false);
       } else {
+        DeviceEventEmitter.emit('play_audio', media.id);
         await sound.playAsync();
         setIsPlaying(true);
       }
     } else {
       try {
+        DeviceEventEmitter.emit('play_audio', media.id);
         const { sound: newSound } = await Audio.Sound.createAsync(
           { uri: media.uri },
           { shouldPlay: true }
@@ -95,8 +121,8 @@ export const AudioPreviewWidget: React.FC<AudioPreviewWidgetProps> = ({ media, o
       {/* Left side: Thumbnail & Play button */}
       <View style={styles.thumbnailContainer}>
         <TouchableOpacity style={styles.thumbnailWrapper} onPress={pickThumbnail} activeOpacity={0.8}>
-          {thumbnail ? (
-            <Image source={{ uri: thumbnail }} style={styles.thumbnailImage} />
+          {displayImage ? (
+            <Image source={{ uri: displayImage }} style={styles.thumbnailImage} contentFit="cover" />
           ) : (
             <View style={styles.thumbnailPlaceholder}>
             </View>
@@ -123,16 +149,26 @@ export const AudioPreviewWidget: React.FC<AudioPreviewWidgetProps> = ({ media, o
 
       {/* Right side: Info fields */}
       <View style={styles.infoContainer}>
-        <TextInput
-          style={styles.nameInput}
-          placeholder="Song Name"
-          placeholderTextColor="rgba(255,255,255,0.5)"
-          value={name}
-          onChangeText={handleNameChange}
-        />
-        
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <TextInput
+            style={[styles.nameInput, { flex: 1, paddingRight: onRemove ? 24 : 0 }]}
+            placeholder="Song Name"
+            placeholderTextColor="rgba(255,255,255,0.5)"
+            value={name}
+            onChangeText={handleNameChange}
+          />
+          {onRemove && (
+            <TouchableOpacity
+              onPress={() => onRemove(media.id)}
+              style={{ position: 'absolute', right: 0, top: 0, padding: 4, zIndex: 10 }}
+            >
+              <X size={20} color="rgba(255,255,255,0.6)" />
+            </TouchableOpacity>
+          )}
+        </View>
+
         <View style={styles.divider} />
-        
+
         <TextInput
           style={styles.artistInput}
           placeholder="Artist Name"
@@ -140,36 +176,58 @@ export const AudioPreviewWidget: React.FC<AudioPreviewWidgetProps> = ({ media, o
           value={artist}
           onChangeText={handleArtistChange}
         />
-        
+
         <View style={styles.divider} />
 
-        <TouchableOpacity style={styles.lyricButton} onPress={() => setLyricsModalVisible(true)}>
-          <FileText size={12} color="#FFF" style={{ marginRight: 6 }} />
-          <Text style={styles.lyricButtonText}>{lyrics ? 'Edit lyric' : 'Add lyric'}</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity style={styles.lyricButton} onPress={async () => {
+            startLoading();
+            await new Promise(r => setTimeout(r, 400));
+            stopLoading();
+            setLyricsModalVisible(true);
+          }}>
+            <FileText size={12} color="#FFF" style={{ marginRight: 6 }} />
+            <Text style={styles.lyricButtonText}>{lyrics ? 'Edit lyric' : 'Add lyric'}</Text>
+          </TouchableOpacity>
+
+          {onSelect && (
+            <TouchableOpacity
+              style={[styles.lyricButton, { marginLeft: 8, backgroundColor: isSelected ? 'rgba(255,255,255,0.2)' : colors.primary }]}
+              onPress={() => onSelect({ ...media, name, artist, lyrics, thumbnail })}
+              disabled={isSelected}
+            >
+              <Text style={[styles.lyricButtonText, { color: isSelected ? '#FFF' : '#000', fontWeight: 'bold' }]}>
+                {isSelected ? 'Selected' : 'Select'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Lyrics Modal */}
       <Modal visible={lyricsModalVisible} animationType="fade" transparent={true}>
-        <KeyboardAvoidingView 
-          style={styles.lyricsModalOverlay} 
+        <KeyboardAvoidingView
+          style={styles.lyricsModalOverlay}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <View style={styles.lyricsSmallWindow}>
             <View style={styles.lyricsHeader}>
               <Text style={styles.lyricsTitle}>Lyrics</Text>
-              <TouchableOpacity onPress={() => setLyricsModalVisible(false)} style={styles.lyricsCloseBtn}>
+              <TouchableOpacity
+                onPress={() => setLyricsModalVisible(false)}
+                style={styles.lyricsCloseBtn}
+              >
                 <X size={20} color="#FFF" />
               </TouchableOpacity>
             </View>
-            <TextInput
-              style={styles.lyricsInputSmall}
-              placeholder="Paste or type lyrics here..."
-              placeholderTextColor="rgba(255,255,255,0.4)"
-              multiline
+            <LyricsEditorPanel
               value={lyrics}
-              onChangeText={setLyrics}
-              autoFocus
+              onChange={(val) => {
+                setLyrics(val);
+                onUpdate(media.id, { lyrics: val });
+              }}
+              initialArtist={artist}
+              initialSong={name}
             />
             <View style={styles.lyricsFooter}>
               <TouchableOpacity style={styles.lyricsSaveButton} onPress={() => {
@@ -192,8 +250,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     padding: 8,
     alignItems: 'center',
-    marginRight: 12,
-    paddingRight: 32, // make room for external close button
   },
   thumbnailContainer: {
     width: 120,
@@ -337,5 +393,25 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 12,
     fontWeight: '600',
+  },
+  getLyricsHereBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+    alignSelf: 'flex-start',
+  },
+  getLyricsHereText: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 13,
+    textDecorationLine: 'underline',
+  },
+  lyricsSearchInput: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    color: '#FFF',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    marginBottom: 10,
   },
 });

@@ -1,29 +1,37 @@
+import UserAvatar from '@/components/avatar/UserAvatar';
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
+import { ComposerDialog } from '@/components/composer/ComposerDialog';
 import { FollowUserButton } from '@/components/FollowUserButton';
 import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import { PostInteractionWrapper } from '@/components/wrappers/PostInteractionWrapper';
 import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { MusicListTile } from '@/features/boxes/components/music_posting/tiles/MusicListTile';
-import UserAvatar from '@/components/avatar/UserAvatar';
 import { useDesktopVidsStore } from '@/mainFeed/pages/main_page_widgets/useDesktopVidsStore';
-import { Plus, Search } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { Search, ListFilter, X } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, FlatList, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions, Modal, Pressable } from 'react-native';
 import { useMusicFeed } from './_hooks/useMusicFeed';
+import { CategoryPickerWidget } from '@/components/compose/CategoryPickerWidget';
+import { MUSIC_CATEGORIES } from '@/core/constants/musicCategories';
 
 export default function MyMusicPage() {
   const theme = useCurrentTheme();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const router = useRouter();
   const { startLoading, stopLoading } = useGlobalProgress();
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
 
-  const { tracks, isLoading, isFetchingMore, fetchMore } = useMusicFeed(searchQuery);
+  const { tracks, isLoading, isFetchingMore, fetchMore } = useMusicFeed(searchQuery, selectedCategory);
   const setActiveVideo = useDesktopVidsStore(s => s.setActiveVideo);
 
   const [activeTrackId, setActiveTrackId] = useState<string | null>(null);
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
 
   useEffect(() => {
     if (!isLoading) {
@@ -61,15 +69,44 @@ export default function MyMusicPage() {
             onSubmitEditing={() => setSearchQuery(searchInput)}
             returnKeyType="search"
           />
+          {selectedCategory !== 'All' && (
+            <TouchableOpacity
+              onPress={() => setSelectedCategory('All')}
+              style={{ 
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                backgroundColor: theme.colors.primary + '20', 
+                paddingHorizontal: 8, 
+                paddingVertical: 4, 
+                borderRadius: 12, 
+                marginRight: 8 
+              }}
+            >
+              <Text style={{ color: theme.colors.primary, fontSize: 12, marginRight: 4, fontWeight: 'bold' }}>
+                {MUSIC_CATEGORIES.find(c => c.id === selectedCategory)?.label}
+              </Text>
+              <X size={12} color={theme.colors.primary} />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity 
+            onPress={() => setShowCategoryPicker(true)}
+            style={{ padding: 4, marginRight: 4 }}
+          >
+            <ListFilter size={20} color="rgba(255,255,255,0.5)" />
+          </TouchableOpacity>
         </View>
         <TouchableOpacity
           style={[styles.addButton, { backgroundColor: 'rgba(255,255,255,0.08)' }]}
           activeOpacity={0.8}
           onPress={async () => {
+            setActiveVideo(null); // Stop any playing music globally
+            setActiveTrackId(null); // Stop local MusicListTile playback
+            
             startLoading();
-            // Simulate navigation delay and prevent multi-tap
             await new Promise(resolve => setTimeout(resolve, 400));
             stopLoading();
+            
+            setIsComposerOpen(true);
           }}
         >
           <Text style={{ color: '#FFF', fontSize: 14, fontWeight: '600' }}>Add</Text>
@@ -170,12 +207,73 @@ export default function MyMusicPage() {
           />
         )}
       </View>
+      <ComposerDialog visible={isComposerOpen} onClose={() => setIsComposerOpen(false)} />
+      {/* Category Picker Modal */}
+      <Modal
+        visible={showCategoryPicker}
+        animationType={isDesktop ? "fade" : "slide"}
+        transparent={true}
+        onRequestClose={() => setShowCategoryPicker(false)}
+      >
+        <Pressable 
+          style={isDesktop ? styles.desktopModalOverlay : styles.modalOverlay} 
+          onPress={() => setShowCategoryPicker(false)}
+        >
+          <Pressable 
+            style={[
+              isDesktop ? styles.desktopModalContent : styles.modalContent, 
+              { backgroundColor: theme.colors.background }
+            ]}
+          >
+            {!isDesktop && <View style={styles.modalHandle} />}
+            <CategoryPickerWidget 
+              onSelectCategory={(id) => {
+                setSelectedCategory(id);
+                setShowCategoryPicker(false);
+              }}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
 
-
 const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  desktopModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    height: '60%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 16,
+    paddingTop: 10,
+  },
+  desktopModalContent: {
+    width: 400,
+    maxHeight: '70%',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',

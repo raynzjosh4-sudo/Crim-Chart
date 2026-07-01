@@ -100,6 +100,7 @@ export default function RootLayout() {
                 <Stack.Screen name="landing" options={{ headerShown: false }} />
                 <Stack.Screen name="login" options={{ headerShown: false }} />
                 <Stack.Screen name="recover" options={{ headerShown: false }} />
+                <Stack.Screen name="add-post" options={{ presentation: 'transparentModal', animation: 'fade' }} />
               </Stack>
               <OfflineStateWidget />
               <Toast config={{ ...chartToastConfig, ...toastConfig }} />

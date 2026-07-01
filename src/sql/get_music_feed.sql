@@ -2,8 +2,9 @@
 -- This function fetches audio posts from both the `posts` and `channel_posts` tables and paginates them.
 
 DROP FUNCTION IF EXISTS get_music_feed(INT, INT);
+DROP FUNCTION IF EXISTS get_music_feed(INT, INT, TEXT);
 
-CREATE OR REPLACE FUNCTION get_music_feed(p_limit INT, p_offset INT)
+CREATE OR REPLACE FUNCTION get_music_feed(p_limit INT, p_offset INT, p_category TEXT DEFAULT NULL)
 RETURNS TABLE (
     source_table TEXT,
     post_data JSONB,
@@ -23,6 +24,7 @@ BEGIN
             p.created_at
         FROM posts p
         WHERE p.audio_url IS NOT NULL AND p.audio_url != ''
+          AND (p_category IS NULL OR p.category = p_category)
         
         UNION ALL
         
@@ -34,6 +36,7 @@ BEGIN
             cp.created_at
         FROM channel_posts cp
         WHERE cp.audio_url IS NOT NULL AND cp.audio_url != ''
+          AND (p_category IS NULL OR cp.category = p_category)
     )
     SELECT 
         cm.source_table,
