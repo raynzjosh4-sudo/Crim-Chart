@@ -80,9 +80,9 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
 
   const { startLoading, stopLoading } = useGlobalProgress();
 
-  const [likesCount, setLikesCount] = useState(propsLikes || 0);
-  const [downloadsCount, setDownloadsCount] = useState(propsDownloads || 0);
-  const [viewsCount, setViewsCount] = useState(propsViews || 0);
+  const likesCount = propsLikes ?? editedTrack.likesCount ?? 0;
+  const downloadsCount = propsDownloads ?? editedTrack.downloadsCount ?? 0;
+  const viewsCount = propsViews ?? editedTrack.viewsCount ?? 0;
 
   const isLocal = track.owner?.id === 'local_user';
 

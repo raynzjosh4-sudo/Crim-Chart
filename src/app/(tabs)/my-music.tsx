@@ -1,20 +1,20 @@
 import UserAvatar from '@/components/avatar/UserAvatar';
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
+import { CategoryPickerWidget } from '@/components/compose/CategoryPickerWidget';
 import { ComposerDialog } from '@/components/composer/ComposerDialog';
 import { FollowUserButton } from '@/components/FollowUserButton';
 import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import { PostInteractionWrapper } from '@/components/wrappers/PostInteractionWrapper';
+import { MUSIC_CATEGORIES } from '@/core/constants/musicCategories';
 import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { MusicListTile } from '@/features/boxes/components/music_posting/tiles/MusicListTile';
 import { useDesktopVidsStore } from '@/mainFeed/pages/main_page_widgets/useDesktopVidsStore';
 import { useRouter } from 'expo-router';
-import { Search, ListFilter, X } from 'lucide-react-native';
+import { ListFilter, Search, X } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions, Modal, Pressable } from 'react-native';
+import { ActivityIndicator, FlatList, Modal, Platform, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useMusicFeed } from './_hooks/useMusicFeed';
-import { CategoryPickerWidget } from '@/components/compose/CategoryPickerWidget';
-import { MUSIC_CATEGORIES } from '@/core/constants/musicCategories';
 
 export default function MyMusicPage() {
   const theme = useCurrentTheme();
@@ -72,14 +72,14 @@ export default function MyMusicPage() {
           {selectedCategory !== 'All' && (
             <TouchableOpacity
               onPress={() => setSelectedCategory('All')}
-              style={{ 
-                flexDirection: 'row', 
-                alignItems: 'center', 
-                backgroundColor: theme.colors.primary + '20', 
-                paddingHorizontal: 8, 
-                paddingVertical: 4, 
-                borderRadius: 12, 
-                marginRight: 8 
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: theme.colors.primary + '20',
+                paddingHorizontal: 8,
+                paddingVertical: 4,
+                borderRadius: 12,
+                marginRight: 8
               }}
             >
               <Text style={{ color: theme.colors.primary, fontSize: 12, marginRight: 4, fontWeight: 'bold' }}>
@@ -88,7 +88,7 @@ export default function MyMusicPage() {
               <X size={12} color={theme.colors.primary} />
             </TouchableOpacity>
           )}
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => setShowCategoryPicker(true)}
             style={{ padding: 4, marginRight: 4 }}
           >
@@ -101,11 +101,11 @@ export default function MyMusicPage() {
           onPress={async () => {
             setActiveVideo(null); // Stop any playing music globally
             setActiveTrackId(null); // Stop local MusicListTile playback
-            
+
             startLoading();
             await new Promise(resolve => setTimeout(resolve, 400));
             stopLoading();
-            
+
             setIsComposerOpen(true);
           }}
         >
@@ -185,9 +185,10 @@ export default function MyMusicPage() {
                     postId={item.id}
                     initialLikesCount={item.likesCount}
                     initialViewsCount={item.viewsCount}
+                    initialDownloadsCount={item.downloadsCount}
                     sourceTable={item.sourceTable}
                   >
-                    {({ isLiked, likesCount, viewsCount }) => (
+                    {({ isLiked, likesCount, viewsCount, downloadsCount }) => (
                       <MusicListTile
                         track={item}
                         hideHeader={true}
@@ -197,7 +198,9 @@ export default function MyMusicPage() {
                         isLiked={isLiked}
                         likesCount={likesCount}
                         viewsCount={viewsCount}
+                        downloadsCount={downloadsCount}
                         onLikePress={() => useInteractionStore.getState().toggleLike(item.id, undefined, item.sourceTable)}
+                        onDownloadPress={() => useInteractionStore.getState().incrementDownload(item.id, undefined, item.sourceTable === 'channel_posts' ? 'channel_posts' : undefined)}
                       />
                     )}
                   </PostInteractionWrapper>
@@ -215,18 +218,18 @@ export default function MyMusicPage() {
         transparent={true}
         onRequestClose={() => setShowCategoryPicker(false)}
       >
-        <Pressable 
-          style={isDesktop ? styles.desktopModalOverlay : styles.modalOverlay} 
+        <Pressable
+          style={isDesktop ? styles.desktopModalOverlay : styles.modalOverlay}
           onPress={() => setShowCategoryPicker(false)}
         >
-          <Pressable 
+          <Pressable
             style={[
-              isDesktop ? styles.desktopModalContent : styles.modalContent, 
+              isDesktop ? styles.desktopModalContent : styles.modalContent,
               { backgroundColor: theme.colors.background }
             ]}
           >
             {!isDesktop && <View style={styles.modalHandle} />}
-            <CategoryPickerWidget 
+            <CategoryPickerWidget
               onSelectCategory={(id) => {
                 setSelectedCategory(id);
                 setShowCategoryPicker(false);
