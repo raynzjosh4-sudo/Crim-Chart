@@ -9,15 +9,24 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { ChevronRight, EyeOff, Plus, Star } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, TextInput } from 'react-native';
+import { Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, TextInput, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export const PersonalInformationPage = () => {
+export const PersonalInformationPage = ({
+  isModal = false,
+  visible = true,
+  onClose,
+}: {
+  isModal?: boolean;
+  visible?: boolean;
+  onClose?: () => void;
+}) => {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const isLoading = useAuthStore((s) => s.isLoading);
   const insets = useSafeAreaInsets();
+  const isDesktop = Dimensions.get('window').width >= 768;
 
   // We should initialize with user's birthday/gender if available
   // but let's assume they might be in `user` object depending on CrimChartUserModel
@@ -52,13 +61,19 @@ export const PersonalInformationPage = () => {
         title: 'Success',
         message: 'Personal information updated successfully!',
       });
-      router.back();
+      if (isModal && onClose) onClose();
+      else router.back();
     } else {
       ChartToast.showError(null, {
         title: 'Error',
         message: 'Failed to update profile.',
       });
     }
+  };
+
+  const handleBack = () => {
+    if (isModal && onClose) onClose();
+    else router.back();
   };
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
@@ -78,12 +93,17 @@ export const PersonalInformationPage = () => {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
+  if (isModal && !visible) return null;
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isModal && isDesktop && styles.desktopContainer]}>
+      <View style={[(isModal && isDesktop) ? styles.desktopModal : styles.pageWrapper]}>
       <ChartAppBar
         title="Personal Information"
         showBack={false}
-        leading={<CrimchartBackButton onPress={() => router.back()} color={colors.text} />}
+        useSafeArea={!isModal}
+        showBorder={!isModal}
+        leading={<CrimchartBackButton onPress={handleBack} color={colors.text} />}
         actions={[
           <TouchableOpacity activeOpacity={1} key="save" onPress={handleSave} disabled={isLoading} style={styles.saveButton}>
             <Text style={[styles.saveText, isLoading && { opacity: 0.5 }]}>Save</Text>
@@ -151,7 +171,7 @@ export const PersonalInformationPage = () => {
         <Text style={styles.sectionHeader}>CROWN TITLE</Text>
         <View style={styles.inputFieldContainer}>
           <TextInput
-            style={styles.blockInput}
+            style={[styles.blockInput, Platform.OS === 'web' && { outlineStyle: 'none' } as any]}
             value={crownTitle}
             onChangeText={setCrownTitle}
             placeholder="Enter your crown title..."
@@ -163,7 +183,7 @@ export const PersonalInformationPage = () => {
         <Text style={styles.sectionHeader}>BIO</Text>
         <View style={styles.inputFieldContainer}>
           <TextInput
-            style={[styles.blockInput, { minHeight: 80, textAlignVertical: 'top' }]}
+            style={[styles.blockInput, { minHeight: 80, textAlignVertical: 'top' }, Platform.OS === 'web' && { outlineStyle: 'none' } as any]}
             value={bio}
             onChangeText={setBio}
             placeholder="Tell us about yourself..."
@@ -190,6 +210,7 @@ export const PersonalInformationPage = () => {
 
 
 
+      </View>
     </View>
   );
 };
@@ -198,6 +219,40 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  pageWrapper: {
+    flex: 1,
+    width: '100%',
+  },
+  desktopContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    ...Platform.select({
+      web: {
+        position: 'fixed',
+        top: 0, left: 0, right: 0, bottom: 0,
+        zIndex: 9999,
+      } as any,
+      default: {
+        ...StyleSheet.absoluteFillObject,
+        zIndex: 9999,
+        elevation: 999,
+      }
+    })
+  },
+  desktopModal: {
+    width: 600,
+    maxWidth: '90%',
+    maxHeight: '80%',
+    backgroundColor: colors.background,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#FFF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
   },
   saveButton: {
     paddingHorizontal: 16,

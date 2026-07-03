@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
-import { Plus } from 'lucide-react-native';
-import { BoxCard, BoxModel } from './BoxCard';
-import { VisibilityBoxTrackerWrapper } from '@/components/wrappers/VisibilityBoxTrackerWrapper';
-import { CreateBoxSheet } from './CreateBoxSheet';
-import { useRouter } from 'expo-router';
-import { supabase } from '@/core/supabase/supabaseConfig';
-import { useBoxStore } from '../application/useBoxStore';
 import { BoxCardShimmer } from '@/components/shimmers/BoxCardShimmer';
+import { VisibilityBoxTrackerWrapper } from '@/components/wrappers/VisibilityBoxTrackerWrapper';
+import { supabase } from '@/core/supabase/supabaseConfig';
+import { useRouter } from 'expo-router';
+import { Plus } from 'lucide-react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { FlatList, Platform, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View, Modal } from 'react-native';
+import { useBoxStore } from '../application/useBoxStore';
+import { BoxCard, BoxModel } from './BoxCard';
+import { CreateBoxSheet, BoxCategory } from './CreateBoxSheet';
+import { CreateBoxPage } from '../pages/creation/CreateBoxPage';
+import { useDesktopBoxStore } from '../application/useDesktopBoxStore';
 
 interface UserBoxesWidgetProps {
   userId?: string;
@@ -19,19 +21,22 @@ const LIMIT = 10;
 export const UserBoxesWidget: React.FC<UserBoxesWidgetProps> = ({ userId, isCurrentUser }) => {
   const router = useRouter();
   const [isCreateSheetVisible, setCreateSheetVisible] = useState(false);
-  
+  const [selectedBoxType, setSelectedBoxType] = useState<BoxCategory | null>(null);
+
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
 
-  const boxes = useBoxStore(state => userId ? state.boxesByUserId[userId] : []) || [];
-  const isLoading = useBoxStore(state => userId ? state.isLoadingByUserId[userId] : false) || false;
+  // Use a stable empty array reference to prevent useSyncExternalStore infinite loop
+  const EMPTY_ARRAY = useRef<any[]>([]).current;
+  const boxes = useBoxStore(state => userId ? state.boxesByUserId[userId] : undefined) || EMPTY_ARRAY;
+  const isLoading = useBoxStore(state => userId ? state.isLoadingByUserId[userId] : undefined) || false;
   const setBoxes = useBoxStore(state => state.setBoxes);
   const setLoading = useBoxStore(state => state.setLoading);
 
   const fetchBoxes = useCallback(async (isLoadMore = false) => {
     if (!userId) return;
-    
+
     const currentPage = isLoadMore ? page + 1 : 0;
     const from = currentPage * LIMIT;
     const to = from + LIMIT - 1;
@@ -80,7 +85,7 @@ export const UserBoxesWidget: React.FC<UserBoxesWidgetProps> = ({ userId, isCurr
         setBoxes(userId, mappedBoxes);
         setPage(0);
       }
-      
+
       setHasMore(mappedBoxes.length === LIMIT);
     } catch (err) {
       console.error('[UserBoxesWidget] Failed to fetch boxes:', err);
@@ -99,11 +104,29 @@ export const UserBoxesWidget: React.FC<UserBoxesWidgetProps> = ({ userId, isCurr
     fetchBoxes(true);
   };
 
+  const createButtonRef = useRef<any>(null);
+  const [menuPosition, setMenuPosition] = useState<{ x: number, y: number, width: number, height: number } | null>(null);
+  const { width } = useWindowDimensions();
+
   const handleCreateBox = () => {
-    setCreateSheetVisible(true);
+    if (Platform.OS === 'web' && width >= 768) {
+      createButtonRef.current?.measureInWindow((x, y, btnWidth, btnHeight) => {
+        setMenuPosition({ x, y, width: btnWidth, height: btnHeight });
+        setCreateSheetVisible(true);
+      });
+    } else {
+      setCreateSheetVisible(true);
+    }
   };
 
   const handleBoxPress = (box: BoxModel) => {
+    const isDesktop = Platform.OS === 'web' && width >= 1024; // Desktop Right pane is usually visible at >= 1024 in layout
+
+    if (isDesktop) {
+      useDesktopBoxStore.getState().openBox(box.id, box.boxType as any);
+      return;
+    }
+
     switch (box.boxType) {
       case 'music': router.push(`/music-box/${box.id}` as any); break;
       case 'movie': router.push(`/movie-box/${box.id}` as any); break;
@@ -120,8 +143,9 @@ export const UserBoxesWidget: React.FC<UserBoxesWidgetProps> = ({ userId, isCurr
   const renderHeader = () => {
     if (isCurrentUser) {
       return (
-        <TouchableOpacity 
-          style={styles.createButtonContainer} 
+        <TouchableOpacity
+          ref={createButtonRef}
+          style={styles.createButtonContainer}
           activeOpacity={0.7}
           onPress={handleCreateBox}
         >
@@ -154,18 +178,18 @@ export const UserBoxesWidget: React.FC<UserBoxesWidgetProps> = ({ userId, isCurr
   return (
     <View style={styles.container}>
       <Text style={styles.headerTitle}>Curated Boxes</Text>
-      
-      <FlatList 
+
+      <FlatList
         data={boxes}
         keyExtractor={item => item.id}
-        horizontal 
+        horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         ListHeaderComponent={renderHeader}
         renderItem={({ item }) => (
           <VisibilityBoxTrackerWrapper box={item} isCurrentUser={isCurrentUser} actionType="view_box">
-            <BoxCard 
-              box={item} 
+            <BoxCard
+              box={item}
               onPress={handleBoxPress}
             />
           </VisibilityBoxTrackerWrapper>
@@ -176,10 +200,16 @@ export const UserBoxesWidget: React.FC<UserBoxesWidgetProps> = ({ userId, isCurr
         initialNumToRender={5}
       />
 
-      <CreateBoxSheet 
+      <CreateBoxSheet
         visible={isCreateSheetVisible}
         onClose={() => setCreateSheetVisible(false)}
+        menuPosition={menuPosition}
+        onSelectCategory={setSelectedBoxType}
       />
+
+      <Modal visible={!!selectedBoxType} animationType="fade" transparent onRequestClose={() => setSelectedBoxType(null)}>
+         {selectedBoxType && <CreateBoxPage inlineType={selectedBoxType} onCloseInline={() => setSelectedBoxType(null)} />}
+      </Modal>
     </View>
   );
 };

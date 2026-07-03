@@ -56,7 +56,7 @@ export default function AppAvatar({
   const totalSize = resolvedHasStatus ? size + RING_THICKNESS * 2 + RING_SPACING : size;
 
   const ringColorResolved = isStatusRead
-    ? 'rgba(150, 150, 150, 0.48)'
+    ? colors.surfaceVariant
     : ringColor || colors.primary;
 
   const onlineDotSize = size * 0.28;

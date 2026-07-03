@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, StyleSheet, Text, ActivityIndicator, DeviceEventEmitter, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, Text, ActivityIndicator, DeviceEventEmitter, Dimensions } from 'react-native';
 import { supabase } from '@/core/supabase/supabaseConfig';
 import { SmartPostWidget } from '@/mainFeed/pages/main_page_widgets/SmartPostWidget';
 import { VideoPostFeedCard } from '@/mainFeed/pages/main_page_widgets/VideoPostFeedCard';
@@ -15,7 +15,7 @@ export const PostsProfileTab: React.FC<PostsProfileTabProps> = ({ userId }) => {
   const [activePostId, setActivePostId] = useState<string | null>(null);
   
   const itemLayouts = useRef<{ [key: string]: { y: number; height: number } }>({});
-  const { height: windowHeight } = useWindowDimensions();
+  const windowHeight = Dimensions.get('window').height;
 
   useEffect(() => {
     if (!userId) return;

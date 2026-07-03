@@ -10,7 +10,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import { usePathname, useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
-import { AppState, Dimensions, FlatList, StyleSheet, Text, View, ViewToken } from 'react-native';
+import { AppState, Dimensions, FlatList, StyleSheet, Text, View, ViewToken, Platform, useWindowDimensions, Modal } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBoxDetail } from '../../application/useBoxDetail';
 import { useBoxItems } from '../../application/useBoxItems';
@@ -19,12 +19,15 @@ import { RecentContributorsWidget } from '../../components/contributors/RecentCo
 import { FullPageShimmer } from '../../components/details/MusicBoxDetailShimmer';
 import { MusicBoxDetailTrackTile } from '../../components/details/MusicBoxDetailTrackTile';
 import { TrendingInBoxWidget } from '../../components/details/TrendingInBoxWidget';
+import { MusicPostingPage } from '../../components/music_posting/MusicPostingPage';
 
-const { width } = Dimensions.get('window');
+const { width: windowWidth } = Dimensions.get('window');
 
-export const MusicBoxDetailPage = ({ id }: { id: string }) => {
+export const MusicBoxDetailPage = ({ id, onClose }: { id: string; onClose?: () => void }) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
 
   const currentUser = useAuthStore(s => s.user);
   const { trackInteraction } = useBoxInteractionTracker();
@@ -72,9 +75,12 @@ export const MusicBoxDetailPage = ({ id }: { id: string }) => {
 
   const [activeTrackId, setActiveTrackId] = useState<string | null>(null);
   const [viewerMemberId, setViewerMemberId] = useState<string | null>(null);
+  const [selectedFilterUserId, setSelectedFilterUserId] = useState<string | null>(null);
 
   const [showComments, setShowComments] = useState(false);
   const [activePostId, setActivePostId] = useState<string | null>(null);
+  
+  const [showPostingModal, setShowPostingModal] = useState(false);
 
   const isFocused = useIsFocused();
   const pathname = usePathname();
@@ -100,6 +106,11 @@ export const MusicBoxDetailPage = ({ id }: { id: string }) => {
   const activeMember = React.useMemo(() => {
     return members.find(m => m.id === viewerMemberId);
   }, [members, viewerMemberId]);
+
+  const filteredItems = React.useMemo(() => {
+    if (!selectedFilterUserId) return displayedItems;
+    return displayedItems.filter(item => item.addedBy.id === selectedFilterUserId);
+  }, [displayedItems, selectedFilterUserId]);
 
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 90,
@@ -138,11 +149,16 @@ export const MusicBoxDetailPage = ({ id }: { id: string }) => {
           isPaginating={isPaginatingMembers}
           onLoadMore={loadMoreMembers}
           boxId={id}
-          selectedMemberId={viewerMemberId}
-          onSelectMember={(userId) => {
-            setViewerMemberId(userId);
+          selectedMemberId={selectedFilterUserId}
+          onSelectMember={(id) => setSelectedFilterUserId(id)}
+          onLongPressMember={(id) => setViewerMemberId(id)}
+          onAddPress={() => {
+            if (isDesktop) {
+              setShowPostingModal(true);
+            } else {
+              router.push(`/music-box/post/${id}`);
+            }
           }}
-          onAddPress={handleAddPress}
         />
       </View>
     );
@@ -171,10 +187,6 @@ export const MusicBoxDetailPage = ({ id }: { id: string }) => {
     );
   };
 
-  const handleAddPress = () => {
-    router.push(`/music-box/post/${id}`);
-  };
-
   const isOwner = currentUser?.id === (fetchedBox as any)?.raw?.owner_id;
   const showInitialLoading = (isLoading || isItemsLoading) && displayedItems.length === 0;
 
@@ -186,6 +198,7 @@ export const MusicBoxDetailPage = ({ id }: { id: string }) => {
     >
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <ChartAppBar
+          onBack={onClose}
           backgroundColor="transparent"
           showBorder={false}
           useSafeArea={false}
@@ -209,17 +222,19 @@ export const MusicBoxDetailPage = ({ id }: { id: string }) => {
 
         {showInitialLoading ? (
           <FullPageShimmer />
-        ) : displayedItems.length === 0 ? (
+        ) : filteredItems.length === 0 ? (
           <View style={{ flex: 1 }}>
             {renderHeader()}
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-              <Text style={{ color: 'rgba(255,255,255,0.5)' }}>No tracks added yet.</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.5)' }}>
+                {selectedFilterUserId ? "No tracks from this user." : "No tracks added yet."}
+              </Text>
             </View>
           </View>
         ) : (
           <FlatList
             ref={flatListRef}
-            data={displayedItems}
+            data={filteredItems}
             keyExtractor={(item) => item.id}
             renderItem={renderSongRow}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -247,8 +262,14 @@ export const MusicBoxDetailPage = ({ id }: { id: string }) => {
         />
       )}
 
+      {showPostingModal && isDesktop && (
+        <Modal visible={true} transparent={true} animationType="fade" onRequestClose={() => setShowPostingModal(false)}>
+          <MusicPostingPage boxId={id} isInline onCloseInline={() => setShowPostingModal(false)} />
+        </Modal>
+      )}
+
       {/* Comment Sheet */}
-      {activePostId && (
+      {showComments && activePostId && (
         <CommentSheet
           postId={activePostId}
           visible={showComments}

@@ -8,7 +8,7 @@ import { BadgeIcon } from '@/mainFeed/features/bottomappbar/iconwithbarge/BadgeI
 import { useRouter, usePathname, useGlobalSearchParams } from 'expo-router';
 import { Bell, CircleDashed, Clapperboard, Compass, Feather, Home, MessageSquare, Music, Search, Settings, Sparkles } from 'lucide-react-native';
 import { useState } from 'react';
-import { Platform, ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { Platform, ScrollView, Text, TouchableOpacity, useWindowDimensions, View, Image } from 'react-native';
 
 export interface AppSideNavBarProps {
   selectedIndex: number;
@@ -38,7 +38,12 @@ export const AppSideNavBar = ({ selectedIndex, onItemTapped, homeBadgeCount = 0 
       {/* Top Logo / Branding */}
       <View style={styles.logoContainer}>
         <TouchableOpacity style={styles.logoButton} activeOpacity={0.7} onPress={() => router.navigate('/')}>
-          <Sparkles color={colors.primary} size={32} />
+          <Image source={require('@/assets/appicon/appicon.png')} style={{ width: 48, height: 48 }} resizeMode="contain" />
+          {isExpanded && (
+            <Text style={[styles.logoText, { color: colors.primary }]}>
+              Crimchart
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -235,18 +240,27 @@ const themeStyles = (colors: ThemeTokens, scale: number): any => ({
   container: {
     height: '100%',
     borderRightWidth: 0.5 * scale,
-    paddingVertical: 12 * scale,
+    paddingVertical: 0,
+    paddingTop: 12 * scale,
     justifyContent: 'space-between' as const,
   },
   logoContainer: {
-    paddingHorizontal: 24 * scale,
+    paddingHorizontal: 12 * scale,
+    paddingTop: 0,
     paddingBottom: 8 * scale,
     alignItems: 'flex-start' as const,
   },
   logoButton: {
-    padding: 12 * scale,
+    padding: 0,
     borderRadius: 999,
-    // Add hover effect if needed later
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+  },
+  logoText: {
+    fontSize: 22 * scale,
+    fontWeight: '800' as const,
+    marginLeft: 12 * scale,
+    letterSpacing: -0.5,
   },
   navItemsContainer: {
     flex: 1,

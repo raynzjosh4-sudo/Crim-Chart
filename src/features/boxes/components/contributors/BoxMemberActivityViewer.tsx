@@ -3,7 +3,7 @@ import { InteractionItemWidget } from '@/components/widgets/InteractionItemWidge
 import { supabase } from '@/core/supabase/supabaseConfig';
 import { X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Modal, StyleSheet, Text, TouchableOpacity, View, Platform, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActivityShimmer, PaginationShimmer } from '@/components/shimmers/ActivityShimmer';
 
@@ -35,6 +35,8 @@ export const BoxMemberActivityViewer: React.FC<BoxMemberActivityViewerProps> = (
 }) => {
   const [interactions, setInteractions] = useState<InteractionRecord[]>([]);
   const [loading, setLoading] = useState(false);
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
 
   useEffect(() => {
     if (!visible || !userId || !boxId) return;
@@ -96,12 +98,12 @@ export const BoxMemberActivityViewer: React.FC<BoxMemberActivityViewerProps> = (
   return (
     <Modal
       visible={visible}
-      animationType="slide"
-      transparent={false}
+      animationType={isDesktop ? "fade" : "slide"}
+      transparent={isDesktop}
       onRequestClose={onClose}
     >
-      <View style={styles.modalBackground}>
-        <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <View style={[styles.modalBackground, isDesktop && { backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' }]}>
+        <SafeAreaView style={isDesktop ? styles.desktopModal : styles.container} edges={['top', 'bottom']}>
 
           {/* Header - Looks like a Status Viewer Header */}
           <View style={styles.header}>
@@ -165,6 +167,20 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+  },
+  desktopModal: {
+    width: '100%',
+    maxWidth: 600,
+    height: '90%',
+    maxHeight: 800,
+    backgroundColor: '#0D0D0D',
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.8,
+    shadowRadius: 20,
+    elevation: 20,
   },
   header: {
     flexDirection: 'row',

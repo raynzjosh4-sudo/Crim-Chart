@@ -3,8 +3,8 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import LottieView from 'lottie-react-native';
 import { STICKER_SOURCES } from '@/features/channel/pages/messages_tab/widgets/StickerSheet';
 
-// Use standard indices for quick emojis
-const QUICK_EMOJI_INDICES = [4, 5, 6, 7, 8];
+// Use standard indices for quick emojis: Wave (30), Heart Hands (45), Sparkle Heart (1), Clapping (8), Fist Bump (18)
+const QUICK_EMOJI_INDICES = [30, 45, 1, 8, 18];
 
 interface QuickEmojiToolbarProps {
   onEmojiSelected: (asset: any) => void;

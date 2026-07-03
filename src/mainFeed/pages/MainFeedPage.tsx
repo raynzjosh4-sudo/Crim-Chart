@@ -24,6 +24,9 @@ import { useRealtimePostInteractions } from '@/hooks/useRealtimePostInteractions
 const PAGE_SIZE = 11;
 const NUKE_KEY = 'db_nuke_v1_done';
 
+export let preloadedMainFeed: MixedFeedItem[] | null = null;
+export const setPreloadedMainFeed = (feed: MixedFeedItem[] | null) => { preloadedMainFeed = feed; };
+
 export const MainFeedPage = () => {
   useRealtimePostInteractions();
 
@@ -31,7 +34,7 @@ export const MainFeedPage = () => {
   const router = useRouter();
   const user = useAuthStore(s => s.user);
 
-  const [cards, setCards] = useState<MixedFeedItem[]>([]);
+  const [cards, setCards] = useState<MixedFeedItem[]>(preloadedMainFeed || []);
   const [discoveredChannels, setDiscoveredChannels] = useState<CrimChartUserModel[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isPaginating, setIsPaginating] = useState(false);
@@ -56,6 +59,11 @@ export const MainFeedPage = () => {
   useEffect(() => {
     (async () => {
       try {
+        if (preloadedMainFeed && preloadedMainFeed.length > 0) {
+          cardsRef.current = preloadedMainFeed;
+          setPreloadedMainFeed(null);
+          return;
+        }
         const cached = await NativeDB.getMainFeed();
         if (cached.length > 0) {
           cardsRef.current = cached;

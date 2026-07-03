@@ -4,6 +4,7 @@ import { channelRepository } from '@/channel/data/repositories/ChannelRepository
 import { channelLocalSource } from '@/channel/data/sources/ChannelLocalSource';
 import { channelStatusFromMap, ChannelStatusModel } from '@/channel/models/ChannelStatusModel';
 import { StatusItem } from '@/components/UserStatusWidget/UserStatusWidget';
+import { useViewedStatusStore } from '@/core/store/useViewedStatusStore';
 
 export function useChannelStatuses(channelId: string | undefined) {
   const [statuses, setStatuses] = useState<StatusItem[]>([]);
@@ -16,6 +17,7 @@ export function useChannelStatuses(channelId: string | undefined) {
   const rawStatusesMap = useRef<Map<string, any>>(new Map());
 
   const processAndSetStatuses = (rawData: any[]) => {
+    const viewedStatusIds = useViewedStatusStore.getState().viewedStatusIds;
     // Merge new raw data into our map
     rawData.forEach(item => {
       rawStatusesMap.current.set(item.id, item);
@@ -35,7 +37,7 @@ export function useChannelStatuses(channelId: string | undefined) {
           id: status.authorId,
           user: status.author,
           thumbnailUrl: status.thumbnailUrl || status.imageUrls?.[0] || 'https://via.placeholder.com/150',
-          hasUnseen: true,
+          hasUnseen: false, // Default to false
           statuses: [status]
         } as StatusItem & { statuses: ChannelStatusModel[] });
       } else {
@@ -44,7 +46,11 @@ export function useChannelStatuses(channelId: string | undefined) {
       }
     });
 
-    setStatuses(Array.from(groupedMap.values()));
+    const result = Array.from(groupedMap.values());
+    result.forEach(group => {
+      group.hasUnseen = group.statuses!.some(s => !viewedStatusIds[s.id]);
+    });
+    setStatuses(result);
   };
 
   const loadData = useCallback(async (isRefresh = false) => {

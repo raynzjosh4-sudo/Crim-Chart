@@ -20,6 +20,7 @@ interface RecentContributorsWidgetProps {
   label?: string;
   selectedMemberId?: string | null;
   onSelectMember?: (id: string | null) => void;
+  onLongPressMember?: (id: string) => void;
   onAddPress?: () => void;
 }
 
@@ -32,6 +33,7 @@ export const RecentContributorsWidget: React.FC<RecentContributorsWidgetProps> =
   label = "Members",
   selectedMemberId,
   onSelectMember,
+  onLongPressMember,
   onAddPress
 }) => {
   if (isLoading && contributors.length === 0) {
@@ -75,6 +77,8 @@ export const RecentContributorsWidget: React.FC<RecentContributorsWidgetProps> =
             <TouchableOpacity activeOpacity={1}
               style={[styles.avatarWrapper]}
               onPress={() => onSelectMember?.(isSelected ? null : user.id)}
+              onLongPress={() => onLongPressMember?.(user.id)}
+              delayLongPress={400}
             >
               <View style={[styles.avatarRing, isSelected && styles.selectedRing]}>
                 <UserAvatar

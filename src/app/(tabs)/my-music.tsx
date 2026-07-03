@@ -4,8 +4,10 @@ import { CategoryPickerWidget } from '@/components/compose/CategoryPickerWidget'
 import { ComposerDialog } from '@/components/composer/ComposerDialog';
 import { FollowUserButton } from '@/components/FollowUserButton';
 import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+import { NetworkStatusBanner } from '@/components/network/NetworkStatusBanner';
 import { PostInteractionWrapper } from '@/components/wrappers/PostInteractionWrapper';
 import { MUSIC_CATEGORIES } from '@/core/constants/musicCategories';
+import { useAppNavigation } from '@/core/navigation/useAppNavigation';
 import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { MusicListTile } from '@/features/boxes/components/music_posting/tiles/MusicListTile';
@@ -13,7 +15,7 @@ import { useDesktopVidsStore } from '@/mainFeed/pages/main_page_widgets/useDeskt
 import { useRouter } from 'expo-router';
 import { ListFilter, Search, X } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Modal, Platform, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, BackHandler, FlatList, Modal, Platform, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useMusicFeed } from './_hooks/useMusicFeed';
 
 export default function MyMusicPage() {
@@ -21,11 +23,22 @@ export default function MyMusicPage() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
   const router = useRouter();
-  const { startLoading, stopLoading } = useGlobalProgress();
+  const { stopLoading } = useGlobalProgress();
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+
+  const { navigateToCrim, withPremiumTransition } = useAppNavigation();
+
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      navigateToCrim();
+      return true;
+    });
+
+    return () => backHandler.remove();
+  }, [navigateToCrim]);
 
   const { tracks, isLoading, isFetchingMore, fetchMore } = useMusicFeed(searchQuery, selectedCategory);
   const setActiveVideo = useDesktopVidsStore(s => s.setActiveVideo);
@@ -98,15 +111,13 @@ export default function MyMusicPage() {
         <TouchableOpacity
           style={[styles.addButton, { backgroundColor: 'rgba(255,255,255,0.08)' }]}
           activeOpacity={0.8}
-          onPress={async () => {
+          onPress={() => {
             setActiveVideo(null); // Stop any playing music globally
             setActiveTrackId(null); // Stop local MusicListTile playback
 
-            startLoading();
-            await new Promise(resolve => setTimeout(resolve, 400));
-            stopLoading();
-
-            setIsComposerOpen(true);
+            withPremiumTransition(async () => {
+              setIsComposerOpen(true);
+            });
           }}
         >
           <Text style={{ color: '#FFF', fontSize: 14, fontWeight: '600' }}>Add</Text>
@@ -238,6 +249,7 @@ export default function MyMusicPage() {
           </Pressable>
         </Pressable>
       </Modal>
+      <NetworkStatusBanner />
     </View>
   );
 }

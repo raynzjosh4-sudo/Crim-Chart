@@ -12,8 +12,14 @@ import { UniversalComposeModal } from '@/components/compose/UniversalComposeModa
 import { AppSideNavBar } from '@/components/navbar/AppSideNavBar';
 import { DesktopRightSidebar } from '@/components/navbar/DesktopRightSidebar';
 import { DesktopVidsRightSidebar } from '@/components/navbar/DesktopVidsRightSidebar';
+import { DesktopBoxDetailPane } from '@/components/navbar/DesktopBoxDetailPane';
+import { useDesktopBoxStore } from '@/features/boxes/application/useDesktopBoxStore';
 import CreateChannelPage from '@/app/channel/create';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+import { NativeDB } from '@/core/db/NativeDB';
+import { useAppNavigation } from '@/core/navigation/useAppNavigation';
 import { useDesktopComposeStore } from '@/core/store/useDesktopComposeStore';
+import { setPreloadedMainFeed } from '@/mainFeed/pages/MainFeedPage';
 import { InboxDetailPage } from '@/features/messaging/pages/InboxDetailPage';
 import { DesktopVidsFeedPane } from '@/mainFeed/pages/main_page_widgets/DesktopVidsFeedPane';
 import { MessageSquare } from 'lucide-react-native';
@@ -27,8 +33,12 @@ export default function TabLayout() {
   const styles = useStyles(themeStyles);
   const theme = useCurrentTheme();
   const { width } = useWindowDimensions();
+  const { startLoading, stopLoading } = useGlobalProgress();
 
   const isDesktop = width >= 768;
+
+  // Global desktop box store
+  const { activeBoxId } = useDesktopBoxStore();
 
   // On desktop, 'vids' is shown inline in the feed column instead of navigating
   const [desktopView, setDesktopView] = useState<'feed' | 'vids'>('feed');
@@ -49,48 +59,50 @@ export default function TabLayout() {
   // When desktop inline vids view is active, highlight Vids in sidebar
   if (isDesktop && desktopView === 'vids') selectedIndex = 1;
 
-  const onItemTapped = (index: number) => {
+  const { 
+    navigateToCrim, 
+    navigateToVids, 
+    navigateToChannels, 
+    navigateToCompose, 
+    navigateToStatuses, 
+    navigateToInbox, 
+    navigateToMyMusic 
+  } = useAppNavigation();
+
+  const onItemTapped = async (index: number) => {
     console.log(`[TabsLayout] Tapped tab index: ${index}`);
     try {
+      if (index === 0 && selectedIndex === 0) {
+        DeviceEventEmitter.emit('tabRefresh', 'feed');
+      }
+
       switch (index) {
         case 0:
-          if (selectedIndex === 0) {
-            DeviceEventEmitter.emit('tabRefresh', 'feed');
-          }
-          if (isDesktop) {
-            setDesktopView('feed');
-            router.navigate('/');
-          } else {
-            router.navigate('/');
-          }
+          await navigateToCrim();
+          if (isDesktop) setDesktopView('feed');
           break;
         case 1:
           if (isDesktop) {
-            // Toggle inline vids view on desktop
             setDesktopView(desktopView === 'vids' ? 'feed' : 'vids');
           } else {
-            router.navigate('/vids');
+            await navigateToVids();
           }
           break;
         case 2:
-          if (Platform.OS === 'web') {
-            useDesktopComposeStore.getState().openModal();
-          } else {
-            router.navigate('/first-post');
-          }
+          await navigateToCompose();
           break;
         case 3:
-          setDesktopView('feed');
-          router.navigate('/channels');
+          if (isDesktop) setDesktopView('feed');
+          await navigateToChannels();
           break;
         case 4:
-          console.log('[TabsLayout] Statuses clicked. Navigating to /statuses');
-          setDesktopView('feed');
-          router.navigate('/statuses' as any);
+          console.log('[TabsLayout] Statuses clicked.');
+          if (isDesktop) setDesktopView('feed');
+          await navigateToStatuses();
           break;
         case 5:
-          setDesktopView('feed');
-          router.navigate('/inbox');
+          if (isDesktop) setDesktopView('feed');
+          await navigateToInbox();
           break;
         case 6:
           console.log('[TabsLayout] Search clicked.');
@@ -99,8 +111,8 @@ export default function TabLayout() {
           console.log('[TabsLayout] Notifications clicked.');
           break;
         case 8:
-          setDesktopView('feed');
-          router.navigate('/my-music' as any);
+          if (isDesktop) setDesktopView('feed');
+          await navigateToMyMusic();
           break;
         default:
           break;
@@ -128,7 +140,13 @@ export default function TabLayout() {
 
       {/* Desktop Right Navigation / Status Grid / Comments */}
       {isDesktop && selectedIndex !== 5 && selectedIndex !== 3 && (
-        (desktopView === 'vids' || selectedIndex === 8) ? <DesktopVidsRightSidebar /> : <DesktopRightSidebar />
+        activeBoxId ? (
+          <DesktopBoxDetailPane />
+        ) : (desktopView === 'vids' || selectedIndex === 8) ? (
+          <DesktopVidsRightSidebar />
+        ) : (
+          <DesktopRightSidebar />
+        )
       )}
 
       {/* Desktop Channels Right Pane */}

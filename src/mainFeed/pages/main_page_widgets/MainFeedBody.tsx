@@ -1,4 +1,5 @@
 import { DiscoverChannelWidget } from '@/channel/ChannelComponents/DiscoverChannelCard/discoverchannelWidget/DiscoverChannelWidget';
+import { NoInternetFooter } from '@/components/internetcontionwidgets/NoInternetFooter';
 import { StatusItem, UserStatusWidget } from '@/components/UserStatusWidget/UserStatusWidget';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { MovieBoxFeedCard } from '@/features/boxes/components/feed/MovieBoxFeedCard';
@@ -6,7 +7,6 @@ import { MusicBoxFeedCard } from '@/features/boxes/components/feed/MusicBoxFeedC
 import { SportsBoxFeedCard } from '@/features/boxes/components/feed/SportsBoxFeedCard';
 import { StoreBoxFeedCard } from '@/features/boxes/components/feed/StoreBoxFeedCard';
 import { VotingBoxFeedCard } from '@/features/boxes/components/feed/VotingBoxFeedCard';
-import { NoInternetFooter } from '@/components/internetcontionwidgets/NoInternetFooter';
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
 import { FlashList } from '@shopify/flash-list';
 import React, { useRef, useState } from 'react';
@@ -22,8 +22,10 @@ import { SmartPostWidget } from './SmartPostWidget';
 import { UserRecommendationCarousel } from './UserRecommendationCarousel';
 import { VideoPostFeedCard } from './VideoPostFeedCard';
 
+import { UserStatusViewer } from '@/components/status/UserStatusViewer';
 import { useAppRouter } from '@/core/hooks/useAppRouter';
 import { useStyles } from '@/core/hooks/useStyles';
+import { useViewedStatusStore } from '@/core/store/useViewedStatusStore';
 import { ThemeTokens } from '@/core/theme/themes';
 import { useFeedStatuses } from '@/statuses/hooks/useFeedStatuses';
 import * as ImagePicker from 'expo-image-picker';
@@ -117,6 +119,7 @@ export const MainFeedBody = ({
   listRef,
 }: MainFeedBodyProps) => {
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
+  const [selectedStatusUser, setSelectedStatusUser] = useState<StatusItem | null>(null);
   const user = useAuthStore(s => s.user);
   const router = useAppRouter();
   const { width } = useWindowDimensions();
@@ -125,6 +128,8 @@ export const MainFeedBody = ({
   const styles = useStyles(themeStyles);
 
   const { statuses: flatStatuses, refresh: refreshStatuses } = useFeedStatuses(user?.id);
+
+  const viewedStatusIds = useViewedStatusStore(s => s.viewedStatusIds);
 
   const groupedStatuses = React.useMemo(() => {
     const userMap = new Map<string, StatusItem>();
@@ -139,15 +144,19 @@ export const MainFeedBody = ({
             profileImageUrl: status.authorAvatarUrl
           } as any,
           thumbnailUrl: status.thumbnailUrl || status.imageUrls[0] || status.authorAvatarUrl || '',
-          hasUnseen: true,
+          hasUnseen: false, // Default to false, will be calculated later
           statuses: []
         });
       }
       userMap.get(status.authorId)!.statuses!.push(status);
     });
 
-    return Array.from(userMap.values());
-  }, [flatStatuses]);
+    const result = Array.from(userMap.values());
+    result.forEach(group => {
+      group.hasUnseen = group.statuses!.some(s => !viewedStatusIds[s.id]);
+    });
+    return result;
+  }, [flatStatuses, viewedStatusIds]);
 
   const handleAddStatusPress = async () => {
     try {
@@ -227,12 +236,14 @@ export const MainFeedBody = ({
         renderItem={renderCard}
         onEndReached={onLoadMore}
         onEndReachedThreshold={0.4}
+        maintainVisibleContentPosition={{ disabled: false }}
         ListHeaderComponent={
           !isDesktop ? (
             <UserStatusWidget
               currentUser={user}
               statuses={groupedStatuses}
               onAddStatusPress={handleAddStatusPress}
+              onStatusPress={(item) => setSelectedStatusUser(item)}
             />
           ) : null
         }
@@ -253,6 +264,14 @@ export const MainFeedBody = ({
           </>
         }
         showsVerticalScrollIndicator={false}
+      />
+
+      <UserStatusViewer
+        userId={selectedStatusUser?.id}
+        userName={selectedStatusUser?.user.displayName || '-'}
+        userAvatarUrl={selectedStatusUser?.user.profileImageUrl || 'https://via.placeholder.com/60'}
+        visible={!!selectedStatusUser}
+        onClose={() => setSelectedStatusUser(null)}
       />
     </View>
   );

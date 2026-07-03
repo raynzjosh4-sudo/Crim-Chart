@@ -5,6 +5,7 @@ export interface CachedProfile {
   isOnline: boolean;
   lastSeen: string | null;
   hasStatus: boolean;
+  isStatusRead?: boolean;
   statusCount: number;
   lastFetchedAt: number;
 }

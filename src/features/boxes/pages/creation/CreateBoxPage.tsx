@@ -9,14 +9,19 @@ import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Camera, Image as ImageIcon } from 'lucide-react-native';
 import { useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StatusBar, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StatusBar, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { BoxCategory } from '../../components/CreateBoxSheet';
 import { useBoxStore } from '../../application/useBoxStore';
 
-export const CreateBoxPage: React.FC = () => {
+export interface CreateBoxPageProps {
+  inlineType?: BoxCategory;
+  onCloseInline?: () => void;
+}
+
+export const CreateBoxPage: React.FC<CreateBoxPageProps> = ({ inlineType, onCloseInline }) => {
   const router = useRouter();
   const { type } = useLocalSearchParams<{ type: BoxCategory }>();
-  const boxType = type || 'audio';
+  const boxType = inlineType || type || 'audio';
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -85,7 +90,11 @@ export const CreateBoxPage: React.FC = () => {
       });
 
       ChartToast.showSuccess(null, { title: 'Box Created!', message: 'Your new box is ready.' });
-      router.back();
+      if (onCloseInline) {
+        onCloseInline();
+      } else {
+        router.back();
+      }
     } catch (e: any) {
       console.error('[CreateBoxPage] Creation error:', e);
       ChartToast.showError(null, { title: 'Failed to create box', message: e.message || 'An unknown error occurred.' });
@@ -149,16 +158,21 @@ export const CreateBoxPage: React.FC = () => {
   };
 
   const config = getConfig();
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
 
-  return (
-    <View style={styles.container}>
+  const content = (
+    <View style={isDesktop ? styles.desktopModal : styles.mobileWrapper}>
       <StatusBar barStyle="light-content" />
 
       {/* App Bar */}
       <View style={styles.appBar}>
-        <CrimchartBackButton onPress={() => router.back()} color="#FFF" />
+        <CrimchartBackButton onPress={() => {
+          if (onCloseInline) onCloseInline();
+          else router.back();
+        }} color="#FFF" />
         <Text style={styles.appBarTitle}>{config.header}</Text>
-        <View style={{ width: 36 }} /> {/* Spacer to center title */}
+        <View style={{ width: 36 }} />
       </View>
 
       <ChartLinearLoader isLoading={isCreating} />
@@ -288,12 +302,39 @@ export const CreateBoxPage: React.FC = () => {
       </KeyboardAvoidingView>
     </View>
   );
+
+  return (
+    <View style={[styles.container, isDesktop && { backgroundColor: 'rgba(0,0,0,0.7)' }]}>
+      {content}
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#000',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mobileWrapper: {
+    flex: 1,
+    width: '100%',
     backgroundColor: '#0D0D0D',
+  },
+  desktopModal: {
+    width: '100%',
+    maxWidth: 600,
+    height: '90%',
+    maxHeight: 800,
+    backgroundColor: '#0D0D0D',
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.8,
+    shadowRadius: 20,
+    elevation: 20,
   },
   keyboardView: {
     flex: 1,

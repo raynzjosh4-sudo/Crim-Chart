@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { Plus, User as UserIcon } from 'lucide-react-native';
@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { colors } from '@/core/theme/colors';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { useFeedStore } from '@/core/store/useFeedStore';
+import { useViewedStatusStore } from '@/core/store/useViewedStatusStore';
 
 export const UserStatusWidget = () => {
   const router = useRouter();
@@ -13,9 +14,10 @@ export const UserStatusWidget = () => {
   
   // Using useFeedStore to mimic joinedStatusesProvider from Riverpod
   const { items, isLoading } = useFeedStore(); 
+  const viewedStatusIds = useViewedStatusStore(s => s.viewedStatusIds);
 
   // Group statuses by authorId to show individual user statuses
-  const groupedStatuses = useMemo(() => {
+  const groupedStatuses = React.useMemo(() => {
     const groups: Record<string, any[]> = {};
     items.forEach(status => {
       const authorId = status.author_id || status.authorId;
@@ -83,6 +85,9 @@ export const UserStatusWidget = () => {
           const avatarUrl = latestStatus.author_avatar_url || latestStatus.authorAvatarUrl;
           const primaryImageUrl = latestStatus.primaryImageUrl || latestStatus.image_urls?.[0];
 
+          const hasUnseen = userStatuses.some((s: any) => !viewedStatusIds[s.id || s.status_id]);
+          const ringColor = hasUnseen ? colors.primary : colors.surfaceVariant;
+
           return (
             <TouchableOpacity activeOpacity={1} 
               key={authorId} 
@@ -98,7 +103,7 @@ export const UserStatusWidget = () => {
               <View style={styles.cardOverlay} />
               
               <View style={styles.cardAvatarContainer}>
-                <View style={styles.cardAvatarRing}>
+                <View style={[styles.cardAvatarRing, { borderColor: ringColor }]}>
                   {avatarUrl ? (
                     <Image 
                       source={{ uri: avatarUrl }} 

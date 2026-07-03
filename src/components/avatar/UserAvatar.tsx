@@ -39,7 +39,7 @@ export default function UserAvatar({
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [sheetVisible, setSheetVisible] = useState(false);
   const [statusViewerVisible, setStatusViewerVisible] = useState(false);
-  const avatarRef = useRef<View>(null);
+  const avatarRef = useRef<any>(null);
   const [anchorPos, setAnchorPos] = useState<{ x: number, y: number, width: number, height: number } | null>(null);
 
   // 1. Initial Local Load (Fast)
@@ -99,6 +99,7 @@ export default function UserAvatar({
         size={size}
         isOnline={isOnline}
         hasStatus={hasStatus}
+        isStatusRead={profile?.isStatusRead ?? false}
         statusSegmentCount={statusSegmentCount}
         onTap={handleTap}
         onLongPress={onLongPress}

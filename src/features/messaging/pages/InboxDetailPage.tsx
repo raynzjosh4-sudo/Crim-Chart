@@ -10,9 +10,9 @@ import { NativeDB } from '@/core/db/NativeDB';
 import { useProfileCacheStore } from '@/core/store/useProfileCacheStore';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { ChatBubble } from '@/features/channel/pages/messages_tab/widgets/chartbubble/ChatBubble';
-import { getStatusColor } from '@/profile/utils/ConnectionStatsUtils';
-import { useGlobalSearchParams, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState, useRef } from 'react';
+import { useGlobalSearchParams, useRouter } from 'expo-router';
+import { X } from 'lucide-react-native';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, FlatList, Keyboard, KeyboardAvoidingView, Platform, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChatStore } from '../application/useChatStore';
@@ -25,14 +25,29 @@ import { InboxTopWidget } from '@/components/InboxTopWidget/InboxTopWidget';
 import { InboxDetailShimmer } from '@/components/shimmers/inboxDetailPageshimmer/InboxDetailShimmer';
 import { InboxPrivacyWrapper } from '@/components/wrappers/InboxPrivacyWrapper/InboxPrivacyWrapper';
 import { UserConnectionStatsModel } from '@/profile/models/CrimChartUserModel';
-import { supabase } from '@/core/supabase/client';
 
-export const InboxDetailPage: React.FC = () => {
+export interface InboxDetailPageProps {
+  threadId?: string;
+  participantId?: string;
+  participantNameFallback?: string;
+  participantAvatarFallback?: string;
+  onClose?: () => void;
+  isOverlay?: boolean;
+}
+
+export const InboxDetailPage: React.FC<InboxDetailPageProps> = ({
+  threadId: propThreadId,
+  participantId: propParticipantId,
+  participantNameFallback: propParticipantNameFallback,
+  participantAvatarFallback: propParticipantAvatarFallback,
+  onClose,
+  isOverlay
+}) => {
   const params = useGlobalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const threadId = params.threadId as string;
-  const participantIdParam = params.participantId as string | undefined;
+  const threadId = propThreadId || params.threadId as string;
+  const participantIdParam = propParticipantId || params.participantId as string | undefined;
 
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
@@ -56,8 +71,8 @@ export const InboxDetailPage: React.FC = () => {
 
   const [participantStats, setParticipantStats] = useState<UserConnectionStatsModel | null>(null);
 
-  const displayName = participantFromThread?.displayName || 'Unknown User';
-  const displayAvatar = participantFromThread?.profileImageUrl || undefined;
+  const displayName = participantFromThread?.displayName || propParticipantNameFallback || 'Unknown User';
+  const displayAvatar = participantFromThread?.profileImageUrl || propParticipantAvatarFallback || undefined;
 
   const displayId = activeParticipantId || '';
 
@@ -68,7 +83,7 @@ export const InboxDetailPage: React.FC = () => {
     const yesterday = new Date(now);
     yesterday.setDate(yesterday.getDate() - 1);
     const isYesterday = date.getDate() === yesterday.getDate() && date.getMonth() === yesterday.getMonth() && date.getFullYear() === yesterday.getFullYear();
-    
+
     const timeString = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     if (isToday) return `today at ${timeString}`;
     if (isYesterday) return `yesterday at ${timeString}`;
@@ -112,14 +127,14 @@ export const InboxDetailPage: React.FC = () => {
           console.log('\n\n================ RAW LOCAL SQLITE STATS ================');
           console.log(JSON.stringify(data, null, 2));
           console.log('========================================================\n\n');
-          
+
           setRelSentCount(data.rel_sent_count || 0);
           setRelationshipStatus(data.relationship_status || 'Unknown');
-          
+
           let preferredCountries = [];
           let preferredAgeRanges = [];
-          try { preferredCountries = typeof data.preferred_countries === 'string' ? JSON.parse(data.preferred_countries) : []; } catch (e) {}
-          try { preferredAgeRanges = typeof data.preferred_age_ranges === 'string' ? JSON.parse(data.preferred_age_ranges) : []; } catch (e) {}
+          try { preferredCountries = typeof data.preferred_countries === 'string' ? JSON.parse(data.preferred_countries) : []; } catch (e) { }
+          try { preferredAgeRanges = typeof data.preferred_age_ranges === 'string' ? JSON.parse(data.preferred_age_ranges) : []; } catch (e) { }
 
           setParticipantStats({
             relSentCount: data.rel_sent_count || 0,
@@ -199,18 +214,23 @@ export const InboxDetailPage: React.FC = () => {
             centerTitle={false}
             leading={
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                {!isDesktop && <CrimchartBackButton onPress={() => router.back()} />}
+                {!isDesktop && !isOverlay && <CrimchartBackButton onPress={() => router.back()} />}
+                {isOverlay && (
+                  <TouchableOpacity onPress={onClose} style={{ marginRight: 12 }}>
+                    <X size={24} color="#FFF" />
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity
                   style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 4 }}
                   activeOpacity={0.7}
                   onPress={() => setShowProfile(true)}
                 >
-                    <UserAvatar
-                      userId={displayId}
-                      fallbackUrl={displayAvatar}
-                      name={displayName}
-                      size={42}
-                    />
+                  <UserAvatar
+                    userId={displayId}
+                    fallbackUrl={displayAvatar}
+                    name={displayName}
+                    size={42}
+                  />
                   <View style={{ marginLeft: 12 }}>
                     <Text style={{ color: '#FFF', fontSize: 16, fontWeight: 'bold' }}>
                       {displayName}

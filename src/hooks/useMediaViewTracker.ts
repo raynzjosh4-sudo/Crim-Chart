@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/core/supabase/supabaseConfig';
 
+import { useViewedStatusStore } from '@/core/store/useViewedStatusStore';
+
 interface UseMediaViewTrackerProps {
   mediaId: string | undefined | null;
   tableName: string;
@@ -16,13 +18,18 @@ export const useMediaViewTracker = ({ mediaId, tableName, idColumn, authorId }: 
 
     const trackView = async () => {
       try {
+        viewedItems.current.add(mediaId);
+        
+        // Mark locally immediately for instant UI update
+        if (tableName === 'status_views') {
+          useViewedStatusStore.getState().markViewed(mediaId);
+        }
+
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
         
-        // Prevent authors from logging views on their own content
+        // Prevent authors from logging views on their own content in the database
         if (authorId && user.id === authorId) return;
-
-        viewedItems.current.add(mediaId);
 
         const { error } = await supabase
           .from(tableName)

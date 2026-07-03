@@ -1,18 +1,22 @@
 import { useRouter } from 'expo-router';
 import { ChevronRight, Music, Play, ShoppingBag } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
-import { Animated, Modal, PanResponder, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { Animated, Modal, PanResponder, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View, Platform, useWindowDimensions } from 'react-native';
 
 export type BoxCategory = 'audio' | 'video' | 'marketplace' | 'sports' | 'contest';
 
 interface CreateBoxSheetProps {
   visible: boolean;
   onClose: () => void;
+  menuPosition?: { x: number, y: number, width: number, height: number } | null;
+  onSelectCategory?: (category: BoxCategory) => void;
 }
 
-export const CreateBoxSheet: React.FC<CreateBoxSheetProps> = ({ visible, onClose }) => {
+export const CreateBoxSheet: React.FC<CreateBoxSheetProps> = ({ visible, onClose, menuPosition, onSelectCategory }) => {
   const router = useRouter();
   const pan = useRef(new Animated.ValueXY()).current;
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
 
   const panResponder = useRef(
     PanResponder.create({
@@ -43,8 +47,11 @@ export const CreateBoxSheet: React.FC<CreateBoxSheetProps> = ({ visible, onClose
 
   const handleSelectCategory = (category: BoxCategory) => {
     onClose();
-    // Navigate to the dynamic creation page, passing the category type
-    router.push({ pathname: '/boxes-create/[type]', params: { type: category } });
+    if (isDesktop && onSelectCategory) {
+      onSelectCategory(category);
+    } else {
+      router.push({ pathname: '/boxes-create/[type]', params: { type: category } });
+    }
   };
 
   const categories = [
@@ -86,18 +93,37 @@ export const CreateBoxSheet: React.FC<CreateBoxSheetProps> = ({ visible, onClose
   ] as const;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.overlay}>
+    <Modal visible={visible} transparent animationType={isDesktop ? "fade" : "slide"} onRequestClose={onClose}>
+      <View style={isDesktop ? styles.desktopOverlay : styles.overlay}>
         <TouchableWithoutFeedback onPress={onClose}>
-          <View style={styles.backdrop} />
+          <View style={isDesktop ? styles.desktopBackdrop : styles.backdrop} />
         </TouchableWithoutFeedback>
 
-        <Animated.View style={[styles.container, { transform: [{ translateY: pan.y }] }]}>
-          <View {...panResponder.panHandlers} style={{ width: '100%', alignItems: 'center' }}>
-            <View style={styles.dragHandle} />
-            <View style={styles.header}>
-              <Text style={styles.headerTitle}>What kind of box are you building?</Text>
+        <Animated.View 
+          style={[
+            styles.container, 
+            isDesktop && menuPosition ? {
+              position: 'absolute',
+              top: menuPosition.y + menuPosition.height + 8,
+              left: menuPosition.x,
+              width: 320,
+              paddingBottom: 24,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.1)',
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16,
+              transform: [],
+            } : { transform: [{ translateY: pan.y }] }
+          ]}
+        >
+          {!isDesktop && (
+            <View {...panResponder.panHandlers} style={{ width: '100%', alignItems: 'center' }}>
+              <View style={styles.dragHandle} />
             </View>
+          )}
+          <View style={[styles.header, isDesktop && { marginTop: 24, marginBottom: 16, paddingHorizontal: 16, alignItems: 'flex-start' }]}>
+            <Text style={styles.headerTitle}>What kind of box are you building?</Text>
           </View>
 
           <View style={styles.listContainer}>
@@ -131,9 +157,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
   },
+  desktopOverlay: {
+    flex: 1,
+  },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.7)',
+  },
+  desktopBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'transparent',
   },
   container: {
     width: '100%',

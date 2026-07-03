@@ -10,7 +10,7 @@ import * as MediaLibrary from 'expo-media-library';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Search } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View, ViewToken } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View, ViewToken, Platform, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMusicFeedStore } from './store/useMusicFeedStore';
 import { ChartToast } from '@/components/showcase/CrimChart_toast';
@@ -20,9 +20,12 @@ import { PhoneMusicWidget } from './widgets/PhoneMusicWidget';
 import { useBoxDetail } from '@/features/boxes/application/useBoxDetail';
 import { useMusicUpload } from '@/features/boxes/application/useMusicUpload';
 
-export const MusicPostingPage = ({ boxId }: { boxId: string }) => {
+export const MusicPostingPage = ({ boxId, isInline, onCloseInline }: { boxId: string; isInline?: boolean; onCloseInline?: () => void }) => {
   const router = useRouter();
   const currentUser = useAuthStore(state => state.user);
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
+
   const [searchQuery, setSearchQuery] = useState('');
   // removed addedTracks local state in favor of useInteractionStore
 
@@ -196,13 +199,15 @@ export const MusicPostingPage = ({ boxId }: { boxId: string }) => {
     }
   }).current;
 
-  return (
-    <SafeAreaView style={styles.container}>
+  const content = (
+    <View style={isDesktop && isInline ? styles.desktopModal : styles.container}>
       <UploadingToast visible={isUploading} message="Uploading track..." />
 
-      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity activeOpacity={1} style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => isInline && onCloseInline ? onCloseInline() : router.back()}
+        >
           <ArrowLeft size={24} color="#FFF" />
         </TouchableOpacity>
         <View style={styles.searchContainer}>
@@ -213,17 +218,16 @@ export const MusicPostingPage = ({ boxId }: { boxId: string }) => {
             placeholderTextColor="rgba(255,255,255,0.4)"
             value={searchQuery}
             onChangeText={setSearchQuery}
+            autoCapitalize="none"
           />
         </View>
       </View>
 
-      {/* Filter Options */}
       <VisibilityBoxTrackerWrapper box={box || {}} isCurrentUser={isOwner} actionType="upload_post">
         <View style={styles.filterContainer}>
           <TouchableOpacity activeOpacity={1}
             style={styles.filterToggle}
             onPress={() => setShowLocalOnly(!showLocalOnly)}
-            activeOpacity={0.7}
           >
             <View style={[styles.radioOuter, showLocalOnly && styles.radioOuterSelected]}>
               {showLocalOnly && <View style={styles.radioInner} />}
@@ -232,10 +236,9 @@ export const MusicPostingPage = ({ boxId }: { boxId: string }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Media Chips for Folders */}
         {showLocalOnly && (
           <MediaChips
-            activeTabIndex={2} // 2 = music
+            activeTabIndex={2}
             selectedAlbum={selectedAlbum}
             onAlbumSelected={(albumId) => {
               setSelectedAlbum(albumId);
@@ -246,7 +249,6 @@ export const MusicPostingPage = ({ boxId }: { boxId: string }) => {
         )}
       </VisibilityBoxTrackerWrapper>
 
-      {/* Results List */}
       <FlatList
         data={filteredTracks}
         keyExtractor={item => item.id}
@@ -290,7 +292,6 @@ export const MusicPostingPage = ({ boxId }: { boxId: string }) => {
                 </BoxReactionRecorderWrapper>
               )}
             </PostInteractionWrapper>
-            {/* Widget that appears after every 10 tiles */}
             {(index + 1) % 10 === 0 && hasMoreLocalMusic && (
               <VisibilityBoxTrackerWrapper box={box || {}} isCurrentUser={isOwner} actionType="upload_post">
                 <PhoneMusicWidget
@@ -336,6 +337,20 @@ export const MusicPostingPage = ({ boxId }: { boxId: string }) => {
           ) : null
         }
       />
+    </View>
+  );
+
+  if (isDesktop && isInline) {
+    return (
+      <View style={styles.modalBackground}>
+        {content}
+      </View>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {content}
     </SafeAreaView>
   );
 };
@@ -345,7 +360,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
-
+  modalBackground: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  desktopModal: {
+    width: 600,
+    height: '80%',
+    backgroundColor: '#000',
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

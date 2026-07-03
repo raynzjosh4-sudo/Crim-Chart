@@ -11,6 +11,7 @@ import { BoxReactionRecorderWrapper } from '@/components/wrappers/BoxReactionRec
 import { PostInteractionWrapper } from '@/components/wrappers/PostInteractionWrapper';
 import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { supabase } from '@/core/supabase/supabaseConfig';
+import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { useLocalVideos } from '@/features/boxes/application/useLocalVideos';
 import { useVideoUpload } from '@/features/boxes/application/useVideoUpload';
 import { VideoFeedPage } from '@/video/pages/VideoFeedPage';
@@ -21,18 +22,23 @@ import {
   ActivityIndicator,
   FlatList,
   Modal,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
+  useWindowDimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PhoneMusicWidget } from '../music_posting/widgets/PhoneMusicWidget';
 import { useVideoFeedStore } from './store/useVideoFeedStore';
 
-export const MoviePostingPage = ({ boxId }: { boxId: string }) => {
+export const MoviePostingPage = ({ boxId, isInline, onCloseInline }: { boxId: string; isInline?: boolean; onCloseInline?: () => void }) => {
   const router = useRouter();
+  const currentUser = useAuthStore(state => state.user);
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
   const [searchQuery, setSearchQuery] = useState('');
   const [showLocalOnly, setShowLocalOnly] = useState<boolean>(false);
   const [isCreateShortOpen, setIsCreateShortOpen] = useState(false);
@@ -216,15 +222,14 @@ export const MoviePostingPage = ({ boxId }: { boxId: string }) => {
         onVideoPress={(params) => setSelectedVideoParams(params)}
         isAdded={tags[boxId]?.includes(item.id)}
         disableVideoPlayer
-        isCurrentlyPlaying={false}
       />
     );
   }, [tags, boxId]);
 
   isModalOpenRef.current = selectedVideoParams !== null;
 
-  return (
-    <SafeAreaView style={styles.container}>
+  const content = (
+    <View style={isDesktop && isInline ? styles.desktopModal : styles.container}>
       {isUploading && (
         <View style={styles.uploadingOverlay}>
           <ActivityIndicator size="small" color="#FACD11" />
@@ -233,7 +238,11 @@ export const MoviePostingPage = ({ boxId }: { boxId: string }) => {
       )}
 
       <View style={styles.header}>
-        <TouchableOpacity activeOpacity={1} style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity
+          activeOpacity={1}
+          style={styles.backButton}
+          onPress={() => isInline && onCloseInline ? onCloseInline() : router.back()}
+        >
           <ArrowLeft size={24} color="#FFF" />
         </TouchableOpacity>
         <View style={styles.searchContainer}>
@@ -311,7 +320,6 @@ export const MoviePostingPage = ({ boxId }: { boxId: string }) => {
                             setSelectedVideoParams(params);
                           }}
                           isAdded={tags[boxId]?.includes(item.id)}
-                          isCurrentlyPlaying={selectedVideoParams ? false : item.id === currentlyPlayingId}
                           isLiked={isLiked}
                           onLikePress={() => useInteractionStore.getState().toggleLike(item.id)}
                         />
@@ -424,6 +432,20 @@ export const MoviePostingPage = ({ boxId }: { boxId: string }) => {
         onCancel={() => setShowPermissionDialog(false)}
         onConfirm={handlePermissionConfirm}
       />
+    </View>
+  );
+
+  if (isDesktop && isInline) {
+    return (
+      <View style={styles.modalBackground}>
+        {content}
+      </View>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {content}
     </SafeAreaView>
   );
 };
@@ -432,6 +454,21 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
+  },
+  modalBackground: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  desktopModal: {
+    width: 600,
+    height: '80%',
+    backgroundColor: '#000',
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   header: {
     flexDirection: 'row',

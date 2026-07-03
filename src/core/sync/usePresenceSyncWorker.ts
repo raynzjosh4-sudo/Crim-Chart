@@ -1,6 +1,7 @@
 import { NativeDB } from '@/core/db/NativeDB';
 import { CachedProfile, useProfileCacheStore } from '@/core/store/useProfileCacheStore';
 import { supabase } from '@/core/supabase/supabaseConfig';
+import { useViewedStatusStore } from '@/core/store/useViewedStatusStore';
 import { useEffect } from 'react';
 
 export function usePresenceSyncWorker() {
@@ -53,13 +54,37 @@ export function usePresenceSyncWorker() {
 
           if (data) {
             const now = Date.now();
+            
+            // Collect active user IDs to fetch their status IDs
+            const activeUserIds = data.filter(row => row.status_count && row.status_count > 0).map(row => row.id);
+            const unreadCounts: Record<string, number> = {};
+
+            if (activeUserIds.length > 0) {
+              const { data: statusesData } = await supabase
+                .from('statuses')
+                .select('id, author_id')
+                .in('author_id', activeUserIds);
+                
+              if (statusesData) {
+                const viewedStatusIds = useViewedStatusStore.getState().viewedStatusIds;
+                statusesData.forEach(status => {
+                  if (!viewedStatusIds[status.id]) {
+                    unreadCounts[status.author_id] = (unreadCounts[status.author_id] || 0) + 1;
+                  }
+                });
+              }
+            }
+
             for (const row of data) {
               const safeStatusCount = Math.max(row.status_count || 0, 0);
+              const isStatusRead = safeStatusCount > 0 ? (unreadCounts[row.id] || 0) === 0 : false;
+              
               const cached: CachedProfile = {
                 id: row.id,
                 isOnline: !!row.is_online,
                 lastSeen: row.last_seen,
                 hasStatus: safeStatusCount > 0,
+                isStatusRead,
                 statusCount: safeStatusCount,
                 lastFetchedAt: now,
               };

@@ -15,6 +15,8 @@ import { PostType } from '@/core/store/usePostingStore';
 import { StatusViewer, StatusGroup } from '@/channel/pages/widgets2/status/StatusViewer';
 import { useState } from 'react';
 
+import { useViewedStatusStore } from '@/core/store/useViewedStatusStore';
+
 interface DesktopStatusGridProps {
   isExpanded: boolean;
   targetUserId?: string;
@@ -30,6 +32,7 @@ export const DesktopStatusGrid = ({ isExpanded, targetUserId }: DesktopStatusGri
   const [viewerInitialIndex, setViewerInitialIndex] = useState(0);
 
   const { statuses: flatStatuses, refresh: refreshStatuses } = useFeedStatuses(user?.id);
+  const viewedStatusIds = useViewedStatusStore(s => s.viewedStatusIds);
 
   const groupedStatuses = React.useMemo(() => {
     const userMap = new Map<string, StatusItem>();
@@ -47,15 +50,19 @@ export const DesktopStatusGrid = ({ isExpanded, targetUserId }: DesktopStatusGri
             profileImageUrl: status.authorAvatarUrl
           } as any,
           thumbnailUrl: status.thumbnailUrl || status.imageUrls?.[0] || null,
-          hasUnseen: true,
+          hasUnseen: false, // Calculated below
           statuses: []
         });
       }
       userMap.get(status.authorId)!.statuses!.push(status);
     });
 
-    return Array.from(userMap.values());
-  }, [flatStatuses]);
+    const result = Array.from(userMap.values());
+    result.forEach(group => {
+      group.hasUnseen = group.statuses!.some(s => !viewedStatusIds[s.id]);
+    });
+    return result;
+  }, [flatStatuses, targetUserId, viewedStatusIds]);
 
   const statusGroups = React.useMemo((): StatusGroup[] => {
     return groupedStatuses.map((group) => ({

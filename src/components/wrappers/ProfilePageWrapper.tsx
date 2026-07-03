@@ -1,12 +1,15 @@
 import { FollowUserButton } from '@/components/FollowUserButton';
 import { InboxUserButton } from '@/components/InboxUserButton';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import { supabase } from '@/core/supabase/client';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
+import { FollowersListPage } from '@/profile/pages/FollowersListPage';
 import { ProfilePage } from '@/profile/pages/ProfilePage';
+import { EditProfilePage } from '@/profile/profileeditpages/EditProfilePage';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View, Platform, Dimensions } from 'react-native';
 import { ProfilePageShimmer } from '@/components/shimmers/ProfilePageShimmer';
 
 interface ProfilePageWrapperProps {
@@ -16,9 +19,22 @@ interface ProfilePageWrapperProps {
 export const ProfilePageWrapper: React.FC<ProfilePageWrapperProps> = ({ targetUserId }) => {
   const currentUser = useAuthStore(s => s.user);
   const router = useRouter();
+  const { startLoading } = useGlobalProgress();
 
   const [userData, setUserData] = useState<CrimChartUserModel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [connectionsPanel, setConnectionsPanel] = useState<{ tab: 'followers' | 'following'; userId: string } | null>(null);
+
+  const openConnections = useCallback((tab: 'followers' | 'following', targetId: string) => {
+    const isDesktop = Platform.OS === 'web' && Dimensions.get('window').width >= 768;
+    startLoading();
+    if (isDesktop) {
+      setConnectionsPanel({ tab, userId: targetId });
+    } else {
+      router.push({ pathname: '/followers', params: { userId: targetId, tab } } as any);
+    }
+  }, [startLoading, router]);
 
   const isCurrentUser = !targetUserId || targetUserId === currentUser?.id;
   const activeUserId = targetUserId || currentUser?.id;
@@ -83,7 +99,14 @@ export const ProfilePageWrapper: React.FC<ProfilePageWrapperProps> = ({ targetUs
         <View style={styles.actionRow}>
           <TouchableOpacity
             style={[styles.actionBtn, styles.primaryBtn]}
-            onPress={() => router.push('/edit-profile')}
+            onPress={() => {
+              const isDesktop = Platform.OS === 'web' && Dimensions.get('window').width >= 768;
+              if (isDesktop) {
+                setIsEditProfileOpen(true);
+              } else {
+                router.push('/edit-profile');
+              }
+            }}
             activeOpacity={0.85}
           >
             <Text style={styles.primaryBtnText}>Edit Profile</Text>
@@ -106,6 +129,8 @@ export const ProfilePageWrapper: React.FC<ProfilePageWrapperProps> = ({ targetUs
         <View style={{ width: 10 }} />
         <InboxUserButton
           targetUserId={activeUserId!}
+          targetUserName={userData?.displayName || userData?.username || ''}
+          targetUserAvatar={userData?.profileImageUrl || undefined}
           style={[styles.actionBtn, styles.secondaryBtn]}
           textStyle={styles.secondaryBtnText}
         />
@@ -114,12 +139,32 @@ export const ProfilePageWrapper: React.FC<ProfilePageWrapperProps> = ({ targetUs
   };
 
   return (
-    <ProfilePage
-      userId={activeUserId}
-      userData={userData || undefined}
-      customActions={renderActions()}
-      isLoading={isLoading}
-    />
+    <>
+      <ProfilePage
+        userId={activeUserId}
+        userData={userData || undefined}
+        customActions={renderActions()}
+        isLoading={isLoading}
+        onEditProfile={() => {
+          const isDesktop = Platform.OS === 'web' && Dimensions.get('window').width >= 768;
+          if (isDesktop) {
+            setIsEditProfileOpen(true);
+          } else {
+            router.push('/edit-profile');
+          }
+        }}
+        onOpenConnections={openConnections}
+      />
+      <EditProfilePage isModal={true} visible={isEditProfileOpen} onClose={() => setIsEditProfileOpen(false)} />
+      {connectionsPanel && (
+        <FollowersListPage
+          targetUserId={connectionsPanel.userId}
+          initialTab={connectionsPanel.tab}
+          isPanel={true}
+          onClose={() => setConnectionsPanel(null)}
+        />
+      )}
+    </>
   );
 };
 
