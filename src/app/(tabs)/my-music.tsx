@@ -19,7 +19,10 @@ import { ListFilter, Search, X } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, BackHandler, FlatList, Modal, Platform, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useMusicFeed } from './_hooks/useMusicFeed';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 export default function MyMusicPage() {
+  const insets = useSafeAreaInsets();
   const styles = useStyles(colors => ({
     modalOverlay: {
       flex: 1,
@@ -224,7 +227,8 @@ export default function MyMusicPage() {
         }}>No music found.</Text>
           </View> : <FlatList data={tracks} keyExtractor={item => item.id} contentContainerStyle={{
         paddingVertical: 16,
-        paddingHorizontal: 16
+        paddingHorizontal: 16,
+        paddingBottom: 80 // Clear the mini player (safe area is handled by parent)
       }} onEndReached={fetchMore} onEndReachedThreshold={0.5} onViewableItemsChanged={onViewableItemsChanged} viewabilityConfig={viewabilityConfig} ListFooterComponent={isFetchingMore ? <View style={{
         padding: 20,
         alignItems: 'center'

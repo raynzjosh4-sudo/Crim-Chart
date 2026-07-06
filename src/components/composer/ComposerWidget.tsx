@@ -19,9 +19,11 @@ import { useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { ComposerMediaInput } from './ComposerMediaInput';
 export const ComposerWidget = ({
-  onPostSuccess
+  onPostSuccess,
+  initialAudio
 }: {
   onPostSuccess?: () => void;
+  initialAudio?: any;
 }) => {
   const styles = useStyles(colors => ({
     container: {
@@ -125,15 +127,15 @@ export const ComposerWidget = ({
   const theme = useCurrentTheme();
   const user = useAuthStore(s => s.user);
   const [text, setText] = useState('');
-  const [title, setTitle] = useState('');
-  const [artist, setArtist] = useState('');
-  const [lyrics, setLyrics] = useState('');
+  const [title, setTitle] = useState(initialAudio?.name || '');
+  const [artist, setArtist] = useState(initialAudio?.artist || '');
+  const [lyrics, setLyrics] = useState(initialAudio?.lyrics || '');
   const [isPosting, setIsPosting] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showCategories, setShowCategories] = useState(false);
   const [isMusicBadgeDismissed, setIsMusicBadgeDismissed] = useState(false);
-  const [selectedAudio, setSelectedAudio] = useState<any>(null);
-  const [customThumbnail, setCustomThumbnail] = useState<string | null>(null);
+  const [selectedAudio, setSelectedAudio] = useState<any>(initialAudio || null);
+  const [customThumbnail, setCustomThumbnail] = useState<string | null>(initialAudio?.thumbnail || null);
   const [category, setCategory] = useState<string | null>(null);
   const [isPickingMusic, setIsPickingMusic] = useState(false);
   const [prefetchedAssets, setPrefetchedAssets] = useState<MediaLibrary.Asset[] | null>(null);

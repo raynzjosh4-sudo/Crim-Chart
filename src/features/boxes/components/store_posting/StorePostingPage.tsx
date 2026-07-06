@@ -1,25 +1,25 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { ArrowLeft, Search } from 'lucide-react-native';
-import { StoreItemTile } from '@/features/boxes/components/details/StoreItemTile';
-import { LocalDeviceImagesWidget } from '@/features/boxes/components/store_posting/widgets/LocalDeviceImagesWidget';
-import { MediaChips } from '@/components/mediaChips/MediaChips';
+import { UploadingToast } from '@/components/loader/UploadingToast';
+import { AlbumSelectorModal } from '@/components/posting/widgets/AlbumSelectorModal';
 import { StorePostingPageShimmer } from '@/components/shimmers/StorePostingShimmer';
-import { useLocalImages } from '@/features/boxes/application/useLocalImages';
-import { useStoreFeedStore } from './store/useStoreFeedStore';
-import { useStoreUpload } from '@/features/boxes/application/useStoreUpload';
-import { useBoxDetail } from '@/features/boxes/application/useBoxDetail';
-import { useAuthStore } from '@/features/auth/application/useAuthStore';
-import { supabase } from '@/core/supabase/supabaseConfig';
-import { useInteractionStore } from '@/core/store/useInteractionStore';
+import { ChartToast } from '@/components/showcase/CrimChart_toast';
+import { BoxReactionRecorderWrapper } from '@/components/wrappers/BoxReactionRecorderWrapper';
 import { PostInteractionWrapper } from '@/components/wrappers/PostInteractionWrapper';
 import { VisibilityBoxTrackerWrapper } from '@/components/wrappers/VisibilityBoxTrackerWrapper';
-import { BoxReactionRecorderWrapper } from '@/components/wrappers/BoxReactionRecorderWrapper';
+import { useInteractionStore } from '@/core/store/useInteractionStore';
+import { supabase } from '@/core/supabase/supabaseConfig';
+import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { useBoxDetail } from '@/features/boxes/application/useBoxDetail';
+import { useLocalImages } from '@/features/boxes/application/useLocalImages';
+import { useStoreUpload } from '@/features/boxes/application/useStoreUpload';
+import { StoreItemTile } from '@/features/boxes/components/details/StoreItemTile';
+import { LocalDeviceImagesWidget } from '@/features/boxes/components/store_posting/widgets/LocalDeviceImagesWidget';
+import { useRouter } from 'expo-router';
+import { ArrowLeft, Search } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StoreItem } from '../../data/dummyStoreBoxData';
-import { ChartToast } from '@/components/showcase/CrimChart_toast';
-import { UploadingToast } from '@/components/loader/UploadingToast';
+import { useStoreFeedStore } from './store/useStoreFeedStore';
 
 export function StorePostingPage({ boxId }: { boxId: string }) {
   const router = useRouter();
@@ -32,7 +32,7 @@ export function StorePostingPage({ boxId }: { boxId: string }) {
   const isOwner = currentUser?.id === box?.owner_id;
 
   const { selectedAlbum, setSelectedAlbum, loadLocalImages, localImages, setLocalImages } = useLocalImages();
-  
+
   const { isUploading, uploadStoreItemToBox } = useStoreUpload();
   const { globalStoreItems, isLoadingGlobal, hasMoreGlobal, isInitialLoad, loadGlobalItems, addItemToTop } = useStoreFeedStore();
 
@@ -143,7 +143,7 @@ export function StorePostingPage({ boxId }: { boxId: string }) {
 
       <VisibilityBoxTrackerWrapper box={box || {}} isCurrentUser={isOwner} actionType="upload_post">
         <View style={styles.filterContainer}>
-          <TouchableOpacity activeOpacity={1}
+          <TouchableOpacity
             style={styles.filterToggle}
             onPress={() => {
               const nextState = !showLocalOnly;
@@ -165,15 +165,17 @@ export function StorePostingPage({ boxId }: { boxId: string }) {
         </View>
 
         {showLocalOnly && (
-          <MediaChips
-            activeTabIndex={0} // 0 = photos
-            selectedAlbum={selectedAlbum}
-            onAlbumSelected={(albumId) => {
-              setSelectedAlbum(albumId);
-              setExpandedWidgets([-2]);
-              loadLocalImages(albumId, undefined, true);
-            }}
-          />
+          <View style={{ paddingHorizontal: 16, marginBottom: 12, alignItems: 'flex-start' }}>
+            <AlbumSelectorModal
+              activeTabIndex={0} // 0 = photos
+              selectedAlbum={selectedAlbum}
+              onAlbumSelected={(albumId) => {
+                setSelectedAlbum(albumId);
+                setExpandedWidgets([-2]);
+                loadLocalImages(albumId, undefined, true);
+              }}
+            />
+          </View>
         )}
 
         <FlatList
@@ -182,14 +184,14 @@ export function StorePostingPage({ boxId }: { boxId: string }) {
           contentContainerStyle={styles.listContent}
           renderItem={({ item, index }) => {
             const isLocal = item.seller?.id === 'local_user';
-            
+
             return (
               <View>
                 <View style={styles.itemWrapper}>
                   {isLocal ? (
                     // Local items don't need the wrappers yet, just the handler
-                    <StoreItemTile 
-                      item={item} 
+                    <StoreItemTile
+                      item={item}
                       onPostPress={handleAddStoreItem}
                       isTagged={false}
                     />

@@ -176,9 +176,10 @@ const AccountCard = ({
     isHighlight, 
     onLogin 
 }: { 
+    key?: string | number;
     account: SavedAccount; 
     isHighlight: boolean; 
-    onLogin: () => void;
+    onLogin: () => void | Promise<void>;
 }) => {
     const { tr } = useLocalization();
 

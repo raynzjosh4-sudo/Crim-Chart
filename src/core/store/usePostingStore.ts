@@ -420,8 +420,28 @@ export const usePostingStore = create<PostingState>((set) => ({
           metadata,
           category: params.category,
         };
-        const { error } = await supabase.from('posts').insert(postPayload);
+        const { error, data } = await supabase.from('posts').insert(postPayload).select('id').single();
         if (error) throw error;
+
+        // If it's a video post, notify all followers
+        if (isVideo && data && data.id) {
+          try {
+            const { data: followers } = await supabase.from('follows').select('follower_id').eq('following_id', user.id);
+            if (followers && followers.length > 0) {
+              const notifications = followers.map(f => ({
+                recipient_id: f.follower_id,
+                actor_id: user.id,
+                type: 'post',
+                action_text: 'posted a new video.',
+                reference_id: data.id
+              }));
+              // Insert in chunks of 1000 if needed, but a single batch is usually fine for most users
+              await supabase.from('notifications').insert(notifications);
+            }
+          } catch (notifErr) {
+            console.warn('[usePostingStore] Failed to send notifications:', notifErr);
+          }
+        }
       }
 
       // Status posting is now explicitly handled by the UI calling createPost with PostType.status

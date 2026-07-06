@@ -23,7 +23,7 @@ import { DesktopSearchDetailPane } from '@/explore/widgets/search_results/Deskto
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { useNotificationStore } from '@/features/notifications/application/useNotificationStore';
 
-import { Slot, useGlobalSearchParams, useRouter, useSegments } from 'expo-router';
+import { Slot, useGlobalSearchParams, useRouter, useSegments, usePathname } from 'expo-router';
 import { MessageSquare } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { DeviceEventEmitter, Platform, Text, useWindowDimensions, View } from 'react-native';
@@ -32,6 +32,7 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const segments = useSegments();
+  const pathname = usePathname();
   const styles = useStyles(themeStyles);
   const theme = useCurrentTheme();
   const {
@@ -59,6 +60,11 @@ export default function TabLayout() {
     stopLoading
   } = useGlobalProgress();
   const isDesktop = width >= 768;
+
+  const hideMobileBottomNav = pathname.startsWith('/profile') || 
+                              pathname.startsWith('/notifications') || 
+                              pathname.startsWith('/my-music') || 
+                              pathname.startsWith('/statuses');
 
   // Global desktop box store
   const { activeBoxId } = useDesktopBoxStore();
@@ -183,6 +189,7 @@ export default function TabLayout() {
       borderRightWidth: isDesktop && (selectedIndex === 5 || selectedIndex === 3) ? 1 : 0,
       borderRightColor: theme.colors.surfaceVariant,
       backgroundColor: isDesktop && desktopView === 'vids' ? '#000' : undefined,
+      paddingBottom: (!isDesktop && hideMobileBottomNav) ? Math.max(48, insets.bottom) : 0,
     }}>
       {isDesktop && desktopView === 'vids' ? <DesktopVidsFeedPane /> : <Slot />}
     </View>
@@ -236,7 +243,7 @@ export default function TabLayout() {
     <MiniPlayerBar />
 
     {/* Mobile Bottom Navigation */}
-    {!isDesktop && <View style={[styles.tabBar, {
+    {!isDesktop && !hideMobileBottomNav && <View style={[styles.tabBar, {
       height: tabBarHeight,
       paddingBottom: bottomPadding,
       backgroundColor: theme.colors.background,

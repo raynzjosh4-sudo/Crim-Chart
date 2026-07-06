@@ -1,4 +1,4 @@
-import { MediaChips } from '@/components/mediaChips/MediaChips';
+import { AlbumSelectorModal } from '@/components/posting/widgets/AlbumSelectorModal';
 import { MoviePostingItemShimmer, MoviePostingPageShimmer } from '@/components/shimmers/MoviePostingShimmer';
 import { CreateShortVideoButton } from '@/components/short/CreateShortVideoButton';
 import { CreateShortVideoPage } from '@/components/short/CreateShortVideoPage';
@@ -273,15 +273,17 @@ export const MoviePostingPage = ({ boxId, isInline, onCloseInline }: { boxId: st
       </View>
 
       {showLocalOnly && (
-        <MediaChips
-          activeTabIndex={1}
-          selectedAlbum={selectedAlbum}
-          onAlbumSelected={(albumId) => {
-            setSelectedAlbum(albumId);
-            setExpandedWidgets([]);
-            loadLocalVideo(albumId, undefined, true);
-          }}
-        />
+        <View style={{ paddingHorizontal: 16, marginBottom: 12, alignItems: 'flex-start' }}>
+          <AlbumSelectorModal
+            activeTabIndex={1}
+            selectedAlbum={selectedAlbum}
+            onAlbumSelected={(albumId) => {
+              setSelectedAlbum(albumId);
+              setExpandedWidgets([]);
+              loadLocalVideo(albumId, undefined, true);
+            }}
+          />
+        </View>
       )}
 
       {isInitialLoad && tracks.length === 0 ? (

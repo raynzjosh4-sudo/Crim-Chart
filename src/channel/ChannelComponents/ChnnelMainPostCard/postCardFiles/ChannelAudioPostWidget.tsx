@@ -52,15 +52,39 @@ export const ChannelAudioPostWidget: React.FC<ChannelAudioPostWidgetProps> = ({
   const heights = useRef(generateHeights(audioUrl)).current;
 
   // Global audio player — one track across the entire app
-  const { currentTrackId, isPlaying: globalIsPlaying, toggleTrack, pauseCurrent } = useGlobalAudioPlayer();
+  const currentTrackId = useGlobalAudioPlayer(state => state.currentTrackId);
+  const globalIsPlaying = useGlobalAudioPlayer(state => state.isPlaying);
+  const toggleTrack = useGlobalAudioPlayer(state => state.toggleTrack);
+  const pauseCurrent = useGlobalAudioPlayer(state => state.pauseCurrent);
+  
   const trackId = `audio_widget_${audioUrl}`;
   const isPlaying = currentTrackId === trackId && globalIsPlaying;
+
+  const songTitle = metadata?.title || metadata?.songName || 'Unknown Title';
+  const songArtist = metadata?.artist || metadata?.singer || 'Unknown Artist';
+  
+  let lyricsString = '';
+  if (Array.isArray(metadata?.lyrics) && metadata.lyrics.length > 0) {
+    lyricsString = metadata.lyrics.join('\n');
+  } else if (typeof metadata?.lyrics === 'string' && metadata.lyrics.trim().length > 0) {
+    lyricsString = metadata.lyrics;
+  }
+
+  // A beautiful default cover art if the post doesn't have one
+  const fallbackThumbnail = 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=800&auto=format&fit=crop';
+  const displayThumbnail = thumbnailUrl || fallbackThumbnail;
+
+  const trackMeta = {
+    title: songTitle,
+    artist: songArtist,
+    coverUrl: displayThumbnail,
+  };
 
   // Auto-play when scrolled into view, pause when scrolled away
   useEffect(() => {
     if (!audioUrl) return;
     if (isActive === true) {
-      useGlobalAudioPlayer.getState().playTrack(trackId, audioUrl);
+      useGlobalAudioPlayer.getState().playTrack(trackId, audioUrl, trackMeta);
     } else if (isActive === false) {
       if (useGlobalAudioPlayer.getState().currentTrackId === trackId) {
         pauseCurrent();
@@ -128,22 +152,8 @@ export const ChannelAudioPostWidget: React.FC<ChannelAudioPostWidgetProps> = ({
     outputRange: ['0deg', '360deg'],
   });
 
-  const songTitle = metadata?.title || metadata?.songName || 'Unknown Title';
-  const songArtist = metadata?.artist || metadata?.singer || 'Unknown Artist';
-  
-  let lyricsString = '';
-  if (Array.isArray(metadata?.lyrics) && metadata.lyrics.length > 0) {
-    lyricsString = metadata.lyrics.join('\n');
-  } else if (typeof metadata?.lyrics === 'string' && metadata.lyrics.trim().length > 0) {
-    lyricsString = metadata.lyrics;
-  }
-
-  // A beautiful default cover art if the post doesn't have one
-  const fallbackThumbnail = 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=800&auto=format&fit=crop';
-  const displayThumbnail = thumbnailUrl || fallbackThumbnail;
-
   return (
-    <TouchableOpacity activeOpacity={0.9} onPress={() => toggleTrack(trackId, audioUrl)} style={styles.container}>
+    <TouchableOpacity activeOpacity={0.9} onPress={() => toggleTrack(trackId, audioUrl, trackMeta)} style={styles.container}>
       {/* Blurred Background */}
       <Image 
         source={{ uri: displayThumbnail }} 

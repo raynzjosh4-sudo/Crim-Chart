@@ -1,8 +1,27 @@
-import 'react-native-reanimated';
-import 'react-native-get-random-values';
-import 'react-native-url-polyfill/auto';
 import { Buffer } from 'buffer';
 import { TouchableOpacity } from 'react-native';
+import 'react-native-get-random-values';
+import 'react-native-reanimated';
+import 'react-native-url-polyfill/auto';
+
+import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { chartToastConfig } from '@/components/showcase/CrimChart_toast';
+import { toastConfig } from '@/components/showcase/CrimChartToast';
+import { dbService } from '@/core/db/database';
+import { LocalizationProvider } from '@/core/localization/LocalizationProvider';
+import { useProtectedRoute } from '@/core/router/useProtectedRoute';
+import { ThemeProvider as AppThemeProvider } from '@/core/theme/theme_provider';
+import { DarkTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
+import { Stack } from 'expo-router';
+import { useEffect } from 'react';
+import { Platform } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
+
+// Import background messaging to register the headless JS task immediately
+if (Platform.OS !== 'web') {
+  require('@/core/notifications/useBackgroundMessaging');
+}
 
 if (typeof (globalThis as any).Buffer === 'undefined') {
   (globalThis as any).Buffer = Buffer;
@@ -14,25 +33,11 @@ if (TouchableOpacity.defaultProps) {
 } else {
   (TouchableOpacity as any).defaultProps = { activeOpacity: 1 };
 }
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import { dbService } from '@/core/db/database';
-import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
-import { ThemeProvider as AppThemeProvider } from '@/core/theme/theme_provider';
-import { Stack } from 'expo-router';
-import React, { useEffect } from 'react';
-import { useColorScheme } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import Toast from 'react-native-toast-message';
-import { chartToastConfig } from '@/components/showcase/CrimChart_toast';
-import { toastConfig } from '@/components/showcase/CrimChartToast';
-import { useProtectedRoute } from '@/core/router/useProtectedRoute';
-import { LocalizationProvider } from '@/core/localization/LocalizationProvider';
 
-import { useAppPresence } from '@/core/hooks/useAppPresence';
-import { usePresenceSyncWorker } from '@/core/sync/usePresenceSyncWorker';
-import { Platform } from 'react-native';
 import { ProgressProvider } from '@/components/globalProgressBar/GlobalProgressBar';
 import { OfflineStateWidget } from '@/components/offline/OfflineStateWidget';
+import { useAppPresence } from '@/core/hooks/useAppPresence';
+import { usePresenceSyncWorker } from '@/core/sync/usePresenceSyncWorker';
 
 const injectWebScrollbarStyle = () => {
   if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -40,6 +45,9 @@ const injectWebScrollbarStyle = () => {
     const style = document.createElement('style');
     style.id = 'custom-scrollbar-style';
     style.textContent = `
+      html, body {
+        overflow-y: scroll;
+      }
       /* Elegant dark mode scrollbar */
       ::-webkit-scrollbar {
         height: 6px;

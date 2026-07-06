@@ -8,6 +8,7 @@ import { Platform } from 'react-native';
 import { initializeApp } from 'firebase/app';
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 import { FIREBASE_VAPID_KEY, firebaseConfig } from './firebaseConfig';
+// Native push notification modules will be required conditionally
 
 // Expo handles incoming notifications while the app is foregrounded
 Notifications.setNotificationHandler({
@@ -58,6 +59,46 @@ export function usePushNotifications() {
         }
       } else {
         token = await registerForPushNotificationsAsync();
+        
+        // Listen for foreground Native FCM messages
+        const notifeeModule = require('@notifee/react-native');
+        const notifee = notifeeModule.default || notifeeModule;
+        const { AndroidImportance } = notifeeModule;
+        const rnMessagingModule = require('@react-native-firebase/messaging');
+        const rnMessaging = rnMessagingModule.default || rnMessagingModule;
+
+        const unsubscribe = rnMessaging().onMessage(async (remoteMessage: any) => {
+          console.log('[PushNotifications] Native foreground message received:', remoteMessage);
+          
+          if (remoteMessage.data) {
+            const title = remoteMessage.data.title as string | undefined;
+            const body = remoteMessage.data.body as string | undefined;
+            const imageUrl = remoteMessage.data.imageUrl as string | undefined;
+            
+            const channelId = await notifee.createChannel({
+              id: 'default',
+              name: 'Default Channel',
+              importance: AndroidImportance.HIGH,
+            });
+            
+            await notifee.displayNotification({
+              title: title || 'Crimchart',
+              body: body || 'You have a new notification',
+              android: {
+                channelId,
+                largeIcon: imageUrl || undefined,
+                pressAction: {
+                  id: 'default',
+                },
+              },
+            });
+          }
+        });
+        
+        // Clean up the foreground listener when unmounting
+        return () => {
+          unsubscribe();
+        };
       }
 
       if (token && isMounted) {

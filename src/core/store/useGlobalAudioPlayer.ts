@@ -26,6 +26,7 @@ interface GlobalAudioPlayerState {
 // Keep the sound object outside of Zustand to avoid non-serializable state warning
 let _sound: Audio.Sound | null = null;
 let _currentUrl: string | null = null;
+let _playRequestId = 0;
 
 export const useGlobalAudioPlayer = create<GlobalAudioPlayerState>((set, get) => ({
   currentTrackId: null,
@@ -33,11 +34,19 @@ export const useGlobalAudioPlayer = create<GlobalAudioPlayerState>((set, get) =>
   currentTrackMeta: null,
 
   playTrack: async (trackId: string, audioUrl: string, meta?: { title: string; artist: string; coverUrl: string }) => {
-    const { currentTrackId } = get();
+    const { currentTrackId: prevTrackId } = get();
+    
+    // Immediately set track ID and meta so UI updates instantly and scrolling away can cancel it
+    set({ 
+      currentTrackId: trackId, 
+      currentTrackMeta: meta ? { id: trackId, ...meta } : get().currentTrackMeta 
+    });
+
+    const requestId = ++_playRequestId;
 
     try {
       // If the same track is already loaded, just play it
-      if (currentTrackId === trackId && _sound && _currentUrl === audioUrl) {
+      if (prevTrackId === trackId && _sound && _currentUrl === audioUrl) {
         await _sound.playAsync();
         set({ isPlaying: true });
         return;
@@ -57,15 +66,25 @@ export const useGlobalAudioPlayer = create<GlobalAudioPlayerState>((set, get) =>
         staysActiveInBackground: false,
       });
 
+      // Initially do NOT play, so we can check if it was aborted before playing
       const { sound: newSound } = await Audio.Sound.createAsync(
         { uri: audioUrl },
-        { isLooping: true, shouldPlay: true }
+        { isLooping: true, shouldPlay: false }
       );
+
+      if (requestId !== _playRequestId) {
+        // A pause, stop, or a different play was requested while we were loading!
+        await newSound.unloadAsync().catch(() => {});
+        return;
+      }
 
       _sound = newSound;
       _currentUrl = audioUrl;
 
-      set({ currentTrackId: trackId, isPlaying: true, currentTrackMeta: meta ? { id: trackId, ...meta } : get().currentTrackMeta });
+      // Now safe to play
+      await _sound.playAsync();
+
+      set({ isPlaying: true });
 
       // Set status callback to detect when sound finishes
       newSound.setOnPlaybackStatusUpdate((status) => {
@@ -73,18 +92,23 @@ export const useGlobalAudioPlayer = create<GlobalAudioPlayerState>((set, get) =>
           set({ isPlaying: false });
         }
       });
-    } catch (e) {
+    } catch (e: any) {
+      // Ignore abort errors as they are expected when pause() interrupts play()
+      if (e?.name === 'AbortError' || e?.message?.includes('AbortError')) {
+        return;
+      }
       console.error('[GlobalAudioPlayer] playTrack error:', e);
       set({ isPlaying: false });
     }
   },
 
   pauseCurrent: async () => {
+    ++_playRequestId; // Abort any pending loads
     try {
       if (_sound) {
         await _sound.pauseAsync();
-        set({ isPlaying: false });
       }
+      set({ isPlaying: false });
     } catch (e) {
       console.error('[GlobalAudioPlayer] pauseCurrent error:', e);
     }
@@ -118,6 +142,7 @@ export const useGlobalAudioPlayer = create<GlobalAudioPlayerState>((set, get) =>
   },
 
   stopAll: async () => {
+    ++_playRequestId;
     const soundToStop = _sound;
     _sound = null;
     _currentUrl = null;

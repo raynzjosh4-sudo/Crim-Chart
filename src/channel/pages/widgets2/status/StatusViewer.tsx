@@ -1,4 +1,5 @@
 import AppAvatar from '@/components/avatar/AppAvatar';
+import { useStyles } from '@/core/hooks/useStyles';
 import { GlassShimmer } from '@/components/shimmers/statusViewerShimmer/GlassShimmer';
 import { saveMediaToDevice } from '@/core/utils/mediaDownload';
 import { useMediaViewTracker } from '@/hooks/useMediaViewTracker';
@@ -82,6 +83,8 @@ interface StatusViewerProps {
   skeletonUser?: { name: string; avatar: string };
 }
 
+
+
 export const StatusViewer: React.FC<StatusViewerProps> = ({
   visible,
   onClose,
@@ -96,6 +99,108 @@ export const StatusViewer: React.FC<StatusViewerProps> = ({
   const [showOptions, setShowOptions] = useState(false);
   const [isMediaLoaded, setIsMediaLoaded] = useState(false);
   const [mediaDuration, setMediaDuration] = useState(5000);
+
+  const styles = useStyles(colors => ({
+    overlay: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+    },
+    overlayDesktop: {
+      backgroundColor: 'transparent',
+    },
+    backdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: colors.background === '#FFFFFF' ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.85)',
+    },
+    rightArrow: {
+      position: 'absolute',
+      right: 24,
+      top: '50%',
+      marginTop: -24,
+      zIndex: 30,
+    },
+    leftArrow: {
+      position: 'absolute',
+      left: 24,
+      top: '50%',
+      marginTop: -24,
+      zIndex: 30,
+    },
+    arrowCircle: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: colors.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      flex: 1,
+      borderRadius: Platform.OS === 'ios' ? 16 : 0,
+      overflow: 'hidden',
+      backgroundColor: colors.background,
+    },
+    topGradient: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 150,
+      zIndex: 10,
+    },
+    safeArea: {
+      paddingTop: 0,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 12,
+      paddingTop: 24,
+      zIndex: 20,
+    },
+    headerTextContainer: {
+      flex: 1,
+      marginLeft: 10,
+    },
+    username: {
+      color: colors.text,
+      fontSize: 14,
+      fontWeight: 'bold',
+    },
+    counter: {
+      color: colors.textSecondary,
+      fontSize: 12,
+    },
+    iconButton: {
+      padding: 8,
+    },
+    captionContainer: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      paddingHorizontal: 24,
+      paddingTop: 60,
+      paddingBottom: 60,
+      zIndex: 10,
+      justifyContent: 'flex-end',
+    },
+    captionText: {
+      color: '#FFF',
+      fontSize: 16,
+      fontWeight: '600',
+      textAlign: 'center',
+      textShadowColor: 'rgba(0,0,0,0.5)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 4,
+    },
+  }));
 
   const { width, height } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
@@ -342,12 +447,12 @@ export const StatusViewer: React.FC<StatusViewerProps> = ({
                           </View>
                           <TouchableWithoutFeedback onPress={() => setShowOptions(true)}>
                             <View style={styles.iconButton}>
-                              <MoreHorizontal color="#FFF" size={24} />
+                              <MoreHorizontal color={styles.username.color as string} size={24} />
                             </View>
                           </TouchableWithoutFeedback>
                           <TouchableWithoutFeedback onPress={onClose}>
                             <View style={styles.iconButton}>
-                              <X color="#FFF" size={24} />
+                              <X color={styles.username.color as string} size={24} />
                             </View>
                           </TouchableWithoutFeedback>
                         </View>
@@ -373,7 +478,7 @@ export const StatusViewer: React.FC<StatusViewerProps> = ({
                       <TouchableWithoutFeedback onPress={goBack}>
                         <View style={styles.leftArrow}>
                           <View style={styles.arrowCircle}>
-                            <ChevronLeft color="#FFF" size={32} />
+                            <ChevronLeft color={styles.username.color as string} size={32} />
                           </View>
                         </View>
                       </TouchableWithoutFeedback>
@@ -382,7 +487,7 @@ export const StatusViewer: React.FC<StatusViewerProps> = ({
                       <TouchableWithoutFeedback onPress={goNext}>
                         <View style={styles.rightArrow}>
                           <View style={styles.arrowCircle}>
-                            <ChevronRight color="#FFF" size={32} />
+                            <ChevronRight color={styles.username.color as string} size={32} />
                           </View>
                         </View>
                       </TouchableWithoutFeedback>
@@ -417,105 +522,3 @@ export const StatusViewer: React.FC<StatusViewerProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-
-  overlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#000',
-  },
-  overlayDesktop: {
-    backgroundColor: 'transparent',
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.85)',
-  },
-  rightArrow: {
-    position: 'absolute',
-    right: 24,
-    top: '50%',
-    marginTop: -24,
-    zIndex: 30,
-  },
-  leftArrow: {
-    position: 'absolute',
-    left: 24,
-    top: '50%',
-    marginTop: -24,
-    zIndex: 30,
-  },
-  arrowCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  content: {
-    flex: 1,
-    borderRadius: Platform.OS === 'ios' ? 16 : 0,
-    overflow: 'hidden',
-    backgroundColor: '#000',
-  },
-  topGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 150,
-    zIndex: 10,
-  },
-  safeArea: {
-    paddingTop: 0,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingTop: 24,
-    zIndex: 20,
-  },
-  headerTextContainer: {
-    flex: 1,
-    marginLeft: 10,
-  },
-  username: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  counter: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 12,
-  },
-  iconButton: {
-    padding: 8,
-  },
-  captionContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 60,
-    zIndex: 10,
-    justifyContent: 'flex-end',
-  },
-  captionText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-  },
-});

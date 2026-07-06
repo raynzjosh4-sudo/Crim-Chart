@@ -19,6 +19,7 @@ export function useNotificationWrapper() {
           actor_id: user.id,
           type: payload.type,
           reference_id: payload.referenceId || null,
+          action_text: payload.actionText || null, // ADDED: dynamic text
         });
 
       if (error) {

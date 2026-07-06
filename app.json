@@ -54,6 +54,8 @@
           "isAccessMediaLocationEnabled": true
         }
       ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/messaging",
       "./withNotifeeRepo.js",
       "@react-native-google-signin/google-signin",
       "expo-secure-store"

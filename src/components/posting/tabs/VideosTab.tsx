@@ -10,6 +10,36 @@ interface VideosTabProps {
   externalSelectedAlbum: string | null;
 }
 
+const VideoListItem = React.memo(({ 
+  item, 
+  isSelected, 
+  onToggleSelection 
+}: { 
+  item: MediaItem; 
+  isSelected: boolean; 
+  onToggleSelection: (id: string, item: MediaItem) => void;
+}) => {
+  return (
+    <TouchableOpacity
+      style={styles.itemContainer}
+      activeOpacity={0.8}
+      onPress={() => onToggleSelection(item.id, item)}
+    >
+      <Image source={{ uri: item.thumbnailUrl }} style={styles.image} />
+      <View style={styles.videoBadge}>
+        <Play color="#FFF" size={16} fill="#FFF" />
+      </View>
+      {isSelected && (
+        <View style={styles.selectedOverlay}>
+          <View style={styles.checkmarkContainer}>
+            <View style={styles.checkmark} />
+          </View>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+});
+
 export const VideosTab: React.FC<VideosTabProps> = ({ selectedItems, onToggleSelection, externalSelectedAlbum }) => {
   const [videos, setVideos] = useState<MediaItem[]>([]);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -38,6 +68,7 @@ export const VideosTab: React.FC<VideosTabProps> = ({ selectedItems, onToggleSel
         type: MediaType.video,
         thumbnailUrl: asset.uri,
         source: MediaSource.device,
+        duration: asset.duration,
         // Store formatted duration string in artist field as a workaround
         artist: asset.duration ? `${Math.floor(asset.duration / 60)}:${Math.floor(asset.duration % 60).toString().padStart(2, '0')}` : '0:00'
       }));
@@ -48,28 +79,13 @@ export const VideosTab: React.FC<VideosTabProps> = ({ selectedItems, onToggleSel
     loadVideos();
   }, [hasPermission, externalSelectedAlbum]);
 
+  const selectedItemsRef = React.useRef(selectedItems);
+  selectedItemsRef.current = selectedItems;
+
   const renderItem = React.useCallback(({ item }: { item: MediaItem }) => {
-    const isSelected = !!selectedItems[item.id];
-    return (
-      <TouchableOpacity
-        style={styles.itemContainer}
-        activeOpacity={0.8}
-        onPress={() => onToggleSelection(item.id, item)}
-      >
-        <Image source={{ uri: item.thumbnailUrl }} style={styles.image} />
-        <View style={styles.videoBadge}>
-          <Play color="#FFF" size={16} fill="#FFF" />
-        </View>
-        {isSelected && (
-          <View style={styles.selectedOverlay}>
-            <View style={styles.checkmarkContainer}>
-              <View style={styles.checkmark} />
-            </View>
-          </View>
-        )}
-      </TouchableOpacity>
-    );
-  }, [selectedItems, onToggleSelection]);
+    const isSelected = !!selectedItemsRef.current[item.id];
+    return <VideoListItem item={item} isSelected={isSelected} onToggleSelection={onToggleSelection} />;
+  }, [onToggleSelection]);
 
   if (hasPermission === false) {
     return <View style={styles.center}><Text style={styles.text}>No access to videos</Text></View>;

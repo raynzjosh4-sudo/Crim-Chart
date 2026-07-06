@@ -82,7 +82,6 @@ export function useLiveStatusViews(userId?: string) {
     });
     return () => sub.remove();
   }, [userId]);
-  console.log(`[useLiveStatusViews] userId: ${userId}, viewsCount: ${viewsCount}`);
-  
+  console.trace(`[useLiveStatusViews] userId: ${userId}, viewsCount: ${viewsCount}`);
   return { viewsCount, isLoading };
 }

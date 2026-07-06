@@ -10,6 +10,38 @@ interface FinalizeListTileProps {
   onTap?: () => void;
   trailing?: React.ReactNode;
 }
+const themeStyles = (colors: any): any => ({
+  tile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12
+  },
+  iconContainer: {
+    marginRight: 16,
+    opacity: 0.7
+  },
+  textContainer: {
+    flex: 1,
+    justifyContent: 'center'
+  },
+  title: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '700'
+  },
+  subtitle: {
+    color: '#FACD11',
+    // primary
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 2
+  },
+  trailingContainer: {
+    marginLeft: 8
+  }
+});
+
 export const FinalizeListTile: React.FC<FinalizeListTileProps> = ({
   icon,
   title,
@@ -17,6 +49,7 @@ export const FinalizeListTile: React.FC<FinalizeListTileProps> = ({
   onTap,
   trailing
 }) => {
+  const styles = useStyles(themeStyles);
   return <TouchableOpacity style={styles.tile} onPress={onTap} activeOpacity={0.7} disabled={!onTap}>
       <View style={styles.iconContainer}>{icon}</View>
       <View style={styles.textContainer}>
@@ -28,6 +61,7 @@ export const FinalizeListTile: React.FC<FinalizeListTileProps> = ({
       </View>
     </TouchableOpacity>;
 };
+
 interface FinalizeSwitchTileProps {
   icon: React.ReactNode;
   title: string;
@@ -40,37 +74,7 @@ export const FinalizeSwitchTile: React.FC<FinalizeSwitchTileProps> = ({
   value,
   onChanged
 }) => {
-  const styles = useStyles(colors => ({
-    tile: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingVertical: 12
-    },
-    iconContainer: {
-      marginRight: 16,
-      opacity: 0.7
-    },
-    textContainer: {
-      flex: 1,
-      justifyContent: 'center'
-    },
-    title: {
-      color: colors.text,
-      fontSize: 14,
-      fontWeight: '700'
-    },
-    subtitle: {
-      color: '#FACD11',
-      // primary
-      fontSize: 12,
-      fontWeight: '600',
-      marginTop: 2
-    },
-    trailingContainer: {
-      marginLeft: 8
-    }
-  }));
+  const styles = useStyles(themeStyles);
   return <View style={styles.tile}>
       <View style={styles.iconContainer}>{icon}</View>
       <View style={styles.textContainer}>

@@ -4,8 +4,9 @@ export interface AppNotification {
   id: string;
   recipient_id: string;
   actor_id: string;
-  type: 'like' | 'comment' | 'follow' | 'channel_invite' | 'channel_request' | 'mention' | 'post_tag';
+  type: string; // broadened to string to support many types
   reference_id: string | null;
+  action_text?: string;
   is_read: boolean;
   created_at: string;
   

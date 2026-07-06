@@ -1,4 +1,7 @@
+import { ColorValue } from "react-native";
+
 export interface ThemeTokens {
+  border: any | ColorValue | undefined;
   primary: string;
   onPrimary: string;
   background: string;
@@ -36,6 +39,7 @@ export const THEMES: Record<string, AppTheme> = {
       error: '#FF3B30',
       accent: '#FACD11',
       muted: 'rgba(0, 0, 0, 0.3)',
+      border: undefined
     }
   },
   'crimchart-dark': {
@@ -54,6 +58,7 @@ export const THEMES: Record<string, AppTheme> = {
       error: '#FF5252',
       accent: '#FACD11',
       muted: 'rgba(255, 255, 255, 0.4)',
+      border: undefined
     }
   }
 };

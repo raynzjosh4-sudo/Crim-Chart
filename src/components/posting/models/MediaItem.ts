@@ -53,6 +53,7 @@ export interface MediaItem {
   thumbnailUrl?: string;
   thumbnailBytes?: Uint8Array;
   aspectRatio?: number;
+  duration?: number; // Video or audio duration in seconds
   lyrics?: string;
   overlays?: any[];
 

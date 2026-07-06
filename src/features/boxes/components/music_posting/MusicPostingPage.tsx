@@ -1,24 +1,24 @@
-import { MediaChips } from '@/components/mediaChips/MediaChips';
 import { UploadingToast } from '@/components/loader/UploadingToast';
+import { AlbumSelectorModal } from '@/components/posting/widgets/AlbumSelectorModal';
+import { ChartToast } from '@/components/showcase/CrimChart_toast';
+import { BoxReactionRecorderWrapper } from '@/components/wrappers/BoxReactionRecorderWrapper';
 import { PostInteractionWrapper } from '@/components/wrappers/PostInteractionWrapper';
 import { VisibilityBoxTrackerWrapper } from '@/components/wrappers/VisibilityBoxTrackerWrapper';
-import { BoxReactionRecorderWrapper } from '@/components/wrappers/BoxReactionRecorderWrapper';
 import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { supabase } from '@/core/supabase/supabaseConfig';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { useBoxDetail } from '@/features/boxes/application/useBoxDetail';
+import { useMusicUpload } from '@/features/boxes/application/useMusicUpload';
 import * as MediaLibrary from 'expo-media-library';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Search } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View, ViewToken, Platform, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Platform, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View, ViewToken } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMusicFeedStore } from './store/useMusicFeedStore';
-import { ChartToast } from '@/components/showcase/CrimChart_toast';
 import { MusicListTile, MusicTrackItem } from './tiles/MusicListTile';
 import { MusicListTileShimmer } from './tiles/MusicListTileShimmer';
 import { PhoneMusicWidget } from './widgets/PhoneMusicWidget';
-import { useBoxDetail } from '@/features/boxes/application/useBoxDetail';
-import { useMusicUpload } from '@/features/boxes/application/useMusicUpload';
 
 export const MusicPostingPage = ({ boxId, isInline, onCloseInline }: { boxId: string; isInline?: boolean; onCloseInline?: () => void }) => {
   const router = useRouter();
@@ -204,8 +204,8 @@ export const MusicPostingPage = ({ boxId, isInline, onCloseInline }: { boxId: st
       <UploadingToast visible={isUploading} message="Uploading track..." />
 
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
+        <TouchableOpacity
+          style={styles.backButton}
           onPress={() => isInline && onCloseInline ? onCloseInline() : router.back()}
         >
           <ArrowLeft size={24} color="#FFF" />
@@ -237,15 +237,17 @@ export const MusicPostingPage = ({ boxId, isInline, onCloseInline }: { boxId: st
         </View>
 
         {showLocalOnly && (
-          <MediaChips
-            activeTabIndex={2}
-            selectedAlbum={selectedAlbum}
-            onAlbumSelected={(albumId) => {
-              setSelectedAlbum(albumId);
-              setExpandedWidgets([]);
-              loadLocalMusic(albumId, undefined, true);
-            }}
-          />
+          <View style={{ paddingHorizontal: 16, marginBottom: 12, alignItems: 'flex-start' }}>
+            <AlbumSelectorModal
+              activeTabIndex={2}
+              selectedAlbum={selectedAlbum}
+              onAlbumSelected={(albumId) => {
+                setSelectedAlbum(albumId);
+                setExpandedWidgets([]);
+                loadLocalMusic(albumId, undefined, true);
+              }}
+            />
+          </View>
         )}
       </VisibilityBoxTrackerWrapper>
 

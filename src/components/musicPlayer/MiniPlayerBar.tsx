@@ -14,6 +14,8 @@ import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { Pause, Play, X, Music2 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { usePathname } from 'expo-router';
+
 /**
  * MiniPlayerBar
  *
@@ -27,12 +29,21 @@ export const MiniPlayerBar = () => {
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
   const insets = useSafeAreaInsets();
+  const pathname = usePathname();
 
-  // Bottom nav height: 60px bar + safe area
-  const TAB_BAR_HEIGHT = 60 + insets.bottom;
+  const hideMobileBottomNav = pathname.startsWith('/profile') || 
+                              pathname.startsWith('/notifications') || 
+                              pathname.startsWith('/my-music') || 
+                              pathname.startsWith('/statuses');
 
-  const { currentTrackId, isPlaying, pauseCurrent, resumeCurrent, stopAll } =
-    useGlobalAudioPlayer();
+  // Bottom nav height: 60px bar + safe area. If hidden, just use safe area + a little gap
+  const TAB_BAR_HEIGHT = hideMobileBottomNav ? insets.bottom + 8 : 60 + insets.bottom;
+
+  const currentTrackId = useGlobalAudioPlayer((s) => s.currentTrackId);
+  const isPlaying = useGlobalAudioPlayer((s) => s.isPlaying);
+  const pauseCurrent = useGlobalAudioPlayer((s) => s.pauseCurrent);
+  const resumeCurrent = useGlobalAudioPlayer((s) => s.resumeCurrent);
+  const stopAll = useGlobalAudioPlayer((s) => s.stopAll);
   const currentMeta = useGlobalAudioPlayer((s) => s.currentTrackMeta);
 
   const slideAnim = useRef(new Animated.Value(100)).current;

@@ -1,10 +1,10 @@
-import { useStyles } from "@/core/hooks/useStyles";
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, ScrollView, SafeAreaView, StyleSheet, Dimensions, useWindowDimensions, Platform } from 'react-native';
-import { Image } from 'expo-image';
-import { ChevronRight, TriangleAlert, User, RefreshCw } from 'lucide-react-native';
-import { useTheme } from '@react-navigation/native';
 import AppAvatar from '@/components/avatar/AppAvatar';
+import { useStyles } from "@/core/hooks/useStyles";
+import { useTheme } from '@react-navigation/native';
+import { Image } from 'expo-image';
+import { ChevronRight, RefreshCw, TriangleAlert, User } from 'lucide-react-native';
+import { useState } from 'react';
+import { Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 interface ChartOptionsDialogProps {
   visible: boolean;
   onClose: () => void;
@@ -39,91 +39,93 @@ export const ChartOptionsDialog: React.FC<ChartOptionsDialogProps> = ({
     height: screenHeight
   } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
+
+  const styles = useStyles(colors => ({
+    overlay: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)'
+    },
+    backdrop: {
+      ...StyleSheet.absoluteFillObject
+    },
+    sheetContainer: {
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      shadowColor: colors.background,
+      shadowOpacity: 0.3,
+      shadowRadius: 20,
+      elevation: 10
+    },
+    handle: {
+      width: 40,
+      height: 4,
+      borderRadius: 2,
+      alignSelf: 'center',
+      marginVertical: 12
+    },
+    headerArea: {
+      paddingHorizontal: 16,
+      paddingBottom: 12,
+      paddingTop: 4
+    },
+    userRow: {
+      flexDirection: 'row',
+      alignItems: 'center'
+    },
+    userInfo: {
+      marginLeft: 10
+    },
+    username: {
+      fontSize: 13,
+      fontWeight: '900'
+    },
+    hisUserText: {
+      fontSize: 11,
+      fontWeight: '700'
+    },
+    contentRow: {
+      flexDirection: 'row',
+      marginTop: 12
+    },
+    statusThumbnail: {
+      width: 80,
+      height: 110,
+      borderRadius: 12,
+      borderWidth: 1.5,
+      borderColor: 'rgba(255, 255, 255, 0.12)'
+    },
+    expansionToggle: {
+      marginLeft: 12,
+      paddingTop: 34
+    },
+    toggleButton: {
+      padding: 8,
+      borderRadius: 20
+    },
+    actionsContainer: {
+      paddingHorizontal: 16
+    },
+    actionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      borderRadius: 12,
+      marginBottom: 4
+    },
+    actionText: {
+      fontSize: 14,
+      fontWeight: '700',
+      marginLeft: 12
+    }
+  }));
+
   const ActionButton = ({
     title,
     isDestructive,
     onTap
   }: any) => {
-    const styles = useStyles(colors => ({
-      overlay: {
-        flex: 1,
-        justifyContent: 'flex-end',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)'
-      },
-      backdrop: {
-        ...StyleSheet.absoluteFillObject
-      },
-      sheetContainer: {
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        shadowColor: colors.background,
-        shadowOpacity: 0.3,
-        shadowRadius: 20,
-        elevation: 10
-      },
-      handle: {
-        width: 40,
-        height: 4,
-        borderRadius: 2,
-        alignSelf: 'center',
-        marginVertical: 12
-      },
-      headerArea: {
-        paddingHorizontal: 16,
-        paddingBottom: 12,
-        paddingTop: 4
-      },
-      userRow: {
-        flexDirection: 'row',
-        alignItems: 'center'
-      },
-      userInfo: {
-        marginLeft: 10
-      },
-      username: {
-        fontSize: 13,
-        fontWeight: '900'
-      },
-      hisUserText: {
-        fontSize: 11,
-        fontWeight: '700'
-      },
-      contentRow: {
-        flexDirection: 'row',
-        marginTop: 12
-      },
-      statusThumbnail: {
-        width: 80,
-        height: 110,
-        borderRadius: 12,
-        borderWidth: 1.5,
-        borderColor: 'rgba(255, 255, 255, 0.12)'
-      },
-      expansionToggle: {
-        marginLeft: 12,
-        paddingTop: 34
-      },
-      toggleButton: {
-        padding: 8,
-        borderRadius: 20
-      },
-      actionsContainer: {
-        paddingHorizontal: 16
-      },
-      actionButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        borderRadius: 12,
-        marginBottom: 4
-      },
-      actionText: {
-        fontSize: 14,
-        fontWeight: '700',
-        marginLeft: 12
-      }
-    }));
     return <TouchableOpacity activeOpacity={1} style={[styles.actionButton, {
       backgroundColor: 'rgba(255, 255, 255, 0.05)'
     }]} onPress={() => {
@@ -143,81 +145,81 @@ export const ChartOptionsDialog: React.FC<ChartOptionsDialogProps> = ({
     </TouchableOpacity>;
   };
   return <Modal visible={visible} animationType={isDesktop ? "fade" : "slide"} transparent>
-      <View style={[styles.overlay, isDesktop && {
+    <View style={[styles.overlay, isDesktop && {
       justifyContent: 'center',
       alignItems: 'center'
     }]}>
-        <TouchableOpacity style={styles.backdrop} onPress={onClose} activeOpacity={1} />
-        <View style={[styles.sheetContainer, {
+      <TouchableOpacity style={styles.backdrop} onPress={onClose} activeOpacity={1} />
+      <View style={[styles.sheetContainer, {
         backgroundColor: colors.background
       }, isDesktop && {
         width: 400,
         borderRadius: 24,
         paddingBottom: 16
       }]}>
-          <SafeAreaView>
-            <ScrollView style={{
+        <SafeAreaView>
+          <ScrollView style={{
             maxHeight: screenHeight * 0.85
           }}>
-              {!isDesktop && <View style={[styles.handle, {
+            {!isDesktop && <View style={[styles.handle, {
               backgroundColor: 'rgba(255, 255, 255, 0.2)'
             }]} />}
 
-              <View style={styles.headerArea}>
-                <View style={styles.userRow}>
-                  <AppAvatar size={32} imageUrl={userProfileImageUrl} showStatusRing showActiveDot={false} onImageTap={() => {
+            <View style={styles.headerArea}>
+              <View style={styles.userRow}>
+                <AppAvatar size={32} imageUrl={userProfileImageUrl} showStatusRing showActiveDot={false} onImageTap={() => {
                   onClose();
                   onProfileTap();
                 }} />
-                  <View style={styles.userInfo}>
-                    <Text style={[styles.username, {
+                <View style={styles.userInfo}>
+                  <Text style={[styles.username, {
                     color: colors.text
                   }]}>{username}</Text>
-                    <Text style={[styles.hisUserText, {
+                  <Text style={[styles.hisUserText, {
                     color: colors.primary
                   }]}>His User</Text>
-                  </View>
-                </View>
-
-                <View style={styles.contentRow}>
-                  <View style={{
-                  width: 42
-                }} />
-                  <Image source={{
-                  uri: statusImageUrl
-                }} style={styles.statusThumbnail} contentFit="cover" />
-                  <View style={styles.expansionToggle}>
-                    <TouchableOpacity activeOpacity={1} style={[styles.toggleButton, {
-                    backgroundColor: showChannels ? 'rgba(255, 184, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)'
-                  }]} onPress={() => setShowChannels(!showChannels)}>
-                      <RefreshCw size={26} color={showChannels ? colors.primary : 'rgba(255, 255, 255, 0.6)'} />
-                    </TouchableOpacity>
-                  </View>
                 </View>
               </View>
 
-              {showChannels && <View style={{
+              <View style={styles.contentRow}>
+                <View style={{
+                  width: 42
+                }} />
+                <Image source={{
+                  uri: statusImageUrl
+                }} style={styles.statusThumbnail} contentFit="cover" />
+                <View style={styles.expansionToggle}>
+                  <TouchableOpacity activeOpacity={1} style={[styles.toggleButton, {
+                    backgroundColor: showChannels ? 'rgba(255, 184, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)'
+                  }]} onPress={() => setShowChannels(!showChannels)}>
+                    <RefreshCw size={26} color={showChannels ? colors.primary : 'rgba(255, 255, 255, 0.6)'} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            {showChannels && <View style={{
               marginBottom: 8,
               padding: 16
             }}>
-                  {/* Channel selector – coming soon */}
-                </View>}
+              {/* Channel selector – coming soon */}
+            </View>}
 
-              <View style={styles.actionsContainer}>
-                <ActionButton title={`Block ${username}`} isDestructive />
-                <ActionButton title="Report Post" isDestructive />
-                <ActionButton title={`Report ${username}`} isDestructive />
-                <ActionButton title="View Profile" onTap={onProfileTap} />
-                {onSaveTap && <ActionButton title="Save Status" onTap={onSaveTap} />}
-                <ActionButton title="Share Status" />
-              </View>
-              
-              <View style={{
+            <View style={styles.actionsContainer}>
+              <ActionButton title={`Block ${username}`} isDestructive />
+              <ActionButton title="Report Post" isDestructive />
+              <ActionButton title={`Report ${username}`} isDestructive />
+              <ActionButton title="View Profile" onTap={onProfileTap} />
+              {onSaveTap && <ActionButton title="Save Status" onTap={onSaveTap} />}
+              <ActionButton title="Share Status" />
+            </View>
+
+            <View style={{
               height: 12
             }} />
-            </ScrollView>
-          </SafeAreaView>
-        </View>
+          </ScrollView>
+        </SafeAreaView>
       </View>
-    </Modal>;
+    </View>
+  </Modal>;
 };

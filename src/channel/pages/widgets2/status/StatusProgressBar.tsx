@@ -22,18 +22,6 @@ export const StatusProgressBar: React.FC<StatusProgressBarProps> = ({
       width: '100%',
       paddingHorizontal: 8,
       paddingTop: 12
-    },
-    segmentContainer: {
-      flex: 1,
-      height: 3,
-      backgroundColor: 'rgba(255, 255, 255, 0.3)',
-      marginHorizontal: 2,
-      borderRadius: 2,
-      overflow: 'hidden'
-    },
-    segmentFill: {
-      height: '100%',
-      backgroundColor: colors.text
     }
   }));
   return <View style={styles.container}>
@@ -58,6 +46,20 @@ const ProgressSegment: React.FC<ProgressSegmentProps> = ({
   onComplete
 }) => {
   const progress = useSharedValue(0);
+  const styles = useStyles(colors => ({
+    segmentContainer: {
+      flex: 1,
+      height: 3,
+      backgroundColor: 'rgba(255, 255, 255, 0.3)',
+      marginHorizontal: 2,
+      borderRadius: 2,
+      overflow: 'hidden'
+    },
+    segmentFill: {
+      height: '100%',
+      backgroundColor: colors.text
+    }
+  }));
   useEffect(() => {
     if (index < currentIndex) {
       // Already completed

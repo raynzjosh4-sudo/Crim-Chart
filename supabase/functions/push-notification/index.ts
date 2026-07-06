@@ -75,30 +75,61 @@ serve(async (req) => {
     }
 
     // 2. Fetch actor info to build a nice message
-    const { data: actorProfile } = await supabase
+    const { data: actorProfile, error: profileError } = await supabase
       .from('profiles')
-      .select('username, display_name')
+      .select('*')
       .eq('id', actor_id)
       .single();
 
-    const actorName = actorProfile?.display_name || actorProfile?.username || 'Someone';
+    if (profileError) {
+      console.error("Error fetching actor profile:", profileError);
+    }
 
-    let title = 'New Notification';
-    let body = 'You have a new notification.';
+    let actorName = actorProfile?.display_name || actorProfile?.username || actorProfile?.name || actorProfile?.full_name || '';
+    const imageUrl = actorProfile?.profile_image_url || actorProfile?.avatar_url || null;
 
-    switch (type) {
-      case 'like':
-        title = 'New Like ❤️';
-        body = `${actorName} liked your post.`;
-        break;
-      case 'comment':
-        title = 'New Comment 💬';
-        body = `${actorName} commented on your post.`;
-        break;
-      case 'follow':
-        title = 'New Follower 👤';
-        body = `${actorName} started following you.`;
-        break;
+    // VERY IMPORTANT FALLBACK: If the profile is empty or has no name, fetch their email!
+    if (!actorName || actorName.trim() === '') {
+      const { data: authUser } = await supabase.auth.admin.getUserById(actor_id);
+      if (authUser?.user?.email) {
+        actorName = authUser.user.email.split('@')[0]; // Use the first part of their email
+      } else {
+        actorName = 'Someone'; // Absolute last resort
+      }
+    }
+
+    let title = 'Crimchart';
+    let body = '';
+
+    if (record.action_text) {
+      body = `${actorName} ${record.action_text}`;
+    } else {
+      switch (type) {
+        case 'like':
+          body = `${actorName} liked your post.`;
+          break;
+        case 'comment':
+          body = `${actorName} commented on your post.`;
+          break;
+        case 'follow':
+          body = `${actorName} started following you.`;
+          break;
+        case 'channel_invite':
+          body = `${actorName} invited you to a channel.`;
+          break;
+        case 'channel_request':
+          body = `${actorName} requested to join your channel.`;
+          break;
+        case 'mention':
+          body = `${actorName} mentioned you.`;
+          break;
+        case 'post_tag':
+          body = `${actorName} tagged you in a post.`;
+          break;
+        default:
+          body = `${actorName} interacted with you.`;
+          break;
+      }
     }
 
     const allTokens = tokens.map((t: any) => t.token);
@@ -113,13 +144,21 @@ serve(async (req) => {
     // 3a. Send to Expo Push API (Mobile)
     if (expoTokens.length > 0) {
       console.log(`Sending to ${expoTokens.length} Expo tokens...`);
-      const expoMessages = expoTokens.map((token: string) => ({
-        to: token,
-        sound: 'default',
-        title,
-        body,
-        data: { type: type, path: '/notifications' },
-      }));
+      const expoMessages = expoTokens.map((token: string) => {
+        const msg: any = {
+          to: token,
+          sound: 'default',
+          title,
+          body,
+          data: { type: type, path: '/notifications' },
+        };
+        // Expo doesn't officially support 'image' for free without a plugin,
+        // but we can pass it in 'data' so Android local handler could potentially use it
+        if (imageUrl) {
+          msg.data.imageUrl = imageUrl;
+        }
+        return msg;
+      });
 
       try {
         const expoRes = await fetch('https://exp.host/--/api/v2/push/send', {
@@ -141,15 +180,25 @@ serve(async (req) => {
       }
     }
 
-    // 3b. Send to Firebase Cloud Messaging (Web/Chrome)
+    // 3b. Send to Firebase Cloud Messaging (Web/Chrome/Android FCM)
     if (fcmTokens.length > 0) {
       console.log(`Sending to ${fcmTokens.length} FCM tokens...`);
       const sendPromises = fcmTokens.map(async (token: string) => {
-        const message = {
-          notification: { title, body },
-          data: { type: type, path: '/notifications' },
+        // We use a Data-Only message so that Notifee can catch it in the background 
+        // without the Android OS rendering a default (image-less) notification.
+        const message: any = {
+          data: { 
+            type: type, 
+            path: '/notifications',
+            title: title,
+            body: body
+          },
           token: token,
         };
+
+        if (imageUrl) {
+          message.data.imageUrl = imageUrl;
+        }
 
         try {
           await admin.messaging().send(message);
@@ -157,6 +206,14 @@ serve(async (req) => {
         } catch (error: any) {
           failureCount++;
           console.error(`Failed to send to FCM token ${token}:`, error);
+          // If the token is no longer registered or is invalid, remove it from our database
+          if (
+            error?.errorInfo?.code === 'messaging/registration-token-not-registered' ||
+            error?.errorInfo?.code === 'messaging/invalid-registration-token'
+          ) {
+            console.log(`Removing invalid FCM token from database: ${token}`);
+            await supabase.from('user_push_tokens').delete().eq('token', token);
+          }
         }
       });
 

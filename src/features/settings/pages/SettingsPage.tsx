@@ -171,7 +171,7 @@ export default function SettingsPage({ isSplitPane = false }: { isSplitPane?: bo
               const confirmed = window.confirm('Are you sure you want to log out?');
               if (confirmed) {
                 useAuthStore.getState().signOut().then(() => {
-                  router.replace('/login');
+                  router.replace('/landing');
                 });
               }
             } else {
@@ -182,7 +182,7 @@ export default function SettingsPage({ isSplitPane = false }: { isSplitPane?: bo
                   { text: 'Cancel', style: 'cancel' },
                   { text: t('log_out'), style: 'destructive', onPress: () => {
                     useAuthStore.getState().signOut().then(() => {
-                      router.replace('/login');
+                      router.replace('/landing');
                     });
                   }}
                 ]

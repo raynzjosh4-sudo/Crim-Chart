@@ -10,6 +10,7 @@ export type NotificationType =
 
 export interface NotificationPayload {
   recipientId: string;
-  type: NotificationType;
+  type: NotificationType | string; // Allow custom string types too for flexibility
   referenceId?: string;
+  actionText?: string;
 }

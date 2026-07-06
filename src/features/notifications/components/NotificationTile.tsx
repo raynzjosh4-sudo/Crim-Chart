@@ -5,7 +5,6 @@ import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
 import UserAvatar from '@/components/avatar/UserAvatar';
-import { Heart, MessageCircle, UserPlus, Mail, AtSign, Hash } from 'lucide-react-native';
 
 interface NotificationTileProps {
   notification: AppNotification;
@@ -20,54 +19,26 @@ export const NotificationTile = ({ notification, onPress }: NotificationTileProp
   const actor = notification.actor;
   const isUnread = !notification.is_read;
 
-  const getIconAndText = () => {
+  const getActionText = () => {
+    if (notification.action_text) {
+      return notification.action_text;
+    }
+
     switch (notification.type) {
-      case 'like':
-        return {
-          icon: <Heart size={20} color="#F91880" fill="#F91880" />,
-          text: `liked your post.`
-        };
-      case 'comment':
-        return {
-          icon: <MessageCircle size={20} color="#1D9BF0" fill="#1D9BF0" />,
-          text: `commented on your post.`
-        };
-      case 'follow':
-        return {
-          icon: <UserPlus size={20} color="#00BA7C" />,
-          text: `followed you.`
-        };
-      case 'channel_invite':
-        return {
-          icon: <Mail size={20} color={colors.primary} />,
-          text: `invited you to a channel.`
-        };
-      case 'channel_request':
-        return {
-          icon: <Mail size={20} color={colors.primary} />,
-          text: `requested to join your channel.`
-        };
-      case 'mention':
-        return {
-          icon: <AtSign size={20} color={colors.primary} />,
-          text: `mentioned you.`
-        };
-      case 'post_tag':
-        return {
-          icon: <Hash size={20} color={colors.primary} />,
-          text: `tagged you in a post.`
-        };
-      default:
-        return {
-          icon: <Heart size={20} color={colors.textSecondary} />,
-          text: `interacted with you.`
-        };
+      case 'like': return `liked your post.`;
+      case 'comment': return `commented on your post.`;
+      case 'follow': return `started following you.`;
+      case 'channel_invite': return `invited you to a channel.`;
+      case 'channel_request': return `requested to join your channel.`;
+      case 'mention': return `mentioned you in a comment.`;
+      case 'post_tag': return `tagged you in a post.`;
+      default: return `interacted with you.`;
     }
   };
 
-  const { icon, text } = getIconAndText();
+  const text = getActionText();
 
-  // Simple relative time formatter
+  // Simple relative time formatter (e.g. "2h", "1d", "3w")
   const getRelativeTime = (dateStr: string) => {
     const date = new Date(dateStr);
     const now = new Date();
@@ -79,7 +50,8 @@ export const NotificationTile = ({ notification, onPress }: NotificationTileProp
     const diffInHours = Math.floor(diffInMinutes / 60);
     if (diffInHours < 24) return `${diffInHours}h`;
     const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 365) return `${diffInDays}d`;
+    if (diffInDays < 7) return `${diffInDays}d`;
+    if (diffInDays < 365) return `${Math.floor(diffInDays / 7)}w`;
     return `${Math.floor(diffInDays / 365)}y`;
   };
 
@@ -92,26 +64,33 @@ export const NotificationTile = ({ notification, onPress }: NotificationTileProp
         isUnread && { backgroundColor: Platform.OS === 'web' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(128, 128, 128, 0.1)' }
       ]}
     >
-      <View style={styles.iconColumn}>
-        {icon}
-      </View>
-      <View style={styles.contentColumn}>
-        {actor && (
+      <View style={styles.avatarColumn}>
+        {actor ? (
           <UserAvatar
             userId={actor.id}
             name={actor.display_name}
             fallbackUrl={actor.profile_image_url}
-            size={36}
+            size={44}
           />
+        ) : (
+          <View style={[styles.fallbackAvatar, { backgroundColor: colors.surfaceVariant }]} />
         )}
-        <Text style={styles.messageText}>
+      </View>
+      
+      <View style={styles.contentColumn}>
+        <Text style={styles.messageText} numberOfLines={3}>
           <Text style={styles.actorName}>{actor?.display_name || 'Someone'}</Text>
           {' '}
           {text}
+          {' '}
+          <Text style={styles.timeText}>{getRelativeTime(notification.created_at)}</Text>
         </Text>
-        <Text style={styles.timeText}>{getRelativeTime(notification.created_at)}</Text>
       </View>
-      {isUnread && <View style={styles.unreadDot} />}
+
+      <View style={styles.rightColumn}>
+        {/* We can add a Follow button or Post Thumbnail here in the future! */}
+        {isUnread && <View style={styles.unreadDot} />}
+      </View>
     </TouchableOpacity>
   );
 };
@@ -119,40 +98,44 @@ export const NotificationTile = ({ notification, onPress }: NotificationTileProp
 const themeStyles = (colors: ThemeTokens, scale: number): any => ({
   container: {
     flexDirection: 'row' as const,
-    paddingVertical: 16 * scale,
-    paddingHorizontal: 20 * scale,
-    borderBottomWidth: 0.5 * scale,
-    borderBottomColor: colors.surfaceVariant,
-    alignItems: 'flex-start' as const,
-  },
-  iconColumn: {
-    width: 40 * scale,
+    paddingVertical: 12 * scale,
+    paddingHorizontal: 16 * scale,
     alignItems: 'center' as const,
+  },
+  avatarColumn: {
     marginRight: 12 * scale,
+  },
+  fallbackAvatar: {
+    width: 44 * scale,
+    height: 44 * scale,
+    borderRadius: 22 * scale,
   },
   contentColumn: {
     flex: 1,
+    justifyContent: 'center' as const,
   },
   messageText: {
     color: colors.text,
-    fontSize: 15 * scale,
-    lineHeight: 20 * scale,
-    marginTop: 8 * scale,
+    fontSize: 14 * scale,
+    lineHeight: 18 * scale,
   },
   actorName: {
-    fontWeight: '700' as const,
+    fontWeight: 'bold' as const,
   },
   timeText: {
     color: colors.textSecondary,
-    fontSize: 13 * scale,
-    marginTop: 4 * scale,
+    fontSize: 14 * scale,
+  },
+  rightColumn: {
+    marginLeft: 12 * scale,
+    justifyContent: 'center' as const,
+    alignItems: 'flex-end' as const,
+    minWidth: 12 * scale,
   },
   unreadDot: {
     width: 8 * scale,
     height: 8 * scale,
     borderRadius: 4 * scale,
     backgroundColor: colors.primary,
-    marginLeft: 12 * scale,
-    alignSelf: 'center' as const,
   }
 });

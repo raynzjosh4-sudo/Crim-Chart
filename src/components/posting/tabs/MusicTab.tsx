@@ -178,7 +178,7 @@ export const MusicTab: React.FC<MusicTabProps> = ({
     }
   };
   return <>
-      <FlatList data={musicList} keyExtractor={item => item.id} style={{
+      <FlatList data={musicList} extraData={selectedItems} keyExtractor={item => item.id} style={{
       flex: 1,
       backgroundColor: '#0D0D0D'
     }} contentContainerStyle={{

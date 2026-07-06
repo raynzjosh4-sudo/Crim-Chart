@@ -1,22 +1,24 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { TabView, TabBar } from 'react-native-tab-view';
-import ChartAppBar from '@/components/chartappbar/ChartAppBar';
-import { MediaItem } from '../models/MediaItem';
-import { MediaChips } from '@/components/mediaChips/MediaChips';
-import { PhotosTab } from '../tabs/PhotosTab';
-import { VideosTab } from '../tabs/VideosTab';
-import { MusicTab } from '../tabs/MusicTab';
-import CrimchartBackButton from '@/components/CrimChartBackButton/CrimChart_back_button';
 import { PermissionDialog } from '@/components/ui/PermissionDialog';
 import * as MediaLibrary from 'expo-media-library';
-import { Linking, AppState } from 'react-native';
-import { Image as ImageIcon } from 'lucide-react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Image as ImageIcon, X } from 'lucide-react-native';
+import React, { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { AppState, Linking, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TabView } from 'react-native-tab-view';
+import { MediaItem } from '../models/MediaItem';
+import { MusicTab } from '../tabs/MusicTab';
+import { LocalMusicList } from '@/components/compose/LocalMusicList';
+import { PhotosTab } from '../tabs/PhotosTab';
+import { VideosTab } from '../tabs/VideosTab';
+import { AlbumSelectorModal } from '../widgets/AlbumSelectorModal';
+import { BottomPillTabs } from '../widgets/BottomPillTabs';
 
 export const FirstPostMainPage: React.FC = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
   const targetChannelId = params.targetChannelId as string;
   const isManifestoContext = params.isManifestoContext === 'true';
 
@@ -26,14 +28,19 @@ export const FirstPostMainPage: React.FC = () => {
   const layout = useWindowDimensions();
 
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
+  const { t } = useTranslation();
+
   const [index, setIndex] = useState(0);
-  const [routes] = useState([
-    { key: 'photos', title: 'Photos' },
-    { key: 'videos', title: 'Videos' },
-    { key: 'music', title: 'Music' },
-  ]);
+  const routes = [
+    { key: 'photos', title: t('common.photos', 'Photos') },
+    { key: 'videos', title: t('common.videos', 'Videos') },
+    { key: 'music', title: t('common.music', 'Music') },
+  ];
 
   const [selectedItems, setSelectedItems] = useState<Record<string, MediaItem>>({});
+  const selectedItemsRef = React.useRef(selectedItems);
+  selectedItemsRef.current = selectedItems;
+
   const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null);
 
   const toggleSelection = useCallback((id: string, item: MediaItem) => {
@@ -45,6 +52,27 @@ export const FirstPostMainPage: React.FC = () => {
     }
     setSelectedItems(newItems);
   }, [selectedItems]);
+
+  const handleNext = () => {
+    const mediaArray = Object.values(selectedItems);
+    if (mediaArray.length === 0) return;
+
+    const hasVideo = mediaArray.some(item => item.type === 'video');
+    const nextRoute = hasVideo ? '/trim-video' : '/finalize-post';
+
+    router.push({
+      pathname: nextRoute,
+      params: {
+        ...(targetChannelId ? { targetChannelId } : {}),
+        ...(params.channelName ? { channelName: params.channelName } : {}),
+        ...(params.channelAvatarUrl ? { channelAvatarUrl: params.channelAvatarUrl } : {}),
+        isManifestoContext: String(isManifestoContext),
+        ...(isChannelPost ? { isChannelPost: 'true' } : {}),
+        ...(isChannelStatus ? { isChannelStatus: 'true' } : {}),
+        selectedMediaJson: JSON.stringify(mediaArray)
+      }
+    });
+  };
 
   React.useEffect(() => {
     const checkPermissions = async () => {
@@ -62,7 +90,7 @@ export const FirstPostMainPage: React.FC = () => {
         setShowPermissionDialog(false);
       }
     };
-    
+
     checkPermissions();
 
     const sub = AppState.addEventListener('change', (state) => {
@@ -73,21 +101,6 @@ export const FirstPostMainPage: React.FC = () => {
     return () => sub.remove();
   }, []);
 
-  const handleNext = () => {
-    router.push({
-      pathname: '/finalize-post',
-      params: { 
-        ...(targetChannelId ? { targetChannelId } : {}),
-        ...(params.channelName ? { channelName: params.channelName } : {}),
-        ...(params.channelAvatarUrl ? { channelAvatarUrl: params.channelAvatarUrl } : {}),
-        isManifestoContext: String(isManifestoContext),
-        ...(isChannelPost ? { isChannelPost: 'true' } : {}),
-        ...(isChannelStatus ? { isChannelStatus: 'true' } : {}),
-        selectedMediaJson: JSON.stringify(Object.values(selectedItems))
-      }
-    });
-  };
-
   const renderScene = ({ route }: { route: any }) => {
     switch (route.key) {
       case 'photos':
@@ -95,90 +108,130 @@ export const FirstPostMainPage: React.FC = () => {
       case 'videos':
         return <VideosTab selectedItems={selectedItems} onToggleSelection={toggleSelection} externalSelectedAlbum={selectedAlbum} />;
       case 'music':
-        return <MusicTab selectedItems={selectedItems} onToggleSelection={toggleSelection} externalSelectedAlbum={selectedAlbum} />;
+        return (
+          <LocalMusicList 
+            onSelect={(media) => {
+              router.push({
+                pathname: '/add-post',
+                params: {
+                  initialAudio: JSON.stringify(media),
+                  ...(targetChannelId ? { targetChannelId } : {}),
+                  ...(params.channelName ? { channelName: params.channelName } : {}),
+                  ...(params.channelAvatarUrl ? { channelAvatarUrl: params.channelAvatarUrl } : {}),
+                  isManifestoContext: String(isManifestoContext),
+                  ...(isChannelPost ? { isChannelPost: 'true' } : {}),
+                  ...(isChannelStatus ? { isChannelStatus: 'true' } : {})
+                }
+              });
+            }} 
+          />
+        );
       default:
         return null;
     }
   };
 
-  const renderTabBar = (props: any) => (
-    <View>
-      <TabBar
-        {...props}
-        indicatorStyle={{ backgroundColor: '#FACD11' }}
-        style={{ backgroundColor: '#0D0D0D', elevation: 0, shadowOpacity: 0 }}
-        labelStyle={{ fontWeight: 'bold' }}
-        activeColor="#FACD11"
-        inactiveColor="rgba(255,255,255,0.4)"
-        scrollEnabled={true}
-        tabStyle={{ width: 'auto', paddingHorizontal: 16 }}
-      />
-      <MediaChips
-        activeTabIndex={index}
-        selectedAlbum={selectedAlbum}
-        onAlbumSelected={(album) => setSelectedAlbum(album)}
-      />
-    </View>
-  );
+  const renderTabBar = () => null; // Hide the default TabBar
 
   return (
-    <View style={styles.root}>
-      <ChartAppBar
-        title="Recents"
-        showBack={false}
-        leading={<CrimchartBackButton onPress={() => router.back()} />}
-        actions={
-          Object.keys(selectedItems).length > 0
-            ? [
-                <TouchableOpacity activeOpacity={1} key="next" onPress={handleNext}>
-                  <Text style={styles.nextText}>Next</Text>
-                </TouchableOpacity>,
-              ]
-            : []
-        }
-      />
-      
-      <TabView
-        navigationState={{ index, routes }}
-        renderScene={renderScene}
-        renderTabBar={renderTabBar}
-        onIndexChange={(newIndex) => {
-          setIndex(newIndex);
-          setSelectedAlbum(null); // Reset album on tab change
-        }}
-        initialLayout={{ width: layout.width }}
-        style={{ flex: 1 }}
-      />
+    <View style={[styles.root, { paddingBottom: Math.max(48, insets.bottom), backgroundColor: '#000000' }]}>
+      <View style={{ flex: 1, backgroundColor: '#0D0D0D' }}>
+        {/* Custom Header - YouTube Style */}
+        <View style={{ paddingTop: Math.max(16, insets.top), backgroundColor: '#000000', paddingHorizontal: 16 }}>
+          {/* Top Row: Close Button & Next Button */}
+          <View style={styles.headerContainer}>
+            <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
+              <X color="#FFFFFF" size={24} />
+            </TouchableOpacity>
 
-      <PermissionDialog
-        visible={showPermissionDialog}
-        title="Media Access Needed"
-        description="CrimChart needs access to your media library to let you select photos, videos, and music for your posts."
-        icon={<ImageIcon color="#FACD11" size={24} />}
-        confirmText="Open Settings"
-        cancelText="Go Back"
-        onConfirm={() => {
-          Linking.openSettings();
-        }}
-        onCancel={() => {
-          setShowPermissionDialog(false);
-          if (router.canGoBack()) {
-            router.back();
-          } else {
-            router.replace('/');
-          }
-        }}
-      />
+            {Object.keys(selectedItems).length > 0 && (
+              <TouchableOpacity style={styles.nextButtonContainer} onPress={handleNext}>
+                <Text style={styles.nextText}>Next</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Second Row: Album Selector aligned to the left */}
+          <View style={{ paddingBottom: 12, alignItems: 'flex-start' }}>
+            <AlbumSelectorModal
+              activeTabIndex={index}
+              selectedAlbum={selectedAlbum}
+              onAlbumSelected={(album) => setSelectedAlbum(album)}
+            />
+          </View>
+        </View>
+
+        <TabView
+          navigationState={{ index, routes }}
+          renderScene={renderScene}
+          renderTabBar={renderTabBar}
+          onIndexChange={(newIndex) => {
+            setIndex(newIndex);
+            setSelectedAlbum(null); // Reset album on tab change
+          }}
+          initialLayout={{ width: layout.width }}
+          style={{ flex: 1 }}
+        />
+
+        {/* Floating Bottom Pill Tabs */}
+        <BottomPillTabs
+          tabs={routes}
+          activeIndex={index}
+          onChange={(newIndex) => {
+            setIndex(newIndex);
+            setSelectedAlbum(null);
+          }}
+        />
+
+        <PermissionDialog
+          visible={showPermissionDialog}
+          title="Media Access Needed"
+          description="CrimChart needs access to your media library to let you select photos, videos, and music for your posts."
+          icon={<ImageIcon color="#FACD11" size={24} />}
+          confirmText="Open Settings"
+          cancelText="Go Back"
+          onConfirm={() => {
+            Linking.openSettings();
+          }}
+          onCancel={() => {
+            setShowPermissionDialog(false);
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/');
+            }
+          }}
+        />
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0D0D0D' },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    backgroundColor: '#000000',
+  },
+  closeButton: {
+    width: 40,
+    alignItems: 'flex-start',
+  },
+  albumSelectorContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  nextButtonContainer: {
+    width: 40,
+    alignItems: 'flex-end',
+  },
   nextText: {
     color: '#FACD11',
     fontWeight: '900',
     fontSize: 16,
-    marginRight: 16,
   }
 });
