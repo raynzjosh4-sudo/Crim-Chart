@@ -8,6 +8,7 @@ import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { PostHeader } from '@/components/PostHeader/PostHeader';
 import { Film, MoreHorizontal, Play, Plus, Tag } from 'lucide-react-native';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -37,27 +38,14 @@ export const MovieBoxFeedCard = ({ boxId, prefetchedData }: Props) => {
           <FeedPermissionsWrapper permissions={{ canComment: true, canSubmit: boxModel?.allowSubmissions ?? true }}>
           <View style={styles.card}>
             {/* Header: User Info */}
-            <View style={styles.header}>
-              <View style={styles.userInfo}>
-                <View style={{ marginRight: 12 }}>
-                  <UserAvatar
-                    userId={ownerModel?.id || ''}
-                    fallbackUrl={ownerModel?.profileImageUrl}
-                    name={rawName}
-                    size={40}
-                  />
-                </View>
-                <View>
-                  <Text style={styles.userName}>{rawName}</Text>
-                  <Text style={styles.timeAgo}>Curated a new Video Box</Text>
-                </View>
-              </View>
-              <View style={styles.headerRight}>
-                <Text style={styles.dateText}>{formattedDate}</Text>
-                <TouchableOpacity activeOpacity={1}>
-                  <MoreHorizontal color={theme.colors.textSecondary} size={20} />
-                </TouchableOpacity>
-              </View>
+            <View style={{ paddingBottom: 12, paddingTop: 4 }}>
+              {ownerModel ? (
+                <PostHeader
+                  author={ownerModel}
+                  timeAgo="Curated a new Video Box"
+                  onAvatarTap={() => router.push(`/profile/${ownerModel.id}` as any)}
+                />
+              ) : null}
             </View>
 
             {/* Cinematic Cover Art (16:9) */}
@@ -215,7 +203,7 @@ const themeStyles = (colors: ThemeTokens, scale: number): any => ({
     padding: 16 * scale,
   },
   boxTitle: {
-    color: '#FFF',
+    color: colors.text,
     fontSize: 26 * scale,
     fontWeight: '900' as const,
     marginBottom: 4 * scale,

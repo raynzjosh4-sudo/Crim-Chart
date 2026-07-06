@@ -1,162 +1,162 @@
+import { useStyles } from "@/core/hooks/useStyles";
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, TouchableWithoutFeedback, Dimensions, Pressable } from 'react-native';
 import { useTheme } from '@react-navigation/native';
 import { User, Eye } from 'lucide-react-native';
-
 interface StatusViewsMenuDialogProps {
   visible: boolean;
   onClose: () => void;
   onViewersPress: () => void;
   onProfilePress: () => void;
-  anchor?: { x: number; y: number } | null;
+  anchor?: {
+    x: number;
+    y: number;
+  } | null;
   widgetSize?: number;
 }
-
-const { width: screenWidth } = Dimensions.get('window');
-
+const {
+  width: screenWidth
+} = Dimensions.get('window');
 export const StatusViewsMenuDialog: React.FC<StatusViewsMenuDialogProps> = ({
   visible,
   onClose,
   onViewersPress,
   onProfilePress,
   anchor,
-  widgetSize = 50,
+  widgetSize = 50
 }) => {
-  const { colors } = useTheme();
-
+  const styles = useStyles(colors => ({
+    overlay: {
+      flex: 1,
+      backgroundColor: 'transparent'
+    },
+    menu: {
+      position: 'absolute',
+      borderRadius: 16,
+      borderWidth: 1,
+      overflow: 'hidden',
+      shadowColor: colors.background,
+      shadowOffset: {
+        width: 0,
+        height: 8
+      },
+      shadowOpacity: 0.5,
+      shadowRadius: 12,
+      elevation: 8,
+      zIndex: 2
+    },
+    menuItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      flex: 1
+    },
+    icon: {
+      marginRight: 12,
+      opacity: 0.9
+    },
+    menuText: {
+      fontSize: 15,
+      fontWeight: '600'
+    },
+    divider: {
+      height: 1,
+      width: '100%',
+      opacity: 0.2
+    }
+  }));
+  const {
+    colors
+  } = useTheme();
   const menuWidth = 160;
   const menuHeight = 90; // reduced from 110 to remove empty space
   const arrowHeight = 10;
   const arrowWidth = 10;
-
   let menuTop = 90;
   let menuLeft = 20;
   let arrowLeft = 0;
   let arrowTop = 0;
-
   if (anchor) {
     menuTop = anchor.y - menuHeight - arrowHeight;
     if (menuTop < 50) {
-      menuTop = anchor.y + widgetSize + arrowHeight; 
+      menuTop = anchor.y + widgetSize + arrowHeight;
     }
-
-    menuLeft = anchor.x + (widgetSize / 2) - (menuWidth / 2);
+    menuLeft = anchor.x + widgetSize / 2 - menuWidth / 2;
     menuLeft = Math.max(10, Math.min(screenWidth - menuWidth - 10, menuLeft));
-
-    arrowLeft = anchor.x + (widgetSize / 2) - arrowWidth;
+    arrowLeft = anchor.x + widgetSize / 2 - arrowWidth;
     arrowTop = menuTop < anchor.y ? menuTop + menuHeight - 1 : menuTop - arrowHeight + 1;
   }
-
   const isPointingDown = anchor && menuTop < anchor.y;
-
-  return (
-    <Modal visible={visible} transparent animationType="fade">
+  return <Modal visible={visible} transparent animationType="fade">
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.overlay}>
           {/* Arrow Border */}
-          {anchor && (
-            <View style={{
-              position: 'absolute',
-              top: arrowTop + (isPointingDown ? 1 : -1),
-              left: arrowLeft,
-              width: 0,
-              height: 0,
-              borderLeftWidth: arrowWidth,
-              borderRightWidth: arrowWidth,
-              borderTopWidth: isPointingDown ? arrowHeight : 0,
-              borderBottomWidth: isPointingDown ? 0 : arrowHeight,
-              borderLeftColor: 'transparent',
-              borderRightColor: 'transparent',
-              borderTopColor: isPointingDown ? colors.border : 'transparent',
-              borderBottomColor: isPointingDown ? 'transparent' : colors.border,
-              zIndex: 1,
-            }} />
-          )}
+          {anchor && <View style={{
+          position: 'absolute',
+          top: arrowTop + (isPointingDown ? 1 : -1),
+          left: arrowLeft,
+          width: 0,
+          height: 0,
+          borderLeftWidth: arrowWidth,
+          borderRightWidth: arrowWidth,
+          borderTopWidth: isPointingDown ? arrowHeight : 0,
+          borderBottomWidth: isPointingDown ? 0 : arrowHeight,
+          borderLeftColor: 'transparent',
+          borderRightColor: 'transparent',
+          borderTopColor: isPointingDown ? colors.border : 'transparent',
+          borderBottomColor: isPointingDown ? 'transparent' : colors.border,
+          zIndex: 1
+        }} />}
 
           {/* Arrow Fill */}
-          {anchor && (
-            <View style={{
-              position: 'absolute',
-              top: arrowTop + (isPointingDown ? 0 : 0),
-              left: arrowLeft,
-              width: 0,
-              height: 0,
-              borderLeftWidth: arrowWidth,
-              borderRightWidth: arrowWidth,
-              borderTopWidth: isPointingDown ? arrowHeight : 0,
-              borderBottomWidth: isPointingDown ? 0 : arrowHeight,
-              borderLeftColor: 'transparent',
-              borderRightColor: 'transparent',
-              borderTopColor: isPointingDown ? colors.card : 'transparent',
-              borderBottomColor: isPointingDown ? 'transparent' : colors.card,
-              zIndex: 3,
-            }} />
-          )}
+          {anchor && <View style={{
+          position: 'absolute',
+          top: arrowTop + (isPointingDown ? 0 : 0),
+          left: arrowLeft,
+          width: 0,
+          height: 0,
+          borderLeftWidth: arrowWidth,
+          borderRightWidth: arrowWidth,
+          borderTopWidth: isPointingDown ? arrowHeight : 0,
+          borderBottomWidth: isPointingDown ? 0 : arrowHeight,
+          borderLeftColor: 'transparent',
+          borderRightColor: 'transparent',
+          borderTopColor: isPointingDown ? colors.card : 'transparent',
+          borderBottomColor: isPointingDown ? 'transparent' : colors.card,
+          zIndex: 3
+        }} />}
 
           {/* Menu Box */}
-          <Pressable 
-            onPress={(e) => { e.stopPropagation?.(); }}
-            style={[styles.menu, { 
-            backgroundColor: colors.card, 
-            borderColor: colors.border,
-            top: anchor ? menuTop : 90,
-            left: anchor ? menuLeft : 20,
-            height: menuHeight,
-            width: menuWidth,
-          }]}>
+          <Pressable onPress={e => {
+          e.stopPropagation?.();
+        }} style={[styles.menu, {
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+          top: anchor ? menuTop : 90,
+          left: anchor ? menuLeft : 20,
+          height: menuHeight,
+          width: menuWidth
+        }]}>
             <TouchableOpacity activeOpacity={1} style={styles.menuItem} onPress={onViewersPress}>
               <Eye size={18} color="#FFD700" style={styles.icon} />
-              <Text style={[styles.menuText, { color: '#FFD700' }]}>Viewers</Text>
+              <Text style={[styles.menuText, {
+              color: '#FFD700'
+            }]}>Viewers</Text>
             </TouchableOpacity>
             
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <View style={[styles.divider, {
+            backgroundColor: colors.border
+          }]} />
             
             <TouchableOpacity activeOpacity={1} style={styles.menuItem} onPress={onProfilePress}>
               <User size={18} color="#00E5FF" style={styles.icon} />
-              <Text style={[styles.menuText, { color: '#00E5FF' }]}>Profile</Text>
+              <Text style={[styles.menuText, {
+              color: '#00E5FF'
+            }]}>Profile</Text>
             </TouchableOpacity>
           </Pressable>
         </View>
       </TouchableWithoutFeedback>
-    </Modal>
-  );
+    </Modal>;
 };
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  menu: {
-    position: 'absolute',
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 8,
-    zIndex: 2,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    flex: 1,
-  },
-  icon: {
-    marginRight: 12,
-    opacity: 0.9,
-  },
-  menuText: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  divider: {
-    height: 1,
-    width: '100%',
-    opacity: 0.2,
-  },
-});

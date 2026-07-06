@@ -1,9 +1,8 @@
+import { useCurrentTheme } from "@/core/store/useThemeStore";
+import { useStyles } from "@/core/hooks/useStyles";
 import React from 'react';
-import {
-  View, Text, TouchableOpacity, StyleSheet,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Heart, MessageCircle } from 'lucide-react-native';
-
 interface CrimChartFooterProps {
   username: string;
   chartName: string;
@@ -17,7 +16,6 @@ interface CrimChartFooterProps {
   onChartTap: () => void;
   onLikeTap?: () => void;
 }
-
 export const CrimChartFooter: React.FC<CrimChartFooterProps> = ({
   likes,
   comments,
@@ -26,19 +24,49 @@ export const CrimChartFooter: React.FC<CrimChartFooterProps> = ({
   chartPoints,
   themeColor = '#FACD11',
   onChartTap,
-  onLikeTap,
+  onLikeTap
 }) => {
-  return (
-    <View style={styles.container}>
+  const theme = useCurrentTheme();
+  const styles = useStyles(colors => ({
+    container: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingVertical: 8
+    },
+    engagementRow: {
+      flexDirection: 'row',
+      gap: 16
+    },
+    engBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4
+    },
+    engText: {
+      color: 'rgba(255,255,255,0.7)',
+      fontSize: 14,
+      fontWeight: '600'
+    },
+    chartBtn: {
+      borderRadius: 20,
+      paddingHorizontal: 16,
+      paddingVertical: 7
+    },
+    chartBtnText: {
+      fontWeight: '800',
+      fontSize: 13
+    }
+  }));
+  return <View style={styles.container}>
       {/* Engagement counters */}
       <View style={styles.engagementRow}>
         <TouchableOpacity activeOpacity={1} style={styles.engBtn} onPress={onLikeTap}>
-          <Heart
-            color={isLiked ? '#FF5252' : 'rgba(255,255,255,0.6)'}
-            size={20}
-            fill={isLiked ? '#FF5252' : 'none'}
-          />
-          <Text style={[styles.engText, isLiked && { color: '#FF5252' }]}>
+          <Heart color={isLiked ? '#FF5252' : 'rgba(255,255,255,0.6)'} size={20} fill={isLiked ? '#FF5252' : 'none'} />
+          <Text style={[styles.engText, isLiked && {
+          color: '#FF5252'
+        }]}>
             {likes != null ? likes : '–'}
           </Text>
         </TouchableOpacity>
@@ -50,39 +78,14 @@ export const CrimChartFooter: React.FC<CrimChartFooterProps> = ({
       </View>
 
       {/* Chart button */}
-      <TouchableOpacity
-        style={[
-          styles.chartBtn,
-          { backgroundColor: isCharted ? themeColor : 'rgba(255,255,255,0.12)' },
-        ]}
-        onPress={onChartTap}
-        activeOpacity={0.85}
-      >
-        <Text
-          style={[styles.chartBtnText, { color: isCharted ? '#000' : '#FFF' }]}
-        >
+      <TouchableOpacity style={[styles.chartBtn, {
+      backgroundColor: isCharted ? themeColor : 'rgba(255,255,255,0.12)'
+    }]} onPress={onChartTap} activeOpacity={0.85}>
+        <Text style={[styles.chartBtnText, {
+        color: isCharted ? theme.colors.background : theme.colors.text
+      }]}>
           👑 {chartPoints} Crowns
         </Text>
       </TouchableOpacity>
-    </View>
-  );
+    </View>;
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  engagementRow: { flexDirection: 'row', gap: 16 },
-  engBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  engText: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: '600' },
-  chartBtn: {
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 7,
-  },
-  chartBtnText: { fontWeight: '800', fontSize: 13 },
-});

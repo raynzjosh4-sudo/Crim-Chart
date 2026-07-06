@@ -5,6 +5,9 @@ import {
 } from 'react-native';
 import { Play } from 'lucide-react-native';
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
+import { ThemeTokens } from '@/core/theme/themes';
 
 interface ChannelsWidgetProps {
   models: CrimChartUserModel[];
@@ -17,6 +20,9 @@ export const ChannelsWidget: React.FC<ChannelsWidgetProps> = ({
   onSeeAll,
   onChannelPress,
 }) => {
+  const theme = useCurrentTheme();
+  const styles = useStyles(themeStyles);
+  
   if (models.length === 0) return null;
 
   return (
@@ -47,7 +53,7 @@ export const ChannelsWidget: React.FC<ChannelsWidgetProps> = ({
                 style={styles.img}
               />
               <View style={styles.playBadge}>
-                <Play color="#FFF" size={12} fill="#FFF" />
+                <Play color={theme.colors.onPrimary} size={12} fill={theme.colors.onPrimary} />
               </View>
             </View>
             <Text style={styles.cardName} numberOfLines={2}>
@@ -63,7 +69,7 @@ export const ChannelsWidget: React.FC<ChannelsWidgetProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = (colors: ThemeTokens) => StyleSheet.create({
   container: { marginBottom: 8 },
   header: {
     flexDirection: 'row',
@@ -73,12 +79,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   title: {
-    color: '#FFF',
+    color: colors.text,
     fontWeight: '900',
     fontSize: 16,
     letterSpacing: -0.2,
   },
-  seeAll: { color: '#FACD11', fontWeight: '800', fontSize: 13 },
+  seeAll: { color: colors.primary, fontWeight: '800', fontSize: 13 },
   list: { paddingHorizontal: 16, gap: 12 },
   card: { width: 120, alignItems: 'center' },
   imgWrapper: {
@@ -86,7 +92,7 @@ const styles = StyleSheet.create({
     height: 160,
     borderRadius: 14,
     overflow: 'hidden',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: colors.surface,
     marginBottom: 8,
     position: 'relative',
   },
@@ -103,14 +109,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cardName: {
-    color: '#FFF',
+    color: colors.text,
     fontWeight: '700',
     fontSize: 12,
     textAlign: 'center',
     lineHeight: 16,
   },
   cardSub: {
-    color: 'rgba(255,255,255,0.45)',
+    color: colors.textSecondary,
     fontSize: 10,
     marginTop: 2,
     textAlign: 'center',

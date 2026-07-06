@@ -5,7 +5,7 @@ import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
 import { useRouter } from 'expo-router';
 import { Eye, Tag } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Platform, Text, TouchableOpacity, View } from 'react-native';
 
 import { LikeAction } from '@/channel/CRimChartMassageBubble/comment_action/like/LikeAction';
 import { CommentActionWidget } from '@/channel/CRimChartMassageBubble/comments/CommentActionWidget';
@@ -31,6 +31,7 @@ export interface RegularPostCardProps {
   commentsCount?: number;
   tagsCount?: number;
   viewsCount?: number;
+  downloadsCount?: number;
   isLiked?: boolean;
   postId?: string | null;
   onTagTap?: () => void;
@@ -57,6 +58,7 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
   commentsCount = 0,
   tagsCount = 0,
   viewsCount = 0,
+  downloadsCount = 0,
   isLiked = false,
   postId,
   onTagTap,
@@ -75,6 +77,7 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
   const router = useRouter();
   const [tagOverlayVisible, setTagOverlayVisible] = useState(false);
   const [postOptionsVisible, setPostOptionsVisible] = useState(false);
+  const [postOptionsPosition, setPostOptionsPosition] = useState<{ x: number; y: number } | undefined>(undefined);
   const styles = useStyles(themeStyles);
   const theme = useCurrentTheme();
 
@@ -102,7 +105,12 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
         source_type={source_type}
         timeAgo={timeAgo}
         onAvatarTap={goToProfile}
-        onMoreTap={() => setPostOptionsVisible(true)}
+        onMoreTap={(e: any) => {
+          if (Platform.OS === 'web' && e?.nativeEvent) {
+            setPostOptionsPosition({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
+          }
+          setPostOptionsVisible(true);
+        }}
         channelId={channelId}
         channelAvatarUrl={channelAvatarUrl}
         channelName={channelName}
@@ -118,7 +126,7 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
 
       {/* Media */}
       {audioUrl ? (
-        <ChannelAudioPostWidget audioUrl={audioUrl} thumbnailUrl={thumbnailUrl ?? undefined} metadata={metadata} isActive={isActive} />
+        <ChannelAudioPostWidget audioUrl={audioUrl} thumbnailUrl={thumbnailUrl ?? undefined} metadata={metadata} isActive={isActive} downloadsCount={downloadsCount} postId={postId ?? undefined} />
       ) : allImages.length > 0 ? (
         <ChannelImagePostWidget images={allImages} />
       ) : null}
@@ -166,6 +174,7 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
         postId={postId ?? ''}
         visible={postOptionsVisible}
         onClose={() => setPostOptionsVisible(false)}
+        anchorPosition={postOptionsPosition}
       />
     </View>
   );

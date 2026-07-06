@@ -3,6 +3,9 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Modal,
 } from 'react-native';
 import { Settings, Info, LogOut, X } from 'lucide-react-native';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
+import { ThemeTokens } from '@/core/theme/themes';
 
 interface MenuAction {
   id: string;
@@ -27,17 +30,20 @@ export const MainFeedMenu: React.FC<MainFeedMenuProps> = ({
   onAbout,
   onLogout,
 }) => {
+  const theme = useCurrentTheme();
+  const styles = useStyles(themeStyles);
+
   const actions: MenuAction[] = [
     {
       id: 'settings',
       label: 'Settings',
-      icon: <Settings color="#FFF" size={20} />,
+      icon: <Settings color={theme.colors.text} size={20} />,
       onPress: () => { onClose(); onSettings?.(); },
     },
     {
       id: 'about',
       label: 'About CrimChart',
-      icon: <Info color="#FFF" size={20} />,
+      icon: <Info color={theme.colors.text} size={20} />,
       onPress: () => { onClose(); onAbout?.(); },
     },
     {
@@ -77,14 +83,14 @@ export const MainFeedMenu: React.FC<MainFeedMenuProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = (colors: ThemeTokens) => StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
   menu: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
@@ -97,7 +103,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  menuTitle: { color: '#FFF', fontSize: 17, fontWeight: '900' },
+  menuTitle: { color: colors.text, fontSize: 17, fontWeight: '900' },
   item: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -106,6 +112,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: 'rgba(255,255,255,0.08)',
   },
-  itemLabel: { color: '#FFF', fontSize: 15, fontWeight: '600' },
-  destructive: { color: '#FF5252' },
+  itemLabel: { color: colors.text, fontSize: 15, fontWeight: '600' },
+  destructive: { color: colors.error },
 });

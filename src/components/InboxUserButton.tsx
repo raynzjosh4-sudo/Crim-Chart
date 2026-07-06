@@ -246,7 +246,7 @@ export const InboxUserButton: React.FC<InboxUserButtonProps> = ({ targetUserId, 
 
 const themeStyles = (colors: ThemeTokens, scale: number) => StyleSheet.create({
   text: {
-    color: '#FFF',
+    color: colors.text,
     fontWeight: '700',
     fontSize: 13 * scale
   },

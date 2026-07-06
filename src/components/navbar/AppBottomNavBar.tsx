@@ -1,11 +1,11 @@
-import { BadgeIcon } from '@/mainFeed/features/bottomappbar/iconwithbarge/BadgeIcon'; // Assuming this exists
-import { Compass, MessageSquare, Clapperboard, PlusCircle, Home } from 'lucide-react-native';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { AppBottomNavBarProps } from './AppBottomNavBarProps';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
+import { BadgeIcon } from '@/mainFeed/features/bottomappbar/iconwithbarge/BadgeIcon'; // Assuming this exists
+import { Clapperboard, Compass, Home, MessageSquare, PlusCircle } from 'lucide-react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppBottomNavBarProps } from './AppBottomNavBarProps';
 
 export const AppBottomNavBar = ({
 
@@ -141,3 +141,4 @@ const themeStyles = (colors: ThemeTokens, scale: number): any => ({
     justifyContent: 'center' as const,
   },
 });
+

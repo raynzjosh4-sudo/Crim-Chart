@@ -1,5 +1,7 @@
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ChevronLeft } from 'lucide-react-native';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 import { ChannelAvatar } from '@/channel/components/channelavatarimage/ChannelAvatar';
 
@@ -16,12 +18,51 @@ export const ChannelTitleBar: React.FC<ChannelTitleBarProps> = ({
   channelImageUrl,
   onBackPress
 }) => {
+  const theme = useCurrentTheme();
+  const styles = useStyles(colors => ({
+    container: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+    },
+    leftSection: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      flex: 1,
+    },
+    backButton: {
+      padding: 4,
+      marginRight: 8,
+    },
+    title: {
+      flex: 1,
+      color: colors.text,
+      fontSize: 24,
+      fontWeight: '900' as const,
+      marginRight: 12,
+    },
+    actions: {
+      flexDirection: 'row' as const,
+      gap: 12,
+    },
+    actionCircle: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.surfaceVariant,
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
+    },
+  }));
+
   return (
     <View style={styles.container}>
       <View style={styles.leftSection}>
         {onBackPress && (
           <TouchableOpacity activeOpacity={1} style={styles.backButton} onPress={onBackPress}>
-            <ChevronLeft size={28} color="#FFF" />
+            <ChevronLeft size={28} color={theme.colors.text} />
           </TouchableOpacity>
         )}
         {channelId && (
@@ -35,43 +76,5 @@ export const ChannelTitleBar: React.FC<ChannelTitleBarProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  leftSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  backButton: {
-    padding: 4,
-    marginRight: 8,
-  },
-  title: {
-    flex: 1,
-    color: '#FFF',
-    fontSize: 24,
-    fontWeight: '900',
-    marginRight: 12,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  actionCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
 
 export default function IgnoredRoute() { return null; }

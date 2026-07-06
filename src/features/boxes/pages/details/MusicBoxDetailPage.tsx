@@ -1,3 +1,5 @@
+import { useCurrentTheme } from "@/core/store/useThemeStore";
+import { useStyles } from "@/core/hooks/useStyles";
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import { CommentSheet } from '@/components/comments/CommentSheet';
 import { ChartLinearLoader } from '@/components/CrimchartLoader/ChartLinearLoader';
@@ -20,22 +22,109 @@ import { FullPageShimmer } from '../../components/details/MusicBoxDetailShimmer'
 import { MusicBoxDetailTrackTile } from '../../components/details/MusicBoxDetailTrackTile';
 import { TrendingInBoxWidget } from '../../components/details/TrendingInBoxWidget';
 import { MusicPostingPage } from '../../components/music_posting/MusicPostingPage';
-
-const { width: windowWidth } = Dimensions.get('window');
-
-export const MusicBoxDetailPage = ({ id, onClose }: { id: string; onClose?: () => void }) => {
+const {
+  width: windowWidth
+} = Dimensions.get('window');
+export const MusicBoxDetailPage = ({
+  id,
+  onClose
+}: {
+  id: string;
+  onClose?: () => void;
+}) => {
+  const theme = useCurrentTheme();
+  const styles = useStyles(colors => ({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background
+    },
+    listContent: {
+      paddingBottom: 40
+    },
+    separator: {
+      height: 1,
+      backgroundColor: 'rgba(255,255,255,0.1)',
+      marginVertical: 20,
+      marginHorizontal: 16
+    },
+    topBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingVertical: 12
+    },
+    backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: 'rgba(255,255,255,0.1)',
+      justifyContent: 'center',
+      alignItems: 'center'
+    },
+    pageTitle: {
+      color: colors.text,
+      fontSize: 18,
+      fontWeight: '700',
+      flex: 1,
+      textAlign: 'center'
+    },
+    smallBoxWidget: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginHorizontal: 16,
+      marginTop: 16,
+      marginBottom: 16,
+      backgroundColor: 'rgba(255,255,255,0.05)',
+      borderRadius: 16,
+      padding: 12
+    },
+    smallBoxCover: {
+      width: 56,
+      height: 56,
+      borderRadius: 12
+    },
+    smallBoxInfo: {
+      flex: 1,
+      marginLeft: 12
+    },
+    smallBoxTitle: {
+      color: colors.text,
+      fontSize: 15,
+      fontWeight: '700'
+    },
+    smallBoxDescription: {
+      color: 'rgba(255,255,255,0.6)',
+      fontSize: 12,
+      marginTop: 4
+    }
+  }));
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const {
+    width
+  } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
-
   const currentUser = useAuthStore(s => s.user);
-  const { trackInteraction } = useBoxInteractionTracker();
-  const { members, isLoading: isLoadingMembers, isPaginating: isPaginatingMembers, loadMore: loadMoreMembers } = useBoxMembers(id);
-
-  const { box: fetchedBox, isLoading } = useBoxDetail(id);
-
-  const { items: fetchedItems, isLoading: isItemsLoading, isFetchingMore, loadMore } = useBoxItems(id);
+  const {
+    trackInteraction
+  } = useBoxInteractionTracker();
+  const {
+    members,
+    isLoading: isLoadingMembers,
+    isPaginating: isPaginatingMembers,
+    loadMore: loadMoreMembers
+  } = useBoxMembers(id);
+  const {
+    box: fetchedBox,
+    isLoading
+  } = useBoxDetail(id);
+  const {
+    items: fetchedItems,
+    isLoading: isItemsLoading,
+    isFetchingMore,
+    loadMore
+  } = useBoxItems(id);
 
   // Track view interaction when the page mounts
   React.useEffect(() => {
@@ -43,9 +132,6 @@ export const MusicBoxDetailPage = ({ id, onClose }: { id: string; onClose?: () =
       trackInteraction(id, currentUser.id, 'view');
     }
   }, [id, currentUser?.id, trackInteraction]);
-
-
-
   const displayedItems = React.useMemo(() => {
     return fetchedItems.map(item => ({
       id: item.id,
@@ -69,24 +155,19 @@ export const MusicBoxDetailPage = ({ id, onClose }: { id: string; onClose?: () =
         id: item.post.authorId,
         name: item.post.authorName || 'Unknown',
         avatarUrl: item.post.authorAvatar || ''
-      },
+      }
     }));
   }, [fetchedItems]);
-
   const [activeTrackId, setActiveTrackId] = useState<string | null>(null);
   const [viewerMemberId, setViewerMemberId] = useState<string | null>(null);
   const [selectedFilterUserId, setSelectedFilterUserId] = useState<string | null>(null);
-
   const [showComments, setShowComments] = useState(false);
   const [activePostId, setActivePostId] = useState<string | null>(null);
-  
   const [showPostingModal, setShowPostingModal] = useState(false);
-
   const isFocused = useIsFocused();
   const pathname = usePathname();
   const isPageActive = isFocused && !pathname.includes('now-playing');
   const [appStateVisible, setAppStateVisible] = useState(AppState.currentState);
-
   React.useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
       setAppStateVisible(nextAppState);
@@ -102,247 +183,130 @@ export const MusicBoxDetailPage = ({ id, onClose }: { id: string; onClose?: () =
       setActiveTrackId(displayedItems[0].id);
     }
   }, [displayedItems, activeTrackId]);
-
   const activeMember = React.useMemo(() => {
     return members.find(m => m.id === viewerMemberId);
   }, [members, viewerMemberId]);
-
   const filteredItems = React.useMemo(() => {
     if (!selectedFilterUserId) return displayedItems;
     return displayedItems.filter(item => item.addedBy.id === selectedFilterUserId);
   }, [displayedItems, selectedFilterUserId]);
-
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 90,
-    minimumViewTime: 300,
+    minimumViewTime: 300
   }).current;
-
-  const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
+  const onViewableItemsChanged = useRef(({
+    viewableItems
+  }: {
+    viewableItems: ViewToken[];
+  }) => {
     if (viewableItems.length > 0) {
       setActiveTrackId(viewableItems[0].item.id);
     }
   }).current;
-
   const flatListRef = useRef<FlatList<any>>();
-
   const renderHeader = () => {
-    return (
-      <View>
-        <TrendingInBoxWidget
-          boxId={id}
-          onTrackPress={(track) => {
-            router.push({
-              pathname: '/now-playing',
-              params: {
-                title: track.title,
-                artist: track.artist,
-                coverUrl: track.thumbnailUrl,
-                audioUrl: track.audioUrl || '',
-              }
-            });
-          }}
-        />
+    return <View>
+        <TrendingInBoxWidget boxId={id} onTrackPress={track => {
+        router.push({
+          pathname: '/now-playing',
+          params: {
+            title: track.title,
+            artist: track.artist,
+            coverUrl: track.thumbnailUrl,
+            audioUrl: track.audioUrl || ''
+          }
+        });
+      }} />
 
-        <RecentContributorsWidget
-          contributors={members}
-          isLoading={isLoadingMembers}
-          isPaginating={isPaginatingMembers}
-          onLoadMore={loadMoreMembers}
-          boxId={id}
-          selectedMemberId={selectedFilterUserId}
-          onSelectMember={(id) => setSelectedFilterUserId(id)}
-          onLongPressMember={(id) => setViewerMemberId(id)}
-          onAddPress={() => {
-            if (isDesktop) {
-              setShowPostingModal(true);
-            } else {
-              router.push(`/music-box/post/${id}`);
-            }
-          }}
-        />
-      </View>
-    );
+        <RecentContributorsWidget contributors={members} isLoading={isLoadingMembers} isPaginating={isPaginatingMembers} onLoadMore={loadMoreMembers} boxId={id} selectedMemberId={selectedFilterUserId} onSelectMember={id => setSelectedFilterUserId(id)} onLongPressMember={id => setViewerMemberId(id)} onAddPress={() => {
+        if (isDesktop) {
+          setShowPostingModal(true);
+        } else {
+          router.push(`/music-box/post/${id}`);
+        }
+      }} />
+      </View>;
   };
-
-  const renderSongRow = ({ item: song }: { item: any }) => {
+  const renderSongRow = ({
+    item: song
+  }: {
+    item: any;
+  }) => {
     const isPlaying = activeTrackId === song.id && isPageActive && appStateVisible === 'active';
-    return (
-      <MusicBoxDetailTrackTile
-        song={song}
-        isPlaying={isPlaying}
-        onCommentPress={(postId) => {
-          setActivePostId(postId);
-          setShowComments(true);
-        }}
-      />
-    );
+    return <MusicBoxDetailTrackTile song={song} isPlaying={isPlaying} onCommentPress={postId => {
+      setActivePostId(postId);
+      setShowComments(true);
+    }} />;
   };
-
   const renderFooter = () => {
     if (!isFetchingMore) return null;
-    return (
-      <View style={{ marginTop: 20 }}>
+    return <View style={{
+      marginTop: 20
+    }}>
         <PaginationShimmer />
-      </View>
-    );
+      </View>;
   };
-
   const isOwner = currentUser?.id === (fetchedBox as any)?.raw?.owner_id;
   const showInitialLoading = (isLoading || isItemsLoading) && displayedItems.length === 0;
-
-  return (
-    <VisibilityBoxTrackerWrapper
-      box={fetchedBox}
-      isCurrentUser={isOwner}
-      actionType="view_box"
-    >
+  return <VisibilityBoxTrackerWrapper box={fetchedBox} isCurrentUser={isOwner} actionType="view_box">
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        <ChartAppBar
-          onBack={onClose}
-          backgroundColor="transparent"
-          showBorder={false}
-          useSafeArea={false}
-          titleWidget={<View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start' }}>
-            {!!fetchedBox?.coverImageUrl && (
-              <Image
-                source={{ uri: fetchedBox.coverImageUrl }}
-                style={{ width: 36, height: 36, borderRadius: 18, marginRight: 12 }}
-                contentFit="cover" />
-            )}
-            <Text style={{ color: '#FFF', fontSize: 18, fontWeight: '700', flexShrink: 1 }} numberOfLines={1}>
+        <ChartAppBar onBack={onClose} backgroundColor="transparent" showBorder={false} useSafeArea={false} titleWidget={<View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-start'
+      }}>
+            {!!fetchedBox?.coverImageUrl && <Image source={{
+          uri: fetchedBox.coverImageUrl
+        }} style={{
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          marginRight: 12
+        }} contentFit="cover" />}
+            <Text style={{
+          color: theme.colors.text,
+          fontSize: 18,
+          fontWeight: '700',
+          flexShrink: 1
+        }} numberOfLines={1}>
               {fetchedBox?.title || ''}
             </Text>
           </View>} title={''} />
 
-        {(isLoading || isItemsLoading || isFetchingMore) && (
-          <View style={{ height: 2, width: '100%', backgroundColor: 'transparent' }}>
+        {(isLoading || isItemsLoading || isFetchingMore) && <View style={{
+        height: 2,
+        width: '100%',
+        backgroundColor: 'transparent'
+      }}>
             <ChartLinearLoader isLoading={true} />
-          </View>
-        )}
+          </View>}
 
-        {showInitialLoading ? (
-          <FullPageShimmer />
-        ) : filteredItems.length === 0 ? (
-          <View style={{ flex: 1 }}>
+        {showInitialLoading ? <FullPageShimmer /> : filteredItems.length === 0 ? <View style={{
+        flex: 1
+      }}>
             {renderHeader()}
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-              <Text style={{ color: 'rgba(255,255,255,0.5)' }}>
+            <View style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center'
+        }}>
+              <Text style={{
+            color: 'rgba(255,255,255,0.5)'
+          }}>
                 {selectedFilterUserId ? "No tracks from this user." : "No tracks added yet."}
               </Text>
             </View>
-          </View>
-        ) : (
-          <FlatList
-            ref={flatListRef}
-            data={filteredItems}
-            keyExtractor={(item) => item.id}
-            renderItem={renderSongRow}
-            ItemSeparatorComponent={() => <View style={styles.separator} />}
-            ListHeaderComponent={renderHeader()}
-            ListFooterComponent={renderFooter()}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            onViewableItemsChanged={onViewableItemsChanged}
-            viewabilityConfig={viewabilityConfig}
-            onEndReached={loadMore}
-            onEndReachedThreshold={0.5}
-          />
-        )}
+          </View> : <FlatList ref={flatListRef} data={filteredItems} keyExtractor={item => item.id} renderItem={renderSongRow} ItemSeparatorComponent={() => <View style={styles.separator} />} ListHeaderComponent={renderHeader()} ListFooterComponent={renderFooter()} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false} onViewableItemsChanged={onViewableItemsChanged} viewabilityConfig={viewabilityConfig} onEndReached={loadMore} onEndReachedThreshold={0.5} />}
       </SafeAreaView>
 
       {/* Member Activity Status Modal */}
-      {viewerMemberId && activeMember && (
-        <BoxMemberActivityViewer
-          visible={!!viewerMemberId}
-          userId={activeMember.id}
-          userName={activeMember.name}
-          userAvatarUrl={activeMember.avatarUrl}
-          boxId={id}
-          onClose={() => setViewerMemberId(null)}
-        />
-      )}
+      {viewerMemberId && activeMember && <BoxMemberActivityViewer visible={!!viewerMemberId} userId={activeMember.id} userName={activeMember.name} userAvatarUrl={activeMember.avatarUrl} boxId={id} onClose={() => setViewerMemberId(null)} />}
 
-      {showPostingModal && isDesktop && (
-        <Modal visible={true} transparent={true} animationType="fade" onRequestClose={() => setShowPostingModal(false)}>
+      {showPostingModal && isDesktop && <Modal visible={true} transparent={true} animationType="fade" onRequestClose={() => setShowPostingModal(false)}>
           <MusicPostingPage boxId={id} isInline onCloseInline={() => setShowPostingModal(false)} />
-        </Modal>
-      )}
+        </Modal>}
 
       {/* Comment Sheet */}
-      {showComments && activePostId && (
-        <CommentSheet
-          postId={activePostId}
-          visible={showComments}
-          onClose={() => setShowComments(false)}
-        />
-      )}
-    </VisibilityBoxTrackerWrapper>
-  );
+      {showComments && activePostId && <CommentSheet postId={activePostId} visible={showComments} onClose={() => setShowComments(false)} />}
+    </VisibilityBoxTrackerWrapper>;
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  listContent: {
-    paddingBottom: 40,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    marginVertical: 20,
-    marginHorizontal: 16,
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pageTitle: {
-    color: '#FFF',
-    fontSize: 18,
-    fontWeight: '700',
-    flex: 1,
-    textAlign: 'center',
-  },
-  smallBoxWidget: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 16,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 16,
-    padding: 12,
-  },
-  smallBoxCover: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
-  },
-  smallBoxInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  smallBoxTitle: {
-    color: '#FFF',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  smallBoxDescription: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 12,
-    marginTop: 4,
-  },
-});

@@ -46,6 +46,7 @@ interface AuthActions {
   setPassword: (password: string) => void;
   setBirthday: (birthday: Date) => void;
   setGender: (gender: string) => void;
+  setMusicCategory: (category: string) => void;
   setCountryName: (countryName: string) => void;
   setUsernameAndCheck: (username: string) => Promise<boolean>;
   createAccountInitial: () => Promise<boolean | 'OTP_REQUIRED'>;
@@ -175,6 +176,13 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   setGender: (gender) => set((state) => {
     if (!state.pendingSignUp) return state;
     const updated = { ...state.pendingSignUp, gender };
+    Storage.setItemAsync('saved_pending_signup', JSON.stringify(updated));
+    return { pendingSignUp: updated };
+  }),
+
+  setMusicCategory: (musicCategory) => set((state) => {
+    if (!state.pendingSignUp) return state;
+    const updated = { ...state.pendingSignUp, musicCategory };
     Storage.setItemAsync('saved_pending_signup', JSON.stringify(updated));
     return { pendingSignUp: updated };
   }),

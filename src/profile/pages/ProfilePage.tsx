@@ -1,8 +1,9 @@
 import CrimchartBackButton from '@/components/CrimChartBackButton/CrimChart_back_button';
+import { useStyles } from '@/core/hooks/useStyles';
+import { ThemeTokens } from '@/core/theme/themes';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { UserBoxesWidget } from '@/features/boxes/components/UserBoxesWidget';
-import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
-import { getStatusText } from '@/profile/utils/ConnectionStatsUtils';
 import { useRouter } from 'expo-router';
 import { LayoutGrid, Music, Play, Settings } from 'lucide-react-native';
 import { useState } from 'react';
@@ -19,10 +20,12 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { CrimChartUserModel } from '../models/CrimChartUserModel';
 import { MusicProfileTab } from '../tabs/MusicProfileTab';
 import { PhotosProfileTab } from '../tabs/PhotosProfileTab';
 import { PostsProfileTab } from '../tabs/PostsProfileTab';
 import { VideosProfileTab } from '../tabs/VideosProfileTab';
+import { getStatusText } from '../utils/ConnectionStatsUtils';
 
 interface ProfilePageProps {
   userId?: string;
@@ -46,6 +49,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   onOpenConnections,
 }) => {
   const router = useRouter();
+  const theme = useCurrentTheme();
+  const styles = useStyles(themeStyles);
   const currentUser = useAuthStore(s => s.user);
   const user: CrimChartUserModel | null | undefined = userData ?? currentUser;
   const isCurrentUser = !userId || userId === currentUser?.id;
@@ -108,7 +113,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           }
         ]}>
           {showBack ? (
-            <CrimchartBackButton onPress={() => router.back()} color="#FFF" />
+            <CrimchartBackButton onPress={() => router.back()} color={theme.colors.text} />
           ) : <View style={styles.appBarBtn} />}
 
           <View style={{ flex: 1, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }}>
@@ -123,7 +128,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             {isDesktop && showScrolledActions ? customActions : null}
             {!isDesktop && (
               <TouchableOpacity activeOpacity={1} onPress={goToSettings} style={styles.appBarBtn}>
-                {isCurrentUser && <Settings color="#FFF" size={22} />}
+                {isCurrentUser && <Settings color={theme.colors.text} size={22} />}
               </TouchableOpacity>
             )}
           </View>
@@ -250,19 +255,19 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                   {/* Mobile: Mini details string underneath - tappable */}
                   <View style={{ paddingBottom: 0, flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
                     <TouchableOpacity activeOpacity={0.8} onPress={() => openConnections('followers')}>
-                      <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>
-                        <Text style={{ color: '#FFF', fontWeight: '700' }}>{isLoading ? '-' : (user?.followersCount ?? '-')}</Text> followers
+                      <Text style={{ color: theme.colors.textSecondary, fontSize: 13 }}>
+                        <Text style={{ color: theme.colors.text, fontWeight: '700' }}>{isLoading ? '-' : (user?.followersCount ?? '-')}</Text> followers
                       </Text>
                     </TouchableOpacity>
-                    <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13 }}> • </Text>
+                    <Text style={{ color: theme.colors.muted, fontSize: 13 }}> • </Text>
                     <TouchableOpacity activeOpacity={0.8} onPress={() => openConnections('following')}>
-                      <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>
-                        <Text style={{ color: '#FFF', fontWeight: '700' }}>{isLoading ? '-' : (user?.followingCount ?? '-')}</Text> following
+                      <Text style={{ color: theme.colors.textSecondary, fontSize: 13 }}>
+                        <Text style={{ color: theme.colors.text, fontWeight: '700' }}>{isLoading ? '-' : (user?.followingCount ?? '-')}</Text> following
                       </Text>
                     </TouchableOpacity>
-                    <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13 }}> • </Text>
-                    <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>
-                      <Text style={{ color: '#FFF', fontWeight: '700' }}>{isLoading ? '-' : (user?.inboxCount ?? '-')}</Text> inboxes
+                    <Text style={{ color: theme.colors.muted, fontSize: 13 }}> • </Text>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: 13 }}>
+                      <Text style={{ color: theme.colors.text, fontWeight: '700' }}>{isLoading ? '-' : (user?.inboxCount ?? '-')}</Text> inboxes
                     </Text>
                   </View>
                 </>
@@ -291,19 +296,19 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
               style={[styles.tabItem, activeTab === 'photos' && styles.tabItemActive]}
               onPress={() => setActiveTab('photos')}
             >
-              {isDesktop ? <Text style={[styles.tabText, activeTab === 'photos' && styles.tabTextActive]}>Photos</Text> : <LayoutGrid color={activeTab === 'photos' ? '#FFF' : 'rgba(255,255,255,0.4)'} size={22} />}
+              {isDesktop ? <Text style={[styles.tabText, activeTab === 'photos' && styles.tabTextActive]}>Photos</Text> : <LayoutGrid color={activeTab === 'photos' ? theme.colors.text : theme.colors.muted} size={22} />}
             </TouchableOpacity>
             <TouchableOpacity activeOpacity={1}
               style={[styles.tabItem, activeTab === 'videos' && styles.tabItemActive]}
               onPress={() => setActiveTab('videos')}
             >
-              {isDesktop ? <Text style={[styles.tabText, activeTab === 'videos' && styles.tabTextActive]}>Videos</Text> : <Play color={activeTab === 'videos' ? '#FFF' : 'rgba(255,255,255,0.4)'} size={22} />}
+              {isDesktop ? <Text style={[styles.tabText, activeTab === 'videos' && styles.tabTextActive]}>Videos</Text> : <Play color={activeTab === 'videos' ? theme.colors.text : theme.colors.muted} size={22} />}
             </TouchableOpacity>
             <TouchableOpacity activeOpacity={1}
               style={[styles.tabItem, activeTab === 'music' && styles.tabItemActive]}
               onPress={() => setActiveTab('music')}
             >
-              {isDesktop ? <Text style={[styles.tabText, activeTab === 'music' && styles.tabTextActive]}>Music</Text> : <Music color={activeTab === 'music' ? '#FFF' : 'rgba(255,255,255,0.4)'} size={22} />}
+              {isDesktop ? <Text style={[styles.tabText, activeTab === 'music' && styles.tabTextActive]}>Music</Text> : <Music color={activeTab === 'music' ? theme.colors.text : theme.colors.muted} size={22} />}
             </TouchableOpacity>
           </View>
 
@@ -320,8 +325,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0D0D0D' },
+const themeStyles = (colors: ThemeTokens) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.background },
   appBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -329,10 +334,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   appBarBtn: { width: 36, alignItems: 'center' },
-  backArrow: { color: '#FFF', fontSize: 22 },
+  backArrow: { color: colors.text, fontSize: 22 },
   appBarTitle: {
     flex: 1,
-    color: '#FFF',
+    color: colors.text,
     fontWeight: '900',
     fontSize: 16,
     textAlign: 'center',
@@ -354,27 +359,27 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 16,
   },
-  displayNameMobile: { color: '#FFF', fontWeight: '900', fontSize: 20, letterSpacing: -0.5 },
-  handleMobile: { color: 'rgba(255,255,255,0.5)', fontSize: 13, marginTop: 2 },
-  bioMobile: { color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 4, lineHeight: 18 },
+  displayNameMobile: { color: colors.text, fontWeight: '900', fontSize: 20, letterSpacing: -0.5 },
+  handleMobile: { color: colors.textSecondary, fontSize: 13, marginTop: 2 },
+  bioMobile: { color: colors.textSecondary, fontSize: 13, marginTop: 4, lineHeight: 18 },
   avatarMobile: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: colors.surface,
   },
   cameraBadgeMobile: {
     position: 'absolute',
     bottom: -4,
     right: -4,
-    backgroundColor: '#FACD11',
+    backgroundColor: colors.primary,
     width: 24,
     height: 24,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#0D0D0D',
+    borderColor: colors.background,
   },
   statsBadgesRowMobile: {
     flexDirection: 'row',
@@ -388,53 +393,53 @@ const styles = StyleSheet.create({
   avatarActionRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
   actionsContainer: { paddingBottom: 12 },
   userInfoRow: { marginTop: 4 },
-  displayName: { color: '#FFF', fontWeight: '900', fontSize: 22, letterSpacing: -0.5 },
-  crownTitle: { color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: '500', marginLeft: 8 },
-  handle: { color: 'rgba(255,255,255,0.5)', fontSize: 15, marginTop: 2 },
+  displayName: { color: colors.text, fontWeight: '900', fontSize: 22, letterSpacing: -0.5 },
+  crownTitle: { color: colors.textSecondary, fontSize: 11, fontWeight: '500', marginLeft: 8 },
+  handle: { color: colors.textSecondary, fontSize: 15, marginTop: 2 },
   avatar: {
     width: 120,
     height: 120,
     borderRadius: 60,
     borderWidth: 4,
-    borderColor: '#0D0D0D', // Matches background to look like it cuts out
-    backgroundColor: '#1A1A1A',
+    borderColor: colors.background, // Matches background to look like it cuts out
+    backgroundColor: colors.surface,
   },
   cameraBadge: {
     position: 'absolute',
     bottom: 4,
     right: 4,
-    backgroundColor: '#FACD11',
+    backgroundColor: colors.primary,
     width: 32,
     height: 32,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#0D0D0D',
+    borderColor: colors.background,
   },
   followStatsRow: { flexDirection: 'row', gap: 16, marginTop: 4 },
-  followStatText: { color: 'rgba(255,255,255,0.5)', fontSize: 14 },
-  followStatNumber: { color: '#FFF', fontWeight: '700' },
+  followStatText: { color: colors.textSecondary, fontSize: 14 },
+  followStatNumber: { color: colors.text, fontWeight: '700' },
   statsRow: { flexDirection: 'row', gap: 8 },
   statBadge: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: colors.surface,
     borderRadius: 10,
     paddingVertical: 8,
     alignItems: 'center',
   },
-  statBadgeHighlighted: { backgroundColor: 'rgba(250,205,17,0.06)' },
-  statValue: { color: '#FFF', fontSize: 15, fontWeight: '900', letterSpacing: -0.5 },
-  statValueHighlighted: { color: '#FACD11' },
+  statBadgeHighlighted: { backgroundColor: colors.surfaceVariant },
+  statValue: { color: colors.text, fontSize: 15, fontWeight: '900', letterSpacing: -0.5 },
+  statValueHighlighted: { color: colors.primary },
   statLabel: {
-    color: 'rgba(255,255,255,0.4)',
+    color: colors.textSecondary,
     fontSize: 8,
     fontWeight: '800',
     letterSpacing: 0.5,
     marginTop: 2,
   },
-  statLabelHighlighted: { color: 'rgba(250,205,17,0.7)' },
-  bio: { color: 'rgba(255,255,255,0.7)', fontSize: 13, lineHeight: 18 },
+  statLabelHighlighted: { color: colors.primary },
+  bio: { color: colors.textSecondary, fontSize: 13, lineHeight: 18 },
   actionRow: { flexDirection: 'row' },
   actionBtn: {
     flex: 1,
@@ -443,15 +448,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  primaryBtn: { backgroundColor: '#FACD11', flex: 2 },
-  secondaryBtn: { backgroundColor: 'rgba(255,255,255,0.08)', flex: 1 },
-  primaryBtnText: { color: '#000', fontWeight: '800', fontSize: 13 },
-  secondaryBtnText: { color: '#FFF', fontWeight: '700', fontSize: 13 },
+  primaryBtn: { backgroundColor: colors.primary, flex: 2 },
+  secondaryBtn: { backgroundColor: colors.surface, flex: 1 },
+  primaryBtnText: { color: colors.onPrimary, fontWeight: '800', fontSize: 13 },
+  secondaryBtnText: { color: colors.text, fontWeight: '700', fontSize: 13 },
   tabBar: {
     flexDirection: 'row',
     borderBottomWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.1)',
-    backgroundColor: '#0D0D0D',
+    borderColor: colors.surface,
+    backgroundColor: colors.background,
   },
   tabItem: {
     flex: 1,
@@ -460,24 +465,24 @@ const styles = StyleSheet.create({
   },
   tabItemActive: {
     borderBottomWidth: 3,
-    borderBottomColor: '#FACD11',
+    borderBottomColor: colors.primary,
   },
   tabText: {
-    color: 'rgba(255,255,255,0.5)',
+    color: colors.textSecondary,
     fontWeight: '700',
     fontSize: 14,
   },
   tabTextActive: {
-    color: '#FFF',
+    color: colors.text,
   },
   detailsContainer: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: colors.surface,
     padding: 12,
     borderRadius: 8,
     marginTop: 4,
   },
   statsText: {
-    color: 'rgba(255,255,255,0.8)',
+    color: colors.textSecondary,
     fontSize: 12,
     marginBottom: 4,
   },

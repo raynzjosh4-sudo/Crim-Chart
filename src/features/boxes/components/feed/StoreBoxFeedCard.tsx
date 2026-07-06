@@ -7,6 +7,7 @@ import { useInteractionStore } from '@/core/store/useInteractionStore';
 import UserAvatar from '@/components/avatar/UserAvatar';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { PostHeader } from '@/components/PostHeader/PostHeader';
 import { MoreHorizontal, Plus, Tag } from 'lucide-react-native';
 import { useState } from 'react';
 import { Dimensions, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -62,24 +63,14 @@ export const StoreBoxFeedCard = ({ boxId, prefetchedData }: Props) => {
           <FeedPermissionsWrapper permissions={{ canComment: true, canSubmit: boxModel?.allowSubmissions ?? true }}>
           <View style={styles.cardContainer}>
             {/* Post Header */}
-            <View style={styles.postHeader}>
-              <View style={styles.headerLeft}>
-                <View style={{ marginRight: 10 }}>
-                  <UserAvatar 
-                    userId={ownerModel?.id || ''} 
-                    fallbackUrl={ownerModel?.profileImageUrl || undefined} 
-                    name={rawName} 
-                    size={36} 
-                  />
-                </View>
-                <View>
-                  <Text style={styles.creatorName}>{rawName}</Text>
-                  <Text style={styles.headerSubText}>Opened a Store Box</Text>
-                </View>
-              </View>
-              <TouchableOpacity activeOpacity={1}>
-                <MoreHorizontal size={20} color={theme.colors.textSecondary} />
-              </TouchableOpacity>
+            <View style={{ paddingBottom: 12, paddingTop: 4 }}>
+              {ownerModel ? (
+                <PostHeader
+                  author={ownerModel}
+                  timeAgo="Opened a Store Box"
+                  onAvatarTap={() => router.push(`/profile/${ownerModel.id}` as any)}
+                />
+              ) : null}
             </View>
 
             {/* Box Info */}

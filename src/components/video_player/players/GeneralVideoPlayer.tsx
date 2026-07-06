@@ -15,6 +15,7 @@ import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
 
 import { PreloadableVideoPlayer, PreloadStatus } from '@/video/components/PreloadableVideoPlayer';
+import { useDesktopVidsStore } from '@/mainFeed/pages/main_page_widgets/useDesktopVidsStore';
 
 export interface GeneralVideoPlayerProps {
   video: {
@@ -59,7 +60,9 @@ import { TagOverlay } from '@/channel/pages/tag/TagOverlay';
 export const GeneralVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress, onVideoPress, isAdded, isLiked, preloadStatus = 'idle', disableVideoPlayer }: GeneralVideoPlayerProps) => {
   const router = useRouter();
   const [showPlayer, setShowPlayer] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const isMuted = useDesktopVidsStore(state => state.isGlobalMuted);
+  const setIsMuted = useDesktopVidsStore(state => state.setGlobalIsMuted);
+  const setActiveVideo = useDesktopVidsStore(state => state.setActiveVideo);
   const [isCommentSheetVisible, setIsCommentSheetVisible] = useState(false);
   const [tagOverlayVisible, setTagOverlayVisible] = useState(false);
   const [localCommentsCount, setLocalCommentsCount] = useState(Number(video.commentsCount) || 0);
@@ -157,26 +160,11 @@ export const GeneralVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress,
           activeOpacity={0.8}
           delayPressIn={150}
           onPress={() => {
-            if (onVideoPress) {
-                onVideoPress({
-                  id: video.id,
-                  videoUrl: videoToPlay as string,
-                  title: isLocal ? localTitle : video.title,
-                  description: isLocal ? (video.description || '') : (video.description || 'A cinematic video.'),
-                  isLocal: isLocal,
-                  isShort: false,
-                  directorId: video.addedBy?.id,
-                  directorAvatarUrl: video.addedBy?.avatarUrl,
-                  likesCount: video.likes,
-                  viewsCount: video.viewsCount,
-                  commentsCount: localCommentsCount,
-                  isLiked: isLiked,
-                  isAdded: isAdded,
-                  sourceTable: video.sourceTable
-                });
-            } else if (videoToPlay) {
-              setShowPlayer(true);
-            }
+            setIsMuted(!isMuted);
+          }}
+          onLongPress={() => {
+            setActiveVideo(video.id);
+            router.push('/vids');
           }}
         >
           <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>

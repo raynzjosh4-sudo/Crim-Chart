@@ -37,7 +37,7 @@ export const MainFeedCard: React.FC<MainFeedCardProps> = ({ card, isActive }) =>
           sourceTable={data.sourceTable || 'posts'}
           forceIsVisible={isActive}
         >
-          {({ isLiked, likesCount, viewsCount }) => (
+          {({ isLiked, likesCount, viewsCount, downloadsCount }) => (
             <ChannelAndFeedPostModel
               content={data.caption || ''}
               timeAgo={data.timeAgo || ''}
@@ -53,6 +53,7 @@ export const MainFeedCard: React.FC<MainFeedCardProps> = ({ card, isActive }) =>
               commentsCount={data.commentsCount}
               tagsCount={data.tagsCount}
               viewsCount={viewsCount}
+              downloadsCount={downloadsCount}
               isLiked={isLiked}
               authorData={data.author}
               postId={data.id}

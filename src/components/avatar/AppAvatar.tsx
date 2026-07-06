@@ -1,4 +1,4 @@
-import { colors } from '@/core/theme/colors';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { Image as ExpoImage } from 'expo-image';
 import { User } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -51,13 +51,14 @@ export default function AppAvatar({
   const resolvedHasStatus = hasStatus || showStatusRing || false;
   const resolvedIsOnline = isOnline || showActiveDot || false;
   const resolvedOnTap = onTap ?? onImageTap;
+  const theme = useCurrentTheme();
   const RING_THICKNESS = 2.5;
   const RING_SPACING = 4;
   const totalSize = resolvedHasStatus ? size + RING_THICKNESS * 2 + RING_SPACING : size;
 
   const ringColorResolved = isStatusRead
-    ? colors.surfaceVariant
-    : ringColor || colors.primary;
+    ? theme.colors.surfaceVariant
+    : ringColor || theme.colors.primary;
 
   const onlineDotSize = size * 0.28;
   const onlineDotOffset = totalSize * 0.05;
@@ -66,7 +67,7 @@ export default function AppAvatar({
     <View style={[styles.fallback, { width: size, height: size }]}>
       {fallbackIcon ?? (
         <User
-          color="rgba(255,255,255,0.4)"
+          color={theme.colors.textSecondary}
           size={size * 0.5}
         />
       )}
@@ -202,7 +203,7 @@ export default function AppAvatar({
               borderRadius: onlineDotSize / 2,
               right: onlineDotOffset,
               bottom: onlineDotOffset,
-              borderColor: colors.background,
+              borderColor: theme.colors.background,
             },
           ]}
         />

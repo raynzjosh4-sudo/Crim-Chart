@@ -10,10 +10,14 @@ import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { supabase } from '@/core/supabase/supabaseConfig';
 import { ThemeTokens } from '@/core/theme/themes';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { useNotificationWrapper } from '@/core/notifications/useNotificationWrapper';
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
+import { useNotificationStore } from '@/features/notifications/application/useNotificationStore';
+import { useAppNavigation } from '@/core/navigation/useAppNavigation';
 import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { Bell, User } from 'lucide-react-native';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+import { Bell, User, Search } from 'lucide-react-native';
 import { MixedFeedItem } from '../models/MixedFeedItem';
 import { MainFeedBody } from './main_page_widgets/MainFeedBody';
 import { MainFeedSkeletonCard } from './main_page_widgets/MainFeedSkeletonCard';
@@ -33,12 +37,24 @@ export const MainFeedPage = () => {
   const navigation = useNavigation();
   const router = useRouter();
   const user = useAuthStore(s => s.user);
+  const { sendNotification } = useNotificationWrapper();
+  const { navigateToNotifications } = useAppNavigation();
+  const { startLoading, stopLoading } = useGlobalProgress();
+
+  const handleSearchPress = () => {
+    startLoading();
+    setTimeout(() => {
+      router.push('/explore');
+      stopLoading();
+    }, 400);
+  };
 
   const [cards, setCards] = useState<MixedFeedItem[]>(preloadedMainFeed || []);
   const [discoveredChannels, setDiscoveredChannels] = useState<CrimChartUserModel[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isPaginating, setIsPaginating] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const unreadCount = useNotificationStore(s => s.unreadCount);
   const [newItemCount, setNewItemCount] = useState(0);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -426,14 +442,16 @@ export const MainFeedPage = () => {
         backgroundColor={theme.colors.background}
         showBorder={false}
         actions={!isDesktop ? [
-          <ChannelButton key="channels" />,
+          <TouchableOpacity activeOpacity={0.8} key="search" onPress={handleSearchPress} style={styles.headerIconBtn}>
+            <Search color={theme.colors.primary} size={24} />
+          </TouchableOpacity>,
           <MusicButton key="my-music" />,
-          <TouchableOpacity activeOpacity={1} key="bell" onPress={() => { }} style={[styles.headerIconBtn, { position: 'relative' }]}>
+          <TouchableOpacity activeOpacity={1} key="bell" onPress={navigateToNotifications} style={[styles.headerIconBtn, { position: 'relative' }]}>
             <Bell color={theme.colors.primary} size={24} />
-            {newItemCount > 0 && (
+            {unreadCount > 0 && (
               <View style={styles.notificationBadge}>
                 <Text style={styles.notificationBadgeText}>
-                  {newItemCount > 99 ? '99+' : newItemCount}
+                  {unreadCount > 99 ? '99+' : unreadCount}
                 </Text>
               </View>
             )}
@@ -442,21 +460,38 @@ export const MainFeedPage = () => {
       />
 
       {isReady ? (
-        <MainFeedBody
-          cards={cards}
-          discoveredChannels={discoveredChannels}
-          isLoading={isLoading}
-          isPaginating={isPaginating}
-          isRefreshing={isRefreshing}
-          newItemCount={newItemCount}
-          onRefresh={handleRefresh}
-          onLoadMore={handleLoadMore}
-          listRef={listRef}
-          onNewItemsBannerPress={() => {
-            setNewItemCount(0);
-            handleRefresh();
-          }}
-        />
+        <View style={{ flex: 1 }}>
+          <TouchableOpacity
+            style={{ backgroundColor: theme.colors.primary, padding: 12, margin: 16, borderRadius: 8, alignItems: 'center' }}
+            onPress={async () => {
+              if (user?.id) {
+                await sendNotification({
+                  recipientId: user.id, // Send to yourself
+                  type: 'mention',
+                });
+                alert('Test notification sent from app! Check your phone/browser in a few seconds.');
+              }
+            }}
+          >
+            <Text style={{ color: 'white', fontWeight: 'bold' }}>Test Push Notification</Text>
+          </TouchableOpacity>
+
+          <MainFeedBody
+            cards={cards}
+            discoveredChannels={discoveredChannels}
+            isLoading={isLoading}
+            isPaginating={isPaginating}
+            isRefreshing={isRefreshing}
+            newItemCount={newItemCount}
+            onRefresh={handleRefresh}
+            onLoadMore={handleLoadMore}
+            listRef={listRef}
+            onNewItemsBannerPress={() => {
+              setNewItemCount(0);
+              handleRefresh();
+            }}
+          />
+        </View>
       ) : (
         <View style={{ flex: 1, backgroundColor: '#000' }}>
           {Array.from({ length: 3 }).map((_, i) => (
@@ -469,22 +504,23 @@ export const MainFeedPage = () => {
 };
 
 const themeStyles = (colors: ThemeTokens, scale: number) => ({
-  root: { flex: 1, backgroundColor: colors.background },
-  appBarTitle: { color: colors.primary, fontSize: 22 * scale, fontWeight: '900' as const, letterSpacing: -1, marginLeft: 8 },
-  headerIconBtn: { padding: 8 },
-  notificationBadge: {
-    position: 'absolute' as const,
-    top: 4,
-    right: 4,
-    backgroundColor: colors.error,
-    borderRadius: 10 * scale,
-    minWidth: 18 * scale,
-    height: 18 * scale,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-    paddingHorizontal: 4,
-    borderWidth: 1.5,
-    borderColor: colors.background
+        root: {flex: 1, backgroundColor: colors.background },
+      appBarTitle: {color: colors.primary, fontSize: 22 * scale, fontWeight: '900' as const, letterSpacing: -1, marginLeft: 8 },
+      headerIconBtn: {padding: 8 },
+      notificationBadge: {
+        position: 'absolute' as const,
+      top: 4,
+      right: 4,
+      backgroundColor: colors.error,
+      borderRadius: 10 * scale,
+      minWidth: 18 * scale,
+      height: 18 * scale,
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
+      paddingHorizontal: 4,
+      borderWidth: 1.5,
+      borderColor: colors.background
   },
-  notificationBadgeText: { color: colors.text, fontSize: 10 * scale, fontWeight: '800' as const }
+      notificationBadgeText: {color: colors.text, fontSize: 10 * scale, fontWeight: '800' as const }
 });
+

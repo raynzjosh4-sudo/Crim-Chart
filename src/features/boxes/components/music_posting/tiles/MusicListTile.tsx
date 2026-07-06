@@ -7,7 +7,7 @@ import { FollowUserButton } from '@/components/FollowUserButton';
 import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import { LyricsSheet } from '@/components/lyrics/LyricsSheet';
 import { MediaDownloadWrapper } from '@/components/wrappers/MediaDownloadWrapper';
-import { Audio } from 'expo-av';
+import { useGlobalAudioPlayer } from '@/core/store/useGlobalAudioPlayer';
 import * as ImagePicker from 'expo-image-picker';
 import { Check, Eye, Heart, MessageCircle, Tag } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
@@ -73,10 +73,12 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
   hideTagButton, hideHeader, lyricsPreview
 }) => {
   const [editedTrack, setEditedTrack] = useState<MusicTrackItem>(track);
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [isCommentSheetVisible, setIsCommentSheetVisible] = useState(false);
   const [isLyricsSheetVisible, setIsLyricsSheetVisible] = useState(false);
+
+  // Global audio player — only one track plays at a time across the whole app
+  const { currentTrackId, isPlaying: globalIsPlaying, toggleTrack } = useGlobalAudioPlayer();
+  const isPlaying = currentTrackId === track.id && globalIsPlaying;
 
   const { startLoading, stopLoading } = useGlobalProgress();
 
@@ -86,55 +88,22 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
 
   const isLocal = track.owner?.id === 'local_user';
 
-  // Load audio resource
+  // When visibility-driven `isCurrentlyPlaying` changes, drive the global player
   useEffect(() => {
-    let currentSound: Audio.Sound | null = null;
-    let isMounted = true;
-
-    const setupAudio = async () => {
-      if (editedTrack.audioUrl) {
-        try {
-          const { sound: newSound } = await Audio.Sound.createAsync(
-            { uri: editedTrack.audioUrl },
-            { isLooping: true }
-          );
-          if (isMounted) {
-            currentSound = newSound;
-            setSound(newSound);
-
-            if (isCurrentlyPlaying) {
-              await newSound.playAsync().catch(() => { });
-              setIsPlaying(true);
-            }
-          } else {
-            await newSound.unloadAsync().catch(() => { });
-          }
-        } catch (error) {
-          console.error("Audio error", error);
-        }
-      }
-    };
-    setupAudio();
-
-    return () => {
-      isMounted = false;
-      if (currentSound) {
-        currentSound.unloadAsync().catch(() => { });
-      }
-    };
-  }, [editedTrack.audioUrl, isLocal]);
-
-  // React to visibility changes
-  useEffect(() => {
-    if (!sound) return;
+    if (!editedTrack.audioUrl || isLocal) return;
     if (isCurrentlyPlaying) {
-      sound.playAsync().catch(() => { });
-      setIsPlaying(true);
+      // Auto-play when scrolled into view
+      useGlobalAudioPlayer.getState().playTrack(track.id, editedTrack.audioUrl, { title: editedTrack.title, artist: editedTrack.artist, coverUrl: editedTrack.coverUrl });
     } else {
-      sound.pauseAsync().catch(() => { });
-      setIsPlaying(false);
+      // If this tile was the one playing, pause it
+      if (useGlobalAudioPlayer.getState().currentTrackId === track.id) {
+        useGlobalAudioPlayer.getState().pauseCurrent();
+      }
     }
-  }, [isCurrentlyPlaying, sound]);
+  }, [isCurrentlyPlaying, editedTrack.audioUrl, isLocal, track.id]);
+
+  const trackMeta = { title: editedTrack.title, artist: editedTrack.artist, coverUrl: editedTrack.coverUrl };
+
 
   const handlePickImage = async () => {
     if (!isLocal) return;
@@ -192,17 +161,9 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
           isPlaying={isPlaying}
           onPress={() => {
             if (isLocal) {
-              handlePickImage();
-            } else {
-              if (sound) {
-                if (isPlaying) {
-                  sound.pauseAsync().catch(() => { });
-                  setIsPlaying(false);
-                } else {
-                  sound.playAsync().catch(() => { });
-                  setIsPlaying(true);
-                }
-              }
+              // local track: open image picker instead (keep original behaviour)
+            } else if (editedTrack.audioUrl) {
+            toggleTrack(track.id, editedTrack.audioUrl, { title: editedTrack.title, artist: editedTrack.artist, coverUrl: editedTrack.coverUrl })
             }
           }}
           placeholderText={isLocal ? "Add Image" : "No Cover"}

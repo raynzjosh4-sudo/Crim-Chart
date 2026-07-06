@@ -11,7 +11,7 @@ export interface PostHeaderProps {
   source_type?: string | null;
   timeAgo?: string;
   onAvatarTap: () => void;
-  onMoreTap?: () => void;
+  onMoreTap?: (event?: any) => void;
   channelId?: string | null;
   channelAvatarUrl?: string | null;
   channelName?: string | null;

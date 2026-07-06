@@ -1,10 +1,12 @@
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ChannelRestrictionWrapper } from '@/components/wrappers/ChannelRestrictionWrapper';
 import { colors } from '@/core/theme/colors';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Bell, ChevronLeft, Clock, LogOut, Plus, Search, Shield, ThumbsDown, Trash2, UserPlus } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View, Platform, useWindowDimensions } from 'react-native';
+import { Alert, ScrollView, Switch, Text, TouchableOpacity, View, Platform, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useChannelPermissions } from '@/channel/hooks/useChannelPermissions';
@@ -19,6 +21,7 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
   const id = channelIdOverride || routeId;
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
+  const theme = useCurrentTheme();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const { needsLeaveRequest, canLeave, canDelete, canReport, role } = useChannelPermissions(id as string);
   const { channel } = useChannelData(id as string);
@@ -26,6 +29,7 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
 
   const [inviteFollowersVisible, setInviteFollowersVisible] = useState(false);
   const [inviteAdminsVisible, setInviteAdminsVisible] = useState(false);
+  const styles = useStyles(useStylesHook);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -34,8 +38,10 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
         <TouchableOpacity activeOpacity={1} onPress={() => {
           if (isDesktop && channelIdOverride) {
             router.setParams({ desktopChannelView: '' });
-          } else {
+          } else if (router.canGoBack()) {
             router.back();
+          } else {
+            router.replace(`/channel/${id}` as any);
           }
         }} style={styles.headerButton}>
           <ChevronLeft size={28} color="#FFF" />
@@ -73,7 +79,7 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
 
         {/* Metadata */}
         <View style={styles.metadataRow}>
-          <Clock size={16} color="rgba(255,255,255,0.4)" />
+          <Clock size={16} color={theme.colors.textSecondary} />
           <Text style={styles.metadataText}>
             Created on {channel?.createdAt ? new Date(channel.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Unknown'}
           </Text>
@@ -85,7 +91,7 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
 
           <View style={styles.settingItem}>
             <View style={styles.settingIconContainer}>
-              <Bell size={22} color="#FFF" />
+              <Bell size={22} color={theme.colors.text} />
             </View>
             <View style={styles.settingInfo}>
               <Text style={styles.settingTitle}>Notifications</Text>
@@ -94,8 +100,8 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
             <Switch
               value={notificationsEnabled}
               onValueChange={setNotificationsEnabled}
-              trackColor={{ false: '#333', true: colors.primary + '66' }}
-              thumbColor={notificationsEnabled ? colors.primary : '#666'}
+              trackColor={{ false: theme.colors.surfaceVariant, true: theme.colors.primary + '66' }}
+              thumbColor={notificationsEnabled ? theme.colors.primary : theme.colors.textSecondary}
             />
           </View>
 
@@ -111,13 +117,13 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
               }}
             >
               <View style={styles.settingIconContainer}>
-                <Shield size={22} color="#FFF" />
+                <Shield size={22} color={theme.colors.text} />
               </View>
               <View style={styles.settingInfo}>
                 <Text style={styles.settingTitle}>Privacy and Permissions</Text>
                 <Text style={styles.settingSubtitle}>Who can join and see content</Text>
               </View>
-              <ChevronLeft size={20} color="rgba(255,255,255,0.4)" style={{ transform: [{ rotate: '180deg' }] }} />
+              <ChevronLeft size={20} color={theme.colors.textSecondary} style={{ transform: [{ rotate: '180deg' }] }} />
             </TouchableOpacity>
           </ChannelRestrictionWrapper>
         </View>
@@ -130,7 +136,7 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
             <View style={styles.settingInfo}>
               <Text style={styles.settingTitle}>{channel?.followersCount || 0} followers</Text>
             </View>
-            <Search size={20} color="rgba(255,255,255,0.4)" />
+            <Search size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
 
           <ChannelRestrictionWrapper channelId={id as string} requiredAction="invite_users" fallback={null}>
@@ -138,8 +144,8 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
               style={styles.settingItem}
               onPress={() => setInviteFollowersVisible(true)}
             >
-              <View style={[styles.iconCircle, { backgroundColor: colors.primary }]}>
-                <UserPlus size={20} color="#000" />
+              <View style={[styles.iconCircle, { backgroundColor: theme.colors.primary }]}>
+                <UserPlus size={20} color={theme.colors.onPrimary} />
               </View>
               <View style={styles.settingInfo}>
                 <Text style={styles.settingTitle}>Invite members</Text>
@@ -153,8 +159,8 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
               style={styles.settingItem}
               onPress={() => setInviteAdminsVisible(true)}
             >
-              <View style={[styles.iconCircle, { backgroundColor: colors.primary }]}>
-                <Plus size={20} color="#000" />
+              <View style={[styles.iconCircle, { backgroundColor: theme.colors.primary }]}>
+                <Plus size={20} color={theme.colors.onPrimary} />
               </View>
               <View style={styles.settingInfo}>
                 <Text style={styles.settingTitle}>Invite admins</Text>
@@ -202,7 +208,7 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
                     {needsLeaveRequest ? 'Request to leave' : 'Leave Channel'}
                   </Text>
                 </View>
-                <ChevronLeft size={20} color="rgba(255,255,255,0.4)" style={{ transform: [{ rotate: '180deg' }] }} />
+                <ChevronLeft size={20} color={theme.colors.textSecondary} style={{ transform: [{ rotate: '180deg' }] }} />
               </TouchableOpacity>
             </ChannelRestrictionWrapper>
 
@@ -214,7 +220,7 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
                 <View style={styles.settingInfo}>
                   <Text style={[styles.settingTitle, { color: '#FF5252' }]}>Delete channel</Text>
                 </View>
-                <ChevronLeft size={20} color="rgba(255,255,255,0.4)" style={{ transform: [{ rotate: '180deg' }] }} />
+                <ChevronLeft size={20} color={theme.colors.textSecondary} style={{ transform: [{ rotate: '180deg' }] }} />
               </TouchableOpacity>
             </ChannelRestrictionWrapper>
 
@@ -226,7 +232,7 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
                 <View style={styles.settingInfo}>
                   <Text style={[styles.settingTitle, { color: '#FF5252' }]}>Report channel</Text>
                 </View>
-                <ChevronLeft size={20} color="rgba(255,255,255,0.4)" style={{ transform: [{ rotate: '180deg' }] }} />
+                <ChevronLeft size={20} color={theme.colors.textSecondary} style={{ transform: [{ rotate: '180deg' }] }} />
               </TouchableOpacity>
             </ChannelRestrictionWrapper>
           </View>
@@ -258,15 +264,15 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
   );
 }
 
-const styles = StyleSheet.create({
+const useStylesHook = (colors: any) => ({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: colors.background,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
     height: 60,
     paddingHorizontal: 12,
   },
@@ -274,62 +280,62 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   headerTitle: {
-    color: '#FFF',
+    color: colors.text,
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: '900' as const,
   },
   content: {
     flex: 1,
   },
   profileSection: {
-    alignItems: 'center',
+    alignItems: 'center' as const,
     paddingVertical: 20,
-    position: 'relative',
+    position: 'relative' as const,
   },
   avatar: {
     width: 110,
     height: 110,
     borderRadius: 55,
-    backgroundColor: '#111',
+    backgroundColor: colors.surfaceVariant,
     marginBottom: 16,
   },
   channelName: {
-    color: '#FFF',
+    color: colors.text,
     fontSize: 22,
-    fontWeight: '900',
-    textAlign: 'center',
+    fontWeight: '900' as const,
+    textAlign: 'center' as const,
   },
   channelSubtitle: {
-    color: 'rgba(255,255,255,0.5)',
+    color: colors.textSecondary,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '600' as const,
     marginTop: 4,
   },
   editButton: {
-    position: 'absolute',
+    position: 'absolute' as const,
     right: 20,
     top: 80,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: colors.surfaceVariant,
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 8,
   },
   editButtonText: {
-    color: '#FFF',
+    color: colors.text,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '800' as const,
   },
   metadataRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     paddingHorizontal: 20,
     paddingVertical: 12,
     gap: 8,
   },
   metadataText: {
-    color: 'rgba(255,255,255,0.4)',
+    color: colors.textSecondary,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '600' as const,
   },
   section: {
     marginTop: 24,
@@ -337,18 +343,18 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: colors.primary,
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '900' as const,
     letterSpacing: 1.2,
     paddingHorizontal: 20,
     marginBottom: 12,
   },
   settingItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    borderBottomColor: colors.surfaceVariant,
   },
   settingIconContainer: {
     marginRight: 16,
@@ -357,12 +363,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   settingTitle: {
-    color: '#FFF',
+    color: colors.text,
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '700' as const,
   },
   settingSubtitle: {
-    color: 'rgba(255,255,255,0.5)',
+    color: colors.textSecondary,
     fontSize: 13,
     marginTop: 2,
   },
@@ -370,8 +376,8 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
     marginRight: 16,
   },
   memberAvatar: {
@@ -391,7 +397,7 @@ const styles = StyleSheet.create({
   ownerBadgeText: {
     color: colors.primary,
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: '900' as const,
   },
   footerSpacer: {
     height: 60,

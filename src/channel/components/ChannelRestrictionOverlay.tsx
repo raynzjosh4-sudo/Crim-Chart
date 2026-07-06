@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ShieldAlert } from 'lucide-react-native';
 import { JoinButton } from '@/channel/components/JoinButton';
-import { colors } from '@/core/theme/colors';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { channelRepository } from '@/channel/data/channelRepository';
@@ -27,6 +28,31 @@ export const ChannelRestrictionOverlay: React.FC<ChannelRestrictionOverlayProps>
     channelId
 }) => {
     const user = useAuthStore(s => s.user);
+    const theme = useCurrentTheme();
+    const styles = useStyles(colors => ({
+      container: {
+        ...require('react-native').StyleSheet.absoluteFillObject,
+        backgroundColor: colors.background,
+        zIndex: 9999,
+        justifyContent: 'space-between' as const,
+      },
+      content: {
+        flex: 1, justifyContent: 'center' as const, alignItems: 'center' as const, paddingHorizontal: 24,
+      },
+      avatarContainer: { position: 'relative' as const, marginBottom: 24 },
+      avatar: { width: 120, height: 120, borderRadius: 60, backgroundColor: colors.surfaceVariant },
+      badgeContainer: {
+        position: 'absolute' as const, bottom: 0, right: 0,
+        backgroundColor: colors.primary,
+        width: 36, height: 36, borderRadius: 18,
+        justifyContent: 'center' as const, alignItems: 'center' as const,
+        borderWidth: 4, borderColor: colors.background,
+      },
+      channelName: { color: colors.text, fontSize: 22, fontWeight: 'bold' as const, marginBottom: 32, textAlign: 'center' as const },
+      title: { color: colors.primary, fontSize: 24, fontWeight: '900' as const, marginBottom: 16, textAlign: 'center' as const },
+      message: { color: colors.textSecondary, fontSize: 16, textAlign: 'center' as const, lineHeight: 24 },
+      footer: { paddingBottom: 24, width: '100%' as any, paddingHorizontal: 24 },
+    }));
 
     const handleJoinRequest = async () => {
         if (!user || !channelId) return;
@@ -56,7 +82,7 @@ export const ChannelRestrictionOverlay: React.FC<ChannelRestrictionOverlayProps>
                         style={styles.avatar} 
                     />
                     <View style={styles.badgeContainer}>
-                        <ShieldAlert color="#000" size={20} />
+                        <ShieldAlert color={theme.colors.onPrimary} size={20} />
                     </View>
                 </View>
                 <Text style={styles.channelName}>{channelName}</Text>
@@ -71,67 +97,3 @@ export const ChannelRestrictionOverlay: React.FC<ChannelRestrictionOverlayProps>
         </SafeAreaView>
     );
 };
-
-const styles = StyleSheet.create({
-    container: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: '#000000',
-        zIndex: 9999,
-        justifyContent: 'space-between',
-    },
-
-    content: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 24,
-    },
-    avatarContainer: {
-        position: 'relative',
-        marginBottom: 24,
-    },
-    avatar: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
-        backgroundColor: '#222',
-    },
-    badgeContainer: {
-        position: 'absolute',
-        bottom: 0,
-        right: 0,
-        backgroundColor: colors.primary || '#FFD700',
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 4,
-        borderColor: '#000000',
-    },
-    channelName: {
-        color: '#FFFFFF',
-        fontSize: 22,
-        fontWeight: 'bold',
-        marginBottom: 32,
-        textAlign: 'center',
-    },
-    title: {
-        color: colors.primary || '#FFD700',
-        fontSize: 24,
-        fontWeight: '900',
-        marginBottom: 16,
-        textAlign: 'center',
-    },
-    message: {
-        color: 'rgba(255, 255, 255, 0.7)',
-        fontSize: 16,
-        textAlign: 'center',
-        lineHeight: 24,
-    },
-    footer: {
-        paddingBottom: 24,
-        width: '100%',
-        paddingHorizontal: 24,
-    }
-});

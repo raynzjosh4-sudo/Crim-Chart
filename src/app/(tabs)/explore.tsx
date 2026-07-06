@@ -1,106 +1,200 @@
-import { CustomBackButton } from '@/components/CustomBackButton';
+import ChartAppBar from '@/components/chartappbar/ChartAppBar';
+import { useStyles } from "@/core/hooks/useStyles";
+import { useSearchStore } from '@/core/store/useSearchStore';
 import { colors } from '@/core/theme/colors';
-import { router } from 'expo-router';
-import { Search } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { Dimensions, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ThemeTokens } from '@/core/theme/themes';
+import { SearchResultRow } from '@/explore/widgets/search_results/SearchResultRow';
+import { SearchResultsSkeleton } from '@/explore/widgets/search_results/SearchResultsSkeleton';
+import { Box, Crown, Music, Play, Radio, Search, User } from 'lucide-react-native';
+import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Dimensions, FlatList, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const COLUMN_WIDTH = (SCREEN_WIDTH - 36) / 2;
+
+// Mobile vs Desktop responsive max width
+const MAX_CONTENT_WIDTH = Platform.OS === 'web' ? 800 : SCREEN_WIDTH;
 
 export default function ExploreScreen() {
+  const styles = useStyles(themeStyles);
   const insets = useSafeAreaInsets();
-  const [searchQuery, setSearchQuery] = useState('');
+  const { t } = useTranslation();
 
-  // Mock data for the explore grid
-  const mockItems = Array.from({ length: 20 }, (_, i) => ({
-    id: String(i),
-    aspectRatio: [0.8, 1.2, 1.0, 1.4, 0.7][i % 5],
-    color: ['#231D1C', '#1E1C1B', '#141110'][i % 3],
-  }));
+  const { query, setQuery, results, isSearching, hasSearched, search, clearSearch } = useSearchStore();
+
+  const handleSearchChange = (text: string) => {
+    setQuery(text);
+    search(text);
+  };
+
+  useEffect(() => {
+    // Cleanup on unmount
+    return () => clearSearch();
+  }, [clearSearch]);
+
+  const renderEmptyState = () => {
+    if (isSearching) {
+      return <SearchResultsSkeleton />;
+    }
+
+    if (hasSearched && results.length === 0) {
+      return (
+        <View style={styles.emptyStateContainer}>
+          <View style={styles.emptyStateIconCircle}>
+            <Search color={colors.textSecondary} size={32} />
+          </View>
+          <Text style={styles.emptyStateTitle}>{t('no_results')}</Text>
+          <Text style={styles.emptyStateSubtitle}>{t('no_results_subtitle')}</Text>
+        </View>
+      );
+    }
+
+    if (!hasSearched) {
+      // Show quick category pills when haven't searched yet
+      return (
+        <View style={styles.categoriesContainer}>
+          <CategoryPill icon={<User color="#FFF" size={16} />} label={t('search_people')} />
+          <CategoryPill icon={<Radio color="#FFF" size={16} />} label={t('search_channels')} />
+          <CategoryPill icon={<Music color="#FFF" size={16} />} label={t('search_music')} />
+          <CategoryPill icon={<Play color="#FFF" size={16} />} label={t('search_videos')} />
+          <CategoryPill icon={<Box color="#FFF" size={16} />} label={t('search_boxes')} />
+          <CategoryPill icon={<Crown color="#FFF" size={16} />} label={t('search_crowns')} />
+        </View>
+      );
+    }
+
+    return null;
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Search Header */}
-      <View style={styles.header}>
-        <CustomBackButton onPressed={() => router.back()} size={28} />
+      <ChartAppBar title={t('explore') || 'Explore'} showBack={false} />
 
-        <View style={styles.searchBar}>
-          <Search size={20} color="rgba(255, 255, 255, 0.5)" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search channels..."
-            placeholderTextColor="rgba(255, 255, 255, 0.5)"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            onSubmitEditing={() => console.log('Searching for:', searchQuery)}
-          />
+      <View style={styles.contentWrapper}>
+        <View style={styles.searchHeader}>
+          <View style={styles.searchBar}>
+            <Search size={20} color="rgba(255, 255, 255, 0.5)" />
+            <TextInput
+              style={[styles.searchInput, Platform.OS === 'web' ? { outlineStyle: 'none' } as any : {}]}
+              placeholder={t('search_placeholder') || 'Search...'}
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+              value={query}
+              onChangeText={handleSearchChange}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
         </View>
 
-        <TouchableOpacity activeOpacity={1} onPress={() => console.log('Searching for:', searchQuery)}>
-          <Text style={styles.searchButtonText}>Search</Text>
-        </TouchableOpacity>
+        <FlatList
+          data={results}
+          keyExtractor={item => `${item.entity_type}_${item.entity_id}`}
+          contentContainerStyle={styles.listPadding}
+          renderItem={({ item }) => <SearchResultRow item={item} />}
+          ListEmptyComponent={renderEmptyState}
+          keyboardShouldPersistTaps="handled"
+        />
       </View>
-
-      {/* Grid Content */}
-      <FlatList
-        data={mockItems}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        contentContainerStyle={styles.gridPadding}
-        renderItem={({ item }) => (
-          <View style={[
-            styles.gridItem,
-            { height: COLUMN_WIDTH * item.aspectRatio, backgroundColor: item.color }
-          ]}>
-            {/* Skeleton / Placeholder content */}
-          </View>
-        )}
-      />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+// Simple internal component for the categories
+const CategoryPill = ({ icon, label }: { icon: React.ReactNode, label: string }) => {
+  const styles = useStyles(themeStyles);
+  return (
+    <TouchableOpacity style={styles.categoryPill} activeOpacity={0.8}>
+      {icon}
+      <Text style={styles.categoryPillText}>{label}</Text>
+    </TouchableOpacity>
+  );
+};
+
+const themeStyles = (colors: ThemeTokens, scale: number) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.background
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    gap: 12,
+  contentWrapper: {
+    flex: 1,
+    width: '100%',
+    maxWidth: MAX_CONTENT_WIDTH,
+    alignSelf: 'center',
+  },
+  searchHeader: {
+    paddingHorizontal: 16 * scale,
+    paddingVertical: 12 * scale,
   },
   searchBar: {
-    flex: 1,
-    height: 45,
+    height: 48 * scale,
     backgroundColor: colors.surfaceVariant,
-    borderRadius: 25,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    gap: 8,
+    borderRadius: 24 * scale,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    paddingHorizontal: 16 * scale,
+    gap: 12 * scale
   },
   searchInput: {
     flex: 1,
     color: colors.text,
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 16 * scale,
   },
-  searchButtonText: {
+  listPadding: {
+    paddingBottom: 100 * scale,
+  },
+
+  // Empty State Styles
+  emptyStateContainer: {
+    flex: 1,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    paddingTop: 80 * scale,
+    paddingHorizontal: 32 * scale,
+  },
+  emptyStateIconCircle: {
+    width: 80 * scale,
+    height: 80 * scale,
+    borderRadius: 40 * scale,
+    backgroundColor: colors.surfaceVariant,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    marginBottom: 24 * scale,
+  },
+  emptyStateTitle: {
+    fontSize: 20 * scale,
+    fontWeight: '700' as const,
     color: colors.text,
-    fontWeight: '900',
-    fontSize: 14,
+    marginBottom: 8 * scale,
+    textAlign: 'center' as const,
   },
-  gridPadding: {
-    padding: 12,
+  emptyStateSubtitle: {
+    fontSize: 14 * scale,
+    color: colors.textSecondary,
+    textAlign: 'center' as const,
+    lineHeight: 20 * scale,
   },
-  gridItem: {
-    width: COLUMN_WIDTH,
-    margin: 6,
-    borderRadius: 15,
+
+  // Categories Styles
+  categoriesContainer: {
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    paddingHorizontal: 16 * scale,
+    gap: 12 * scale,
+    paddingTop: 12 * scale,
   },
+  categoryPill: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: colors.surfaceVariant,
+    paddingHorizontal: 16 * scale,
+    paddingVertical: 10 * scale,
+    borderRadius: 20 * scale,
+    gap: 8 * scale,
+  },
+  categoryPillText: {
+    color: colors.text,
+    fontSize: 14 * scale,
+    fontWeight: '600' as const,
+  }
 });

@@ -6,6 +6,7 @@ import { FlatList, View } from 'react-native';
 import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { VideoPostFeedCard } from './VideoPostFeedCard';
 import { useDesktopVidsStore } from './useDesktopVidsStore';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
 
 interface ShortVideoItem {
   id: string;
@@ -19,6 +20,7 @@ interface ShortVideoItem {
  */
 export const DesktopVidsFeedPane: React.FC = () => {
   const user = useAuthStore(s => s.user);
+  const theme = useCurrentTheme();
   const [items, setItems] = useState<ShortVideoItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeIndex, setActiveIndex] = useState<number>(0);
@@ -120,14 +122,14 @@ export const DesktopVidsFeedPane: React.FC = () => {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#000' }}>
+      <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
         {Array.from({ length: 3 }).map((_, i) => <VideoCardSkeleton key={i} />)}
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#000' }}>
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <FlatList
         data={items}
         keyExtractor={item => item.id}

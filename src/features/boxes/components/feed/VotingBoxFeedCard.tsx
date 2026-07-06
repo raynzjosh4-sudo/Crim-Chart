@@ -1,5 +1,6 @@
 import { BoxFeedCardWrapper } from '@/components/wrappers/BoxFeedCardWrapper';
 import { useRouter } from 'expo-router';
+import { PostHeader } from '@/components/PostHeader/PostHeader';
 import { MoreHorizontal } from 'lucide-react-native';
 import UserAvatar from '@/components/avatar/UserAvatar';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -33,24 +34,14 @@ export const VotingBoxFeedCard = ({ boxId, prefetchedData }: Props) => {
         return (
           <View style={styles.cardContainer}>
             {/* Post Header */}
-            <View style={styles.postHeader}>
-              <View style={styles.headerLeft}>
-                <View style={{ marginRight: 10 }}>
-                  <UserAvatar 
-                    userId={ownerModel?.id || ''} 
-                    fallbackUrl={ownerModel?.profileImageUrl || undefined} 
-                    name={rawName} 
-                    size={36} 
-                  />
-                </View>
-                <View>
-                  <Text style={styles.creatorName}>{rawName}</Text>
-                  <Text style={styles.actionText}>Started a Voting Box</Text>
-                </View>
-              </View>
-              <TouchableOpacity activeOpacity={1}>
-                <MoreHorizontal size={20 * (StyleSheet.hairlineWidth > 0 ? 1 : 1)} color={theme.colors.textSecondary} />
-              </TouchableOpacity>
+            <View style={{ paddingBottom: 12, paddingTop: 4 }}>
+              {ownerModel ? (
+                <PostHeader
+                  author={ownerModel}
+                  timeAgo="Started a Voting Box"
+                  onAvatarTap={() => router.push(`/profile/${ownerModel.id}` as any)}
+                />
+              ) : null}
             </View>
 
             {/* Box Info */}

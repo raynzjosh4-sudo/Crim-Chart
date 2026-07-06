@@ -67,17 +67,8 @@ export default function BirthdayPage() {
             authStore.setBirthday(selectedDate);
             authStore.setGender(selectedGender);
             
-            const success = await authStore.completeGoogleOnboarding();
             setIsLoading(false);
-            
-            if (success) {
-                router.push('/profilePicture' as any);
-            } else {
-                ChartToast.showError(null, {
-                    title: tr('birthday_error_update_title') || 'Error',
-                    message: authStore.errorMessage || tr('birthday_error_update_message') || 'Failed to create profile',
-                });
-            }
+            router.push('/musicCategory' as any);
         } else {
             // For email signup flow, the profile was already created in OtpVerificationPage.
             // We just need to update it now.
@@ -88,7 +79,7 @@ export default function BirthdayPage() {
             setIsLoading(false);
 
             if (success) {
-                router.push('/profilePicture' as any);
+                router.push('/musicCategory' as any);
             } else {
                 ChartToast.showError(null, {
                     title: tr('birthday_error_update_title') || 'Error',

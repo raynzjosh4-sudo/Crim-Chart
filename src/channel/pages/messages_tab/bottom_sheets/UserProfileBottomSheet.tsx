@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, Modal, TouchableWithoutFeedba
 import { MessageModel } from '../models/MessageModel';
 import { Image as ExpoImage } from 'expo-image';
 import { UserPlus, UserCircle, X } from 'lucide-react-native';
-import { colors } from '@/core/theme/colors';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { useRouter } from 'expo-router';
 import AppAvatar from '@/components/avatar/AppAvatar';
 import { FollowUserButton } from '@/components/FollowUserButton';
@@ -25,6 +26,38 @@ export const UserProfileBottomSheet: React.FC<UserProfileBottomSheetProps> = ({ 
   const isDesktop = Platform.OS === 'web' && width >= 768;
   const router = useRouter();
   const currentUser = useAuthStore(state => state.user);
+  const theme = useCurrentTheme();
+  const styles = useStyles(colors => ({
+    overlay: { flex: 1, justifyContent: 'flex-end' as const },
+    backdrop: { ...require('react-native').StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
+    container: {
+      paddingHorizontal: 24, paddingTop: 12, paddingBottom: 40,
+      backgroundColor: colors.background,
+      borderTopLeftRadius: 32, borderTopRightRadius: 32, alignItems: 'center' as const,
+    },
+    dragHandle: { width: 40, height: 4, backgroundColor: colors.muted, borderRadius: 2, marginBottom: 24 },
+    avatar: {
+      width: 100, height: 100, borderRadius: 50,
+      borderWidth: 3, borderColor: 'rgba(250, 205, 17, 0.3)', marginBottom: 12,
+    },
+    name: { fontSize: 20, fontWeight: '900' as const, color: colors.text, marginBottom: 16 },
+    statsRow: { flexDirection: 'row' as const, alignItems: 'center' as const, marginBottom: 24 },
+    statCol: { alignItems: 'center' as const },
+    statValue: { fontSize: 18, fontWeight: '900' as const, color: colors.text },
+    statLabel: { fontSize: 12, fontWeight: '500' as const, color: colors.textSecondary },
+    divider: { width: 1, height: 24, backgroundColor: colors.muted, marginHorizontal: 24 },
+    actionsRow: { flexDirection: 'row' as const, width: '100%' as any, gap: 12 },
+    btn: {
+      flex: 1, height: 50, borderRadius: 16,
+      backgroundColor: colors.surfaceVariant,
+      justifyContent: 'center' as const, alignItems: 'center' as const,
+      flexDirection: 'row' as const, gap: 8,
+    },
+    primaryBtn: { backgroundColor: colors.primary },
+    btnText: { color: colors.text, fontSize: 14, fontWeight: '700' as const },
+    primaryBtnText: { color: colors.onPrimary, fontSize: 14, fontWeight: '700' as const },
+    sectionTitle: { fontSize: 16, fontWeight: '800' as const, color: colors.text, textAlign: 'left' as const },
+  }));
   
   const [stats, setStats] = useState({ followers: 0, channels: 0 });
   const [commonChannels, setCommonChannels] = useState<any[]>([]);
@@ -157,7 +190,7 @@ export const UserProfileBottomSheet: React.FC<UserProfileBottomSheetProps> = ({ 
                       showStatusRing={false}
                       showActiveDot={false}
                     />
-                    <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: '600', marginTop: 8, maxWidth: 64 }} numberOfLines={1}>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: 11, fontWeight: '600', marginTop: 8, maxWidth: 64 }} numberOfLines={1}>
                       {channel.name}
                     </Text>
                   </View>
@@ -174,102 +207,3 @@ export const UserProfileBottomSheet: React.FC<UserProfileBottomSheetProps> = ({ 
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  container: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 40,
-    backgroundColor: '#000',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    alignItems: 'center',
-  },
-  dragHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 2,
-    marginBottom: 24,
-  },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 3,
-    borderColor: 'rgba(250, 205, 17, 0.3)',
-    marginBottom: 12,
-  },
-  name: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#FFF',
-    marginBottom: 16,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  statCol: {
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#FFF',
-  },
-  statLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: 'rgba(255,255,255,0.6)',
-  },
-  divider: {
-    width: 1,
-    height: 24,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    marginHorizontal: 24,
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    width: '100%',
-    gap: 12,
-  },
-  btn: {
-    flex: 1,
-    height: 50,
-    borderRadius: 16,
-    backgroundColor: '#2A2A2A',
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-  },
-  primaryBtn: {
-    backgroundColor: colors.primary,
-  },
-  btnText: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  primaryBtnText: {
-    color: '#000',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#FFF',
-    textAlign: 'left',
-  },
-});

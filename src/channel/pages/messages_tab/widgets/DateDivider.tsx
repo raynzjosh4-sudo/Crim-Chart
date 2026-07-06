@@ -1,11 +1,33 @@
+import { useStyles } from '@/core/hooks/useStyles';
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 
 interface DateDividerProps {
   date: Date;
 }
 
 export const DateDivider: React.FC<DateDividerProps> = ({ date }) => {
+  const styles = useStyles(colors => ({
+    container: {
+      width: '100%' as any,
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      paddingVertical: 24,
+    },
+    dividerLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: colors.muted,
+    },
+    dateText: {
+      paddingHorizontal: 16,
+      fontSize: 12,
+      fontWeight: '800' as const,
+      color: colors.textSecondary,
+      letterSpacing: 0.5,
+    },
+  }));
+
   const formatDate = (msgDate: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -39,23 +61,3 @@ export const DateDivider: React.FC<DateDividerProps> = ({ date }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-  },
-  dateText: {
-    paddingHorizontal: 16,
-    fontSize: 12,
-    fontWeight: '800',
-    color: 'rgba(255,255,255,0.3)',
-    letterSpacing: 0.5,
-  },
-});

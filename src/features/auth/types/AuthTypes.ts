@@ -8,6 +8,7 @@ export interface SignUpParams {
   birthday?: Date;
   gender?: string;
   profileImagePath?: string;
+  musicCategory?: string;
 }
 
 export interface LoginParams {

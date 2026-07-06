@@ -1,14 +1,7 @@
+import { useCurrentTheme } from '@/core/store/useThemeStore';
+import { useStyles } from "@/core/hooks/useStyles";
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Modal,
-  FlatList,
-  useWindowDimensions,
-  Platform,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, FlatList, useWindowDimensions, Platform } from 'react-native';
 import { X } from 'lucide-react-native';
 import { colors } from '@/core/theme/colors';
 
@@ -305,24 +298,82 @@ export const STICKER_SOURCES: Record<number, any> = {
   286: require('../../../../../../assets/stickers/sticker_286.json'),
   287: require('../../../../../../assets/stickers/sticker_287.json'),
   288: require('../../../../../../assets/stickers/sticker_288.json'),
-  289: require('../../../../../../assets/stickers/sticker_289.json'),
+  289: require('../../../../../../assets/stickers/sticker_289.json')
 };
-
 const STICKER_KEYS = Object.keys(STICKER_SOURCES).map(Number);
 const NUM_COLUMNS = 4;
-
 interface StickerSheetProps {
   visible: boolean;
   onClose: () => void;
   onStickerSelected: (stickerIndex: number) => void;
 }
-
 export const StickerSheet: React.FC<StickerSheetProps> = ({
   visible,
   onClose,
-  onStickerSelected,
+  onStickerSelected
 }) => {
-  const { width, height } = useWindowDimensions();
+  const theme = useCurrentTheme();
+  const styles = useStyles(colors => ({
+    overlay: {
+      flex: 1,
+      justifyContent: 'flex-end'
+    },
+    overlayDesktop: {
+      justifyContent: 'center',
+      alignItems: 'center'
+    },
+    backdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0,0,0,0.5)'
+    },
+    sheet: {
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24
+    },
+    handle: {
+      width: 40,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: colors.muted,
+      alignSelf: 'center' as const,
+      marginTop: 12
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingVertical: 14
+    },
+    title: {
+      color: colors.text,
+      fontSize: 18,
+      fontWeight: '900'
+    },
+    closeBtn: {
+      padding: 4
+    },
+    grid: {
+      paddingHorizontal: 16,
+      paddingBottom: 24
+    },
+    stickerCell: {
+      borderRadius: 16,
+      backgroundColor: colors.surfaceVariant,
+      margin: 4,
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
+      overflow: 'hidden' as const
+    },
+    fallbackEmoji: {
+      fontSize: 36
+    }
+  }));
+  const {
+    width,
+    height
+  } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
   const sheetWidth = isDesktop ? 400 : '100%';
   const containerWidth = isDesktop ? 400 : width;
@@ -338,130 +389,43 @@ export const StickerSheet: React.FC<StickerSheetProps> = ({
       setLottieView(null);
     }
   }, []);
-
-  const renderSticker = useCallback(({ item }: { item: number }) => (
-    <TouchableOpacity
-      style={[styles.stickerCell, { width: itemSize, height: itemSize }]}
-      onPress={() => onStickerSelected(item)}
-      activeOpacity={0.7}
-    >
-      {LottieView ? (
-        <LottieView
-          source={
-            Platform.OS === 'web'
-              ? { uri: `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(STICKER_SOURCES[item]))}` }
-              : STICKER_SOURCES[item]
-          }
-          autoPlay
-          loop
-          style={{ width: itemSize - 16, height: itemSize - 16 }}
-          resizeMode="contain"
-        />
-
-      ) : (
-        <Text style={styles.fallbackEmoji}>🎯</Text>
-      )}
-    </TouchableOpacity>
-  ), [LottieView, itemSize, onStickerSelected]);
-
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType={isDesktop ? "fade" : "slide"}
-      onRequestClose={onClose}
-    >
+  const renderSticker = useCallback(({
+    item
+  }: {
+    item: number;
+  }) => <TouchableOpacity style={[styles.stickerCell, {
+    width: itemSize,
+    height: itemSize
+  }]} onPress={() => onStickerSelected(item)} activeOpacity={0.7}>
+      {LottieView ? <LottieView source={Platform.OS === 'web' ? {
+      uri: `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(STICKER_SOURCES[item]))}`
+    } : STICKER_SOURCES[item]} autoPlay loop style={{
+      width: itemSize - 16,
+      height: itemSize - 16
+    }} resizeMode="contain" /> : <Text style={styles.fallbackEmoji}>🎯</Text>}
+    </TouchableOpacity>, [LottieView, itemSize, onStickerSelected]);
+  return <Modal visible={visible} transparent animationType={isDesktop ? "fade" : "slide"} onRequestClose={onClose}>
       <View style={[styles.overlay, isDesktop && styles.overlayDesktop]}>
         <TouchableOpacity style={styles.backdrop} onPress={onClose} />
 
-        <View style={[
-          styles.sheet, 
-          { 
-            height: isDesktop ? 500 : height * 0.55,
-            width: sheetWidth,
-            borderRadius: isDesktop ? 24 : undefined,
-          }
-        ]}>
+        <View style={[styles.sheet, {
+        height: isDesktop ? 500 : height * 0.55,
+        width: sheetWidth,
+        borderRadius: isDesktop ? 24 : undefined
+      }]}>
           {!isDesktop && <View style={styles.handle} />}
 
           <View style={styles.header}>
             <Text style={styles.title}>Stickers</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <X size={20} color="rgba(255,255,255,0.7)" />
+              <X size={20} color={theme.colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
-          <FlatList
-            style={{ flex: 1 }}
-            data={STICKER_KEYS}
-            keyExtractor={(item) => `sticker-${item}`}
-            numColumns={NUM_COLUMNS}
-            contentContainerStyle={styles.grid}
-            renderItem={renderSticker}
-            showsVerticalScrollIndicator={false}
-            initialNumToRender={16}
-            maxToRenderPerBatch={16}
-          />
+          <FlatList style={{
+          flex: 1
+        }} data={STICKER_KEYS} keyExtractor={item => `sticker-${item}`} numColumns={NUM_COLUMNS} contentContainerStyle={styles.grid} renderItem={renderSticker} showsVerticalScrollIndicator={false} initialNumToRender={16} maxToRenderPerBatch={16} />
         </View>
       </View>
-    </Modal>
-  );
+    </Modal>;
 };
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  overlayDesktop: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  sheet: {
-    backgroundColor: '#0F1117',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    alignSelf: 'center',
-    marginTop: 12,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  title: {
-    color: '#FFF',
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  closeBtn: {
-    padding: 4,
-  },
-  grid: {
-    paddingHorizontal: 16,
-    paddingBottom: 24,
-  },
-  stickerCell: {
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    margin: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  fallbackEmoji: {
-    fontSize: 36,
-  },
-});

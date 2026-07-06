@@ -95,6 +95,7 @@ export const MediaDownloadWrapper: React.FC<MediaDownloadWrapperProps> = ({
 
         try {
           const response = await fetch(mediaUrl);
+          if (!response.ok) throw new Error(`Failed to fetch media: ${response.statusText}`);
           const blob = await response.blob();
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
@@ -107,9 +108,12 @@ export const MediaDownloadWrapper: React.FC<MediaDownloadWrapperProps> = ({
           document.body.removeChild(a);
 
           if (coverUrl) {
+            // Delay the second download to avoid browser blocking multiple rapid downloads
+            await new Promise(resolve => setTimeout(resolve, 1000));
             const coverExt = getFileExtension(coverUrl, 'jpg');
             const coverFileName = `${safeTitle}_cover_${Date.now()}.${coverExt}`;
             const coverResponse = await fetch(coverUrl);
+            if (!coverResponse.ok) throw new Error(`Failed to fetch cover: ${coverResponse.statusText}`);
             const coverBlob = await coverResponse.blob();
             const coverObjUrl = window.URL.createObjectURL(coverBlob);
             const aCover = document.createElement('a');

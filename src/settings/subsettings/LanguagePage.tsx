@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     },
     searchInput: {
         flex: 1,
-        color: colors.text,
+        color: '#FFF',
         fontSize: 16,
     },
     listContent: {
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
         borderBottomColor: 'rgba(255, 255, 255, 0.05)',
     },
     nativeName: {
-        color: colors.text,
+        color: '#FFF',
         fontSize: 16,
         fontWeight: '500',
         marginBottom: 4,

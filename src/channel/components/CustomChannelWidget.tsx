@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Image } from 'expo-image';
+import { View, Text, TouchableOpacity } from 'react-native';
 import UserAvatar from '@/components/avatar/UserAvatar';
 import { Plus, Menu } from 'lucide-react-native';
 import { ChannelRestrictionWrapper } from '@/components/wrappers/ChannelRestrictionWrapper';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
 
 interface CustomChannelWidgetProps {
   userId?: string;
@@ -24,6 +25,42 @@ export const CustomChannelWidget: React.FC<CustomChannelWidgetProps> = ({
   onMorePress,
   channelId,
 }) => {
+  const theme = useCurrentTheme();
+  const styles = useStyles(colors => ({
+    container: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+    },
+    userInfo: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+    },
+    avatarContainer: {
+      position: 'relative' as const,
+      marginRight: 12,
+    },
+    username: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: '800' as const,
+    },
+    actions: {
+      flexDirection: 'row' as const,
+      gap: 12,
+    },
+    actionCircle: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.surfaceVariant,
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
+    },
+  }));
+
   return (
     <View style={styles.container}>
       <View style={styles.userInfo}>
@@ -43,70 +80,21 @@ export const CustomChannelWidget: React.FC<CustomChannelWidgetProps> = ({
         {channelId ? (
           <ChannelRestrictionWrapper channelId={channelId} requiredAction="post_feed" fallback={null}>
             <TouchableOpacity activeOpacity={1} style={styles.actionCircle} onPress={onPlusPress}>
-              <Plus size={20} color="#FFF" />
+              <Plus size={20} color={theme.colors.text} />
             </TouchableOpacity>
           </ChannelRestrictionWrapper>
         ) : (
           <TouchableOpacity activeOpacity={1} style={styles.actionCircle} onPress={onPlusPress}>
-            <Plus size={20} color="#FFF" />
+            <Plus size={20} color={theme.colors.text} />
           </TouchableOpacity>
         )}
         <TouchableOpacity activeOpacity={1} style={styles.actionCircle} onPress={onMorePress}>
-          <Menu size={20} color="#FFF" />
+          <Menu size={20} color={theme.colors.text} />
         </TouchableOpacity>
       </View>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginRight: 12,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#333',
-  },
-  onlineDot: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#4CAF50',
-    borderWidth: 2,
-    borderColor: '#000',
-  },
-  username: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  actionCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
+
+

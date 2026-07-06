@@ -6,8 +6,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { Camera, ChevronLeft } from 'lucide-react-native';
-import { colors } from '@/core/theme/colors';
 import { supabase } from '@/core/supabase/supabaseConfig';
 import { channelRepository } from '@/channel/data/repositories/ChannelRepositoryImpl';
 import { useChannelData } from '@/channel/hooks/useChannelData';
@@ -25,6 +26,8 @@ export default function ChannelEditPage({ channelIdOverride }: { channelIdOverri
   const [description, setDescription] = useState('');
   const [preview, setPreview] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const theme = useCurrentTheme();
+  const styles = useStyles(useStylesHook);
 
   useEffect(() => {
     if (channel && !name) {
@@ -68,8 +71,10 @@ export default function ChannelEditPage({ channelIdOverride }: { channelIdOverri
       Alert.alert('Success', 'Channel updated successfully!');
       if (isDesktop && channelIdOverride) {
         router.setParams({ desktopChannelView: 'settings' });
-      } else {
+      } else if (router.canGoBack()) {
         router.back();
+      } else {
+        router.replace(`/channel/settings/${id}` as any);
       }
     } catch (e: any) {
       Alert.alert('Update Failed', e?.message ?? 'Failed to update channel');
@@ -86,17 +91,19 @@ export default function ChannelEditPage({ channelIdOverride }: { channelIdOverri
         <TouchableOpacity activeOpacity={1} onPress={() => {
           if (isDesktop && channelIdOverride) {
             router.setParams({ desktopChannelView: 'settings' });
-          } else {
+          } else if (router.canGoBack()) {
             router.back();
+          } else {
+            router.replace(`/channel/settings/${id}` as any);
           }
         }} style={styles.headerButton}>
-          <ChevronLeft size={28} color="#FFF" />
+          <ChevronLeft size={28} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Channel</Text>
         <View style={{ width: 44 }} />
       </View>
 
-      {channelLoading && <ActivityIndicator color={colors.primary} style={{ marginTop: 20 }} />}
+      {channelLoading && <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 20 }} />}
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.avatarSection}>
@@ -117,7 +124,7 @@ export default function ChannelEditPage({ channelIdOverride }: { channelIdOverri
           value={name}
           onChangeText={setName}
           placeholder="Channel Title"
-          placeholderTextColor="rgba(255,255,255,0.3)"
+          placeholderTextColor={theme.colors.textSecondary}
         />
 
         <TextInput
@@ -125,7 +132,7 @@ export default function ChannelEditPage({ channelIdOverride }: { channelIdOverri
           value={description}
           onChangeText={setDescription}
           placeholder="Channel Description"
-          placeholderTextColor="rgba(255,255,255,0.3)"
+          placeholderTextColor={theme.colors.textSecondary}
           multiline
           numberOfLines={4}
           textAlignVertical="top"
@@ -139,7 +146,7 @@ export default function ChannelEditPage({ channelIdOverride }: { channelIdOverri
             disabled={isSaving}
           >
             {isSaving ? (
-              <ActivityIndicator color={colors.primary} />
+              <ActivityIndicator color={theme.colors.primary} />
             ) : (
               <Text style={styles.saveButtonText}>Save</Text>
             )}
@@ -150,15 +157,15 @@ export default function ChannelEditPage({ channelIdOverride }: { channelIdOverri
   );
 }
 
-const styles = StyleSheet.create({
+const useStylesHook = (colors: any) => ({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: colors.background,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
     height: 60,
     paddingHorizontal: 12,
   },
@@ -166,31 +173,31 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   headerTitle: {
-    color: '#FFF',
+    color: colors.text,
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: '900' as const,
   },
   content: {
     padding: 24,
   },
   avatarSection: {
-    alignItems: 'center',
+    alignItems: 'center' as const,
     marginBottom: 32,
   },
   avatarWrapper: {
     width: 110,
     height: 110,
     borderRadius: 55,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    overflow: 'hidden',
-    position: 'relative',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: colors.surfaceVariant,
+    overflow: 'hidden' as const,
+    position: 'relative' as const,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
   },
   avatar: {
     width: '100%',
     height: '100%',
-    position: 'absolute',
+    position: 'absolute' as const,
   },
   avatarPlaceholder: {
     backgroundColor: 'rgba(255,255,255,0.05)',
@@ -200,32 +207,33 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
   },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: colors.surfaceVariant,
     borderRadius: 16,
-    color: '#FFF',
+    color: colors.text,
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '600' as const,
     padding: 18,
     marginBottom: 16,
+    outlineStyle: 'none' as any,
   },
   textArea: {
     minHeight: 120,
   },
   saveContainer: {
-    alignItems: 'flex-end',
+    alignItems: 'flex-end' as const,
     marginTop: 16,
   },
   saveButton: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: colors.surfaceVariant,
     width: 120,
     height: 48,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
   },
   saveButtonDisabled: {
     opacity: 0.5,
@@ -233,7 +241,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: colors.primary,
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: '900' as const,
     letterSpacing: 1.0,
   },
 });

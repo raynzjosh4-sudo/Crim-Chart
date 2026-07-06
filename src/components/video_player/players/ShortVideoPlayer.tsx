@@ -16,6 +16,7 @@ import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
 
 import { PreloadableVideoPlayer, PreloadStatus } from '@/video/components/PreloadableVideoPlayer';
+import { useDesktopVidsStore } from '@/mainFeed/pages/main_page_widgets/useDesktopVidsStore';
 
 export interface ShortVideoPlayerProps {
   video: {
@@ -60,7 +61,9 @@ import { TagOverlay } from '@/channel/pages/tag/TagOverlay';
 export const ShortVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress, onVideoPress, isAdded, isLiked, preloadStatus = 'idle', disableVideoPlayer }: ShortVideoPlayerProps) => {
   const router = useRouter();
   const [showPlayer, setShowPlayer] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const isMuted = useDesktopVidsStore(state => state.isGlobalMuted);
+  const setIsMuted = useDesktopVidsStore(state => state.setGlobalIsMuted);
+  const setActiveVideo = useDesktopVidsStore(state => state.setActiveVideo);
   const [isCommentSheetVisible, setIsCommentSheetVisible] = useState(false);
   const [tagOverlayVisible, setTagOverlayVisible] = useState(false);
   const [localCommentsCount, setLocalCommentsCount] = useState(Number(video.commentsCount) || 0);
@@ -166,18 +169,11 @@ export const ShortVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress, o
           ]}
           activeOpacity={0.8}
           onPress={() => {
-            if (onVideoPress) {
-              onVideoPress({
-                id: video.id,
-                videoUrl: videoToPlay as string,
-                title: isLocal ? localTitle : video.title,
-                description: isLocal ? (video.description || '') : (video.description || 'A short cinematic video.'),
-                isLocal: isLocal,
-                isShort: true
-              });
-            } else if (videoToPlay) {
-              setShowPlayer(true);
-            }
+            setIsMuted(!isMuted);
+          }}
+          onLongPress={() => {
+            setActiveVideo(video.id);
+            router.push('/vids');
           }}
         >
           <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>

@@ -1,6 +1,9 @@
 import React from 'react';
 import { View, StyleSheet, Text, Image, TouchableOpacity, Dimensions } from 'react-native';
 import { Play } from 'lucide-react-native';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
+import { ThemeTokens } from '@/core/theme/themes';
 
 const { width } = Dimensions.get('window');
 const VIDEO_WIDTH = (width - 48) / 2; // 16 padding on each side, 16 gap between = 48
@@ -22,6 +25,8 @@ const DUMMY_SHORTS = [
 ];
 
 export const ShortVideosWidget = () => {
+  const theme = useCurrentTheme();
+  const styles = useStyles(themeStyles);
   return (
     <View style={styles.container}>
       <Text style={styles.headerTitle}>Shorts For You</Text>
@@ -31,7 +36,7 @@ export const ShortVideosWidget = () => {
             <Image source={{ uri: short.thumbnail }} style={styles.thumbnail} />
             <View style={styles.overlay}>
               <View style={styles.playIconContainer}>
-                <Play size={20} color="#FFF" fill="#FFF" style={{ marginLeft: 2 }} />
+                <Play size={20} color={theme.colors.onPrimary} fill={theme.colors.onPrimary} style={{ marginLeft: 2 }} />
               </View>
               <View style={styles.textContainer}>
                 <Text style={styles.title} numberOfLines={2}>{short.title}</Text>
@@ -45,14 +50,14 @@ export const ShortVideosWidget = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = (colors: ThemeTokens) => StyleSheet.create({
   container: {
     paddingVertical: 20,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.05)',
   },
   headerTitle: {
-    color: '#FFF',
+    color: colors.text,
     fontSize: 18,
     fontWeight: '800',
     paddingHorizontal: 16,
@@ -68,7 +73,7 @@ const styles = StyleSheet.create({
     height: VIDEO_HEIGHT,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: colors.surface,
   },
   thumbnail: {
     ...StyleSheet.absoluteFillObject,
@@ -92,7 +97,7 @@ const styles = StyleSheet.create({
     marginTop: 'auto',
   },
   title: {
-    color: '#FFF',
+    color: colors.text,
     fontSize: 14,
     fontWeight: '700',
     marginBottom: 6,
@@ -101,7 +106,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 3,
   },
   views: {
-    color: '#FFF',
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: '600',
     textShadowColor: 'rgba(0,0,0,0.8)',

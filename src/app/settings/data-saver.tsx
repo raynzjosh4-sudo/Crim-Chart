@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
     paddingRight: 16,
   },
   label: {
-    color: colors.text,
+    color: '#FFF',
     fontSize: 16,
     fontWeight: '500',
     marginBottom: 4,
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255, 255, 255, 0.05)',
   },
   optionText: {
-    color: colors.text,
+    color: '#FFF',
     fontSize: 15,
   },
   optionTextSelected: {

@@ -19,35 +19,67 @@ interface PostOptionsSheetProps {
   postId: string;
   visible: boolean;
   onClose: () => void;
+  anchorPosition?: { x: number; y: number };
 }
 
-export const PostOptionsSheet: React.FC<PostOptionsSheetProps> = ({ postId, visible, onClose }) => {
+export const PostOptionsSheet: React.FC<PostOptionsSheetProps> = ({ postId, visible, onClose, anchorPosition }) => {
   const insets = useSafeAreaInsets();
   const styles = useStyles(themeStyles);
   const theme = useCurrentTheme();
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
+
+  const getDesktopStyle = () => {
+    if (!anchorPosition) return {};
+    
+    let left = anchorPosition.x - 200;
+    if (left + 250 > width) {
+      left = width - 260;
+    }
+    if (left < 10) left = 10;
+    
+    return {
+      position: 'absolute' as const,
+      top: anchorPosition.y + 10,
+      left: left,
+      width: 250,
+      borderRadius: 16,
+      backgroundColor: theme.colors.background,
+      shadowColor: theme.isDark ? '#FFFFFF' : '#000000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: theme.isDark ? 0.15 : 0.15,
+      shadowRadius: 24,
+      elevation: 10,
+      paddingTop: 16,
+      paddingBottom: 8,
+      overflow: 'hidden' as const,
+    };
+  };
 
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType={isDesktop ? 'fade' : 'slide'}
       onRequestClose={onClose}
       statusBarTranslucent={true}
       navigationBarTranslucent={true}
     >
-      <View style={styles.overlay}>
+      <View style={isDesktop ? styles.desktopOverlay : styles.overlay}>
         <TouchableWithoutFeedback onPress={onClose}>
           <View style={styles.backdrop} />
         </TouchableWithoutFeedback>
         
-        <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 24) }]}>
-          <View style={styles.header}>
-            <View style={{ width: 24 }} />
-            <Text style={styles.title}>Post Options</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <X size={24} color={theme.colors.text} />
-            </TouchableOpacity>
-          </View>
+        <View style={isDesktop ? getDesktopStyle() : [styles.container, { paddingBottom: Math.max(insets.bottom, 24) }]}>
+          {!isDesktop && (
+            <View style={styles.header}>
+              <View style={{ width: 24 }} />
+              <Text style={styles.title}>Post Options</Text>
+              <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+                <X size={24} color={theme.colors.text} />
+              </TouchableOpacity>
+            </View>
+          )}
           
           <View style={styles.optionsContainer}>
             <TouchableOpacity style={styles.optionRow} onPress={() => { /* TODO */ }}>
@@ -75,6 +107,9 @@ const themeStyles = (colors: ThemeTokens, scale: number) => ({
   overlay: {
     flex: 1,
     justifyContent: 'flex-end' as const,
+  },
+  desktopOverlay: {
+    flex: 1,
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,

@@ -2,7 +2,8 @@ import { channelRepository } from '@/channel/data/repositories/ChannelRepository
 import { useChannelData } from '@/channel/hooks/useChannelData';
 import { AgeRestrictionType, AppAgeRestrictionPicker } from '@/components/ageRestriction/AppAgeRestrictionPicker';
 import { AppCountryPicker } from '@/components/countryPicker/AppCountryPicker';
-import { colors } from '@/core/theme/colors';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Calendar, CheckCircle2, ChevronLeft, Circle, Globe } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -17,6 +18,8 @@ export default function PrivacyPermissionsPage({ channelIdOverride }: { channelI
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
   const { channel, loading } = useChannelData(id);
+  const theme = useCurrentTheme();
+  const styles = useStyles(useStylesHook);
 
   // Settings State
   const [visibleToOthers, setVisibleToOthers] = useState(true);
@@ -84,8 +87,8 @@ export default function PrivacyPermissionsPage({ channelIdOverride }: { channelI
       <Switch
         value={value}
         onValueChange={onValueChange}
-        trackColor={{ false: '#333', true: colors.primary + '66' }}
-        thumbColor={value ? colors.primary : '#666'}
+        trackColor={{ false: theme.colors.surfaceVariant, true: theme.colors.primary + '66' }}
+        thumbColor={value ? theme.colors.primary : theme.colors.textSecondary}
       />
     </View>
   );
@@ -94,9 +97,9 @@ export default function PrivacyPermissionsPage({ channelIdOverride }: { channelI
     <TouchableOpacity activeOpacity={1} style={styles.tile} onPress={() => onSelect(value)}>
       <Text style={styles.tileTitle}>{title}</Text>
       {value === groupValue ? (
-        <CheckCircle2 size={22} color={colors.primary} />
+        <CheckCircle2 size={22} color={theme.colors.primary} />
       ) : (
-        <Circle size={22} color="rgba(255,255,255,0.2)" />
+        <Circle size={22} color={theme.colors.surfaceVariant} />
       )}
     </TouchableOpacity>
   );
@@ -106,7 +109,7 @@ export default function PrivacyPermissionsPage({ channelIdOverride }: { channelI
       <Text style={styles.tileTitle}>{title}</Text>
       <View style={styles.tileRight}>
         <Text style={styles.tileSubtitle}>{subtitle}</Text>
-        <ChevronLeft size={20} color="rgba(255,255,255,0.4)" style={{ transform: [{ rotate: '180deg' }] }} />
+        <ChevronLeft size={20} color={theme.colors.textSecondary} style={{ transform: [{ rotate: '180deg' }] }} />
       </View>
     </TouchableOpacity>
   );
@@ -118,11 +121,13 @@ export default function PrivacyPermissionsPage({ channelIdOverride }: { channelI
         <TouchableOpacity activeOpacity={1} onPress={() => {
           if (isDesktop && channelIdOverride) {
             router.setParams({ desktopChannelView: 'settings' });
-          } else {
+          } else if (router.canGoBack()) {
             router.back();
+          } else {
+            router.replace(`/channel/settings/${id}` as any);
           }
         }} style={styles.headerButton}>
-          <ChevronLeft size={28} color="#FFF" />
+          <ChevronLeft size={28} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Privacy & Permissions</Text>
         <View style={{ width: 44 }} />
@@ -259,15 +264,15 @@ export default function PrivacyPermissionsPage({ channelIdOverride }: { channelI
   );
 }
 
-const styles = StyleSheet.create({
+const useStylesHook = (colors: any) => ({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: colors.background,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
     height: 60,
     paddingHorizontal: 12,
   },
@@ -275,9 +280,9 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   headerTitle: {
-    color: '#FFF',
+    color: colors.text,
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: '900' as const,
   },
   content: {
     flex: 1,
@@ -285,36 +290,36 @@ const styles = StyleSheet.create({
   sectionHeader: {
     color: colors.primary,
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: '900' as const,
     letterSpacing: 1.2,
     paddingHorizontal: 20,
     marginTop: 24,
     marginBottom: 8,
   },
   tile: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    borderBottomColor: colors.surfaceVariant,
   },
   tileTitle: {
-    color: '#FFF',
+    color: colors.text,
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '600' as const,
     flex: 1,
   },
   tileRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 8,
   },
   tileSubtitle: {
-    color: 'rgba(255,255,255,0.5)',
+    color: colors.textSecondary,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '600' as const,
   },
 
   footerSpacer: {

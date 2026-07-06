@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   label: {
-    color: colors.text,
+    color: '#FFF',
     fontSize: 16,
     fontWeight: '500',
   },

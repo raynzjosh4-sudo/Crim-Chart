@@ -25,6 +25,7 @@ import { VideoPostFeedCard } from './VideoPostFeedCard';
 import { UserStatusViewer } from '@/components/status/UserStatusViewer';
 import { useAppRouter } from '@/core/hooks/useAppRouter';
 import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { useViewedStatusStore } from '@/core/store/useViewedStatusStore';
 import { ThemeTokens } from '@/core/theme/themes';
 import { useFeedStatuses } from '@/statuses/hooks/useFeedStatuses';
@@ -57,6 +58,7 @@ const MemoizedFeedItem = React.memo(({
     case 'channel_post':
     case 'post':
       return <SmartPostWidget postId={item.entity_id} entityType={item.entity_type} sourceType={item.source_type} isActive={isActive} prefetchedData={item.prefetchedData} />;
+    /*
     case 'box':
     case 'box_store':
     case 'box_marketplace':
@@ -72,6 +74,7 @@ const MemoizedFeedItem = React.memo(({
     case 'box_voting':
     case 'box_contest':
       return <VotingBoxFeedCard boxId={item.entity_id} prefetchedData={item.prefetchedData} />;
+    */
     case 'user_recommendation_carousel':
       return <UserRecommendationCarousel />;
     case 'channel_recommendation_carousel':
@@ -125,6 +128,7 @@ export const MainFeedBody = ({
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
 
+  const theme = useCurrentTheme();
   const styles = useStyles(themeStyles);
 
   const { statuses: flatStatuses, refresh: refreshStatuses } = useFeedStatuses(user?.id);
@@ -212,7 +216,7 @@ export const MainFeedBody = ({
 
   if (isLoading && cards.length === 0) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#000' }}>
+      <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
         {Array.from({ length: 3 }).map((_, i) => (
           <MainFeedSkeletonCard key={i} />
         ))}

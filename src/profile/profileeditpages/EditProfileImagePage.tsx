@@ -8,9 +8,14 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { supabase } from '@/core/supabase/supabaseConfig';
 import { Camera } from 'lucide-react-native';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
+import { ThemeTokens } from '@/core/theme/themes';
 
 export const EditProfileImagePage: React.FC = () => {
   const navigation = useNavigation();
+  const theme = useCurrentTheme();
+  const styles = useStyles(themeStyles);
   const user = useAuthStore(s => s.user);
   const [preview, setPreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -68,7 +73,7 @@ export const EditProfileImagePage: React.FC = () => {
           </View>
         )}
         <View style={styles.editBadge}>
-          <Camera color="#000" size={16} />
+          <Camera color={theme.colors.onPrimary} size={16} />
         </View>
       </TouchableOpacity>
 
@@ -77,7 +82,7 @@ export const EditProfileImagePage: React.FC = () => {
       {preview && (
         <TouchableOpacity activeOpacity={1} style={styles.uploadBtn} onPress={uploadImage} disabled={isUploading}>
           {isUploading
-            ? <ActivityIndicator color="#000" />
+            ? <ActivityIndicator color={theme.colors.onPrimary} />
             : <Text style={styles.uploadBtnText}>Save Photo</Text>
           }
         </TouchableOpacity>
@@ -86,16 +91,16 @@ export const EditProfileImagePage: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = (colors: ThemeTokens) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0D0D0D',
+    backgroundColor: colors.background,
     alignItems: 'center',
     paddingTop: 48,
     paddingHorizontal: 24,
   },
   heading: {
-    color: '#FFF',
+    color: colors.text,
     fontSize: 22,
     fontWeight: '900',
     marginBottom: 32,
@@ -109,13 +114,13 @@ const styles = StyleSheet.create({
     height: 150,
     borderRadius: 75,
     borderWidth: 3,
-    borderColor: '#FACD11',
+    borderColor: colors.primary,
   },
   avatarPlaceholder: {
     width: 150,
     height: 150,
     borderRadius: 75,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
@@ -125,14 +130,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 4,
     right: 4,
-    backgroundColor: '#FACD11',
+    backgroundColor: colors.primary,
     width: 36,
     height: 36,
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#0D0D0D',
+    borderColor: colors.background,
   },
   hint: {
     color: 'rgba(255,255,255,0.4)',
@@ -140,14 +145,14 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   uploadBtn: {
-    backgroundColor: '#FACD11',
+    backgroundColor: colors.primary,
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 40,
     alignItems: 'center',
   },
   uploadBtnText: {
-    color: '#000',
+    color: colors.onPrimary,
     fontWeight: '900',
     fontSize: 15,
   },

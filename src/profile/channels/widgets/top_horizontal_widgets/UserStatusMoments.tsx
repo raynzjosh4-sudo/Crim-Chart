@@ -7,9 +7,14 @@ import { colors } from '@/core/theme/colors';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { useFeedStore } from '@/core/store/useFeedStore';
 import { useViewedStatusStore } from '@/core/store/useViewedStatusStore';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
+import { ThemeTokens } from '@/core/theme/themes';
 
 export const UserStatusWidget = () => {
   const router = useRouter();
+  const theme = useCurrentTheme();
+  const styles = useStyles(themeStyles);
   const { user } = useAuthStore();
   
   // Using useFeedStore to mimic joinedStatusesProvider from Riverpod
@@ -38,7 +43,7 @@ export const UserStatusWidget = () => {
       <View style={styles.container}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           {[1, 2, 3, 4, 5].map(i => (
-            <View key={i} style={[styles.statusCard, { backgroundColor: '#333' }]} />
+            <View key={i} style={[styles.statusCard, { backgroundColor: theme.colors.surface }]} />
           ))}
         </ScrollView>
       </View>
@@ -71,7 +76,7 @@ export const UserStatusWidget = () => {
               )}
             </View>
             <View style={styles.addButton}>
-              <Plus size={14} color="#000" />
+              <Plus size={14} color={theme.colors.onPrimary} />
             </View>
           </View>
           <Text style={styles.cardLabel}>Status</Text>
@@ -128,7 +133,7 @@ export const UserStatusWidget = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = (colors: ThemeTokens) => StyleSheet.create({
   container: {
     height: 175,
     paddingVertical: 4,
@@ -140,7 +145,7 @@ const styles = StyleSheet.create({
   createCard: {
     width: 100,
     height: 160,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: colors.surface,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
@@ -166,14 +171,14 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#111',
+    backgroundColor: colors.surfaceVariant,
   },
   placeholderAvatar: {
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarInitials: {
-    color: '#FFF',
+    color: colors.text,
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -186,7 +191,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   cardLabel: {
-    color: '#FFF',
+    color: colors.text,
     fontSize: 13,
     fontWeight: 'bold',
     position: 'absolute',
@@ -196,7 +201,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 160,
     borderRadius: 16,
-    backgroundColor: '#000',
+    backgroundColor: colors.background,
     overflow: 'hidden',
     position: 'relative',
     shadowColor: '#000',
@@ -221,20 +226,20 @@ const styles = StyleSheet.create({
     padding: 2,
     borderRadius: 20,
     borderWidth: 2,
-    borderColor: '#FFB800',
+    borderColor: colors.primary,
   },
   cardAvatar: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#333',
+    backgroundColor: colors.surface,
   },
   authorName: {
     position: 'absolute',
     bottom: 12,
     left: 12,
     right: 12,
-    color: '#FFF',
+    color: colors.text,
     fontSize: 13,
     fontWeight: 'bold',
   },

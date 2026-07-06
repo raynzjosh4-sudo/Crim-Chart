@@ -3,8 +3,10 @@ import { FollowUserButton } from '@/components/FollowUserButton';
 import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import { OfflineStateWidget } from '@/components/offline/OfflineStateWidget';
 import { supabase } from '@/core/supabase/supabaseConfig';
-import { colors } from '@/core/theme/colors';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
+import { ThemeTokens } from '@/core/theme/themes';
 import { useRouter } from 'expo-router';
 import { User, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef } from 'react';
@@ -48,6 +50,8 @@ export const FollowersListPage: React.FC<FollowersListPageProps> = ({
   onClose,
 }) => {
   const router = useRouter();
+  const theme = useCurrentTheme();
+  const styles = useStyles(themeStyles);
   const insets = useSafeAreaInsets();
   const currentUser = useAuthStore(s => s.user);
   const { stopLoading } = useGlobalProgress();
@@ -230,7 +234,7 @@ export const FollowersListPage: React.FC<FollowersListPageProps> = ({
             <View style={styles.panelHeader}>
               <Text style={styles.panelTitle}>Connections</Text>
               <TouchableOpacity activeOpacity={0.8} onPress={handleBack} style={styles.closeBtn}>
-                <X color="#FFF" size={20} />
+                <X color={theme.colors.text} size={20} />
               </TouchableOpacity>
             </View>
             {content}
@@ -290,7 +294,7 @@ const shimmerStyles = StyleSheet.create({
   line2: { height: 10, width: '35%', borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.04)' },
 });
 
-const styles = StyleSheet.create({
+const themeStyles = (colors: ThemeTokens) => StyleSheet.create({
   page: {
     flex: 1,
     backgroundColor: colors.background,
@@ -310,15 +314,15 @@ const styles = StyleSheet.create({
   },
   tabActive: {
     borderBottomWidth: 3,
-    borderBottomColor: '#FACD11',
+    borderBottomColor: colors.primary,
   },
   tabText: {
-    color: 'rgba(255,255,255,0.4)',
+    color: colors.textSecondary,
     fontWeight: '700',
     fontSize: 14,
   },
   tabTextActive: {
-    color: '#FFF',
+    color: colors.text,
   },
   userRow: {
     flexDirection: 'row',
@@ -349,12 +353,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   displayName: {
-    color: '#FFF',
+    color: colors.text,
     fontWeight: '700',
     fontSize: 15,
   },
   crownTitle: {
-    color: 'rgba(255,255,255,0.4)',
+    color: colors.textSecondary,
     fontSize: 12,
     marginTop: 2,
   },
@@ -404,7 +408,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,255,255,0.08)',
   },
   panelTitle: {
-    color: '#FFF',
+    color: colors.text,
     fontWeight: '800',
     fontSize: 18,
     letterSpacing: -0.3,

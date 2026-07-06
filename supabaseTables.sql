@@ -26,6 +26,7 @@ CREATE TABLE public.profiles (
   unread_interactions_count integer DEFAULT 0,
   country text,
   inbox_permission text DEFAULT 'everyone'::text CHECK (inbox_permission = ANY (ARRAY['everyone'::text, 'require_approval'::text, 'followers_only'::text, 'only_me'::text])),
+  music_category text,
   CONSTRAINT profiles_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.channels (
@@ -236,6 +237,7 @@ CREATE TABLE public.channel_posts (
   views_count integer DEFAULT 0,
   downloads_count integer DEFAULT 0,
   type text,
+  category text,
   CONSTRAINT channel_posts_pkey PRIMARY KEY (id),
   CONSTRAINT channel_posts_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id),
   CONSTRAINT channel_posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.profiles(id)
@@ -380,9 +382,12 @@ CREATE TABLE public.posts (
   views_count integer DEFAULT 0,
   downloads_count integer DEFAULT 0,
   type text,
+  music_id uuid,
+  category text,
   CONSTRAINT posts_pkey PRIMARY KEY (id),
   CONSTRAINT posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.profiles(id),
-  CONSTRAINT posts_parent_post_id_fkey FOREIGN KEY (parent_post_id) REFERENCES public.posts(id)
+  CONSTRAINT posts_parent_post_id_fkey FOREIGN KEY (parent_post_id) REFERENCES public.posts(id),
+  CONSTRAINT posts_music_id_fkey FOREIGN KEY (music_id) REFERENCES public.posts(id)
 );
 CREATE TABLE public.channel_branding (
   channel_id uuid NOT NULL,
@@ -574,4 +579,26 @@ CREATE TABLE public.short_video_pointers (
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT short_video_pointers_pkey PRIMARY KEY (id),
   CONSTRAINT short_video_pointers_target_user_id_fkey FOREIGN KEY (target_user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.notifications (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  recipient_id uuid NOT NULL,
+  actor_id uuid NOT NULL,
+  type text NOT NULL CHECK (type = ANY (ARRAY['like'::text, 'comment'::text, 'follow'::text, 'channel_invite'::text, 'channel_request'::text, 'mention'::text, 'post_tag'::text])),
+  reference_id uuid,
+  is_read boolean NOT NULL DEFAULT false,
+  created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT notifications_pkey PRIMARY KEY (id),
+  CONSTRAINT notifications_recipient_id_fkey FOREIGN KEY (recipient_id) REFERENCES public.profiles(id),
+  CONSTRAINT notifications_actor_id_fkey FOREIGN KEY (actor_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.user_push_tokens (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid,
+  token text NOT NULL,
+  platform text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT user_push_tokens_pkey PRIMARY KEY (id),
+  CONSTRAINT user_push_tokens_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );

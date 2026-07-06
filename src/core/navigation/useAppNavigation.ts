@@ -4,6 +4,7 @@ import { NativeDB } from '@/core/db/NativeDB';
 import { setPreloadedMainFeed } from '@/mainFeed/pages/MainFeedPage';
 import { Platform } from 'react-native';
 import { useDesktopComposeStore } from '@/core/store/useDesktopComposeStore';
+import { useGlobalAudioPlayer } from '@/core/store/useGlobalAudioPlayer';
 
 export const useAppNavigation = () => {
   const router = useRouter();
@@ -104,6 +105,26 @@ export const useAppNavigation = () => {
     }
   };
 
+  const navigateToNotifications = async () => {
+    useGlobalAudioPlayer.getState().stopAll();
+    startLoading();
+    try {
+      const { useAuthStore } = require('@/features/auth/application/useAuthStore');
+      const { useNotificationStore } = require('@/features/notifications/application/useNotificationStore');
+      const user = useAuthStore.getState().user;
+      
+      if (user) {
+        await useNotificationStore.getState().fetchNotifications(user.id, true);
+      }
+      await new Promise(resolve => setTimeout(resolve, 300));
+    } catch (e) {
+      console.error(e);
+    } finally {
+      stopLoading();
+      router.navigate('/notifications' as any);
+    }
+  };
+
   return {
     withPremiumTransition,
     navigateToCrim,
@@ -113,5 +134,6 @@ export const useAppNavigation = () => {
     navigateToStatuses,
     navigateToInbox,
     navigateToMyMusic,
+    navigateToNotifications,
   };
 };

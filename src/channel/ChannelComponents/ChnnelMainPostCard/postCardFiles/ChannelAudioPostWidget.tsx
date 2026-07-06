@@ -1,15 +1,20 @@
 import { Music, Pause, Play } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { Audio } from 'expo-av';
 import { Animated, Easing, Image, StyleSheet, Text, TouchableOpacity, View, AppState } from 'react-native';
 import { SyncedLyrics } from '@/components/musicPlayer/SyncedLyrics';
 import { useIsFocused } from '@react-navigation/native';
+import { MediaDownloadWrapper } from '@/components/wrappers/MediaDownloadWrapper';
+import { DownloadButton } from '@/components/buttons/DownloadButton';
+import { useInteractionStore } from '@/core/store/useInteractionStore';
+import { useGlobalAudioPlayer } from '@/core/store/useGlobalAudioPlayer';
 
 export interface ChannelAudioPostWidgetProps {
   audioUrl: string;
   thumbnailUrl?: string;
   metadata?: any;
   isActive?: boolean;
+  downloadsCount?: number;
+  postId?: string;
 }
 
 // Generate random pseudo-waveform heights based on the URL string
@@ -39,116 +44,52 @@ export const ChannelAudioPostWidget: React.FC<ChannelAudioPostWidgetProps> = ({
   thumbnailUrl,
   metadata,
   isActive,
+  downloadsCount = 0,
+  postId,
 }) => {
-  const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [totalDuration, setTotalDuration] = useState(30);
   const heights = useRef(generateHeights(audioUrl)).current;
-  
-  const soundRef = useRef<Audio.Sound | null>(null);
-  const loadingPromiseRef = useRef<Promise<Audio.Sound | null> | null>(null);
-  const desiredPlayState = useRef(false);
 
-  const onPlaybackStatusUpdate = (status: any) => {
-    if (status.isLoaded) {
-      setPosition(status.positionMillis / 1000);
-      if (status.durationMillis) {
-        setTotalDuration(status.durationMillis / 1000);
-      }
-      if (status.didJustFinish) {
-        setIsPlaying(false);
-        desiredPlayState.current = false;
-        soundRef.current?.setPositionAsync(0);
-      }
-    }
-  };
+  // Global audio player — one track across the entire app
+  const { currentTrackId, isPlaying: globalIsPlaying, toggleTrack, pauseCurrent } = useGlobalAudioPlayer();
+  const trackId = `audio_widget_${audioUrl}`;
+  const isPlaying = currentTrackId === trackId && globalIsPlaying;
 
-  const loadAudio = async () => {
-    if (soundRef.current) return soundRef.current;
-    if (loadingPromiseRef.current) return loadingPromiseRef.current;
-
-    loadingPromiseRef.current = (async () => {
-      try {
-        const { sound } = await Audio.Sound.createAsync(
-          { uri: audioUrl },
-          { shouldPlay: false, progressUpdateIntervalMillis: 100 },
-          onPlaybackStatusUpdate
-        );
-        soundRef.current = sound;
-        return sound;
-      } catch (e) {
-        console.log('Error loading audio:', e);
-        return null;
-      }
-    })();
-
-    return loadingPromiseRef.current;
-  };
-
-  const playAudio = async () => {
-    desiredPlayState.current = true;
-    setIsPlaying(true);
-    const sound = await loadAudio();
-    if (sound) {
-      if (desiredPlayState.current) {
-        await sound.playAsync();
-      } else {
-        await sound.pauseAsync();
-      }
-    }
-  };
-
-  const pauseAudio = async () => {
-    desiredPlayState.current = false;
-    setIsPlaying(false);
-    
-    if (soundRef.current) {
-      await soundRef.current.pauseAsync();
-    } else if (loadingPromiseRef.current) {
-      // If it's currently loading, wait for it to finish and then pause it
-      const sound = await loadingPromiseRef.current;
-      if (sound) await sound.pauseAsync();
-    }
-  };
-
-  const togglePlay = () => {
-    if (desiredPlayState.current) {
-      pauseAudio();
-    } else {
-      playAudio();
-    }
-  };
-
+  // Auto-play when scrolled into view, pause when scrolled away
   useEffect(() => {
-    if (isActive === false) {
-      pauseAudio();
+    if (!audioUrl) return;
+    if (isActive === true) {
+      useGlobalAudioPlayer.getState().playTrack(trackId, audioUrl);
+    } else if (isActive === false) {
+      if (useGlobalAudioPlayer.getState().currentTrackId === trackId) {
+        pauseCurrent();
+      }
     }
-  }, [isActive]);
+  }, [isActive, audioUrl, trackId]);
 
-  const isFocused = useIsFocused();
-  
+  // Pause when app goes to background
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (nextAppState !== 'active') {
-        pauseAudio();
+        if (useGlobalAudioPlayer.getState().currentTrackId === trackId) {
+          pauseCurrent();
+        }
       }
     });
     return () => subscription.remove();
-  }, []);
+  }, [trackId]);
 
+  // Pause when screen loses focus (navigating away)
+  const isFocused = useIsFocused();
   useEffect(() => {
     if (!isFocused) {
-      pauseAudio();
-    }
-  }, [isFocused]);
-
-  useEffect(() => {
-    return () => {
-      if (soundRef.current) {
-        soundRef.current.unloadAsync();
+      if (useGlobalAudioPlayer.getState().currentTrackId === trackId) {
+        pauseCurrent();
       }
-    };
-  }, []);
+    }
+  }, [isFocused, trackId]);
+
 
   const formatDuration = (secs: number) => {
     const mins = Math.floor(secs / 60);
@@ -187,16 +128,10 @@ export const ChannelAudioPostWidget: React.FC<ChannelAudioPostWidgetProps> = ({
     outputRange: ['0deg', '360deg'],
   });
 
-  const songTitle = metadata?.title || metadata?.songName || 'Starlit Reverie';
-  const songArtist = metadata?.artist || metadata?.singer || 'Budiarti x Lil magrib';
-
-  const mockLyrics = [
-    "Whispers in the midnight breeze,",
-    "Carrying dreams across the seas,",
-    "I close my eyes, let go, and drift away."
-  ];
+  const songTitle = metadata?.title || metadata?.songName || 'Unknown Title';
+  const songArtist = metadata?.artist || metadata?.singer || 'Unknown Artist';
   
-  let lyricsString = mockLyrics.join('\n');
+  let lyricsString = '';
   if (Array.isArray(metadata?.lyrics) && metadata.lyrics.length > 0) {
     lyricsString = metadata.lyrics.join('\n');
   } else if (typeof metadata?.lyrics === 'string' && metadata.lyrics.trim().length > 0) {
@@ -208,7 +143,7 @@ export const ChannelAudioPostWidget: React.FC<ChannelAudioPostWidgetProps> = ({
   const displayThumbnail = thumbnailUrl || fallbackThumbnail;
 
   return (
-    <TouchableOpacity activeOpacity={0.9} onPress={togglePlay} style={styles.container}>
+    <TouchableOpacity activeOpacity={0.9} onPress={() => toggleTrack(trackId, audioUrl)} style={styles.container}>
       {/* Blurred Background */}
       <Image 
         source={{ uri: displayThumbnail }} 
@@ -216,6 +151,31 @@ export const ChannelAudioPostWidget: React.FC<ChannelAudioPostWidgetProps> = ({
         blurRadius={50} 
       />
       <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0,0,0,0.5)' }]} />
+
+      {/* Download Button */}
+      <View style={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }}>
+        <MediaDownloadWrapper
+          mediaUrl={audioUrl}
+          title={songTitle}
+          coverUrl={displayThumbnail}
+          mediaType="audio"
+          onDownloadSuccess={() => {
+            if (postId) {
+               useInteractionStore.getState().incrementDownload(postId);
+            }
+          }}
+        >
+          {({ download, isDownloading }) => (
+            <DownloadButton
+              onPress={download}
+              isDownloading={isDownloading}
+              color="rgba(255,255,255,0.8)"
+              size={24}
+              count={downloadsCount}
+            />
+          )}
+        </MediaDownloadWrapper>
+      </View>
 
       {/* Large Circular Disk with Play Overlay */}
       <View style={styles.largeDiskContainer}>
@@ -263,11 +223,13 @@ export const ChannelAudioPostWidget: React.FC<ChannelAudioPostWidgetProps> = ({
       <Text style={styles.largeArtistText} numberOfLines={1}>{songArtist}</Text>
 
       {/* Lyrics using custom SyncedLyrics widget */}
-      <SyncedLyrics 
-        lyrics={lyricsString} 
-        position={position} 
-        duration={totalDuration} 
-      />
+      {lyricsString ? (
+        <SyncedLyrics 
+          lyrics={lyricsString} 
+          position={position} 
+          duration={totalDuration} 
+        />
+      ) : null}
     </TouchableOpacity>
   );
 };

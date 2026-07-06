@@ -1,7 +1,6 @@
 import { ChannelModel } from '@/channel/models/ChannelModel';
 import ChannelListTile from '@/channel/widgets/ChannelListTile';
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
-import { useTheme } from '@react-navigation/native';
 import { useAppRouter } from '@/core/hooks/useAppRouter';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View, Platform, useWindowDimensions } from 'react-native';
@@ -18,8 +17,16 @@ import { ChannelSearchBar } from '@/profile/channels/widgets/ChannelSearchBar';
 import { useUserChannels } from '@/channel/hooks/useChannels';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 
+import { useStyles } from '@/core/hooks/useStyles';
 export default function ChannelsPage() {
-  const { colors } = useTheme();
+  const styles = useStyles(colors => ({
+    container: { flex: 1, backgroundColor: colors.background },
+    headerContainer: { paddingBottom: 8 },
+    footerContainer: { paddingTop: 16 },
+    divider: { height: 1, backgroundColor: colors.muted, marginVertical: 8 },
+    listContent: { paddingBottom: 40 },
+    empty: { textAlign: 'center' as const, marginTop: 40, opacity: 0.5, color: colors.text },
+  }));
   const router = useAppRouter();
   const user = useAuthStore(s => s.user);
   const { width } = useWindowDimensions();
@@ -90,7 +97,7 @@ export default function ChannelsPage() {
   };
 
   if (isLoading) return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={styles.container}>
       <ChartAppBar title="CHANNELS" showBack={false} titleStyle={{ fontWeight: '900', fontSize: 16, letterSpacing: 0.5 }} />
       <ChannelSearchBar onChanged={() => {}} />
       <ChannelFilterChips filters={['Channels', 'Private', 'Public']} activeFilter={activeFilter} onFilterChanged={setActiveFilter} />
@@ -99,7 +106,7 @@ export default function ChannelsPage() {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={styles.container}>
       <ChartAppBar
         title="CHANNELS"
         showBack={false}
@@ -130,7 +137,7 @@ export default function ChannelsPage() {
             onAvatarTap={(ch) => ch.momentsCount > 0 && setSelectedChannel(ch)}
           />
         )}
-        ListEmptyComponent={<Text style={[styles.empty, { color: colors.text }]}>No channels yet</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>No channels yet</Text>}
         contentContainerStyle={styles.listContent}
         removeClippedSubviews={true}
         initialNumToRender={8}
@@ -146,21 +153,3 @@ export default function ChannelsPage() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  headerContainer: {
-    paddingBottom: 8,
-  },
-  footerContainer: {
-    paddingTop: 16,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    marginVertical: 8,
-  },
-  listContent: {
-    paddingBottom: 40,
-  },
-  empty: { textAlign: 'center', marginTop: 40, opacity: 0.5 },
-});

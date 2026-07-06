@@ -11,7 +11,8 @@ import { useCurrentUserProfile, useUserProfile } from '@/features/auth/applicati
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { View, Platform } from 'react-native';
+import { PostOptionsSheet } from '@/components/postOptionsSheet/PostOptionsSheet';
 
 function resolveCanComment(allowCommentingBy: string | undefined | null, isMember: boolean, isFollower: boolean): boolean {
   const policy = (allowCommentingBy ?? 'all').toLowerCase();
@@ -112,6 +113,8 @@ export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
   const videoData = state.videoData;
   const canComment = state.canComment;
   const [loading, setLoading] = useState(!state.videoData);
+  const [postOptionsVisible, setPostOptionsVisible] = useState(false);
+  const [postOptionsPosition, setPostOptionsPosition] = useState<{ x: number; y: number } | undefined>(undefined);
 
   const isLocal = videoData?.addedBy?.id === 'local_user';
   const otherProfileId = isLocal || !videoData?.addedBy?.id ? undefined : videoData.addedBy?.id;
@@ -209,6 +212,12 @@ export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
               router.push(`/profile/${videoData.addedBy.id}`);
             }
           }}
+          onMoreTap={(e: any) => {
+            if (Platform.OS === 'web' && e?.nativeEvent) {
+              setPostOptionsPosition({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
+            }
+            setPostOptionsVisible(true);
+          }}
         />
       ) : null}
     </View>
@@ -234,6 +243,12 @@ export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
                 disableVideoPlayer={false}
                 isLiked={isLiked}
                 onLikePress={() => useInteractionStore.getState().toggleLike(videoData.id, undefined, videoData.sourceTable)}
+              />
+              <PostOptionsSheet
+                postId={videoData.id}
+                visible={postOptionsVisible}
+                onClose={() => setPostOptionsVisible(false)}
+                anchorPosition={postOptionsPosition}
               />
             </View>
           )}
@@ -261,6 +276,12 @@ export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
               disableVideoPlayer={false}
               isLiked={isLiked}
               onLikePress={() => useInteractionStore.getState().toggleLike(videoData.id, undefined, videoData.sourceTable)}
+            />
+            <PostOptionsSheet
+              postId={videoData.id}
+              visible={postOptionsVisible}
+              onClose={() => setPostOptionsVisible(false)}
+              anchorPosition={postOptionsPosition}
             />
           </View>
         )}

@@ -10,6 +10,8 @@ import { NativeDB } from '@/core/db/NativeDB';
 import { useProfileCacheStore } from '@/core/store/useProfileCacheStore';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { ChatBubble } from '@/features/channel/pages/messages_tab/widgets/chartbubble/ChatBubble';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { useGlobalSearchParams, useRouter } from 'expo-router';
 import { X } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
@@ -51,6 +53,41 @@ export const InboxDetailPage: React.FC<InboxDetailPageProps> = ({
 
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
+  const theme = useCurrentTheme();
+  const styles = useStyles(colors => ({
+    root: { flex: 1, backgroundColor: colors.background },
+    headerAvatarWrapper: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      backgroundColor: colors.surface,
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
+      marginLeft: 4,
+      position: 'relative' as const,
+    },
+    headerAvatar: { width: '100%' as any, height: '100%' as any, borderRadius: 17 },
+    avatarFallbackText: { fontSize: 18 },
+    activeDot: {
+      position: 'absolute' as const, bottom: 0, right: 0,
+      width: 10, height: 10, borderRadius: 5,
+      backgroundColor: '#4CAF50', borderWidth: 1.5, borderColor: colors.background,
+    },
+    statusRing: {
+      ...require('react-native').StyleSheet.absoluteFillObject,
+      borderRadius: 18, borderWidth: 1.5, borderColor: colors.accent,
+    },
+    headerTextCol: { justifyContent: 'center' as const },
+    emptyState: {
+      padding: 32, alignItems: 'center' as const, justifyContent: 'center' as const,
+      transform: [{ scaleY: -1 }],
+    },
+    emptyTitle: { color: colors.text, fontSize: 18, fontWeight: 'bold' as const, marginBottom: 8, opacity: 0.6 },
+    emptySub: { color: colors.textSecondary, fontSize: 14 },
+    inputContainer: {
+      paddingBottom: Platform.OS === 'ios' ? 8 : 0,
+    },
+  }));
 
   const { threads, messages, typingUsers, isLoadingMessages, fetchMessages, loadMoreMessages, subscribeToThread, unsubscribeFromThread, markThreadAsRead, sendMessage, startTyping, stopTyping, acceptInboxRequest } = useChatStore();
   const currentThread = threads.find(t => t.id === threadId);
@@ -217,7 +254,7 @@ export const InboxDetailPage: React.FC<InboxDetailPageProps> = ({
                 {!isDesktop && !isOverlay && <CrimchartBackButton onPress={() => router.back()} />}
                 {isOverlay && (
                   <TouchableOpacity onPress={onClose} style={{ marginRight: 12 }}>
-                    <X size={24} color="#FFF" />
+                    <X size={24} color={theme.colors.text} />
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity
@@ -232,7 +269,7 @@ export const InboxDetailPage: React.FC<InboxDetailPageProps> = ({
                     size={42}
                   />
                   <View style={{ marginLeft: 12 }}>
-                    <Text style={{ color: '#FFF', fontSize: 16, fontWeight: 'bold' }}>
+                    <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: 'bold' }}>
                       {displayName}
                     </Text>
                     {isTyping ? (
@@ -242,7 +279,7 @@ export const InboxDetailPage: React.FC<InboxDetailPageProps> = ({
                     ) : participantProfile?.isOnline ? (
                       <Text style={{ color: '#4CAF50', fontSize: 13, marginTop: 2 }}>Online</Text>
                     ) : participantProfile?.lastSeen ? (
-                      <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, marginTop: 2 }}>
+                      <Text style={{ color: theme.colors.textSecondary, fontSize: 13, marginTop: 2 }}>
                         last seen {formatLastSeen(participantProfile.lastSeen)}
                       </Text>
                     ) : null}
@@ -447,39 +484,3 @@ export const InboxDetailPage: React.FC<InboxDetailPageProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0D0D0D' },
-  headerAvatarWrapper: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#1A1A1A',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 4,
-    position: 'relative',
-  },
-  headerAvatar: { width: '100%', height: '100%', borderRadius: 17 },
-  avatarFallbackText: { fontSize: 18 },
-  activeDot: {
-    position: 'absolute', bottom: 0, right: 0,
-    width: 10, height: 10, borderRadius: 5,
-    backgroundColor: '#4CAF50', borderWidth: 1.5, borderColor: '#000',
-  },
-  statusRing: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 18, borderWidth: 1.5, borderColor: '#FACD11',
-  },
-  headerTextCol: {
-    justifyContent: 'center',
-  },
-  emptyState: {
-    padding: 32, alignItems: 'center', justifyContent: 'center',
-    transform: [{ scaleY: -1 }], // Inverted FlatList counter-transform
-  },
-  emptyTitle: { color: '#FFF', fontSize: 18, fontWeight: 'bold', marginBottom: 8, opacity: 0.6 },
-  emptySub: { color: 'rgba(255,255,255,0.4)', fontSize: 14 },
-  inputContainer: {
-    paddingBottom: Platform.OS === 'ios' ? 8 : 0,
-  },
-});

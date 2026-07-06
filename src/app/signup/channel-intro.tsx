@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    color: colors.text,
+    color: '#FFF',
     fontSize: 28,
     fontWeight: 'bold',
     textAlign: 'center',
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.05)',
   },
   channelPreviewTitle: {
-    color: colors.text,
+    color: '#FFF',
     fontSize: 20,
     fontWeight: 'bold',
     marginTop: 16,

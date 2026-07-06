@@ -3,6 +3,9 @@ import {
   View, Text, Image, TouchableOpacity, StyleSheet,
 } from 'react-native';
 import { Play } from 'lucide-react-native';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
+import { ThemeTokens } from '@/core/theme/themes';
 
 interface PostPreview {
   id: string;
@@ -21,6 +24,8 @@ interface ThumbnailLinkCardProps {
 }
 
 export const ThumbnailLinkCard: React.FC<ThumbnailLinkCardProps> = ({ post, onTap }) => {
+  const theme = useCurrentTheme();
+  const styles = useStyles(themeStyles);
   const previewUrl = post.imageUrl ?? post.videoUrl;
 
   return (
@@ -45,7 +50,7 @@ export const ThumbnailLinkCard: React.FC<ThumbnailLinkCardProps> = ({ post, onTa
             <Image source={{ uri: previewUrl }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
             {post.isVideo && (
               <View style={styles.playOverlay}>
-                <Play color="#FFF" size={22} fill="#FFF" />
+                <Play color={theme.colors.onPrimary} size={22} fill={theme.colors.onPrimary} />
               </View>
             )}
           </View>
@@ -62,7 +67,7 @@ export const ThumbnailLinkCard: React.FC<ThumbnailLinkCardProps> = ({ post, onTa
   );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = (colors: ThemeTokens) => StyleSheet.create({
   card: {
     borderWidth: 0.5,
     borderColor: 'rgba(255,255,255,0.12)',
@@ -82,22 +87,22 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     overflow: 'hidden',
-    backgroundColor: '#2A2A2A',
+    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarImg: { width: '100%', height: '100%' },
   avatarFallback: { fontSize: 12 },
-  authorName: { flex: 1, color: '#FFF', fontWeight: '700', fontSize: 12 },
-  timeAgo: { color: 'rgba(255,255,255,0.4)', fontSize: 10 },
+  authorName: { flex: 1, color: colors.text, fontWeight: '700', fontSize: 12 },
+  timeAgo: { color: colors.textSecondary, fontSize: 10 },
   content: { flexDirection: 'row' },
-  thumb: { width: 100, height: 100, backgroundColor: '#1A1A1A', position: 'relative' },
+  thumb: { width: 100, height: 100, backgroundColor: colors.surface, position: 'relative' },
   playOverlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.3)',
   },
-  caption: { color: '#FFF', fontSize: 13, lineHeight: 18 },
-  viewOriginal: { color: 'rgba(255,255,255,0.4)', fontSize: 12, fontStyle: 'italic' },
+  caption: { color: colors.text, fontSize: 13, lineHeight: 18 },
+  viewOriginal: { color: colors.textSecondary, fontSize: 12, fontStyle: 'italic' },
 });

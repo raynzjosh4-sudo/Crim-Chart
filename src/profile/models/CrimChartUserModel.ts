@@ -42,6 +42,7 @@ export class CrimChartUserModel {
   public createdAt?: Date;
   public inboxPermission?: string;
   public connectionStats?: UserConnectionStatsModel;
+  public musicCategory?: string;
 
   constructor(params: {
     id: string;
@@ -74,6 +75,7 @@ export class CrimChartUserModel {
     createdAt?: Date;
     inboxPermission?: string;
     connectionStats?: UserConnectionStatsModel;
+    musicCategory?: string;
   }) {
     this.id = params.id;
     this.displayName = params.displayName;
@@ -105,6 +107,7 @@ export class CrimChartUserModel {
     this.createdAt = params.createdAt;
     this.inboxPermission = params.inboxPermission ?? 'everyone';
     this.connectionStats = params.connectionStats;
+    this.musicCategory = params.musicCategory;
   }
 
   static empty(): CrimChartUserModel {
@@ -154,6 +157,7 @@ export class CrimChartUserModel {
         showStatusText: map.user_connection_stats.show_status_text ?? true,
         showCountryPref: map.user_connection_stats.show_country_pref ?? true,
         showAgePref: map.user_connection_stats.show_age_pref ?? true,
+        lockedIntent: map.user_connection_stats.locked_intent ?? false,
       } : undefined,
     });
   }

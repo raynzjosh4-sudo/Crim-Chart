@@ -43,12 +43,13 @@ import { ChatBubble } from "@/features/channel/pages/messages_tab/widgets/chartb
 import { TypingBubble } from "@/features/channel/pages/messages_tab/widgets/chartbubble/TypingBubble";
 import { ChatInputField } from "@/features/channel/pages/messages_tab/widgets/ChatInputField";
 import { VideoTabView } from "@/features/channel/pages/video_tab/VideoTabView";
-import { styles } from "./styles/_channelStyyles.styles";
+import { useChannelStyles } from "./styles/_channelStyyles.styles";
 import { DateDivider } from "./widgets/_datedivider";
 import { ChannelTitleBar } from "./widgets/ChannelTitleBar";
 import { InviteCardWidget } from "./widgets/InviteCardWidget";
 
 export default function ChannelPage({ channelIdOverride }: { channelIdOverride?: string }) {
+  const styles = useChannelStyles();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === "web" && width >= 768;
@@ -273,7 +274,7 @@ export default function ChannelPage({ channelIdOverride }: { channelIdOverride?:
                   style={styles.backButton}
                   onPress={() => setActiveTab(0)}
                 >
-                  <ChevronLeft size={28} color="#FFF" />
+                  <ChevronLeft size={28} color={styles.headerTitle.color} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle} numberOfLines={1}>
                   {channel?.title || ""}
@@ -327,7 +328,7 @@ export default function ChannelPage({ channelIdOverride }: { channelIdOverride?:
                       />
                       <Text
                         style={{
-                          color: "#FFF",
+                          color: styles.feedAuthor.color,
                           fontSize: 18,
                           fontWeight: "bold",
                           marginTop: 16,
@@ -339,7 +340,7 @@ export default function ChannelPage({ channelIdOverride }: { channelIdOverride?:
                       </Text>
                       <Text
                         style={{
-                          color: "rgba(255,255,255,0.5)",
+                          color: styles.inviteChannelSub.color,
                           fontSize: 14,
                           textAlign: "center",
                           marginTop: 8,
@@ -377,7 +378,7 @@ export default function ChannelPage({ channelIdOverride }: { channelIdOverride?:
                       <Text
                         style={{
                           marginLeft: 70,
-                          color: "rgba(255,255,255,0.5)",
+                          color: styles.inviteChannelSub.color,
                           fontSize: 12,
                           marginTop: -4,
                         }}
@@ -687,7 +688,7 @@ export default function ChannelPage({ channelIdOverride }: { channelIdOverride?:
                             <View
                               style={{
                                 height: 6,
-                                backgroundColor: "rgba(255,255,255,0.08)",
+                                backgroundColor: styles.dateLine.backgroundColor,
                                 marginTop: 12,
                               }}
                             />
@@ -718,7 +719,7 @@ export default function ChannelPage({ channelIdOverride }: { channelIdOverride?:
                       <View
                         style={{
                           height: 6,
-                          backgroundColor: "rgba(255,255,255,0.08)",
+                          backgroundColor: styles.dateLine.backgroundColor,
                           marginTop: 12,
                         }}
                       />

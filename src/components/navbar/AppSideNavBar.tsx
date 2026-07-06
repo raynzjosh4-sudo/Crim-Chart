@@ -4,6 +4,7 @@ import { useDesktopComposeStore } from '@/core/store/useDesktopComposeStore';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { useNotificationStore } from '@/features/notifications/application/useNotificationStore';
 import { BadgeIcon } from '@/mainFeed/features/bottomappbar/iconwithbarge/BadgeIcon';
 import { useRouter, usePathname, useGlobalSearchParams } from 'expo-router';
 import { Bell, CircleDashed, Clapperboard, Compass, Feather, Home, MessageSquare, Music, Search, Settings, Sparkles } from 'lucide-react-native';
@@ -31,6 +32,7 @@ export const AppSideNavBar = ({ selectedIndex, onItemTapped, homeBadgeCount = 0 
   const isExpanded = width >= 1280;
 
   const { user } = useAuthStore();
+  const unreadCount = useNotificationStore(s => s.unreadCount);
 
   return (
     <View style={[styles.container, { width: isExpanded ? 275 : 88, backgroundColor: colors.background, borderRightColor: colors.surfaceVariant }]}>
@@ -71,8 +73,8 @@ export const AppSideNavBar = ({ selectedIndex, onItemTapped, homeBadgeCount = 0 
           index={7}
           selectedIndex={selectedIndex}
           onTap={onItemTapped}
-          icon={<Bell size={28} />}
-          selectedIcon={<Bell size={28} fill={colors.text} />}
+          icon={<BadgeIcon IconComponent={Bell} count={unreadCount} />}
+          selectedIcon={<BadgeIcon IconComponent={Bell} count={unreadCount} />}
           label="Notifications"
           isExpanded={isExpanded}
         />
@@ -299,7 +301,7 @@ const themeStyles = (colors: ThemeTokens, scale: number): any => ({
     elevation: 4,
   },
   postButtonText: {
-    color: '#FFF',
+    color: colors.background, // Used to be colors.text, but we want it to contrast with the primary background color.
     fontSize: 17 * scale,
     fontWeight: '700' as const,
   },

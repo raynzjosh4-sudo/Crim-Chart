@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    color: colors.text,
+    color: '#FFF',
     fontSize: 24,
     fontWeight: 'bold',
     marginTop: 20,

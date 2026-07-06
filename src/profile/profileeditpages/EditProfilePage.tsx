@@ -3,15 +3,18 @@ import CrimchartBackButton from '@/components/CrimChartBackButton/CrimChart_back
 import { ChartLinearLoader } from '@/components/CrimchartLoader/ChartLinearLoader';
 import { ChartToast } from '@/components/showcase/CrimChart_toast';
 import { PermissionDialog } from '@/components/ui/PermissionDialog';
+import { useStyles } from '@/core/hooks/useStyles';
 import { cloudMediaService } from '@/core/network/cloudMediaService';
 import { useCameraStore } from '@/core/store/useCameraStore';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { colors } from '@/core/theme/colors';
+import { ThemeTokens } from '@/core/theme/themes';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { Camera, ChevronRight, Image as ImageIcon } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Image, Linking, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Dimensions, Platform } from 'react-native';
+import { Dimensions, Image, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PersonalInformationPage } from './PersonalInformationPage';
 
@@ -25,6 +28,8 @@ export const EditProfilePage = ({
   onClose?: () => void;
 }) => {
   const router = useRouter();
+  const theme = useCurrentTheme();
+  const styles = useStyles(themeStyles);
   const isDesktop = Dimensions.get('window').width >= 768;
   const user = useAuthStore((s) => s.user);
   const updateProfile = useAuthStore((s) => s.updateProfile);
@@ -172,7 +177,7 @@ export const EditProfilePage = ({
           showBack={false}
           useSafeArea={!isModal}
           showBorder={!isModal}
-          leading={<CrimchartBackButton onPress={handleBack} color={colors.text} />}
+          leading={<CrimchartBackButton onPress={handleBack} color={theme.colors.text} />}
           actions={[
             <TouchableOpacity activeOpacity={0.8} key="save" onPress={handleSave} disabled={isLoading} style={styles.saveButton}>
               <Text style={[styles.saveText, isLoading && { opacity: 0.5 }]}>Save</Text>
@@ -192,7 +197,7 @@ export const EditProfilePage = ({
                   style={styles.avatar}
                 />
                 <View style={styles.cameraBadge}>
-                  <Camera size={14} color="#000" />
+                  <Camera size={14} color={theme.colors.onPrimary} />
                 </View>
               </View>
             </TouchableOpacity>
@@ -202,7 +207,7 @@ export const EditProfilePage = ({
 
             {isDesktop && showImagePickerModal && (
               <>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={Platform.OS === 'web' ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, cursor: 'default' } as any : undefined}
                   activeOpacity={1}
                   onPress={() => setShowImagePickerModal(false)}
@@ -303,7 +308,7 @@ export const EditProfilePage = ({
   );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = (colors: ThemeTokens) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -337,7 +342,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#FFF',
+    shadowColor: colors.text,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.2,
     shadowRadius: 20,
@@ -364,7 +369,7 @@ const styles = StyleSheet.create({
     borderRadius: 70,
     borderWidth: 2,
     borderColor: colors.primary,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: colors.surface,
   },
   cameraBadge: {
     position: 'absolute',
@@ -409,7 +414,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   inputLabel: {
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: colors.textSecondary,
     fontWeight: '900',
     fontSize: 11,
     letterSpacing: 1.2,
@@ -417,10 +422,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   inputContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: colors.surface,
     borderRadius: 14,
     borderWidth: 0.8,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: colors.surfaceVariant,
     paddingHorizontal: 16,
   },
   input: {
@@ -437,7 +442,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingTop: 24,
@@ -447,10 +452,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 180,
     width: 220,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: colors.surfaceVariant,
     paddingVertical: 8,
     zIndex: 9999,
     shadowColor: '#000',
@@ -472,7 +477,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   modalTitle: {
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: colors.textSecondary,
     fontWeight: '900',
     fontSize: 11,
     letterSpacing: 1.2,
@@ -497,7 +502,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalCancelText: {
-    color: colors.error || '#FF3B30',
+    color: colors.error,
     fontSize: 16,
     fontWeight: '700',
   },

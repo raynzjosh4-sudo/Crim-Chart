@@ -1,16 +1,35 @@
+import { useStyles } from "@/core/hooks/useStyles";
 import React from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 import { useDesktopBoxStore } from '@/features/boxes/application/useDesktopBoxStore';
 import { MusicBoxDetailPage } from '@/features/boxes/pages/details/MusicBoxDetailPage';
 import { MovieBoxDetailPage } from '@/features/boxes/pages/details/MovieBoxDetailPage';
-
 export const DesktopBoxDetailPane = () => {
-  const { activeBoxId, activeBoxType, closeBox } = useDesktopBoxStore();
-
+  const styles = useStyles(colors => ({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      borderLeftWidth: 1,
+      borderLeftColor: 'rgba(255,255,255,0.1)'
+    },
+    unsupportedContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center'
+    },
+    unsupportedText: {
+      color: colors.text,
+      fontSize: 16
+    }
+  }));
+  const {
+    activeBoxId,
+    activeBoxType,
+    closeBox
+  } = useDesktopBoxStore();
   if (!activeBoxId || !activeBoxType) {
     return null;
   }
-
   const renderContent = () => {
     switch (activeBoxType) {
       case 'music':
@@ -21,37 +40,14 @@ export const DesktopBoxDetailPane = () => {
         return <MovieBoxDetailPage id={activeBoxId} onClose={closeBox} />;
       default:
         // Fallback for types not yet extracted or supported (like store)
-        return (
-          <View style={styles.unsupportedContainer}>
+        return <View style={styles.unsupportedContainer}>
             <Text style={styles.unsupportedText}>
               Preview for {activeBoxType} boxes is not supported yet.
             </Text>
-          </View>
-        );
+          </View>;
     }
   };
-
-  return (
-    <View style={styles.container}>
+  return <View style={styles.container}>
       {renderContent()}
-    </View>
-  );
+    </View>;
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-    borderLeftWidth: 1,
-    borderLeftColor: 'rgba(255,255,255,0.1)',
-  },
-  unsupportedContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  unsupportedText: {
-    color: '#FFF',
-    fontSize: 16,
-  }
-});

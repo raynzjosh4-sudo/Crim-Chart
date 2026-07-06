@@ -1,22 +1,24 @@
-import React, { useState, useRef, useEffect } from 'react';
-import {
-  View,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Animated,
-  Keyboard,
-  Text,
-  ScrollView,
-  Linking,
-} from 'react-native';
+import { PermissionDialog } from '@/components/ui/PermissionDialog';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
+import { colors } from '@/core/theme/colors';
+import { Audio } from 'expo-av';
 import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { Audio } from 'expo-av';
 import * as VideoThumbnails from 'expo-video-thumbnails';
-import { Camera, Smile, Send, Mic, Square, Trash2, Play, Pause, X } from 'lucide-react-native';
-import { colors } from '@/core/theme/colors';
-import { PermissionDialog } from '@/components/ui/PermissionDialog';
+import { Camera, Mic, Pause, Play, Send, Smile, Square, Trash2, X } from 'lucide-react-native';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  Keyboard,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 // We'll mock recording for now until we fully wire up expo-av
 enum RecordState {
@@ -45,6 +47,75 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
   onEmojiPressed,
   onChangeText,
 }) => {
+  const theme = useCurrentTheme();
+  const styles = useStyles(colors => ({
+    wrapper: {
+      backgroundColor: colors.background,
+      borderTopWidth: 1,
+      borderTopColor: colors.muted,
+    },
+    container: {
+      flexDirection: 'row' as const,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      alignItems: 'flex-end' as const,
+    },
+    pendingRow: { maxHeight: 90, paddingTop: 8 },
+    pendingRowContent: { paddingHorizontal: 16, gap: 8, flexDirection: 'row' as const },
+    pendingThumb: { width: 72, height: 72, borderRadius: 12, overflow: 'visible' as const, position: 'relative' as const },
+    pendingImage: { width: 72, height: 72, borderRadius: 12, borderWidth: 1.5, borderColor: colors.primary },
+    removeThumbBtn: {
+      position: 'absolute' as const, top: -6, right: -6,
+      width: 18, height: 18, borderRadius: 9,
+      backgroundColor: '#FF5252', justifyContent: 'center' as const, alignItems: 'center' as const, zIndex: 10,
+    },
+    cameraBtn: { marginBottom: 4 },
+    cameraIconWrapper: { padding: 8, backgroundColor: 'rgba(250, 205, 17, 0.1)', borderRadius: 24 },
+    cameraIconWrapperActive: { backgroundColor: colors.primary },
+    mediaBadge: {
+      position: 'absolute' as const, top: -4, right: -4,
+      width: 16, height: 16, borderRadius: 8,
+      backgroundColor: '#FF5252', justifyContent: 'center' as const, alignItems: 'center' as const,
+    },
+    mediaBadgeText: { color: colors.onPrimary, fontSize: 9, fontWeight: 'bold' as const },
+    mainArea: { flex: 1 },
+    inputWrapper: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      backgroundColor: colors.surfaceVariant,
+      borderRadius: 24,
+      minHeight: 48,
+    },
+    input: {
+      flex: 1,
+      color: colors.text,
+      fontSize: 14,
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      paddingBottom: 12,
+      maxHeight: 250,
+      outlineStyle: 'none',
+    } as any,
+    emojiBtn: { padding: 12 },
+    recordingContainer: {
+      flexDirection: 'row' as const, alignItems: 'center' as const,
+      backgroundColor: 'rgba(255, 82, 82, 0.1)', borderRadius: 24,
+      borderWidth: 1, borderColor: 'rgba(255, 82, 82, 0.3)', height: 48, paddingHorizontal: 16,
+    },
+    recordingDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#FF5252' },
+    recordingTime: { color: '#FF5252', fontWeight: 'bold' as const, fontSize: 14, marginLeft: 12 },
+    recordingLabel: { color: 'rgba(255, 82, 82, 0.7)', fontSize: 12, marginRight: 8 },
+    reviewingContainer: {
+      flexDirection: 'row' as const, alignItems: 'center' as const,
+      backgroundColor: colors.surfaceVariant, borderRadius: 24,
+      borderWidth: 1, borderColor: 'rgba(250, 205, 17, 0.3)', height: 48, paddingHorizontal: 8,
+    },
+    trashBtn: { padding: 8, backgroundColor: 'rgba(255, 82, 82, 0.1)', borderRadius: 20 },
+    actionBtn: {
+      width: 44, height: 44, borderRadius: 22,
+      alignItems: 'center' as const, justifyContent: 'center' as const, marginBottom: 2,
+    },
+  }));
   const [text, setText] = useState('');
   const [pendingMedia, setPendingMedia] = useState<PendingMedia[]>([]);
   const [recordState, setRecordState] = useState<RecordState>(RecordState.none);
@@ -128,7 +199,7 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
         }
         return;
       }
-      
+
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
@@ -153,7 +224,7 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
 
   const cleanupReviewSound = async () => {
     if (reviewSound) {
-      await reviewSound.unloadAsync().catch(() => {});
+      await reviewSound.unloadAsync().catch(() => { });
       setReviewSound(null);
     }
     setIsPlayingReview(false);
@@ -167,7 +238,7 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
       const uri = recording.getURI();
       setRecordUri(uri);
       setRecordState(RecordState.reviewing);
-      
+
       if (uri) {
         const { sound } = await Audio.Sound.createAsync(
           { uri },
@@ -235,7 +306,7 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
 
   const handleCancelRecording = async () => {
     if (recording) {
-      await recording.stopAndUnloadAsync().catch(() => {});
+      await recording.stopAndUnloadAsync().catch(() => { });
     }
     await cleanupReviewSound();
     setRecording(null);
@@ -325,26 +396,26 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
         <TextInput
           style={styles.input}
           placeholder={pendingMedia.length > 0 ? 'Add a caption...' : 'Type a message...'}
-          placeholderTextColor="rgba(255,255,255,0.4)"
+          placeholderTextColor={theme.colors.muted}
           value={text}
           onChangeText={handleTextChange}
           multiline
         />
         <TouchableOpacity activeOpacity={1} onPress={onEmojiPressed} style={styles.emojiBtn}>
-          <Smile size={20} color="rgba(255,255,255,0.4)" />
+          <Smile size={20} color={theme.colors.muted} />
         </TouchableOpacity>
       </View>
     );
   };
 
   const getActionIcon = () => {
-    if (recordState === RecordState.recording) return <Square size={20} color="#FFF" />;
-    if (recordState === RecordState.reviewing) return <Send size={20} color="#000" />;
-    if (hasContent) return <Send size={20} color="#000" />;
-    return <Mic size={20} color="#000" />;
+    if (recordState === RecordState.recording) return <Square size={20} color={theme.colors.text} />;
+    if (recordState === RecordState.reviewing) return <Send size={20} color={theme.colors.onPrimary} />;
+    if (hasContent) return <Send size={20} color={theme.colors.onPrimary} />;
+    return <Mic size={20} color={theme.colors.onPrimary} />;
   };
 
-  const buttonColor = recordState === RecordState.recording ? '#FF5252' : colors.primary;
+  const buttonColor = recordState === RecordState.recording ? '#FF5252' : theme.colors.primary;
 
   return (
     <View style={styles.wrapper}>
@@ -370,7 +441,7 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
               styles.cameraIconWrapper,
               pendingMedia.length > 0 && styles.cameraIconWrapperActive,
             ]}>
-              <Camera size={24} color={pendingMedia.length > 0 ? '#000' : colors.primary} />
+              <Camera size={24} color={pendingMedia.length > 0 ? theme.colors.onPrimary : theme.colors.primary} />
               {pendingMedia.length > 0 && (
                 <View style={styles.mediaBadge}>
                   <Text style={styles.mediaBadgeText}>{pendingMedia.length}</Text>
@@ -426,152 +497,3 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  wrapper: {
-    backgroundColor: '#000',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.05)',
-  },
-  container: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    alignItems: 'flex-end',
-  },
-  pendingRow: {
-    maxHeight: 90,
-    paddingTop: 8,
-  },
-  pendingRowContent: {
-    paddingHorizontal: 16,
-    gap: 8,
-    flexDirection: 'row',
-  },
-  pendingThumb: {
-    width: 72,
-    height: 72,
-    borderRadius: 12,
-    overflow: 'visible',
-    position: 'relative',
-  },
-  pendingImage: {
-    width: 72,
-    height: 72,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-  },
-  removeThumbBtn: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#FF5252',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  cameraBtn: {
-    marginBottom: 4,
-  },
-  cameraIconWrapper: {
-    padding: 8,
-    backgroundColor: 'rgba(250, 205, 17, 0.1)',
-    borderRadius: 24,
-  },
-  cameraIconWrapperActive: {
-    backgroundColor: colors.primary,
-  },
-  mediaBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#FF5252',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  mediaBadgeText: {
-    color: '#FFF',
-    fontSize: 9,
-    fontWeight: 'bold',
-  },
-  mainArea: {
-    flex: 1,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2A2A2A',
-    borderRadius: 24,
-    minHeight: 48,
-  },
-  input: {
-    flex: 1,
-    color: '#FFF',
-    fontSize: 14,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 12,
-    maxHeight: 250,
-    outlineStyle: 'none',
-  } as any,
-  emojiBtn: {
-    padding: 12,
-  },
-  recordingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 82, 82, 0.1)',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 82, 82, 0.3)',
-    height: 48,
-    paddingHorizontal: 16,
-  },
-  recordingDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#FF5252',
-  },
-  recordingTime: {
-    color: '#FF5252',
-    fontWeight: 'bold',
-    fontSize: 14,
-    marginLeft: 12,
-  },
-  recordingLabel: {
-    color: 'rgba(255, 82, 82, 0.7)',
-    fontSize: 12,
-    marginRight: 8,
-  },
-  reviewingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2A2A2A',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(250, 205, 17, 0.3)',
-    height: 48,
-    paddingHorizontal: 8,
-  },
-  trashBtn: {
-    padding: 8,
-    backgroundColor: 'rgba(255, 82, 82, 0.1)',
-    borderRadius: 20,
-  },
-  actionBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 2,
-  },
-});

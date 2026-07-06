@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    color: colors.text,
+    color: '#FFF',
     fontSize: 14,
     fontWeight: '800',
     fontFamily: 'Inter',

@@ -5,6 +5,7 @@ import { BoxFeedCardWrapper } from '@/components/wrappers/BoxFeedCardWrapper';
 import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { PostHeader } from '@/components/PostHeader/PostHeader';
 import { MoreHorizontal, Play, Plus, Tag, Trophy } from 'lucide-react-native';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { OpenBoxButton } from '../shared/OpenBoxButton';
@@ -34,24 +35,14 @@ export const SportsBoxFeedCard = ({ boxId, prefetchedData }: Props) => {
         return (
           <View style={styles.card}>
             {/* Post Header */}
-            <View style={styles.header}>
-              <View style={styles.userInfo}>
-                <View style={{ marginRight: 12 }}>
-                  <UserAvatar
-                    userId={ownerModel?.id || ''}
-                    fallbackUrl={ownerModel?.profileImageUrl}
-                    name={rawName}
-                    size={40}
-                  />
-                </View>
-                <View>
-                  <Text style={styles.userName}>{rawName}</Text>
-                  <Text style={styles.timeAgo}>Started a Live Sports Box</Text>
-                </View>
-              </View>
-              <TouchableOpacity activeOpacity={1}>
-                <MoreHorizontal color={theme.colors.textSecondary} size={20 * (StyleSheet.hairlineWidth > 0 ? 1 : 1)} />
-              </TouchableOpacity>
+            <View style={{ paddingBottom: 12, paddingTop: 4 }}>
+              {ownerModel ? (
+                <PostHeader
+                  author={ownerModel}
+                  timeAgo="Started a Live Sports Box"
+                  onAvatarTap={() => router.push(`/profile/${ownerModel.id}` as any)}
+                />
+              ) : null}
             </View>
 
             {/* Middle Row: Scoreboard + Add Button */}
@@ -295,7 +286,7 @@ const themeStyles = (colors: ThemeTokens, scale: number): any => ({
     borderRadius: 8 * scale,
   },
   highlightBadgeText: {
-    color: '#FFF',
+    color: colors.text,
     fontSize: 12 * scale,
     fontWeight: '800',
     marginLeft: 6 * scale,
@@ -310,7 +301,7 @@ const themeStyles = (colors: ThemeTokens, scale: number): any => ({
     justifyContent: 'flex-end',
   },
   highlightTitle: {
-    color: '#FFF',
+    color: colors.text,
     fontSize: 16 * scale,
     fontWeight: '800',
     marginBottom: 4 * scale,

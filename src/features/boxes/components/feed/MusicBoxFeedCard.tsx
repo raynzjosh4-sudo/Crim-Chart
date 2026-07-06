@@ -5,6 +5,7 @@ import { BoxFeedCardWrapper } from '@/components/wrappers/BoxFeedCardWrapper';
 import { FeedPermissionsWrapper } from '@/components/wrappers/FeedPermissionsWrapper';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { PostHeader } from '@/components/PostHeader/PostHeader';
 import { MoreHorizontal, Plus, Tag } from 'lucide-react-native';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { OpenBoxButton } from '../shared/OpenBoxButton';
@@ -37,31 +38,14 @@ export const MusicBoxFeedCard = ({ boxId, prefetchedData }: Props) => {
           <FeedPermissionsWrapper permissions={{ canComment: true, canSubmit: boxModel?.allowSubmissions ?? true }}>
             <View style={styles.card}>
               {/* Header: User Info */}
-            <View style={styles.header}>
-              <View style={[styles.userInfo, { flex: 1 }]}>
-                <View style={{ marginRight: 12 }}>
-                  <UserAvatar
-                    size={48}
-                    userId={ownerModel?.id || ''}
-                    fallbackUrl={ownerModel?.profileImageUrl}
-                    name={shortenedName}
-                  />
-                </View>
-                <View style={{ flex: 1, paddingRight: 8 }}>
-                  <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">
-                    {shortenedName}
-                  </Text>
-                  {ownerModel?.crownTitle ? (
-                    <Text style={styles.timeAgo}>{ownerModel.crownTitle}</Text>
-                  ) : null}
-                </View>
-              </View>
-              <View style={styles.headerRight}>
-                <Text style={styles.dateText}>{formattedDate}</Text>
-                <TouchableOpacity activeOpacity={1}>
-                  <MoreHorizontal color={theme.colors.textSecondary} size={20} />
-                </TouchableOpacity>
-              </View>
+            <View style={{ paddingBottom: 12, paddingTop: 4 }}>
+              {ownerModel ? (
+                <PostHeader
+                  author={ownerModel}
+                  timeAgo={ownerModel.crownTitle || "Started a Music Box"}
+                  onAvatarTap={() => router.push(`/profile/${ownerModel.id}` as any)}
+                />
+              ) : null}
             </View>
 
             {/* Main Box Content */}
@@ -196,7 +180,7 @@ const themeStyles = (colors: ThemeTokens, scale: number): any => ({
     justifyContent: 'flex-end' as const,
   },
   boxTitle: {
-    color: '#FFF', // Keeping white over image overlay for contrast
+    color: colors.text, // Keeping white over image overlay for contrast
     fontSize: 24 * scale,
     fontWeight: '900' as const,
     marginBottom: 4 * scale,
