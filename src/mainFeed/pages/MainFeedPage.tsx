@@ -461,20 +461,6 @@ export const MainFeedPage = () => {
 
       {isReady ? (
         <View style={{ flex: 1 }}>
-          <TouchableOpacity
-            style={{ backgroundColor: theme.colors.primary, padding: 12, margin: 16, borderRadius: 8, alignItems: 'center' }}
-            onPress={async () => {
-              if (user?.id) {
-                await sendNotification({
-                  recipientId: user.id, // Send to yourself
-                  type: 'mention',
-                });
-                alert('Test notification sent from app! Check your phone/browser in a few seconds.');
-              }
-            }}
-          >
-            <Text style={{ color: 'white', fontWeight: 'bold' }}>Test Push Notification</Text>
-          </TouchableOpacity>
 
           <MainFeedBody
             cards={cards}
