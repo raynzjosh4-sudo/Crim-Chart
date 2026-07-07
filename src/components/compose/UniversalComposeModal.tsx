@@ -5,7 +5,6 @@ import {
   Globe,
   Image as ImageIcon,
   Music,
-  Plus,
   Smile,
   X
 } from 'lucide-react-native';
@@ -26,13 +25,15 @@ import {
 import { EmojiPickerWidget } from '@/components/EmojiPicker/EmojiPickerWidget';
 import { ChartToast } from '@/components/showcase/CrimChart_toast';
 import { useDesktopComposeStore } from '@/core/store/useDesktopComposeStore';
+import { useDraftStore } from '@/core/store/useDraftStore';
 import { MediaSource, MediaType, PostType, usePostingStore } from '@/core/store/usePostingStore';
 import { colors } from '@/core/theme/colors';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import LottieView from 'lottie-react-native';
 import { AudioPreviewWidget } from './AudioPreviewWidget';
-import { VideoPreviewWidget } from './VideoPreviewWidget';
+import { DraftsListModal } from './DraftsListModal';
 import { MobileMediaPickerMenu } from './MobileMediaPickerMenu';
+import { VideoPreviewWidget } from './VideoPreviewWidget';
 
 export const UniversalComposeModal: React.FC = () => {
   const { isOpen, options, closeModal } = useDesktopComposeStore();
@@ -46,6 +47,7 @@ export const UniversalComposeModal: React.FC = () => {
   const [isPosting, setIsPosting] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showMobileMediaPicker, setShowMobileMediaPicker] = useState(false);
+  const [showDraftsList, setShowDraftsList] = useState(false);
 
   // Settings states
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
@@ -66,7 +68,7 @@ export const UniversalComposeModal: React.FC = () => {
 
   const handleMediaOptionSelect = async (source: 'camera' | 'library', mediaType: 'image' | 'video') => {
     setShowMobileMediaPicker(false);
-    
+
     const hasImage = selectedMedia.some(m => m.type === 'image');
     const hasVideo = selectedMedia.some(m => m.type === 'video');
 
@@ -111,7 +113,7 @@ export const UniversalComposeModal: React.FC = () => {
       setShowMobileMediaPicker(true);
       return;
     }
-    
+
     const hasImage = selectedMedia.some(m => m.type === 'image');
     const hasVideo = selectedMedia.some(m => m.type === 'video');
 
@@ -128,7 +130,7 @@ export const UniversalComposeModal: React.FC = () => {
 
     if (!result.canceled && result.assets) {
       let newAssets = result.assets;
-      
+
       if (!hasImage && newAssets.some(a => a.type === 'video')) {
         newAssets = newAssets.filter(a => a.type === 'video').slice(0, 1);
       } else if (hasImage) {
@@ -232,6 +234,28 @@ export const UniversalComposeModal: React.FC = () => {
     }
   };
 
+  const handleSaveDraft = () => {
+    if (!text.trim() && selectedMedia.length === 0) {
+      setShowDraftsList(true);
+      return;
+    }
+    useDraftStore.getState().saveDraft({
+      text: text.trim(),
+      media: selectedMedia,
+      post_type: options?.postType || 'post'
+    });
+    ChartToast.showSuccess(null, { title: 'Draft saved offline', message: 'You can load it anytime.' });
+    closeModal();
+  };
+
+  const handleSelectDraft = (draft: any) => {
+    setText(draft.text || '');
+    if (draft.media) {
+      setSelectedMedia(draft.media);
+    }
+    setShowDraftsList(false);
+  };
+
   if (!isOpen || Platform.OS !== 'web') return null;
 
   const hasAudio = selectedMedia.some(m => m.type === 'audio');
@@ -281,18 +305,18 @@ export const UniversalComposeModal: React.FC = () => {
   return (
     <Modal transparent visible={isOpen} animationType="fade">
       <Pressable style={[styles.overlay, isMobile && { paddingTop: 0, padding: 0 }]} onPress={closeModal}>
-        <Pressable 
+        <Pressable
           style={[
-            styles.modalContainer, 
-            isMobile && { 
-              width: '100%', 
+            styles.modalContainer,
+            isMobile && {
+              width: '100%',
               maxWidth: '100%',
-              height: '100%', 
-              maxHeight: '100%', 
+              height: '100%',
+              maxHeight: '100%',
               borderRadius: 0,
               borderWidth: 0,
             }
-          ]} 
+          ]}
           onPress={(e) => e.stopPropagation()}
         >
 
@@ -308,13 +332,13 @@ export const UniversalComposeModal: React.FC = () => {
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               {hasVideo && (
                 <View style={styles.videoChipsContainer}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.videoChip, isShortClip && styles.videoChipActive]}
                     onPress={() => setIsShortClip(true)}
                   >
                     <Text style={[styles.videoChipText, isShortClip && styles.videoChipTextActive]}>Short clip</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.videoChip, !isShortClip && styles.videoChipActive]}
                     onPress={() => setIsShortClip(false)}
                   >
@@ -324,7 +348,7 @@ export const UniversalComposeModal: React.FC = () => {
               )}
 
               {showDraftsButton && (
-                <TouchableOpacity>
+                <TouchableOpacity onPress={handleSaveDraft}>
                   <Text style={styles.draftsText}>Drafts</Text>
                 </TouchableOpacity>
               )}
@@ -364,10 +388,10 @@ export const UniversalComposeModal: React.FC = () => {
                         ) : media.type === 'video' ? (
                           <VideoPreviewWidget media={media} />
                         ) : media.type === 'audio' ? (
-                          <AudioPreviewWidget 
-                            media={media} 
-                            onRemove={removeMedia} 
-                            onUpdate={updateMedia} 
+                          <AudioPreviewWidget
+                            media={media}
+                            onRemove={removeMedia}
+                            onUpdate={updateMedia}
                           />
                         ) : (
                           <Image source={{ uri: media.uri }} style={styles.mediaImage as any} />
@@ -408,8 +432,8 @@ export const UniversalComposeModal: React.FC = () => {
           {/* Footer */}
           <View style={styles.footer}>
             <View style={styles.toolbar}>
-              <TouchableOpacity 
-                style={[styles.iconButton, hasAudio && { opacity: 0.5 }]} 
+              <TouchableOpacity
+                style={[styles.iconButton, hasAudio && { opacity: 0.5 }]}
                 onPress={pickMedia}
                 disabled={hasAudio}
               >
@@ -418,8 +442,8 @@ export const UniversalComposeModal: React.FC = () => {
               <TouchableOpacity style={styles.iconButton} onPress={() => setShowEmojiPicker(!showEmojiPicker)}>
                 <Smile size={20} color={colors.primary} />
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.iconButton, hasImageOrVideo && { opacity: 0.5 }]} 
+              <TouchableOpacity
+                style={[styles.iconButton, hasImageOrVideo && { opacity: 0.5 }]}
                 onPress={pickAudio}
                 disabled={hasImageOrVideo}
               >
@@ -428,9 +452,6 @@ export const UniversalComposeModal: React.FC = () => {
             </View>
 
             <View style={styles.postActions}>
-              <TouchableOpacity style={styles.addButton}>
-                <Plus size={16} color={colors.primary} />
-              </TouchableOpacity>
               <TouchableOpacity
                 style={[
                   styles.postButton,
@@ -457,12 +478,12 @@ export const UniversalComposeModal: React.FC = () => {
               />
               <View style={styles.settingsDropdown}>
                 <Text style={styles.settingsTitle}>Who can reply?</Text>
-                
+
                 <View style={styles.settingRow}>
                   <Text style={styles.settingText}>Allow comments</Text>
-                  <Switch 
-                    value={allowComments} 
-                    onValueChange={setAllowComments} 
+                  <Switch
+                    value={allowComments}
+                    onValueChange={setAllowComments}
                     trackColor={{ false: '#3A3A3C', true: colors.primary }}
                     thumbColor="#FFFFFF"
                     ios_backgroundColor="#3A3A3C"
@@ -473,9 +494,9 @@ export const UniversalComposeModal: React.FC = () => {
                 {showPublicToggle && (
                   <View style={styles.settingRow}>
                     <Text style={styles.settingText}>Public</Text>
-                    <Switch 
-                      value={isPublic} 
-                      onValueChange={setIsPublic} 
+                    <Switch
+                      value={isPublic}
+                      onValueChange={setIsPublic}
                       trackColor={{ false: '#3A3A3C', true: colors.primary }}
                       thumbColor="#FFFFFF"
                       ios_backgroundColor="#3A3A3C"
@@ -487,9 +508,9 @@ export const UniversalComposeModal: React.FC = () => {
                 {showShareToStatusToggle && (
                   <View style={styles.settingRow}>
                     <Text style={styles.settingText}>Share to status</Text>
-                    <Switch 
-                      value={shareToStatus} 
-                      onValueChange={setShareToStatus} 
+                    <Switch
+                      value={shareToStatus}
+                      onValueChange={setShareToStatus}
                       trackColor={{ false: '#3A3A3C', true: colors.primary }}
                       thumbColor="#FFFFFF"
                       ios_backgroundColor="#3A3A3C"
@@ -501,10 +522,16 @@ export const UniversalComposeModal: React.FC = () => {
             </>
           )}
 
-          <MobileMediaPickerMenu 
+          <MobileMediaPickerMenu
             visible={showMobileMediaPicker}
             onClose={() => setShowMobileMediaPicker(false)}
             onSelectOption={handleMediaOptionSelect}
+          />
+
+          <DraftsListModal
+            visible={showDraftsList}
+            onClose={() => setShowDraftsList(false)}
+            onSelectDraft={handleSelectDraft}
           />
         </Pressable>
       </Pressable>

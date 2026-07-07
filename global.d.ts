@@ -50,6 +50,7 @@ declare module 'react' {
     export function useEffect(...args: any[]): any;
     export function useRef<T = any>(initial?: T): { current: T };
     export function useCallback<T extends (...args: any[]) => any>(fn: T, deps: any[]): T;
+    export function useMemo<T>(factory: () => T, deps: any[] | undefined): T;
     export type FC<P = any> = (props: P & { children?: any }) => any;
     const React: any;
     export default React;

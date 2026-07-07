@@ -5,6 +5,7 @@ import { FollowUserButton } from '@/components/FollowUserButton';
 import { AnimatedPostButton } from '@/components/buttons/AnimatedPostButton';
 import { BoxReactions } from '@/components/reactions/BoxReactions';
 import { CommentAction } from '@/features/feed/components/CommentAction';
+import { PostFooter } from '@/components/PostFooter/PostFooter';
 import { Image } from 'expo-image';
 import { Check, Eye, MessageCircle, Tag } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
@@ -120,52 +121,18 @@ export function StoreItemTile({ item, likesCount, isLiked, viewsCount, onLikePre
         )}
 
         {/* Interaction Bar */}
-        <View style={styles.actionBar}>
-          {boxItemId ? (
-            // ── In-box mode: reuse BoxReactions exactly like MovieBoxDetailVideoTile ──
-            <>
-              <BoxReactions
-                boxItemId={boxItemId}
-                postId={item.id}
-                boxId={boxId}
-                initialLikes={likesCount ?? item.likes ?? 0}
-                initialDislikes={initialDislikes ?? 0}
-                currentUserId={currentUserId}
-              />
-              <View style={styles.actionBtn}>
-                <CommentAction
-                  icon={MessageCircle}
-                  label={(item.commentsCount ?? 0).toString()}
-                  size={24}
-                  direction="row"
-                  onPress={() => item.id && onCommentPress?.(item.id)}
-                />
-              </View>
-              <View style={[styles.actionBtn, { marginLeft: 'auto', marginRight: 0 }]}>
-                <Eye size={24} color="#FFF" />
-                <Text style={styles.actionText}>{viewsCount ?? item.viewsCount ?? 0}</Text>
-              </View>
-            </>
-          ) : (
-            // ── Posting mode: existing actions ──
-            <>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <LikeAction
-                  initialLikesCount={likesCount ?? item.likes ?? 0}
-                  initialIsLiked={isLiked ?? false}
-                  onLikeTap={onLikePress}
-                />
-                <CommentActionWidget postId={item.id} commentsCount={item.commentsCount ?? 0} />
-                <View style={{ marginLeft: 8 }}>
-                  <CommentAction
-                    icon={Eye}
-                    label={(viewsCount ?? item.viewsCount ?? 0).toString()}
-                    size={20}
-                    direction="row"
-                  />
-                </View>
-              </View>
-              {isLocal ? (
+        <PostFooter
+          isLocal={isLocal}
+          isLiked={isLiked}
+          likesCount={likesCount ?? item.likes ?? 0}
+          commentsCount={item.commentsCount ?? 0}
+          viewsCount={viewsCount ?? item.viewsCount ?? 0}
+          onLikePress={onLikePress}
+          onCommentPress={() => item.id && onCommentPress?.(item.id)}
+          iconSize={boxItemId ? 24 : 20}
+          rightContent={
+            !boxItemId && (
+              isLocal ? (
                 <AnimatedPostButton
                   title="Post"
                   style={styles.postButton}
@@ -193,10 +160,10 @@ export function StoreItemTile({ item, likesCount, isLiked, viewsCount, onLikePre
                     </>
                   )}
                 </TouchableOpacity>
-              )}
-            </>
-          )}
-        </View>
+              )
+            )
+          }
+        />
       </View>
     </View>
   );
@@ -260,11 +227,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 16,
   },
-  actionBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
   postButton: {
     backgroundColor: 'rgba(255,255,255,0.1)',
     paddingHorizontal: 16,
@@ -293,16 +255,5 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 13,
     fontWeight: '700',
-  },
-  actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 24,
-  },
-  actionText: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: '700',
-    marginLeft: 8,
   },
 });

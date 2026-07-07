@@ -6,6 +6,7 @@ import { useDelayedAutoPlay } from '@/features/auto_play/useDelayedAutoPlay';
 import { useUserProfile } from '@/features/auth/application/useUserProfile';
 import { InteractionType } from '@/features/boxes/application/useBoxInteractionTracker';
 import { CommentAction } from '@/features/feed/components/CommentAction';
+import { PostFooter } from '@/components/PostFooter/PostFooter';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
@@ -175,32 +176,14 @@ export const MovieBoxDetailVideoTile = ({ video, isPlaying, onVideoPress, onComm
       )}
 
       {/* Facebook-style Action Bar */}
-      <View style={styles.actionBar}>
-        <BoxReactions
-          boxItemId={video.id}
-          postId={video.postId}
-          boxId={video.boxId}
-          initialLikes={video.likes}
-          initialDislikes={video.dislikes}
-          currentUserId={currentUserId}
-          onInteraction={onInteraction}
-        />
-
-        <View style={styles.actionBtn}>
-          <CommentAction
-            icon={MessageCircle}
-            label={video.commentsCount ? `${video.commentsCount}` : '0'}
-            size={24}
-            direction="row"
-            onPress={() => video.postId && onCommentPress?.(video.postId)}
-          />
-        </View>
-
-        <View style={[styles.actionBtn, { marginLeft: 'auto', marginRight: 0 }]}>
-          <Eye size={24} color="#FFF" />
-          <Text style={styles.actionText}>{video.viewsCount ? `${video.viewsCount}` : '0'}</Text>
-        </View>
-      </View>
+      <PostFooter
+        likesCount={video.likes}
+        commentsCount={video.commentsCount || 0}
+        viewsCount={video.viewsCount || 0}
+        onCommentPress={() => video.postId && onCommentPress?.(video.postId)}
+        iconSize={24}
+        style={{ paddingVertical: 12, marginTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 16 }}
+      />
     </View>
   );
 };
@@ -313,27 +296,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.6)',
     fontSize: 14,
     marginTop: 4,
-  },
-  actionBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingVertical: 12,
-    marginTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.05)',
-    paddingHorizontal: 16,
-  },
-  actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 24,
-  },
-  actionText: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: '700',
-    marginLeft: 8,
   },
   commentsContainer: {
     marginTop: 12,

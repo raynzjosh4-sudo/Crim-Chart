@@ -1,10 +1,11 @@
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import { ChartToast } from '@/components/showcase/CrimChart_toast';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { CircleDot, Hash, Settings } from 'lucide-react-native';
+import { CircleDot, Hash, Save, Settings } from 'lucide-react-native';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { useDraftStore } from '@/core/store/useDraftStore';
 import { PostType, usePostingStore } from '@/core/store/usePostingStore';
 import { AdvancedSettingsSheet } from './widgets/AdvancedSettingsSheet';
 import { FinalizeCaptionSection } from './widgets/FinalizeCaptionSection';
@@ -32,9 +33,12 @@ export const FinalizePostPage: React.FC = () => {
   const channelName = params.channelName as string | undefined;
   const channelAvatarUrl = params.channelAvatarUrl as string | undefined;
 
+  const draftId = params.draftId as string | undefined;
+  const initialCaption = params.initialCaption as string | undefined;
+
   const { createPost } = usePostingStore();
 
-  const [caption, setCaption] = useState('');
+  const [caption, setCaption] = useState(initialCaption || '');
   const [shareToStatus, setShareToStatus] = useState(false);
   const [isChannelSheetVisible, setIsChannelSheetVisible] = useState(false);
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
@@ -55,6 +59,23 @@ export const FinalizePostPage: React.FC = () => {
       ? selectedChannels.filter(c => c !== id)
       : [...selectedChannels, id];
     setSelectedChannels(newChannels);
+  };
+
+  const handleSaveDraft = () => {
+    let primaryPostType = 'post';
+    if (isManifesto) primaryPostType = PostType.manifesto;
+    if (isChannelPost) primaryPostType = PostType.channel;
+    if (isChannelStatus) primaryPostType = PostType.channel_status;
+    if (isChannelMoment) primaryPostType = PostType.channel_moment;
+    if (isGlobalStatus) primaryPostType = PostType.status;
+
+    useDraftStore.getState().saveDraft({
+      text: caption.trim(),
+      media: selectedMedia,
+      post_type: primaryPostType
+    });
+    ChartToast.showSuccess(null, { title: 'Draft saved offline', message: 'You can load it anytime.' });
+    router.push('/(tabs)');
   };
 
   const handlePost = async () => {
@@ -122,10 +143,17 @@ export const FinalizePostPage: React.FC = () => {
       setIsPosting(false);
       ChartToast.showSuccess(null, { title: 'Success', message: 'Post created successfully!' });
 
+      if (draftId) {
+        useDraftStore.getState().deleteDraft(draftId);
+      }
+
       if (targetChannelId && (isChannelPost || isChannelStatus || isChannelMoment || isManifesto)) {
-        router.push({ pathname: '/channel/channelpage', params: { id: targetChannelId } } as any);
+        router.dismissAll();
+        setTimeout(() => {
+          router.push({ pathname: '/channel/channelpage', params: { id: targetChannelId } } as any);
+        }, 100);
       } else {
-        router.push('/(tabs)');
+        router.dismissAll();
       }
     } else {
       setIsPosting(false);
@@ -193,6 +221,12 @@ export const FinalizePostPage: React.FC = () => {
               onTap={() => setIsAdvancedSettingsVisible(true)}
             />
           )}
+
+          <FinalizeListTile
+            icon={<Save color="rgba(255,255,255,0.7)" size={22} />}
+            title="Save as Draft"
+            onTap={handleSaveDraft}
+          />
 
           <View style={styles.bottomSpacing} />
         </ScrollView>

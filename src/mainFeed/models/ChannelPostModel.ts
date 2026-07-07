@@ -41,6 +41,7 @@ export interface ChannelPostModel {
   likesCount: number;
   commentsCount: number;
   viewsCount?: number;
+  downloadsCount?: number;
   timeAgo: string;
   isLiked: boolean;
   isSponsored: boolean;

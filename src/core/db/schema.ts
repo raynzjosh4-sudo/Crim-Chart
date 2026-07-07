@@ -19,6 +19,7 @@ export const TABLES = {
   MAIN_FEED: 'main_feed',
   CHANNEL_STATUSES: 'channel_statuses',
   MUSIC_FEED: 'music_feed',
+  DRAFTS: 'drafts',
 };
 
 export const SCHEMA = `
@@ -35,6 +36,14 @@ export const SCHEMA = `
     has_status INTEGER DEFAULT 0,
     status_count INTEGER DEFAULT 0,
     inbox_permission TEXT DEFAULT 'everyone'
+  );
+
+  CREATE TABLE IF NOT EXISTS ${TABLES.DRAFTS} (
+    id TEXT PRIMARY KEY,
+    text TEXT,
+    media TEXT,
+    post_type TEXT,
+    created_at TEXT
   );
 
   CREATE TABLE IF NOT EXISTS ${TABLES.USER_CONNECTION_STATS} (

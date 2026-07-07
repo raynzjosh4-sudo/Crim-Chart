@@ -1,7 +1,7 @@
 import { PermissionDialog } from '@/components/ui/PermissionDialog';
 import * as MediaLibrary from 'expo-media-library';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Image as ImageIcon, X } from 'lucide-react-native';
+import { Image as ImageIcon, X, FileText } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppState, Linking, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
@@ -14,6 +14,7 @@ import { PhotosTab } from '../tabs/PhotosTab';
 import { VideosTab } from '../tabs/VideosTab';
 import { AlbumSelectorModal } from '../widgets/AlbumSelectorModal';
 import { BottomPillTabs } from '../widgets/BottomPillTabs';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
 
 export const FirstPostMainPage: React.FC = () => {
   const router = useRouter();
@@ -26,6 +27,8 @@ export const FirstPostMainPage: React.FC = () => {
   const isChannelStatus = params.isChannelStatus === 'true';
 
   const layout = useWindowDimensions();
+  const theme = useCurrentTheme();
+  const colors = theme.colors;
 
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
   const { t } = useTranslation();
@@ -151,13 +154,22 @@ export const FirstPostMainPage: React.FC = () => {
             )}
           </View>
 
-          {/* Second Row: Album Selector aligned to the left */}
-          <View style={{ paddingBottom: 12, alignItems: 'flex-start' }}>
-            <AlbumSelectorModal
-              activeTabIndex={index}
-              selectedAlbum={selectedAlbum}
-              onAlbumSelected={(album) => setSelectedAlbum(album)}
-            />
+          {/* Second Row: Album Selector & Drafts Button */}
+          <View style={{ paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flex: 1, alignItems: 'flex-start' }}>
+              <AlbumSelectorModal
+                activeTabIndex={index}
+                selectedAlbum={selectedAlbum}
+                onAlbumSelected={(album) => setSelectedAlbum(album)}
+              />
+            </View>
+            <TouchableOpacity 
+              style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, paddingHorizontal: '3%', paddingVertical: '2%', borderRadius: 20 }}
+              onPress={() => router.push('/drafts')}
+            >
+              <FileText color={colors.primary} size={16} />
+              <Text style={{ color: colors.primary, marginLeft: '4%', fontWeight: '600' }}>Drafts</Text>
+            </TouchableOpacity>
           </View>
         </View>
 

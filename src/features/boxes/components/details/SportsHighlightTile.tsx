@@ -3,8 +3,8 @@ import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-nati
 import { Image } from 'expo-image';
 import { Play } from 'lucide-react-native';
 import { SportsHighlight } from '../../data/dummySportsBoxData';
-import { LikeAction } from '@/channel/CRimChartMassageBubble/comment_action/like/LikeAction';
 import { CommentActionWidget } from '@/channel/CRimChartMassageBubble/comments/CommentActionWidget';
+import { PostFooter } from '@/components/PostFooter/PostFooter';
 import UserAvatar from '@/components/avatar/UserAvatar';
 
 interface Props {
@@ -47,10 +47,10 @@ export function SportsHighlightTile({ highlight }: Props) {
         <Text style={styles.title}>{highlight.title}</Text>
         
         {/* Interaction Bar */}
-        <View style={styles.actionBar}>
-          <LikeAction initialLikesCount={highlight.likes} initialIsLiked={false} />
-          <CommentActionWidget commentsCount={highlight.commentsCount} />
-        </View>
+        <PostFooter
+          likesCount={highlight.likes}
+          commentsCount={highlight.commentsCount}
+        />
       </View>
     </View>
   );
@@ -119,9 +119,5 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 22,
     marginBottom: 16,
-  },
-  actionBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
 });

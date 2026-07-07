@@ -9,6 +9,7 @@ import { MainFeedCardModel, MainFeedCardType } from '../../models/MainFeedCardTy
 import { UserRecommendationCarousel } from '../../pages/main_page_widgets/UserRecommendationCarousel';
 import { ChannelsWidget } from '../charts_stars/ChannelsWidget';
 import { Mainfeedcard } from './subfeedCards/Mainfeedcard';
+import { useInteractionStore } from '@/core/store/useInteractionStore';
 
 interface MainFeedCardProps {
   card: MainFeedCardModel;
@@ -33,11 +34,12 @@ export const MainFeedCard: React.FC<MainFeedCardProps> = ({ card, isActive }) =>
           postId={data.id}
           initialLikesCount={data.likesCount}
           initialViewsCount={data.viewsCount}
-          initialDownloadsCount={0}
+          initialDownloadsCount={data.downloadsCount}
+          initialTagsCount={data.tagsCount}
           sourceTable={data.sourceTable || 'posts'}
           forceIsVisible={isActive}
         >
-          {({ isLiked, likesCount, viewsCount, downloadsCount }) => (
+          {({ isLiked, likesCount, viewsCount, downloadsCount, tagsCount }) => (
             <ChannelAndFeedPostModel
               content={data.caption || ''}
               timeAgo={data.timeAgo || ''}
@@ -51,7 +53,7 @@ export const MainFeedCard: React.FC<MainFeedCardProps> = ({ card, isActive }) =>
               metadata={data.metadata}
               likesCount={likesCount}
               commentsCount={data.commentsCount}
-              tagsCount={data.tagsCount}
+              tagsCount={tagsCount}
               viewsCount={viewsCount}
               downloadsCount={downloadsCount}
               isLiked={isLiked}
@@ -63,6 +65,11 @@ export const MainFeedCard: React.FC<MainFeedCardProps> = ({ card, isActive }) =>
               widgetType={data.widgetType ?? (card.cardType === MainFeedCardType.socialPost ? 'regular_post' : 'channel_post')}
               source_type={data.source_type}
               isActive={isActive}
+              onLikeTap={() => {
+                if (data.id) {
+                  useInteractionStore.getState().toggleLike(data.id, undefined, data.sourceTable || 'posts');
+                }
+              }}
             />
           )}
         </PostInteractionWrapper>

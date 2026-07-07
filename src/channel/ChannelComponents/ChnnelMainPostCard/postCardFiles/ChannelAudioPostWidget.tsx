@@ -15,6 +15,7 @@ export interface ChannelAudioPostWidgetProps {
   isActive?: boolean;
   downloadsCount?: number;
   postId?: string;
+  sourceTable?: string;
 }
 
 // Generate random pseudo-waveform heights based on the URL string
@@ -46,6 +47,7 @@ export const ChannelAudioPostWidget: React.FC<ChannelAudioPostWidgetProps> = ({
   isActive,
   downloadsCount = 0,
   postId,
+  sourceTable,
 }) => {
   const [position, setPosition] = useState(0);
   const [totalDuration, setTotalDuration] = useState(30);
@@ -171,7 +173,7 @@ export const ChannelAudioPostWidget: React.FC<ChannelAudioPostWidgetProps> = ({
           mediaType="audio"
           onDownloadSuccess={() => {
             if (postId) {
-               useInteractionStore.getState().incrementDownload(postId);
+               useInteractionStore.getState().incrementDownload(postId, undefined, sourceTable);
             }
           }}
         >

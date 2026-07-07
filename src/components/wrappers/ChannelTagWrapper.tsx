@@ -6,7 +6,7 @@ interface ChannelTagWrapperProps {
   postId: string;
   sourceChannelId: string;
   targetChannelId: string;
-  linkChain?: string[];
+  linkChain?: string[] | null;
   children: React.ReactElement;
   onTagSuccess?: () => void;
 }
@@ -34,7 +34,7 @@ export const ChannelTagWrapper: React.FC<ChannelTagWrapperProps> = ({
         postId,
         sourceChannelId: actualSourceChannelId,
         targetChannelId,
-        linkChain: [...linkChain, targetChannelId],
+        linkChain: [...(linkChain ?? []), targetChannelId],
       });
 
       // 2. Optimistically increment the local tag count

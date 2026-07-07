@@ -18,6 +18,10 @@ import { Music, Smile } from 'lucide-react-native';
 import { useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { ComposerMediaInput } from './ComposerMediaInput';
+import { useDraftStore } from '@/core/store/useDraftStore';
+import { DraftsListModal } from '@/components/compose/DraftsListModal';
+import { ChartToast } from '@/components/showcase/CrimChart_toast';
+
 export const ComposerWidget = ({
   onPostSuccess,
   initialAudio
@@ -138,6 +142,7 @@ export const ComposerWidget = ({
   const [customThumbnail, setCustomThumbnail] = useState<string | null>(initialAudio?.thumbnail || null);
   const [category, setCategory] = useState<string | null>(null);
   const [isPickingMusic, setIsPickingMusic] = useState(false);
+  const [showDraftsList, setShowDraftsList] = useState(false);
   const [prefetchedAssets, setPrefetchedAssets] = useState<MediaLibrary.Asset[] | null>(null);
   const {
     startLoading,
@@ -369,6 +374,39 @@ export const ComposerWidget = ({
             {category ? category.charAt(0).toUpperCase() + category.slice(1) : '+ Category'}
           </Text>
         </TouchableOpacity>
+
+        <TouchableOpacity 
+          activeOpacity={0.8} 
+          style={[styles.categoryChip, { backgroundColor: 'transparent' }]} 
+          onPress={() => {
+            if (!text.trim() && !selectedAudio) {
+              setShowDraftsList(true);
+            } else {
+              const mediaList = selectedAudio ? [{
+                path: selectedAudio.uri,
+                type: MediaType.audio,
+                source: 'device',
+                title: title || selectedAudio.name,
+                artist: artist || selectedAudio.artist,
+                lyrics: lyrics || selectedAudio.lyrics,
+                thumbnailUrl: customThumbnail || selectedAudio.thumbnailUri || undefined
+              }] : [];
+              
+              useDraftStore.getState().saveDraft({
+                text: text.trim(),
+                media: mediaList,
+                post_type: 'post'
+              });
+              ChartToast.showSuccess(null, { title: 'Draft saved offline', message: 'You can load it anytime.' });
+              setText('');
+              setSelectedAudio(null);
+              if (onPostSuccess) onPostSuccess();
+              else router.back();
+            }
+          }}
+        >
+          <Text style={{ color: theme.colors.primary, fontSize: 14, fontWeight: '600' }}>Drafts</Text>
+        </TouchableOpacity>
       </View>
 
       <TouchableOpacity activeOpacity={0.8} style={[styles.postButton, {
@@ -377,5 +415,32 @@ export const ComposerWidget = ({
         <Text style={styles.postButtonText}>{isPosting ? t('posting' as any) || 'Posting...' : t('post' as any) || 'Post'}</Text>
       </TouchableOpacity>
     </View>
+    
+    <DraftsListModal
+      visible={showDraftsList}
+      onClose={() => setShowDraftsList(false)}
+      onSelectDraft={(draft) => {
+        setText(draft.text || '');
+        if (draft.media && draft.media.length > 0) {
+          const mediaItem = draft.media[0];
+          if (mediaItem.type === 'audio' || mediaItem.type === MediaType.audio) {
+            setSelectedAudio({
+              id: `local-${Date.now()}`,
+              uri: mediaItem.path || mediaItem.uri,
+              name: mediaItem.title || '',
+              artist: mediaItem.artist || '',
+              lyrics: mediaItem.lyrics || '',
+              thumbnailUri: mediaItem.thumbnailUrl || undefined,
+              type: 'audio'
+            });
+            setTitle(mediaItem.title || '');
+            setArtist(mediaItem.artist || '');
+            setLyrics(mediaItem.lyrics || '');
+            setCustomThumbnail(mediaItem.thumbnailUrl || null);
+          }
+        }
+        setShowDraftsList(false);
+      }}
+    />
   </View>;
 };

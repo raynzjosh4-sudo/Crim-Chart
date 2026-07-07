@@ -62,7 +62,7 @@ DECLARE
     post_owner_id UUID;
 BEGIN
     -- Get the owner of the post
-    SELECT user_id INTO post_owner_id FROM public.posts WHERE id = NEW.post_id;
+    SELECT author_id INTO post_owner_id FROM public.posts WHERE id = NEW.post_id;
     
     -- Only create notification if it's not a self-like
     IF post_owner_id != NEW.user_id THEN

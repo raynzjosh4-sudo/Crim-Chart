@@ -28,7 +28,7 @@ interface InteractionState {
   // Actions to interact
   toggleLike: (postId: string, boxId?: string, sourceTable?: string) => void;
   incrementView: (postId: string, boxId?: string, sourceTable?: string) => void;
-  incrementDownload: (postId: string, boxId?: string, channelId?: string) => void;
+  incrementDownload: (postId: string, boxId?: string, sourceTable?: string) => void;
   toggleTag: (postId: string, boxId: string) => void;
   incrementChannelTagCount: (postId: string) => void;
 
@@ -116,6 +116,7 @@ export const useInteractionStore = create<InteractionState>((set) => ({
     }),
 
   toggleLike: (postId, boxId, sourceTable) => {
+    console.log(`[InteractionStore Debug] toggleLike called! postId=${postId}, boxId=${boxId}, sourceTable=${sourceTable}`);
     const key = boxId ? `${boxId}_${postId}` : postId;
 
     set((state) => {
@@ -123,6 +124,8 @@ export const useInteractionStore = create<InteractionState>((set) => ({
       const count = state.likesCount[key] || 0;
       const newIsLiked = !isLiked;
       const newCount = newIsLiked ? count + 1 : Math.max(0, count - 1);
+      console.log(`[InteractionStore Debug] toggleLike optimistic update -> key: ${key}, oldIsLiked: ${isLiked}, newIsLiked: ${newIsLiked}, newCount: ${newCount}`);
+
 
       // If we are in a box context and the user likes, we should ALSO optimistically like the global post if they haven't.
       const globalIsLiked = state.likes[postId] || false;
@@ -215,10 +218,10 @@ export const useInteractionStore = create<InteractionState>((set) => ({
     });
   },
 
-  incrementDownload: (postId, boxId, channelId) =>
+  incrementDownload: (postId, boxId, sourceTable) =>
     set((state) => {
       // Logic: if boxId is provided, we increment both the global count and the box count
-      // if channelId is provided, we might just increment global and channel (but channelId might just be handled via global for now since we just pass it)
+      // if sourceTable is provided, we use it for DB sync
       const key = boxId ? `${boxId}_${postId}` : postId;
       const count = state.downloadsCount[key] || 0;
       const newCount = count + 1;
@@ -232,9 +235,8 @@ export const useInteractionStore = create<InteractionState>((set) => ({
 
       // Sync to backend
       import('@/core/supabase/supabaseConfig').then(({ supabase }) => {
-        let tableType = 'posts';
+        let tableType = sourceTable || 'posts';
         if (boxId) tableType = 'box_items';
-        else if (channelId) tableType = 'channel_posts';
 
         supabase.rpc('increment_download', {
           p_post_id: postId,
@@ -366,7 +368,7 @@ export const useInteractionStore = create<InteractionState>((set) => ({
 
       const { data: channelPostsData } = await supabase
         .from('channel_posts')
-        .select('id, likes, comments, views')
+        .select('id, likes_count, comments_count, views_count')
         .in('id', postIds);
 
       const trueCountsMap = new Map<string, number>();
@@ -379,9 +381,9 @@ export const useInteractionStore = create<InteractionState>((set) => ({
         trueViewsMap.set(p.id, p.views_count);
       });
       if (channelPostsData) channelPostsData.forEach(p => {
-        trueCountsMap.set(p.id, p.likes);
-        trueCommentsMap.set(p.id, p.comments);
-        trueViewsMap.set(p.id, p.views);
+        trueCountsMap.set(p.id, p.likes_count);
+        trueCommentsMap.set(p.id, p.comments_count);
+        trueViewsMap.set(p.id, p.views_count);
       });
 
       // 5. Batch update state

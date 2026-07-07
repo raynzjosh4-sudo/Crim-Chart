@@ -43,6 +43,7 @@ export interface RegularPostCardProps {
   canComment?: boolean;
   channelAvatarUrl?: string | null;
   channelName?: string | null;
+  onLikeTap?: () => void;
 }
 
 export const RegularPostCard: React.FC<RegularPostCardProps> = ({
@@ -71,6 +72,7 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
   canComment: canCommentProp = true,
   channelAvatarUrl,
   channelName,
+  onLikeTap,
 }) => {
   const { canComment: contextCanComment } = useFeedPermissions();
   const canComment = canCommentProp && contextCanComment;
@@ -126,7 +128,7 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
 
       {/* Media */}
       {audioUrl ? (
-        <ChannelAudioPostWidget audioUrl={audioUrl} thumbnailUrl={thumbnailUrl ?? undefined} metadata={metadata} isActive={isActive} downloadsCount={downloadsCount} postId={postId ?? undefined} />
+        <ChannelAudioPostWidget audioUrl={audioUrl} thumbnailUrl={thumbnailUrl ?? undefined} metadata={metadata} isActive={isActive} downloadsCount={downloadsCount} postId={postId ?? undefined} sourceTable={widgetType === 'channel_post' ? 'channel_posts' : 'posts'} />
       ) : allImages.length > 0 ? (
         <ChannelImagePostWidget images={allImages} />
       ) : null}
@@ -135,7 +137,7 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
         <Text style={styles.timeAgo}>{timeAgo}</Text>
         <View style={{ flex: 1 }} />
         <View style={styles.actionsRight}>
-          <LikeAction initialLikesCount={likesCount} initialIsLiked={isLiked} />
+          <LikeAction initialLikesCount={likesCount} initialIsLiked={isLiked} onLikeTap={onLikeTap} />
           <View style={{ width: 16 }} />
           {canComment ? (
             <CommentActionWidget commentsCount={commentsCount} postId={postId || ''} />

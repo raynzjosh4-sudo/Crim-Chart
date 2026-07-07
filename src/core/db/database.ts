@@ -121,6 +121,19 @@ class DatabaseService {
         try { await _db.execAsync(`ALTER TABLE music_feed ADD COLUMN created_at TEXT`); } catch (e) {}
       } catch (e) {}
 
+      // Migration: drafts table
+      try {
+        await _db.execAsync(`
+          CREATE TABLE IF NOT EXISTS drafts (
+            id TEXT PRIMARY KEY,
+            text TEXT,
+            media TEXT,
+            post_type TEXT,
+            created_at TEXT
+          )
+        `);
+      } catch (e) {}
+
       this.db = _db;
       console.log('✅ [SQLite] Database initialized successfully');
       } catch (error) {

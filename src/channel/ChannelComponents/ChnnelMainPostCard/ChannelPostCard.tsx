@@ -30,6 +30,7 @@ export interface ChannelPostCardProps {
   likesCount?: number;
   commentsCount?: number;
   tagsCount?: number;
+  downloadsCount?: number;
   isLiked?: boolean;
   postId?: string | null;
   onLikeTap?: () => void;
@@ -61,6 +62,7 @@ export const ChannelPostCard: React.FC<ChannelPostCardProps> = ({
   likesCount = 0,
   commentsCount = 0,
   tagsCount = 0,
+  downloadsCount = 0,
   isLiked = false,
   postId,
   onLikeTap,
@@ -127,7 +129,7 @@ export const ChannelPostCard: React.FC<ChannelPostCardProps> = ({
 
       {/* Media */}
       {audioUrl ? (
-        <ChannelAudioPostWidget audioUrl={audioUrl} thumbnailUrl={thumbnailUrl ?? undefined} metadata={metadata} />
+        <ChannelAudioPostWidget audioUrl={audioUrl} thumbnailUrl={thumbnailUrl ?? undefined} metadata={metadata} downloadsCount={downloadsCount} postId={postId ?? undefined} sourceTable="channel_posts" />
       ) : videoUrl ? (
         <ChannelVideoPostWidget videoUrl={videoUrl} aspectRatio={aspectRatio} thumbnail={thumbnailUrl} />
       ) : allImages.length > 0 ? (

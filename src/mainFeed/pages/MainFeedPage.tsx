@@ -24,6 +24,7 @@ import { MainFeedSkeletonCard } from './main_page_widgets/MainFeedSkeletonCard';
 
 
 import { useRealtimePostInteractions } from '@/hooks/useRealtimePostInteractions';
+import { useInteractionStore } from '@/core/store/useInteractionStore';
 
 const PAGE_SIZE = 11;
 const NUKE_KEY = 'db_nuke_v1_done';
@@ -374,6 +375,19 @@ export const MainFeedPage = () => {
           setHasMore(rawRpcCount >= PAGE_SIZE);
         }
       }
+
+      // 6. Pre-fetch and sync all interactions for the loaded posts and boxes
+      const syncIds = new Set<string>();
+      postIds.forEach(id => syncIds.add(id));
+      channelPostIds.forEach(id => syncIds.add(id));
+      trendingPostIds.forEach(id => syncIds.add(id));
+      for (const box of (boxesRes.data || [])) {
+        if (box.post_id) syncIds.add(box.post_id);
+      }
+      if (syncIds.size > 0) {
+        useInteractionStore.getState().syncPostInteractions(Array.from(syncIds));
+      }
+
     } catch (e) {
       console.error('[MainFeedPage] loadFeed error:', e);
     } finally {

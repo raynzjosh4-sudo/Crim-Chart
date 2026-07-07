@@ -93,37 +93,60 @@ export const MediaDownloadWrapper: React.FC<MediaDownloadWrapperProps> = ({
         ext = getFileExtension(mediaUrl, ext);
         const mediaFileName = `${safeTitle}_${Date.now()}.${ext}`;
 
+        const triggerDownload = async (url: string, fileName: string) => {
+          try {
+            // If it's a Supabase storage URL, we can leverage its native ?download parameter
+            // which avoids CORS and Blob issues and properly sets Content-Disposition
+            if (url.includes('supabase.co/storage')) {
+              const downloadUrl = new URL(url);
+              downloadUrl.searchParams.set('download', fileName);
+
+              const a = document.createElement('a');
+              a.style.display = 'none';
+              a.href = downloadUrl.toString();
+              a.download = fileName;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+            } else {
+              // Try fetch first (works when CORS headers are present on CDN response)
+              let blobUrl: string | null = null;
+              try {
+                const response = await fetch(url);
+                if (response.ok) {
+                  const blob = await response.blob();
+                  blobUrl = window.URL.createObjectURL(blob);
+                }
+              } catch (_corsErr) {
+                // CORS blocked — will fall through to direct link
+              }
+
+              const a = document.createElement('a');
+              a.style.display = 'none';
+              a.href = blobUrl ?? url;
+              a.download = fileName;
+              // target _blank makes browsers download rather than navigate for cross-origin hrefs
+              if (!blobUrl) a.target = '_blank';
+              document.body.appendChild(a);
+              a.click();
+              if (blobUrl) window.URL.revokeObjectURL(blobUrl);
+              document.body.removeChild(a);
+            }
+          } catch (e) {
+            console.error("Web download failed:", e);
+            window.open(url, '_blank');
+          }
+        };
+
         try {
-          const response = await fetch(mediaUrl);
-          if (!response.ok) throw new Error(`Failed to fetch media: ${response.statusText}`);
-          const blob = await response.blob();
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.style.display = 'none';
-          a.href = url;
-          a.download = mediaFileName;
-          document.body.appendChild(a);
-          a.click();
-          window.URL.revokeObjectURL(url);
-          document.body.removeChild(a);
+          await triggerDownload(mediaUrl, mediaFileName);
 
           if (coverUrl) {
             // Delay the second download to avoid browser blocking multiple rapid downloads
             await new Promise(resolve => setTimeout(resolve, 1000));
             const coverExt = getFileExtension(coverUrl, 'jpg');
             const coverFileName = `${safeTitle}_cover_${Date.now()}.${coverExt}`;
-            const coverResponse = await fetch(coverUrl);
-            if (!coverResponse.ok) throw new Error(`Failed to fetch cover: ${coverResponse.statusText}`);
-            const coverBlob = await coverResponse.blob();
-            const coverObjUrl = window.URL.createObjectURL(coverBlob);
-            const aCover = document.createElement('a');
-            aCover.style.display = 'none';
-            aCover.href = coverObjUrl;
-            aCover.download = coverFileName;
-            document.body.appendChild(aCover);
-            aCover.click();
-            window.URL.revokeObjectURL(coverObjUrl);
-            document.body.removeChild(aCover);
+            await triggerDownload(coverUrl, coverFileName);
           }
 
           ChartToast.showSuccess(null, {
@@ -131,11 +154,6 @@ export const MediaDownloadWrapper: React.FC<MediaDownloadWrapperProps> = ({
             message: 'Check your browser downloads.'
           });
           if (onDownloadSuccess) onDownloadSuccess();
-        } catch (fetchError) {
-          console.error("Web fetch download failed:", fetchError);
-          // Fallback to direct navigation if CORS prevents blob fetch
-          window.open(mediaUrl, '_blank');
-          if (coverUrl) window.open(coverUrl, '_blank');
         } finally {
           setIsDownloading(false);
         }

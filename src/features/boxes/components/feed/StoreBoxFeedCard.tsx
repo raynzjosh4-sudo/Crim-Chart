@@ -1,20 +1,19 @@
-import { LikeAction } from '@/channel/CRimChartMassageBubble/comment_action/like/LikeAction';
-import { CommentActionWidget } from '@/channel/CRimChartMassageBubble/comments/CommentActionWidget';
 import { TagOverlay } from '@/channel/pages/tag/TagOverlay';
+import { PostFooter } from '@/components/PostFooter/PostFooter';
+import { PostHeader } from '@/components/PostHeader/PostHeader';
 import { BoxFeedCardWrapper } from '@/components/wrappers/BoxFeedCardWrapper';
 import { FeedPermissionsWrapper } from '@/components/wrappers/FeedPermissionsWrapper';
-import { useInteractionStore } from '@/core/store/useInteractionStore';
-import UserAvatar from '@/components/avatar/UserAvatar';
-import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
-import { PostHeader } from '@/components/PostHeader/PostHeader';
-import { MoreHorizontal, Plus, Tag } from 'lucide-react-native';
-import { useState } from 'react';
-import { Dimensions, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { OpenBoxButton } from '../shared/OpenBoxButton';
 import { useStyles } from '@/core/hooks/useStyles';
+import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
+import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
+import { Plus } from 'lucide-react-native';
+import { useState } from 'react';
+import { Dimensions, FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { OpenBoxButton } from '../shared/OpenBoxButton';
+import { StoreItemTile } from '../details/StoreItemTile';
 
 interface Props { boxId?: string; prefetchedData?: any; }
 
@@ -31,18 +30,7 @@ export const StoreBoxFeedCard = ({ boxId, prefetchedData }: Props) => {
     router.push(`/store-box/${boxId}` as any);
   };
 
-  const renderStoreItem = ({ item }: { item: any }) => {
-    const priceStr = item.price || '$0.00';
-    return (
-      <View style={styles.carouselItem}>
-        <Image source={{ uri: item.thumbnailUrl || item.mediaUrl || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=400&q=80' }} style={styles.carouselImage} contentFit="cover" />
-        <View style={styles.priceTag}>
-          <Text style={styles.priceText}>{priceStr}</Text>
-        </View>
-        <Text style={styles.itemTitle} numberOfLines={2}>{item.title}</Text>
-      </View>
-    );
-  };
+
 
   const renderAddYoursCard = () => (
     <TouchableOpacity activeOpacity={1} style={[styles.carouselItem, styles.addYoursCard]} onPress={() => router.push(`/store-box/post/${boxId}` as any)}>
@@ -59,75 +47,82 @@ export const StoreBoxFeedCard = ({ boxId, prefetchedData }: Props) => {
     <BoxFeedCardWrapper boxId={boxId} prefetchedData={prefetchedData}>
       {(rawData, boxModel, ownerModel, interactionState) => {
         const rawName = ownerModel?.displayName || 'Unknown';
+        
+        const renderStoreItem = ({ item }: { item: any }) => (
+          <StoreItemTile 
+            item={item} 
+            boxId={boxModel?.id || boxId}
+            onLikePress={() => {
+              const idToLike = item.post_id || item.id;
+              if (idToLike) {
+                useInteractionStore.getState().toggleLike(idToLike, boxModel?.id || boxId, 'box_items');
+              }
+            }}
+          />
+        );
+
         return (
           <FeedPermissionsWrapper permissions={{ canComment: true, canSubmit: boxModel?.allowSubmissions ?? true }}>
-          <View style={styles.cardContainer}>
-            {/* Post Header */}
-            <View style={{ paddingBottom: 12, paddingTop: 4 }}>
-              {ownerModel ? (
-                <PostHeader
-                  author={ownerModel}
-                  timeAgo="Opened a Store Box"
-                  onAvatarTap={() => router.push(`/profile/${ownerModel.id}` as any)}
-                />
-              ) : null}
-            </View>
-
-            {/* Box Info */}
-            <View style={styles.boxInfo}>
-              <Text style={styles.boxTitle}>{boxModel.title}</Text>
-              <Text style={styles.boxDescription} numberOfLines={2}>{boxModel.raw?.description || ''}</Text>
-            </View>
-
-            {/* Store Items Carousel */}
-            <FlatList
-              data={(rawData.trendingTracks || []).slice(0, 5)} // Show top 5 in preview
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              ListHeaderComponent={renderAddYoursCard}
-              keyExtractor={(item: any) => item.id}
-              renderItem={renderStoreItem}
-              contentContainerStyle={styles.carouselContent}
-            />
-
-            {/* Action Bar */}
-            <View style={styles.actionBar}>
-              <View style={styles.leftActions}>
-                <LikeAction 
-                  initialLikesCount={interactionState?.likesCount ?? 0} 
-                  initialIsLiked={interactionState?.isLiked ?? false} 
-                  onLikeTap={() => {
-                    if (boxModel.postId) {
-                      useInteractionStore.getState().toggleLike(boxModel.postId, undefined, 'posts');
-                    }
-                  }}
-                />
-                <CommentActionWidget commentsCount={0} postId={boxModel.postId} />
-                <TouchableOpacity 
-                  activeOpacity={0.7} 
-                  style={[styles.actionBtn, { marginLeft: 24, marginRight: 0 }]}
-                  onPress={() => {
-                    if (boxModel.postId) {
-                      setTagOverlayVisible(true);
-                    }
-                  }}
-                >
-                  <Tag color={interactionState?.isTagged ? "#FACD11" : "#FFF"} size={24} />
-                  <Text style={[styles.actionText, interactionState?.isTagged && { color: "#FACD11" }]}>{0}</Text>
-                </TouchableOpacity>
+            <View style={styles.cardContainer}>
+              {/* Post Header */}
+              <View style={{ paddingBottom: 12, paddingTop: 4 }}>
+                {ownerModel ? (
+                  <PostHeader
+                    author={ownerModel}
+                    timeAgo="Opened a Store Box"
+                    onAvatarTap={() => router.push(`/profile/${ownerModel.id}` as any)}
+                  />
+                ) : null}
               </View>
 
-            <OpenBoxButton onPress={handleOpenBox} />
-            </View>
+              {/* Box Info */}
+              <View style={styles.boxInfo}>
+                <Text style={styles.boxTitle}>{boxModel.title}</Text>
+                <Text style={styles.boxDescription} numberOfLines={2}>{boxModel.raw?.description || ''}</Text>
+              </View>
 
-            <TagOverlay
-              visible={tagOverlayVisible}
-              onClose={() => setTagOverlayVisible(false)}
-              postId={boxModel.postId ?? ''}
-              sourceChannelId=""
-              linkChain={[]}
-            />
-          </View>
+              {/* Store Items Carousel */}
+              <FlatList
+                data={(rawData.trendingTracks || []).slice(0, 5)} // Show top 5 in preview
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                ListHeaderComponent={renderAddYoursCard}
+                keyExtractor={(item: any) => item.id}
+                renderItem={renderStoreItem}
+                contentContainerStyle={styles.carouselContent}
+              />
+
+              {/* Action Bar */}
+              <PostFooter
+                likesCount={interactionState?.likesCount ?? 0}
+                isLiked={interactionState?.isLiked ?? false}
+                onLikePress={() => {
+                  const targetId = boxModel.postId || boxId;
+                  if (targetId) {
+                    useInteractionStore.getState().toggleLike(targetId, undefined, 'posts');
+                  }
+                }}
+                commentsCount={0}
+                tagsCount={0}
+                isTagged={interactionState?.isTagged ?? false}
+                onTagPress={() => {
+                  if (boxModel.postId) {
+                    setTagOverlayVisible(true);
+                  }
+                }}
+                iconSize={24}
+                rightContent={<OpenBoxButton onPress={handleOpenBox} />}
+                style={{ paddingTop: 12, paddingHorizontal: 16 }}
+              />
+
+              <TagOverlay
+                visible={tagOverlayVisible}
+                onClose={() => setTagOverlayVisible(false)}
+                postId={boxModel.postId ?? ''}
+                sourceChannelId=""
+                linkChain={[]}
+              />
+            </View>
           </FeedPermissionsWrapper>
         );
       }}
@@ -239,27 +234,5 @@ const themeStyles = (colors: ThemeTokens, scale: number): any => ({
     fontSize: 14 * scale,
     fontWeight: '700',
     marginTop: 4 * scale,
-  },
-  actionBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16 * scale,
-    paddingTop: 12 * scale,
-  },
-  leftActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 24 * scale,
-  },
-  actionText: {
-    color: colors.text,
-    fontSize: 14 * scale,
-    fontWeight: '600',
-    marginLeft: 6 * scale,
   },
 });

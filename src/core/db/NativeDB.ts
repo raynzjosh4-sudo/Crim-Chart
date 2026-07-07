@@ -855,4 +855,38 @@ export class NativeDB {
       return [];
     }
   }
+
+  // --- Drafts ---
+  static async saveDraft(draft: { id: string, text: string, media: string, post_type: string, created_at: string }) {
+    try {
+      const sql = `
+        INSERT OR REPLACE INTO ${TABLES.DRAFTS} (id, text, media, post_type, created_at)
+        VALUES (?, ?, ?, ?, ?)
+      `;
+      const params = [draft.id, draft.text, draft.media, draft.post_type, draft.created_at];
+      await dbService.execute(sql, params);
+    } catch (error) {
+      console.error('🚨 [NativeDB] saveDraft FAILED:', error);
+    }
+  }
+
+  static async getDrafts(): Promise<any[]> {
+    try {
+      const sql = `SELECT * FROM ${TABLES.DRAFTS} ORDER BY created_at DESC`;
+      const rows = await dbService.query<any>(sql, []);
+      return rows;
+    } catch (error) {
+      console.error('🚨 [NativeDB] getDrafts FAILED:', error);
+      return [];
+    }
+  }
+
+  static async deleteDraft(id: string) {
+    try {
+      const sql = `DELETE FROM ${TABLES.DRAFTS} WHERE id = ?`;
+      await dbService.execute(sql, [id]);
+    } catch (error) {
+      console.error('🚨 [NativeDB] deleteDraft FAILED:', error);
+    }
+  }
 }

@@ -86,8 +86,14 @@ export const usePostingStore = create<PostingState>((set) => ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // Show a toast notification for background posting
+      if (Platform.OS !== 'web') {
+        const { ChartToast } = require('@/components/showcase/CrimChart_toast');
+        ChartToast.showInfo(null, { title: 'Posting...', message: 'Your post is uploading in the background.' });
+      }
+
       // Optimistic Update: inject pending post for offline-first feel
-      if (params.postType === PostType.channel) {
+      if (params.postType === PostType.channel || params.isPublicFeed || params.postType === 'post') {
         const visualMedia = params.media.filter(
           (m) => m.type === MediaType.photo || m.type === MediaType.video
         );
@@ -104,7 +110,7 @@ export const usePostingStore = create<PostingState>((set) => ({
           isAudio: params.media.some(m => m.type === MediaType.audio),
           isVideo: isVideo,
           type: isVideo ? 'video' : (params.media.some(m => m.type === MediaType.audio) ? 'audio' : 'image'),
-          sourceTable: 'channel_posts',
+          sourceTable: params.postType === PostType.channel ? 'channel_posts' : 'posts',
           aspectRatio: params.aspectRatio || null,
           metadata: {},
           likes: 0,
@@ -119,6 +125,28 @@ export const usePostingStore = create<PostingState>((set) => ({
           isPending: true,
         };
         set((state) => ({ pendingPosts: [pendingPost, ...state.pendingPosts] }));
+        
+        // Save to local SQLite feed for instant offline display
+        if (params.postType !== PostType.channel) {
+          NativeDB.upsertDiscoveryFeed([
+            {
+              id: pendingPost.id,
+              author_id: pendingPost.addedBy.id,
+              author_username: pendingPost.addedBy.name,
+              author_avatar_url: pendingPost.addedBy.avatarUrl,
+              channel_id: pendingPost.channel_id,
+              caption: pendingPost.title,
+              video_url: pendingPost.videoUrl,
+              image_urls: JSON.stringify(pendingPost.imageUrls),
+              is_video: pendingPost.isVideo ? 1 : 0,
+              likes: 0,
+              comments: 0,
+              created_at: pendingPost.createdAt,
+              widget_type: pendingPost.type,
+              views_count: 0
+            }
+          ]).catch(e => console.warn('[Optimistic] DB Error:', e));
+        }
       }
 
       const markHasStatusLocally = () => {
@@ -423,8 +451,8 @@ export const usePostingStore = create<PostingState>((set) => ({
         const { error, data } = await supabase.from('posts').insert(postPayload).select('id').single();
         if (error) throw error;
 
-        // If it's a video post, notify all followers
-        if (isVideo && data && data.id) {
+        // Notify all followers about the new post
+        if (data && data.id) {
           try {
             const { data: followers } = await supabase.from('follows').select('follower_id').eq('following_id', user.id);
             if (followers && followers.length > 0) {
@@ -432,7 +460,7 @@ export const usePostingStore = create<PostingState>((set) => ({
                 recipient_id: f.follower_id,
                 actor_id: user.id,
                 type: 'post',
-                action_text: 'posted a new video.',
+                action_text: isVideo ? 'posted a new video.' : (finalAudioUrl ? 'posted a new audio track.' : (finalImageUrls.length > 0 ? 'posted a new photo.' : 'published a new post.')),
                 reference_id: data.id
               }));
               // Insert in chunks of 1000 if needed, but a single batch is usually fine for most users

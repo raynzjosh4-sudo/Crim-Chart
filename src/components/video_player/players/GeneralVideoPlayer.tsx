@@ -2,7 +2,7 @@ import UserAvatar from '@/components/avatar/UserAvatar';
 import { AnimatedPostButton } from '@/components/buttons/AnimatedPostButton';
 import { CommentSheet } from '@/components/comments/CommentSheet';
 import { CommentAction } from '@/features/feed/components/CommentAction';
-import { LikeAction } from '@/features/feed/components/LikeAction';
+import { PostFooter } from '@/components/PostFooter/PostFooter';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
@@ -216,78 +216,53 @@ export const GeneralVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress,
 
 
       {/* Bottom Action Bar */}
-      <View style={styles.actionBar}>
-        <View style={[{ flexDirection: 'row', alignItems: 'center' }, isLocal && { opacity: 0.5 }]} pointerEvents={isLocal ? "none" : "auto"}>
-          <View style={styles.actionBtn}>
-            <LikeAction
-              initialLikes={video.likes > 0 ? video.likes : 0}
-              initialIsLiked={isLiked || false}
-              onPress={isLocal ? undefined : onLikePress}
-              size={20}
-              direction="row"
+      <PostFooter
+        isLocal={isLocal}
+        likesCount={video.likes > 0 ? video.likes : 0}
+        isLiked={isLiked || false}
+        onLikePress={onLikePress}
+        commentsCount={localCommentsCount}
+        onCommentPress={() => setIsCommentSheetVisible(true)}
+        viewsCount={video.viewsCount || 0}
+        iconSize={20}
+        rightContent={
+          isLocal ? (
+            <AnimatedPostButton
+              title="Post"
+              style={styles.tagButton}
+              textStyle={styles.tagButtonText}
+              onPress={async () => {
+                if (onAddPress) {
+                  await onAddPress(localTitle);
+                }
+              }}
             />
-          </View>
-
-          <View style={styles.actionBtn}>
-            <CommentAction
-              icon={MessageCircle}
-              label={localCommentsCount.toString()}
-              size={20}
-              direction="row"
-              onPress={isLocal ? undefined : () => setIsCommentSheetVisible(true)}
-            />
-          </View>
-
-          <View style={[styles.actionBtn, { marginRight: 0 }]}>
-            <CommentAction
-              icon={Eye}
-              label={(video.viewsCount || 0).toString()}
-              size={20}
-              direction="row"
-            />
-          </View>
-        </View>
-
-        {isLocal ? (
-          <AnimatedPostButton
-            title="Post"
-            style={styles.tagButton}
-            textStyle={styles.tagButtonText}
-            onPress={async () => {
-              if (onAddPress) {
-                await onAddPress(localTitle);
-              }
-            }}
-          />
-        ) : onTagPress ? (
-          <TouchableOpacity activeOpacity={1}
-            style={[styles.tagButton, isAdded && styles.tagButtonAdded]}
-            onPress={onTagPress}
-          >
-            {isAdded ? (
-              <>
-                <Check size={12} color={theme.colors.background} style={{ marginRight: 6 }} />
-                <Text style={[styles.tagButtonText, { color: theme.colors.background }]}>Tagged</Text>
-              </>
-            ) : (
-              <>
-                <Tag size={12} color={theme.colors.text} style={{ marginRight: 6 }} />
-                <Text style={styles.tagButtonText}>Tag</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        ) : (
-          <View style={[styles.actionBtn, { marginLeft: 16 }]}>
-            <CommentAction
-              icon={Tag}
-              label={(video.tagsCount || 0).toString()}
-              size={20}
-              direction="row"
-              onPress={() => setTagOverlayVisible(true)}
-            />
-          </View>
-        )}
-      </View>
+          ) : onTagPress ? (
+            <TouchableOpacity activeOpacity={1}
+              style={[styles.tagButton, isAdded && styles.tagButtonAdded]}
+              onPress={onTagPress}
+            >
+              {isAdded ? (
+                <>
+                  <Check size={12} color={theme.colors.background} style={{ marginRight: 6 }} />
+                  <Text style={[styles.tagButtonText, { color: theme.colors.background }]}>Tagged</Text>
+                </>
+              ) : (
+                <>
+                  <Tag size={12} color={theme.colors.text} style={{ marginRight: 6 }} />
+                  <Text style={styles.tagButtonText}>Tag</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity activeOpacity={1} onPress={() => setTagOverlayVisible(true)} style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Tag size={20} color={theme.colors.text} />
+              <Text style={{ color: theme.colors.text, fontSize: 14, fontWeight: '600', marginLeft: 6 }}>{video.tagsCount || 0}</Text>
+            </TouchableOpacity>
+          )
+        }
+        style={styles.actionBar}
+      />
 
       {showPlayer && (
         <LongVideoPlayerLayout
@@ -467,17 +442,6 @@ const themeStyles = (colors: ThemeTokens, scale: number): any => ({
     paddingHorizontal: 16 * scale,
     borderBottomWidth: 1,
     borderBottomColor: colors.surfaceVariant,
-  },
-  actionBtn: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    marginRight: 24 * scale,
-  },
-  actionText: {
-    color: colors.text,
-    fontSize: 14 * scale,
-    fontWeight: '700' as const,
-    marginLeft: 8 * scale,
   },
   inputField: {
     borderBottomWidth: 1,

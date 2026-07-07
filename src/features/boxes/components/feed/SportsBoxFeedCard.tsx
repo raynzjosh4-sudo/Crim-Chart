@@ -1,19 +1,17 @@
-import { LikeAction } from '@/channel/CRimChartMassageBubble/comment_action/like/LikeAction';
-import { CommentActionWidget } from '@/channel/CRimChartMassageBubble/comments/CommentActionWidget';
-import UserAvatar from '@/components/avatar/UserAvatar';
-import { BoxFeedCardWrapper } from '@/components/wrappers/BoxFeedCardWrapper';
-import { useInteractionStore } from '@/core/store/useInteractionStore';
-import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
-import { PostHeader } from '@/components/PostHeader/PostHeader';
-import { MoreHorizontal, Play, Plus, Tag, Trophy } from 'lucide-react-native';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { OpenBoxButton } from '../shared/OpenBoxButton';
-import { useState } from 'react';
 import { TagOverlay } from '@/channel/pages/tag/TagOverlay';
+import { PostFooter } from '@/components/PostFooter/PostFooter';
+import { PostHeader } from '@/components/PostHeader/PostHeader';
+import { BoxFeedCardWrapper } from '@/components/wrappers/BoxFeedCardWrapper';
 import { useStyles } from '@/core/hooks/useStyles';
+import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
+import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
+import { Play, Plus, Trophy } from 'lucide-react-native';
+import { useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { OpenBoxButton } from '../shared/OpenBoxButton';
 
 interface Props { boxId: string; prefetchedData?: any; }
 export const SportsBoxFeedCard = ({ boxId, prefetchedData }: Props) => {
@@ -108,35 +106,27 @@ export const SportsBoxFeedCard = ({ boxId, prefetchedData }: Props) => {
             )}
 
             {/* Action Bar */}
-            <View style={styles.actionBar}>
-              <View style={styles.leftActions}>
-                <LikeAction 
-                  initialLikesCount={interactionState?.likesCount ?? 0} 
-                  initialIsLiked={interactionState?.isLiked ?? false} 
-                  onLikeTap={() => {
-                    if (boxModel.postId) {
-                      useInteractionStore.getState().toggleLike(boxModel.postId, undefined, 'posts');
-                    }
-                  }}
-                />
-                <CommentActionWidget commentsCount={0} postId={boxModel.postId} />
-                <TouchableOpacity 
-                  activeOpacity={0.7} 
-                  style={[styles.actionBtn, { marginLeft: 24, marginRight: 0 }]}
-                  onPress={() => {
-                    if (boxModel.postId) {
-                      setTagOverlayVisible(true);
-                    }
-                  }}
-                >
-                  <Tag color={interactionState?.isTagged ? "#FACD11" : "#FFF"} size={24} />
-                  <Text style={[styles.actionText, interactionState?.isTagged && { color: "#FACD11" }]}>{0}</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.rightActions}>
-                <OpenBoxButton onPress={() => router.push(`/sports-box/${boxId}` as any)} />
-              </View>
-            </View>
+            <PostFooter
+              likesCount={interactionState?.likesCount ?? 0}
+              isLiked={interactionState?.isLiked ?? false}
+              onLikePress={() => {
+                const targetId = boxModel.postId || boxId;
+                if (targetId) {
+                  useInteractionStore.getState().toggleLike(targetId, undefined, 'posts');
+                }
+              }}
+              commentsCount={0}
+              tagsCount={0}
+              isTagged={interactionState?.isTagged ?? false}
+              onTagPress={() => {
+                if (boxModel.postId) {
+                  setTagOverlayVisible(true);
+                }
+              }}
+              iconSize={24}
+              rightContent={<OpenBoxButton onPress={() => router.push(`/sports-box/${boxId}` as any)} />}
+              style={{ paddingTop: 16, paddingHorizontal: 16 }}
+            />
 
             <TagOverlay
               visible={tagOverlayVisible}
@@ -310,30 +300,5 @@ const themeStyles = (colors: ThemeTokens, scale: number): any => ({
     color: 'rgba(255,255,255,0.8)',
     fontSize: 12 * scale,
     fontWeight: '600',
-  },
-  actionBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16 * scale,
-    paddingTop: 16 * scale,
-  },
-  leftActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  actionText: {
-    color: colors.text,
-    fontSize: 14 * scale,
-    fontWeight: '600',
-    marginLeft: 6 * scale,
-  },
-  rightActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
 });

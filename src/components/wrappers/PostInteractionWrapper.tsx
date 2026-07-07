@@ -11,6 +11,7 @@ interface InteractionState {
   viewsCount: number;
   downloadsCount: number;
   isTagged: boolean;
+  tagsCount: number;
 }
 
 interface PostInteractionWrapperProps {
@@ -18,6 +19,7 @@ interface PostInteractionWrapperProps {
   initialLikesCount?: number;
   initialViewsCount?: number;
   initialDownloadsCount?: number;
+  initialTagsCount?: number;
   initialIsLiked?: boolean;
 
   /**
@@ -52,6 +54,7 @@ export const PostInteractionWrapper: React.FC<PostInteractionWrapperProps> = ({
   initialLikesCount = 0,
   initialViewsCount = 0,
   initialDownloadsCount = 0,
+  initialTagsCount = 0,
   initialIsLiked = false,
   boxId,
   sourceTable,
@@ -64,6 +67,9 @@ export const PostInteractionWrapper: React.FC<PostInteractionWrapperProps> = ({
   // 1. Seed initial data into store on mount
   useEffect(() => {
     store.seedPost(postId, initialLikesCount, initialViewsCount, initialIsLiked, initialDownloadsCount, boxId);
+    if (initialTagsCount !== undefined) {
+      store.seedChannelTagCount(postId, initialTagsCount);
+    }
     if (boxId) {
       store.seedTag(postId, boxId, initialIsTagged);
     }
@@ -108,7 +114,9 @@ export const PostInteractionWrapper: React.FC<PostInteractionWrapperProps> = ({
     ? (store.tags[postId]?.includes(boxId) ?? initialIsTagged)
     : false;
 
-  const renderedChildren = children({ isLiked, likesCount, viewsCount, downloadsCount, isTagged });
+  const tagsCount = store.channelTagsCount[postId] ?? initialTagsCount ?? 0;
+
+  const renderedChildren = children({ isLiked, likesCount, viewsCount, downloadsCount, isTagged, tagsCount });
 
   // 3. Render child
   if (forceIsVisible !== undefined) {

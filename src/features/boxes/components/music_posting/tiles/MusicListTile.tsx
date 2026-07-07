@@ -11,6 +11,7 @@ import { useGlobalAudioPlayer } from '@/core/store/useGlobalAudioPlayer';
 import * as ImagePicker from 'expo-image-picker';
 import { Check, Eye, Heart, MessageCircle, Tag } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
+import { PostFooter } from '@/components/PostFooter/PostFooter';
 import { Dimensions, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -251,52 +252,36 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
       </View>
 
       {/* Bottom Action Bar */}
-      <View style={styles.actionBar}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity activeOpacity={1}
-            style={[styles.actionItem, isLocal && { opacity: 0.3 }]}
-            disabled={isLocal}
-            onPress={onLikePress}
+      <PostFooter
+        isLocal={isLocal}
+        isLiked={isLiked}
+        likesCount={likesCount ?? editedTrack.likesCount ?? 0}
+        commentsCount={editedTrack.commentsCount ?? 0}
+        viewsCount={viewsCount ?? editedTrack.viewsCount ?? 0}
+        onLikePress={onLikePress}
+        onCommentPress={() => setIsCommentSheetVisible(true)}
+        rightContent={
+          <MediaDownloadWrapper
+            mediaUrl={editedTrack.audioUrl || editedTrack.coverUrl}
+            mediaType={editedTrack.audioUrl ? 'audio' : 'image'}
+            coverUrl={editedTrack.coverUrl}
+            title={editedTrack.title}
+            onDownloadSuccess={onDownloadPress}
           >
-            <Heart size={20} color={isLiked ? "#E21" : "#FFF"} fill={isLiked ? "#E21" : "transparent"} />
-            <Text style={styles.actionText}>{likesCount ?? editedTrack.likesCount ?? 0}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity activeOpacity={1}
-            style={[styles.actionItem, isLocal && { opacity: 0.3 }]}
-            disabled={isLocal}
-            onPress={() => setIsCommentSheetVisible(true)}
-          >
-            <MessageCircle size={20} color="#FFF" />
-            <Text style={styles.actionText}>{editedTrack.commentsCount ?? 0}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity activeOpacity={1} style={[styles.actionItem, isLocal && { opacity: 0.3 }]} disabled={isLocal}>
-            <Eye size={20} color="#FFF" />
-            <Text style={styles.actionText}>{viewsCount ?? editedTrack.viewsCount ?? 0}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Download Button on the Right wrapped with logic */}
-        <MediaDownloadWrapper
-          mediaUrl={editedTrack.audioUrl || editedTrack.coverUrl}
-          mediaType={editedTrack.audioUrl ? 'audio' : 'image'}
-          coverUrl={editedTrack.coverUrl}
-          title={editedTrack.title}
-          onDownloadSuccess={onDownloadPress}
-        >
-          {({ download, isDownloading }) => (
-            <DownloadButton
-              onPress={download}
-              count={downloadsCount ?? editedTrack.downloadsCount ?? 0}
-              isDownloading={isDownloading}
-              disabled={isLocal}
-              size={20}
-              color="#FFF"
-            />
-          )}
-        </MediaDownloadWrapper>
-      </View>
+            {({ download, isDownloading }) => (
+              <DownloadButton
+                onPress={download}
+                count={downloadsCount ?? editedTrack.downloadsCount ?? 0}
+                isDownloading={isDownloading}
+                disabled={isLocal}
+                size={20}
+                color="#FFF"
+              />
+            )}
+          </MediaDownloadWrapper>
+        }
+        style={{ paddingHorizontal: 16 }}
+      />
 
       <CommentSheet
         postId={editedTrack.id}
@@ -412,22 +397,5 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 12,
     fontWeight: '600',
-  },
-  actionBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-  },
-  actionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 24,
-  },
-  actionText: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 6,
   }
 });

@@ -8,8 +8,9 @@ import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { PostFooter } from '@/components/PostFooter/PostFooter';
 import { PostHeader } from '@/components/PostHeader/PostHeader';
-import { Film, MoreHorizontal, Play, Plus, Tag } from 'lucide-react-native';
+import { Film, MoreHorizontal, Play, Plus } from 'lucide-react-native';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { OpenBoxButton } from '../shared/OpenBoxButton';
@@ -101,35 +102,27 @@ export const MovieBoxFeedCard = ({ boxId, prefetchedData }: Props) => {
             </View>
 
             {/* Action Bar */}
-            <View style={styles.actionBar}>
-              <View style={styles.leftActions}>
-                <LikeAction
-                  initialLikesCount={interactionState?.likesCount ?? 0}
-                  initialIsLiked={interactionState?.isLiked ?? false}
-                  onLikeTap={() => {
-                    if (boxModel.postId) {
-                      useInteractionStore.getState().toggleLike(boxModel.postId, undefined, 'posts');
-                    }
-                  }}
-                />
-                <CommentActionWidget commentsCount={0} postId={boxModel.postId} />
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  style={[styles.actionBtn, { marginLeft: 24, marginRight: 0 }]}
-                  onPress={() => {
-                    if (boxModel.postId) {
-                      setTagOverlayVisible(true);
-                    }
-                  }}
-                >
-                  <Tag color={interactionState?.isTagged ? theme.colors.primary : theme.colors.text} size={24} />
-                  <Text style={[styles.actionText, interactionState?.isTagged && { color: theme.colors.primary }]}>{0}</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.rightActions}>
-                <OpenBoxButton onPress={() => router.push(`/movie-box/${boxId}` as any)} />
-              </View>
-            </View>
+            <PostFooter
+              likesCount={interactionState?.likesCount ?? 0}
+              isLiked={interactionState?.isLiked ?? false}
+              onLikePress={() => {
+                const targetId = boxModel.postId || boxId;
+                if (targetId) {
+                  useInteractionStore.getState().toggleLike(targetId, undefined, 'posts');
+                }
+              }}
+              commentsCount={0}
+              tagsCount={0}
+              isTagged={interactionState?.isTagged ?? false}
+              onTagPress={() => {
+                if (boxModel.postId) {
+                  setTagOverlayVisible(true);
+                }
+              }}
+              iconSize={24}
+              rightContent={<OpenBoxButton onPress={() => router.push(`/movie-box/${boxId}` as any)} />}
+              style={{ paddingTop: 20, paddingHorizontal: 16 }}
+            />
 
             <TagOverlay
               visible={tagOverlayVisible}
@@ -323,31 +316,5 @@ const themeStyles = (colors: ThemeTokens, scale: number): any => ({
     fontSize: 12 * scale,
     fontWeight: '700' as const,
     marginTop: 4 * scale,
-  },
-  actionBar: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'space-between' as const,
-    paddingHorizontal: 16 * scale,
-    paddingTop: 20 * scale,
-  },
-  leftActions: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-  },
-  actionBtn: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    marginRight: 24 * scale,
-  },
-  actionText: {
-    color: colors.text,
-    fontSize: 14 * scale,
-    fontWeight: '600' as const,
-    marginLeft: 6 * scale,
-  },
-  rightActions: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
   },
 });
