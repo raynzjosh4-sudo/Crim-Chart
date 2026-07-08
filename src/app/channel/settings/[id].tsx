@@ -1,19 +1,19 @@
+import { ChannelRestrictionWrapper } from '@/components/wrappers/ChannelRestrictionWrapper';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
-import { ChannelRestrictionWrapper } from '@/components/wrappers/ChannelRestrictionWrapper';
 import { colors } from '@/core/theme/colors';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Bell, ChevronLeft, Clock, LogOut, Plus, Search, Shield, ThumbsDown, Trash2, UserPlus } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, ScrollView, Switch, Text, TouchableOpacity, View, Platform, useWindowDimensions } from 'react-native';
+import { Alert, Platform, ScrollView, Switch, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useChannelPermissions } from '@/channel/hooks/useChannelPermissions';
-import { useChannelData } from '@/channel/hooks/useChannelData';
-import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { SelectUsersBottomSheet } from '@/channel/components/bottom_sheets/SelectUsersBottomSheet';
 import { channelRepository } from '@/channel/data/channelRepository';
+import { useChannelData } from '@/channel/hooks/useChannelData';
+import { useChannelPermissions } from '@/channel/hooks/useChannelPermissions';
+import { useAuthStore } from '@/features/auth/application/useAuthStore';
 
 export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOverride?: string }) {
   const router = useRouter();
@@ -29,6 +29,7 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
 
   const [inviteFollowersVisible, setInviteFollowersVisible] = useState(false);
   const [inviteAdminsVisible, setInviteAdminsVisible] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
   const styles = useStyles(useStylesHook);
 
   return (
@@ -186,31 +187,89 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
             </View>
           </View>
         </View>
-
         {/* Danger Zone */}
         {(canLeave || canDelete || canReport) && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>DANGER ZONE</Text>
 
-            <ChannelRestrictionWrapper channelId={id as string} requiredAction="leave_channel" fallback={null}>
-              <TouchableOpacity activeOpacity={1} style={styles.settingItem} onPress={() => {
-                if (needsLeaveRequest) {
-                  Alert.alert('Request Sent', 'Your request to leave this channel has been sent to the admins.');
-                } else {
-                  Alert.alert('Leave Channel', 'You are about to leave this channel.');
-                }
-              }}>
+            {canLeave && (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                disabled={isLeaving}
+                style={styles.settingItem}
+                onPress={() => {
+                  if (needsLeaveRequest) {
+                    // Submit a leave_request so admin can approve
+                    Alert.alert(
+                      'Request to Leave',
+                      'Your request to leave this channel will be sent to the admins for approval.',
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        {
+                          text: 'Send Request',
+                          style: 'default',
+                          onPress: async () => {
+                            if (!user) return;
+                            try {
+                              setIsLeaving(true);
+                              await channelRepository.createChannelRequest(
+                                id as string,
+                                user.id,
+                                'leave_request',
+                                user.id
+                              );
+                              Alert.alert('Request Sent', 'Your leave request has been sent to the channel admins.');
+                            } catch (e) {
+                              Alert.alert('Error', 'Could not send leave request. Please try again.');
+                            } finally {
+                              setIsLeaving(false);
+                            }
+                          },
+                        },
+                      ]
+                    );
+                  } else {
+                    Alert.alert(
+                      'Leave Channel',
+                      'Are you sure you want to leave this channel? You will lose access to its content.',
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        {
+                          text: 'Leave',
+                          style: 'destructive',
+                          onPress: async () => {
+                            if (!user) return;
+                            try {
+                              setIsLeaving(true);
+                              await channelRepository.leaveChannel(id as string, user.id);
+                              // Navigate away — replace so user can't go back into the channel
+                              if (router.canGoBack()) {
+                                router.back();
+                              } else {
+                                router.replace('/(tabs)/explore' as any);
+                              }
+                            } catch (e) {
+                              Alert.alert('Error', 'Could not leave the channel. Please try again.');
+                              setIsLeaving(false);
+                            }
+                          },
+                        },
+                      ]
+                    );
+                  }
+                }}
+              >
                 <View style={styles.settingIconContainer}>
-                  <LogOut size={22} color={colors.primary} />
+                  <LogOut size={22} color={isLeaving ? theme.colors.textSecondary : colors.primary} />
                 </View>
                 <View style={styles.settingInfo}>
-                  <Text style={[styles.settingTitle, { color: colors.primary }]}>
-                    {needsLeaveRequest ? 'Request to leave' : 'Leave Channel'}
+                  <Text style={[styles.settingTitle, { color: isLeaving ? theme.colors.textSecondary : colors.primary }]}>
+                    {isLeaving ? 'Leaving...' : (needsLeaveRequest ? 'Request to leave' : 'Leave Channel')}
                   </Text>
                 </View>
                 <ChevronLeft size={20} color={theme.colors.textSecondary} style={{ transform: [{ rotate: '180deg' }] }} />
               </TouchableOpacity>
-            </ChannelRestrictionWrapper>
+            )}
 
             <ChannelRestrictionWrapper channelId={id as string} requiredAction="delete_channel" fallback={null}>
               <TouchableOpacity activeOpacity={1} style={styles.settingItem}>

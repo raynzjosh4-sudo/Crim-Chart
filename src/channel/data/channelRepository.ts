@@ -186,6 +186,10 @@ export class ChannelRepository {
   async updateChannelRequestStatus(requestId: string, status: 'approved' | 'rejected' | 'canceled'): Promise<void> {
     return channelRemoteSource.updateChannelRequestStatus(requestId, status);
   }
+
+  async leaveChannel(channelId: string, userId: string): Promise<void> {
+    return channelRemoteSource.leaveChannel(channelId, userId);
+  }
 }
 
 export const channelRepository = new ChannelRepository();
