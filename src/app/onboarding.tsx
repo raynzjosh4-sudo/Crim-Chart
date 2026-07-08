@@ -14,7 +14,7 @@ export default function OnboardingPage() {
         visible={true} 
         onClose={() => {
           // If they close without finishing, log them out
-          useAuthStore.getState().logout();
+          useAuthStore.getState().signOut();
           router.replace('/landing');
         }}
         onGoToLogin={() => {
