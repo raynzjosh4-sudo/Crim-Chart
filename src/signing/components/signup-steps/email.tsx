@@ -1,3 +1,4 @@
+import { StepProps } from '../signup.types';
 import { useStyles } from "@/core/hooks/useStyles";
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
@@ -5,28 +6,28 @@ import { useTranslation } from '@/core/localization/i18n';
 import { colors } from '@/core/theme/colors';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+
 import { LogIn } from 'lucide-react-native';
 import { useState } from 'react';
 import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-export default function MobileNumberPage() {
+export default function MobileNumberPage({ onNext, onBack, onClose }: StepProps) {
   const styles = useStyles(colors => ({
     container: {
       flex: 1,
-      backgroundColor: colors.background
+      backgroundColor: Platform.OS === 'web' ? 'transparent' : colors.background
     },
     desktopWrapper: {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
       padding: 20,
-      backgroundColor: 'rgba(255, 255, 255, 0.02)' // Subtle background dimming
+      backgroundColor: 'transparent' // Subtle background dimming
     },
     desktopModal: {
       width: '100%',
       maxWidth: 600,
-      backgroundColor: '#16181c',
+      backgroundColor: colors.background,
       borderRadius: 16,
       paddingVertical: 32,
       paddingHorizontal: 16,
@@ -164,7 +165,7 @@ export default function MobileNumberPage() {
       fontWeight: 'bold'
     }
   }));
-  const router = useRouter();
+  
   const {
     t
   } = useTranslation();
@@ -198,14 +199,14 @@ export default function MobileNumberPage() {
         return;
       }
       stopLoading();
-      router.push('/signup/password' as any);
+      onNext('password');
       setTimeout(() => setIsLoading(false), 1000);
       return;
     }
     setStoreEmail(email);
     await new Promise(resolve => setTimeout(resolve, 600));
     stopLoading();
-    router.push('/signup/password' as any);
+    onNext('password');
     setTimeout(() => setIsLoading(false), 1000);
   };
   const handleLogin = async () => {
@@ -214,7 +215,7 @@ export default function MobileNumberPage() {
     startLoading();
     await new Promise(resolve => setTimeout(resolve, 400));
     stopLoading();
-    router.push('/login' as any);
+    onNext('login');
     setTimeout(() => setIsLoading(false), 1000);
   };
   const handleGoogle = async () => {
@@ -223,7 +224,7 @@ export default function MobileNumberPage() {
     startLoading();
     await new Promise(resolve => setTimeout(resolve, 800));
     stopLoading();
-    router.push('/landing' as any);
+    onClose?.();
     setTimeout(() => setIsLoading(false), 1000);
   };
   const handleRecover = async () => {
@@ -232,14 +233,14 @@ export default function MobileNumberPage() {
     startLoading();
     await new Promise(resolve => setTimeout(resolve, 400));
     stopLoading();
-    router.push('/recover' as any);
+    onNext('recover');
     setTimeout(() => setIsLoading(false), 1000);
   };
   return <SafeAreaView style={styles.container}>
       {!isDesktop && <ChartAppBar title="" showBorder isLoading={isLoading} />}
 
-      <View style={isDesktop ? styles.desktopWrapper : styles.flexOne}>
-        <View style={[styles.content, isDesktop && styles.desktopModal]}>
+      <View style={styles.flexOne}>
+        <View style={styles.content}>
           <Text style={[styles.title, isDesktop && {
           textAlign: 'center',
           marginBottom: 12,

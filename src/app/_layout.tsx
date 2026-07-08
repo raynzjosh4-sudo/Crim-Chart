@@ -38,6 +38,20 @@ import { ProgressProvider } from '@/components/globalProgressBar/GlobalProgressB
 import { OfflineStateWidget } from '@/components/offline/OfflineStateWidget';
 import { useAppPresence } from '@/core/hooks/useAppPresence';
 import { usePresenceSyncWorker } from '@/core/sync/usePresenceSyncWorker';
+import { useExploreStore } from '@/channel/store/useExploreStore';
+import { ExploreChannelsPage } from '@/channel/pages/ExploreChannelsPage';
+import { Modal } from 'react-native';
+
+const GlobalExploreModal = () => {
+  const isOpen = useExploreStore(s => s.isOpen);
+  const closeExplore = useExploreStore(s => s.closeExplore);
+
+  return (
+    <Modal visible={isOpen} transparent animationType="fade" onRequestClose={closeExplore}>
+      <ExploreChannelsPage isModal={true} />
+    </Modal>
+  );
+};
 
 const injectWebScrollbarStyle = () => {
   if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -108,9 +122,11 @@ export default function RootLayout() {
                 <Stack.Screen name="landing" options={{ headerShown: false }} />
                 <Stack.Screen name="login" options={{ headerShown: false }} />
                 <Stack.Screen name="recover" options={{ headerShown: false }} />
+                <Stack.Screen name="onboarding" options={{ headerShown: false, animation: 'fade' }} />
                 <Stack.Screen name="add-post" options={{ presentation: 'transparentModal', animation: 'fade' }} />
               </Stack>
               <OfflineStateWidget />
+              <GlobalExploreModal />
               <Toast config={{ ...chartToastConfig, ...toastConfig }} />
             </ProgressProvider>
           </NavThemeProvider>

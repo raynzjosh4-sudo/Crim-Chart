@@ -109,7 +109,7 @@ export const PromotionBannerCard: React.FC<PromotionBannerCardProps> = ({
         </View>
         <View style={styles.authorInfo}>
           <Text style={styles.authorName}>{moment.authorName}</Text>
-          {moment.caption && <Text style={styles.caption} numberOfLines={1}>{moment.caption}</Text>}
+          {moment.caption ? <Text style={styles.caption} numberOfLines={1}>{moment.caption}</Text> : null}
         </View>
       </View>
     </View>;

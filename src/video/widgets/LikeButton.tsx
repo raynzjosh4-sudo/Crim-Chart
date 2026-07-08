@@ -6,7 +6,7 @@ import { Heart } from 'lucide-react-native';
 interface LikeButtonProps {
   initialLikes: number;
   isLiked?: boolean;
-  onTap?: () => void;
+  onTap?: () => boolean | void | Promise<boolean | void>;
 }
 export const LikeButton = ({
   initialLikes,
@@ -34,10 +34,18 @@ export const LikeButton = ({
     setLiked(isLiked);
     setLikes(initialLikes);
   }, [initialLikes, isLiked]);
-  const handleTap = (e?: any) => {
+  const handleTap = async (e?: any) => {
     if (e && e.stopPropagation) {
       e.stopPropagation();
     }
+    
+    if (onTap) {
+      const allowed = await Promise.resolve(onTap());
+      if (allowed === false) {
+        return;
+      }
+    }
+
     const newLiked = !liked;
     setLiked(newLiked);
     if (newLiked) {
@@ -54,7 +62,6 @@ export const LikeButton = ({
       duration: 100,
       useNativeDriver: true
     })]).start();
-    if (onTap) onTap();
   };
   return <Pressable style={styles.container} onPress={handleTap}>
       <Animated.View style={{

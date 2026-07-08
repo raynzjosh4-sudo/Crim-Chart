@@ -32,6 +32,7 @@ SELECT
   ) as author
 FROM public.channel_posts cp
 LEFT JOIN public.profiles pr ON pr.id = cp.author_id
+WHERE cp.type != 'status' OR cp.type IS NULL
 
 UNION 
 
@@ -64,6 +65,7 @@ SELECT
 FROM public.posts p
 JOIN public.channel_content_tags cct ON cct.post_id = p.id
 LEFT JOIN public.profiles pr ON pr.id = p.author_id
+WHERE p.type != 'status' OR p.type IS NULL
 
 UNION
 
@@ -95,7 +97,8 @@ SELECT
   ) as author
 FROM public.channel_posts cp
 JOIN public.channel_content_tags cct ON cct.post_id = cp.id
-LEFT JOIN public.profiles pr ON pr.id = cp.author_id;
+LEFT JOIN public.profiles pr ON pr.id = cp.author_id
+WHERE cp.type != 'status' OR cp.type IS NULL;
 
 -- 4. Grant access to the API roles
 GRANT SELECT ON public.unified_channel_posts_view TO anon, authenticated;

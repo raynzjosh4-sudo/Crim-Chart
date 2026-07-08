@@ -1,10 +1,11 @@
+import { StepProps } from '../signup.types';
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import { ChartToast } from '@/components/showcase/CrimChart_toast';
 import { cloudMediaService } from '@/core/network/cloudMediaService';
 import { colors } from '@/core/theme/colors';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+
 import { Camera, User } from 'lucide-react-native';
 import { useState } from 'react';
 import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
@@ -12,8 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import { useTranslation } from '@/core/localization/i18n';
 
-export default function ProfilePicturePage() {
-  const router = useRouter();
+export default function ProfilePicturePage({ onNext, onBack, onClose }: StepProps) {
+  
   const { t } = useTranslation();
   const { updateProfile, user } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
@@ -48,7 +49,7 @@ export default function ProfilePicturePage() {
       }
 
       stopLoading();
-      router.push('/signup/user-suggestions' as any);
+      onNext('user-suggestions');
       setTimeout(() => setIsLoading(false), 1000);
     } catch (error: any) {
       console.error('Profile picture upload error:', error);
@@ -66,7 +67,7 @@ export default function ProfilePicturePage() {
     await new Promise(resolve => setTimeout(resolve, 400));
     
     stopLoading();
-    router.push('/signup/user-suggestions' as any);
+    onNext('user-suggestions');
     setTimeout(() => setIsLoading(false), 1000);
   };
 
@@ -90,8 +91,8 @@ export default function ProfilePicturePage() {
       )}
 
       <ScrollView contentContainerStyle={isDesktop ? styles.desktopScroll : styles.scrollContent}>
-        <View style={isDesktop ? styles.desktopWrapper : styles.flexOne}>
-          <View style={[styles.content, isDesktop && styles.desktopModal]}>
+        <View style={styles.flexOne}>
+          <View style={styles.content}>
             <Text style={[styles.title, isDesktop && { textAlign: 'center', marginBottom: 12, fontSize: 28 }]}>Add a profile picture</Text>
           <Text style={styles.subtitle}>
             Adding a photo helps your friends recognize you. You can always change this later.
@@ -136,7 +137,7 @@ export default function ProfilePicturePage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: Platform.OS === 'web' ? 'transparent' : colors.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -152,17 +153,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: 'transparent',
   },
   desktopModal: {
     width: '100%',
-    backgroundColor: '#16181c',
+    backgroundColor: colors.background,
     borderRadius: 16,
     paddingVertical: 40,
     paddingHorizontal: 40,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
+    borderWidth: 0,
+      },
   flexOne: {
     flex: 1,
     width: '100%',
@@ -205,8 +205,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 4,
-    borderColor: 'rgba(255, 179, 0, 0.3)',
-  },
+    },
   cameraButton: {
     position: 'absolute',
     bottom: 0,

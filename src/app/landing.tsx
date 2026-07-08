@@ -1,15 +1,23 @@
-import { useStyles } from "@/core/hooks/useStyles";
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import { ChartToast } from '@/components/showcase/CrimChart_toast';
+import { useStyles } from "@/core/hooks/useStyles";
 import { useTranslation } from '@/core/localization/i18n';
 import { colors } from '@/core/theme/colors';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
-import { AvatarCollage } from '@/signing/components/AvatarCollage';
+
+import { GridLayer } from '@/features/landing/components/GridLayer/GridLayer';
+import { HeroLayer } from '@/features/landing/components/HeroLayer/HeroLayer';
+import { TabsLayer } from '@/features/landing/components/TabsLayer/TabsLayer';
+import LanguagePage from '@/settings/subsettings/LanguagePage';
+import { AuthChoiceModalWidget } from '@/signing/components/AuthChoiceModalWidget';
 import { LoginModalWidget } from '@/signing/components/LoginModalWidget';
 import { useRouter } from 'expo-router';
 import { ChevronDown, Moon, Sun } from 'lucide-react-native';
 import { useState } from 'react';
-import { Image, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Image, Modal, Platform, SafeAreaView, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+
+import { SignupModalWidget } from '@/signing/components/SignupModalWidget';
+
 export default function LandingPage() {
   const styles = useStyles(colors => ({
     root: {
@@ -196,7 +204,10 @@ export default function LandingPage() {
     width
   } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const [isAuthChoiceVisible, setAuthChoiceVisible] = useState(false);
   const [isLoginModalVisible, setLoginModalVisible] = useState(false);
+  const [isLanguageModalVisible, setLanguageModalVisible] = useState(false);
+  const [isSignupModalVisible, setSignupModalVisible] = useState(false);
   const [topUsername, setTopUsername] = useState('');
   const [topPassword, setTopPassword] = useState('');
   const handleGoogleLogin = async () => {
@@ -204,7 +215,7 @@ export default function LandingPage() {
       const success = await authStore.loginWithGoogle();
       if (success) {
         if (useAuthStore.getState().pendingGoogleOnboarding) {
-          router.push('/signup/country' as any);
+          setSignupModalVisible(true);
         } else {
           router.push('/(tabs)' as any);
         }
@@ -229,120 +240,58 @@ export default function LandingPage() {
 
   /* ─── DESKTOP ─────────────────────────────────────────────────── */
   if (isDesktop) {
-    return <ScrollView style={styles.root} contentContainerStyle={styles.rootContent} showsVerticalScrollIndicator={false}>
-        {/* Top-right Sign in form */}
-        <View style={styles.topBar}>
-          <TextInput style={styles.topInput} placeholder="Email, phone, or username" placeholderTextColor="rgba(255,255,255,0.4)" value={topUsername} onChangeText={setTopUsername} autoCapitalize="none" />
-          <TextInput style={styles.topInput} placeholder="Password" placeholderTextColor="rgba(255,255,255,0.4)" secureTextEntry value={topPassword} onChangeText={setTopPassword} />
-          <TouchableOpacity activeOpacity={0.8} onPress={() => setLoginModalVisible(true)} style={styles.loginBtnSmall}>
-            <Text style={[styles.loginBtnSmallText, {
-            color: colors.background
-          }]}>Log in</Text>
-          </TouchableOpacity>
-        </View>
+    return (
+      <ScrollView
+        style={styles.root}
+        contentContainerStyle={{ paddingBottom: 60 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <HeroLayer
+          onGoogleLogin={handleGoogleLogin}
+          onCreateAccount={() => setSignupModalVisible(true)}
+          onLoginClick={() => setAuthChoiceVisible(true)}
+          onLanguageClick={() => setLanguageModalVisible(true)}
+        />
+        <TabsLayer />
+        <GridLayer />
 
-        <View style={styles.columns}>
-          {/* ── LEFT: actions ── */}
-          <View style={styles.leftCol}>
-            <View style={styles.leftInner}>
-              <View style={{
-              flexDirection: 'row',
-              alignItems: 'center'
-            }}>
-                <Text style={styles.hero}>CrimChart.</Text>
 
-              </View>
+        <AuthChoiceModalWidget
+          visible={isAuthChoiceVisible}
+          onClose={() => setAuthChoiceVisible(false)}
+          onLoginClick={() => {
+            setAuthChoiceVisible(false);
+            setLoginModalVisible(true);
+          }}
+          onSignupClick={() => {
+            setAuthChoiceVisible(false);
+            setSignupModalVisible(true);
+          }}
+        />
 
-              <View style={{
-              height: 52
-            }} />
-              <Text style={styles.sub}>Join today.</Text>
-              <View style={{
-              height: 24
-            }} />
-              {/* Google */}
-              <Pressable onPress={handleGoogleLogin} style={({
-              pressed
-            }) => [styles.whitePill, pressed && {
-              opacity: 0.85
-            }]}>
-                <Image source={{
-                uri: 'https://www.gstatic.com/images/branding/product/2x/googleg_96dp.png'
-              }} style={styles.gIcon} resizeMode="contain" />
-                <Text style={styles.whitePillText}>{t('try_with_google') || 'Sign in with Google'}</Text>
-              </Pressable>
+        <LoginModalWidget
+          visible={isLoginModalVisible}
+          onClose={() => setLoginModalVisible(false)}
+          initialUsername={topUsername}
+          initialPassword={topPassword}
+        />
 
-              {/* OR */}
-              <View style={styles.orRow}>
-                <View style={styles.orLine} />
-                <Text style={styles.orTxt}>or</Text>
-                <View style={styles.orLine} />
-              </View>
+        <SignupModalWidget
+          visible={isSignupModalVisible}
+          onClose={() => setSignupModalVisible(false)}
+          onGoToLogin={() => {
+            setSignupModalVisible(false);
+            setLoginModalVisible(true);
+          }}
+        />
 
-              {/* Create account */}
-              <Pressable onPress={() => router.push('/signup/country' as any)} style={({
-              pressed
-            }) => [styles.brandPill, {
-              backgroundColor: colors.primary
-            }, pressed && {
-              opacity: 0.85
-            }]}>
-                <Text style={[styles.brandPillText, {
-                color: colors.background
-              }]}>
-                  {t('create_account') || 'Create account'}
-                </Text>
-              </Pressable>
-
-              <View style={{
-              height: 44
-            }} />
-              <Text style={styles.already}>Already have an account?</Text>
-              <View style={{
-              height: 16
-            }} />
-
-              {/* Sign in */}
-              <Pressable onPress={() => setLoginModalVisible(true)} style={({
-              pressed
-            }) => [styles.outlinePill, pressed && {
-              opacity: 0.85
-            }]}>
-                <Text style={[styles.outlinePillText, {
-                color: colors.primary
-              }]}>Log In</Text>
-              </Pressable>
-
-              <View style={{
-              height: 36
-            }} />
-
-              <TouchableOpacity activeOpacity={0.7} style={styles.langRow} onPress={() => router.push('/language' as any)}>
-                <Text style={styles.langTxt}>{t('native_name') || 'English'}</Text>
-                <ChevronDown size={14} color="rgba(255,255,255,0.4)" />
-              </TouchableOpacity>
-
-              <View style={{
-              height: 18
-            }} />
-              <Text style={styles.tos}>
-                By signing up, you agree to our{' '}
-                <Text style={styles.tosLink}>Terms of Service</Text>
-                {' '}and{' '}
-                <Text style={styles.tosLink}>Privacy Policy</Text>.
-              </Text>
-            </View>
+        <Modal visible={isLanguageModalVisible} transparent animationType="fade">
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' }}>
+            <LanguagePage onClose={() => setLanguageModalVisible(false)} />
           </View>
-
-          {/* ── RIGHT: user avatar collage ── */}
-          <View style={styles.rightCol}>
-            <AvatarCollage />
-          </View>
-
-        </View>
-
-        <LoginModalWidget visible={isLoginModalVisible} onClose={() => setLoginModalVisible(false)} initialUsername={topUsername} initialPassword={topPassword} />
-      </ScrollView>;
+        </Modal>
+      </ScrollView>
+    );
   }
 
   /* ─── MOBILE ──────────────────────────────────────────────────── */
@@ -350,98 +299,98 @@ export default function LandingPage() {
     flex: 1,
     backgroundColor: colors.background
   }}>
-      <ScrollView contentContainerStyle={{
+    <ScrollView contentContainerStyle={{
       paddingBottom: 40
     }}>
-        <ChartAppBar title="" showBack={false} actions={[<TouchableOpacity activeOpacity={1} key="theme" style={{
+      <ChartAppBar title="" showBack={false} actions={[<TouchableOpacity activeOpacity={1} key="theme" style={{
         padding: 8
       }}>
-              {isDark ? <Sun size={20} color={colors.textSecondary} /> : <Moon size={20} color={colors.textSecondary} />}
-            </TouchableOpacity>, <TouchableOpacity activeOpacity={1} key="login" onPress={() => router.push('/login' as any)}>
-              <Text style={{
+        {isDark ? <Sun size={20} color={colors.textSecondary} /> : <Moon size={20} color={colors.textSecondary} />}
+      </TouchableOpacity>, <TouchableOpacity activeOpacity={1} key="login" onPress={() => router.push('/login' as any)}>
+        <Text style={{
           color: colors.primary,
           fontSize: 14,
           fontWeight: 'bold',
           paddingHorizontal: 8
         }}>
-                {t('log_in')}
-              </Text>
-            </TouchableOpacity>]} />
-        <View style={{
+          {t('log_in')}
+        </Text>
+      </TouchableOpacity>]} />
+      <View style={{
         height: 40
       }} />
-        <View style={{
+      <View style={{
         alignItems: 'center'
       }}>
-          <Image source={require('@/assets/images/logo-glow.png')} style={{
+        <Image source={require('@/assets/images/logo-glow.png')} style={{
           width: 150,
           height: 150
         }} resizeMode="contain" />
-        </View>
-        <View style={{
+      </View>
+      <View style={{
         height: 32
       }} />
-        <TouchableOpacity activeOpacity={0.7} style={{
+      <TouchableOpacity activeOpacity={0.7} style={{
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
         gap: 4
       }} onPress={() => router.push('/language' as any)}>
-          <Text style={{
+        <Text style={{
           color: colors.textSecondary,
           fontSize: 14
         }}>{t('native_name') || 'English'}</Text>
-          <ChevronDown size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <View style={{
+        <ChevronDown size={20} color={colors.textSecondary} />
+      </TouchableOpacity>
+      <View style={{
         height: 60
       }} />
-        <View style={{
+      <View style={{
         paddingHorizontal: 24
       }}>
-          <TouchableOpacity activeOpacity={0.8} style={{
+        <TouchableOpacity activeOpacity={0.8} style={{
           backgroundColor: colors.primary,
           height: 52,
           borderRadius: 12,
           justifyContent: 'center',
           alignItems: 'center'
-        }} onPress={() => router.push('/signup/country' as any)}>
-            <Text style={{
+        }} onPress={() => router.push('/signing/EmailSignupPage' as any)}>
+          <Text style={{
             color: colors.background,
             fontSize: 16,
             fontWeight: 'bold'
           }}>{t('create_account')}</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={{
+        </TouchableOpacity>
+      </View>
+      <View style={{
         height: 24
       }} />
-        <View style={{
+      <View style={{
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 24
       }}>
-          <View style={{
+        <View style={{
           flex: 1,
           height: 1,
           backgroundColor: 'rgba(255,255,255,0.1)'
         }} />
-          <Text style={{
+        <Text style={{
           color: colors.textSecondary,
           fontSize: 12,
           fontWeight: 'bold',
           paddingHorizontal: 16
         }}>{t('or')}</Text>
-          <View style={{
+        <View style={{
           flex: 1,
           height: 1,
           backgroundColor: 'rgba(255,255,255,0.1)'
         }} />
-        </View>
-        <View style={{
+      </View>
+      <View style={{
         height: 24
       }} />
-        <TouchableOpacity activeOpacity={0.8} style={{
+      <TouchableOpacity activeOpacity={0.8} style={{
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
@@ -449,46 +398,44 @@ export default function LandingPage() {
         gap: 12,
         alignSelf: 'center'
       }} onPress={handleGoogleLogin}>
-          <Image source={{
+        <Image source={{
           uri: 'https://www.gstatic.com/images/branding/product/2x/googleg_96dp.png'
         }} style={{
           width: 20,
           height: 20
         }} />
-          <Text style={{
+        <Text style={{
           color: colors.text,
           fontSize: 14,
           fontWeight: 'bold'
         }}>{t('try_with_google')}</Text>
-        </TouchableOpacity>
-        <View style={{
+      </TouchableOpacity>
+      <View style={{
         height: 40
       }} />
-        <View style={{
+      <View style={{
         paddingHorizontal: 40,
         paddingVertical: 24
       }}>
-          <Text style={{
+        <Text style={{
           color: 'rgba(255,255,255,0.4)',
           fontSize: 11,
           lineHeight: 16,
           textAlign: 'center'
         }}>
-            By continuing, you agree to our{' '}
-            <Text style={{
+          By continuing, you agree to our{' '}
+          <Text style={{
             color: 'rgba(255,255,255,0.7)',
             fontWeight: '600'
           }}>Terms of Service</Text>
-            {' '}and{' '}
-            <Text style={{
+          {' '}and{' '}
+          <Text style={{
             color: 'rgba(255,255,255,0.7)',
             fontWeight: '600'
           }}>Privacy Policy</Text>.
-          </Text>
-        </View>
-
-        <LoginModalWidget visible={isLoginModalVisible} onClose={() => setLoginModalVisible(false)} />
-      </ScrollView>
-    </SafeAreaView>;
+        </Text>
+      </View>
+    </ScrollView>
+  </SafeAreaView>;
 }
 const isWeb = Platform.OS === 'web';

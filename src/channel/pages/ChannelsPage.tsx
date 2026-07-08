@@ -16,6 +16,7 @@ import { ChannelSearchBar } from '@/profile/channels/widgets/ChannelSearchBar';
 
 import { useUserChannels } from '@/channel/hooks/useChannels';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { useExploreStore } from '@/channel/store/useExploreStore';
 
 import { useStyles } from '@/core/hooks/useStyles';
 export default function ChannelsPage() {
@@ -40,12 +41,19 @@ export default function ChannelsPage() {
   const { channels: joinedChannels, loadMore: loadJoined } = useUserChannels(user?.id || '', 'joined');
 
   useEffect(() => {
+    let isMounted = true;
     // Fire the initial loads
     if (user?.id) {
-      loadOwned(true);
-      loadJoined(true);
+      Promise.all([
+        loadOwned(true),
+        loadJoined(true)
+      ]).finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+    } else {
       setIsLoading(false);
     }
+    return () => { isMounted = false; };
   }, [user?.id]);
 
   const displayedChannels = (() => {
@@ -89,7 +97,13 @@ export default function ChannelsPage() {
           subtitle="Explore more channels to find new moments"
           showAction={true}
           actionText="Explore"
-          onActionPressed={() => router.push('/channel/explore' as any)}
+          onActionPressed={() => {
+            if (Platform.OS === 'web' && width >= 768) {
+              useExploreStore.getState().openExplore();
+            } else {
+              router.push('/channel/explore' as any);
+            }
+          }}
         />
         <View style={{ height: 40 }} />
       </View>

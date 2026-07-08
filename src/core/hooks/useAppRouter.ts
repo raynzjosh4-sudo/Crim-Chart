@@ -33,6 +33,12 @@ export function useAppRouter() {
     ...router,
     push: (href: any, options?: any) => safeNavigate(() => router.push(href, options)),
     replace: (href: any, options?: any) => safeNavigate(() => router.replace(href, options)),
-    back: () => safeNavigate(() => router.back()),
+    back: () => safeNavigate(() => {
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/');
+      }
+    }),
   };
 }

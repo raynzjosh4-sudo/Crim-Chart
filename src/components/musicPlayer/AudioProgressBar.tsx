@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, PanResponder, Dimensions } from 'react-native';
+import { useRef, useState } from 'react';
+import { Dimensions, PanResponder, StyleSheet, Text, View } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -10,6 +10,8 @@ interface AudioProgressBarProps {
   onScrubStart: () => void;
   onScrubMove: (seekMillis: number) => void;
   onScrubRelease: (seekMillis: number) => void;
+  style?: any;
+  compact?: boolean;
 }
 
 const formatTime = (millis: number) => {
@@ -27,9 +29,11 @@ export const AudioProgressBar: React.FC<AudioProgressBarProps> = ({
   onScrubStart,
   onScrubMove,
   onScrubRelease,
+  style,
+  compact = false,
 }) => {
   const [layoutWidth, setLayoutWidth] = useState(width - 60);
-  
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -59,7 +63,7 @@ export const AudioProgressBar: React.FC<AudioProgressBarProps> = ({
     let progress = touchX / layoutWidth;
     if (progress < 0) progress = 0;
     if (progress > 1) progress = 1;
-    
+
     const seekMillis = progress * duration;
     if (isMove) {
       onScrubMove(seekMillis);
@@ -72,10 +76,10 @@ export const AudioProgressBar: React.FC<AudioProgressBarProps> = ({
   const timeRemaining = duration - position;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, compact && styles.compactContainer, style]}>
       {/* Invisible larger hit area for easier scrubbing */}
-      <View 
-        style={styles.hitArea} 
+      <View
+        style={[styles.hitArea, compact && styles.compactHitArea]}
         {...panResponder.panHandlers}
         onLayout={(e) => setLayoutWidth(e.nativeEvent.layout.width)}
       >
@@ -84,8 +88,8 @@ export const AudioProgressBar: React.FC<AudioProgressBarProps> = ({
           <View style={[styles.progressThumb, { backgroundColor: primaryColor, left: `${progressPercent}%` }]} />
         </View>
       </View>
-      
-      <View style={styles.timeRow}>
+
+      <View style={[styles.timeRow, compact && styles.compactTimeRow]}>
         <Text style={styles.timeText}>{formatTime(position)}</Text>
         <Text style={styles.timeText}>-{formatTime(timeRemaining)}</Text>
       </View>
@@ -98,9 +102,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     marginTop: 40,
   },
+  compactContainer: {
+    paddingHorizontal: 0,
+    marginTop: 0,
+  },
   hitArea: {
     height: 40, // Much larger hit area for fingers
     justifyContent: 'center',
+  },
+  compactHitArea: {
+    height: 20,
   },
   progressBarBg: {
     height: 4,
@@ -126,6 +137,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 8,
+  },
+  compactTimeRow: {
+    marginTop: 4,
   },
   timeText: {
     color: 'rgba(255,255,255,0.5)',

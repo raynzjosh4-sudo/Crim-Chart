@@ -1,14 +1,12 @@
 import React from 'react';
 import { View, Text, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ShieldAlert } from 'lucide-react-native';
+import { ShieldAlert, User } from 'lucide-react-native';
 import { JoinButton } from '@/channel/components/JoinButton';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
-import { useAuthStore } from '@/features/auth/application/useAuthStore';
-import { channelRepository } from '@/channel/data/channelRepository';
-import { Alert } from 'react-native';
+import { JoinRequestWrapper } from '@/components/wrappers/JoinRequestWrapper';
 
 interface ChannelRestrictionOverlayProps {
     isVisible: boolean;
@@ -23,11 +21,10 @@ export const ChannelRestrictionOverlay: React.FC<ChannelRestrictionOverlayProps>
     isVisible, 
     title = "Access Restricted",
     reason = "You do not have permission to view this channel.",
-    channelName = "Restricted Channel",
-    channelImage = "https://picsum.photos/400/400?random=11",
+    channelName = "",
+    channelImage = "",
     channelId
 }) => {
-    const user = useAuthStore(s => s.user);
     const theme = useCurrentTheme();
     const styles = useStyles(colors => ({
       container: {
@@ -54,16 +51,6 @@ export const ChannelRestrictionOverlay: React.FC<ChannelRestrictionOverlayProps>
       footer: { paddingBottom: 24, width: '100%' as any, paddingHorizontal: 24 },
     }));
 
-    const handleJoinRequest = async () => {
-        if (!user || !channelId) return;
-        try {
-            await channelRepository.createChannelRequest(channelId, user.id, 'join_request', user.id);
-            Alert.alert('Success', 'Your join request has been sent successfully.');
-        } catch (e: any) {
-            Alert.alert('Error', e.message);
-        }
-    };
-
     if (!isVisible) return null;
 
     return (
@@ -77,10 +64,16 @@ export const ChannelRestrictionOverlay: React.FC<ChannelRestrictionOverlayProps>
             />
             <View style={styles.content}>
                 <View style={styles.avatarContainer}>
-                    <Image 
-                        source={{ uri: channelImage }} 
-                        style={styles.avatar} 
-                    />
+                    {channelImage ? (
+                        <Image 
+                            source={{ uri: channelImage }} 
+                            style={styles.avatar} 
+                        />
+                    ) : (
+                        <View style={[styles.avatar, { justifyContent: 'center', alignItems: 'center' }]}>
+                            <User size={48} color={theme.colors.textSecondary} />
+                        </View>
+                    )}
                     <View style={styles.badgeContainer}>
                         <ShieldAlert color={theme.colors.onPrimary} size={20} />
                     </View>
@@ -92,7 +85,16 @@ export const ChannelRestrictionOverlay: React.FC<ChannelRestrictionOverlayProps>
             </View>
             
             <View style={styles.footer}>
-                <JoinButton title="Request Join" fullWidth onPress={handleJoinRequest} />
+                <JoinRequestWrapper channelId={channelId}>
+                    {({ hasRequested, handleJoinRequest }) => (
+                        <JoinButton 
+                            title={hasRequested ? "Requested" : "Request Join"} 
+                            fullWidth 
+                            onPress={handleJoinRequest} 
+                            disabled={hasRequested}
+                        />
+                    )}
+                </JoinRequestWrapper>
             </View>
         </SafeAreaView>
     );

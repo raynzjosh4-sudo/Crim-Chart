@@ -1,4 +1,5 @@
 import { useChannelPermissions } from '@/channel/hooks/useChannelPermissions';
+import { View, ActivityIndicator } from 'react-native';
 
 export type ChannelAction = 'view_channel' | 'join_channel' | 'post_comment' | 'post_feed' | 'invite_users' | 'invite_admins' | 'post_moment' | 'leave_channel' | 'edit_settings' | 'delete_channel' | 'report_channel' | 'participate_in_chat';
 
@@ -21,10 +22,15 @@ export const ChannelRestrictionWrapper: React.FC<ChannelRestrictionWrapperProps>
     return null;
   }
 
-  // While loading, optimistically show children to prevent blocking flash.
-  // Once permissions resolve, if access is denied we'll switch to the fallback.
+  // Do not optimistically show children if it's a critical restriction check (e.g. view_channel),
+  // otherwise it flashes the page content before showing the restriction overlay.
   if (loading) {
-    return <>{children}</>;
+    if (fallback === null) return null;
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#FFB300" />
+      </View>
+    );
   }
 
   let hasPermission = true;

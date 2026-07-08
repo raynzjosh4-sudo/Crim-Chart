@@ -17,23 +17,12 @@ export function useProtectedRoute() {
 
     const inAuthGroup = segments[0] === 'login' || segments[0] === 'landing' || segments[0] === 'signup' || segments[0] === 'language' || segments[0] === 'recover';
     
-    // Special Rule: Authenticated users can stay on signup-related setup pages
-    const isSignupSetupRoute = 
-      (segments as string[]).includes('otp') ||
-      (segments as string[]).includes('country') ||
-      (segments as string[]).includes('username') ||
-      (segments as string[]).includes('birthday') ||
-      (segments as string[]).includes('gender') ||
-      (segments as string[]).includes('bio') ||
-      (segments as string[]).includes('crown-title') ||
-      (segments as string[]).includes('profile-picture') ||
-      (segments as string[]).includes('user-suggestions') ||
-      (segments as string[]).includes('channel-intro') ||
-      (segments as string[]).includes('channel-suggestions');
+    // Special Rule: Authenticated users can stay on onboarding
+    const isSignupSetupRoute = segments[0] === 'onboarding';
 
     // Rule 1: Google Onboarding (Web OAuth Redirect handling)
-    if (pendingGoogleOnboarding && segments[0] !== 'signup') {
-      router.replace('/signup/country' as any);
+    if (pendingGoogleOnboarding && segments[0] !== 'onboarding') {
+      router.replace('/onboarding' as any);
       return;
     }
 
@@ -44,11 +33,11 @@ export function useProtectedRoute() {
     // Rule 3: Logged in? Enforce onboarding completion.
     if (status === AuthStatus.AUTHENTICATED && user) {
       let missingRoute: string | null = null;
-      if (!user.country) missingRoute = '/signup/country';
-      else if (!user.birthday) missingRoute = '/signup/username';
-      else if (!user.bio) missingRoute = '/signup/bio';
-      else if (!user.crownTitle) missingRoute = '/signup/crown-title';
-      else if (!user.profileImageUrl) missingRoute = '/signup/profile-picture';
+      if (!user.country) missingRoute = '/onboarding';
+      else if (!user.birthday) missingRoute = '/onboarding';
+      else if (!user.bio) missingRoute = '/onboarding';
+      else if (!user.crownTitle) missingRoute = '/onboarding';
+      else if (!user.profileImageUrl) missingRoute = '/onboarding';
 
       if (missingRoute) {
         if (!isSignupSetupRoute) {

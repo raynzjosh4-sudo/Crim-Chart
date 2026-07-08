@@ -1,30 +1,31 @@
+import { StepProps } from '../signup.types';
 import { useStyles } from "@/core/hooks/useStyles";
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { colors } from '@/core/theme/colors';
-import { useRouter } from 'expo-router';
+
 import React, { useEffect, useState } from 'react';
 import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import { useTranslation } from '@/core/localization/i18n';
-export default function UsernamePage() {
+export default function UsernamePage({ onNext, onBack, onClose }: StepProps) {
   const styles = useStyles(colors => ({
     container: {
       flex: 1,
-      backgroundColor: colors.background
+      backgroundColor: Platform.OS === 'web' ? 'transparent' : colors.background
     },
     desktopWrapper: {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
       padding: 20,
-      backgroundColor: 'rgba(255, 255, 255, 0.02)'
+      backgroundColor: 'transparent'
     },
     desktopModal: {
       width: '100%',
       maxWidth: 600,
-      backgroundColor: '#16181c',
+      backgroundColor: colors.background,
       borderRadius: 16,
       paddingVertical: 40,
       paddingHorizontal: 40,
@@ -87,7 +88,7 @@ export default function UsernamePage() {
       fontWeight: 'bold'
     }
   }));
-  const router = useRouter();
+  
   const {
     t
   } = useTranslation();
@@ -128,7 +129,7 @@ export default function UsernamePage() {
         display_name: username
       });
       stopLoading();
-      router.push('/signup/birthday' as any);
+      onNext('birthday');
       setTimeout(() => setIsLoading(false), 1000);
     } else {
       stopLoading();
@@ -138,8 +139,8 @@ export default function UsernamePage() {
   return <SafeAreaView style={styles.container}>
       {!isDesktop && <ChartAppBar title="" showBorder isLoading={isLoading} />}
 
-      <View style={isDesktop ? styles.desktopWrapper : styles.flexOne}>
-        <View style={[styles.content, isDesktop && styles.desktopModal]}>
+      <View style={styles.flexOne}>
+        <View style={styles.content}>
           <Text style={[styles.title, isDesktop && {
           textAlign: 'center',
           marginBottom: 12,

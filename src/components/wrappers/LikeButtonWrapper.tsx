@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { LikeButton } from '@/video/widgets/LikeButton';
+import { RequireAuthWrapper } from './RequireAuthWrapper';
 
 interface LikeButtonWrapperProps {
   postId: string;
@@ -39,10 +40,14 @@ export const LikeButtonWrapper: React.FC<LikeButtonWrapperProps> = ({
   };
 
   return (
-    <LikeButton
-      initialLikes={likesCount}
-      isLiked={liked}
-      onTap={handleLike}
-    />
+    <RequireAuthWrapper>
+      {({ checkAuth }) => (
+        <LikeButton
+          initialLikes={likesCount}
+          isLiked={liked}
+          onTap={() => checkAuth(() => handleLike())}
+        />
+      )}
+    </RequireAuthWrapper>
   );
 };

@@ -1,6 +1,7 @@
-import React, { useState, useCallback } from 'react';
-import { ChannelModel } from '@/channel/models/ChannelModel';
 import { channelRepository } from '@/channel/data/channelRepository';
+import { ChannelModel } from '@/channel/models/ChannelModel';
+import React, { useCallback, useState } from 'react';
+import { DeviceEventEmitter } from 'react-native';
 
 const PAGE_LIMIT = 10;
 
@@ -61,6 +62,16 @@ export const useUserChannels = (
       setIsLoading(false);
     }
   }, [userId, filterType, targetUserId]);
+
+  React.useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('channel_created', () => {
+      // Reload channels when a new one is created
+      if (filterType === 'owned') {
+        loadMore(true);
+      }
+    });
+    return () => sub.remove();
+  }, [filterType, loadMore]);
 
   return { channels, isLoading, hasMore, loadMore };
 };

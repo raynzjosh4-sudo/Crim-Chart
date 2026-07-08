@@ -13,6 +13,8 @@ import { create } from 'zustand';
 interface GlobalAudioPlayerState {
   currentTrackId: string | null;
   isPlaying: boolean;
+  position: number;
+  duration: number;
   currentTrackMeta: { id: string; title: string; artist: string; coverUrl: string } | null;
 
   // Actions
@@ -21,6 +23,7 @@ interface GlobalAudioPlayerState {
   resumeCurrent: () => Promise<void>;
   toggleTrack: (trackId: string, audioUrl: string, meta?: { title: string; artist: string; coverUrl: string }) => Promise<void>;
   stopAll: () => Promise<void>;
+  seekTo: (positionMillis: number) => Promise<void>;
 }
 
 // Keep the sound object outside of Zustand to avoid non-serializable state warning
@@ -31,6 +34,8 @@ let _playRequestId = 0;
 export const useGlobalAudioPlayer = create<GlobalAudioPlayerState>((set, get) => ({
   currentTrackId: null,
   isPlaying: false,
+  position: 0,
+  duration: 0,
   currentTrackMeta: null,
 
   playTrack: async (trackId: string, audioUrl: string, meta?: { title: string; artist: string; coverUrl: string }) => {
@@ -86,10 +91,16 @@ export const useGlobalAudioPlayer = create<GlobalAudioPlayerState>((set, get) =>
 
       set({ isPlaying: true });
 
-      // Set status callback to detect when sound finishes
+      // Set status callback to detect when sound finishes and track progress
       newSound.setOnPlaybackStatusUpdate((status) => {
         if (!status.isLoaded) {
           set({ isPlaying: false });
+        } else {
+          set({
+            position: status.positionMillis,
+            duration: status.durationMillis || 0,
+            isPlaying: status.isPlaying,
+          });
         }
       });
     } catch (e: any) {
@@ -146,7 +157,7 @@ export const useGlobalAudioPlayer = create<GlobalAudioPlayerState>((set, get) =>
     const soundToStop = _sound;
     _sound = null;
     _currentUrl = null;
-    set({ currentTrackId: null, isPlaying: false, currentTrackMeta: null });
+    set({ currentTrackId: null, isPlaying: false, currentTrackMeta: null, position: 0, duration: 0 });
 
     if (soundToStop) {
       try {
@@ -155,6 +166,13 @@ export const useGlobalAudioPlayer = create<GlobalAudioPlayerState>((set, get) =>
       try {
         await soundToStop.unloadAsync();
       } catch (_) {}
+    }
+  },
+
+  seekTo: async (positionMillis: number) => {
+    if (_sound) {
+      await _sound.setPositionAsync(positionMillis);
+      set({ position: positionMillis });
     }
   },
 }));

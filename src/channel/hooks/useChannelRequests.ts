@@ -9,10 +9,8 @@ export const useChannelRequests = (channelId: string) => {
     if (!channelId) return;
     try {
       setLoading(true);
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-      // Simulated network call or future API
-      setRequests([]);
+      const data = await channelRepository.getPendingChannelRequests(channelId);
+      setRequests(data);
     } catch (e) {
       console.error('Failed to fetch channel requests:', e);
     } finally {

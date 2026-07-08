@@ -1,9 +1,10 @@
+import { StepProps } from '../signup.types';
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import { colors } from '@/core/theme/colors';
-import { useRouter, useFocusEffect } from 'expo-router';
+
 import { Hash, Plus, CheckCircle } from 'lucide-react-native';
 import React, { useState, useCallback } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, useWindowDimensions , Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import { useTranslation } from '@/core/localization/i18n';
@@ -11,8 +12,8 @@ import { useUserChannels } from '@/channel/hooks/useChannels';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { ChannelAvatarImage } from '@/channel/components/channelavatarimage/ChannelAvatarImage';
 
-export default function ChannelIntroPage() {
-  const router = useRouter();
+export default function ChannelIntroPage({ onNext, onBack, onClose }: StepProps) {
+  
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const { startLoading, stopLoading } = useGlobalProgress();
@@ -38,7 +39,7 @@ export default function ChannelIntroPage() {
     startLoading();
     await new Promise(resolve => setTimeout(resolve, 600));
     stopLoading();
-    router.push('/signup/channel-suggestions' as any);
+    onNext('channel-suggestions');
     setTimeout(() => setIsLoading(false), 1000);
   };
 
@@ -48,7 +49,7 @@ export default function ChannelIntroPage() {
     startLoading();
     await new Promise(resolve => setTimeout(resolve, 600));
     stopLoading();
-    router.push('/channel/create' as any);
+    onClose?.();
     setTimeout(() => setIsLoading(false), 1000);
   };
 
@@ -73,8 +74,8 @@ export default function ChannelIntroPage() {
         />
       )}
 
-      <View style={isDesktop ? styles.desktopWrapper : styles.flexOne}>
-        <View style={[styles.content, isDesktop && styles.desktopModal]}>
+      <View style={styles.flexOne}>
+        <View style={styles.content}>
           
           {hasChannel ? (
             <>
@@ -156,25 +157,24 @@ export default function ChannelIntroPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: Platform.OS === 'web' ? 'transparent' : colors.background,
   },
   desktopWrapper: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: 'transparent',
   },
   desktopModal: {
     width: '100%',
     maxWidth: 600,
-    backgroundColor: '#16181c',
+    backgroundColor: colors.background,
     borderRadius: 16,
     paddingVertical: 40,
     paddingHorizontal: 40,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
+    borderWidth: 0,
+      },
   flexOne: {
     flex: 1,
   },
@@ -220,9 +220,8 @@ const styles = StyleSheet.create({
     padding: 24,
     borderRadius: 24,
     width: '100%',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
+    borderWidth: 0,
+      },
   channelPreviewTitle: {
     color: '#FFF',
     fontSize: 20,

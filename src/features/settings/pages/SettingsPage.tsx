@@ -1,6 +1,8 @@
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import { useTranslation } from '@/core/localization/i18n';
 import { colors } from '@/core/theme/colors';
+import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { SettingsItem } from '@/features/settings/components/SettingsItem';
 import { useRouter } from 'expo-router';
 import {
@@ -19,13 +21,12 @@ import {
   Send,
   Type, UserCheck, UserPlus
 } from 'lucide-react-native';
-import React from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert, Platform } from 'react-native';
-import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function SettingsPage({ isSplitPane = false }: { isSplitPane?: boolean }) {
   const router = useRouter();
   const { t } = useTranslation();
+  const { startLoading, stopLoading } = useGlobalProgress();
 
   const renderSectionHeader = (title: string) => (
     <View style={styles.sectionHeader}>
@@ -164,29 +165,17 @@ export default function SettingsPage({ isSplitPane = false }: { isSplitPane?: bo
         <TouchableOpacity activeOpacity={1} style={styles.textButton}>
           <Text style={[styles.textButtonLabel, { color: colors.primary }]}>{t('switch_account')}</Text>
         </TouchableOpacity>
-        <TouchableOpacity activeOpacity={1} 
+        <TouchableOpacity activeOpacity={1}
           style={styles.textButton}
-          onPress={() => {
-            if (Platform.OS === 'web') {
-              const confirmed = window.confirm('Are you sure you want to log out?');
-              if (confirmed) {
-                useAuthStore.getState().signOut().then(() => {
-                  router.replace('/landing');
-                });
-              }
-            } else {
-              Alert.alert(
-                t('log_out'),
-                'Are you sure you want to log out?',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: t('log_out'), style: 'destructive', onPress: () => {
-                    useAuthStore.getState().signOut().then(() => {
-                      router.replace('/landing');
-                    });
-                  }}
-                ]
-              );
+          onPress={async () => {
+            try {
+              startLoading();
+              await useAuthStore.getState().signOut();
+              router.replace('/landing');
+            } catch (e) {
+              console.error(e);
+            } finally {
+              stopLoading();
             }
           }}
         >

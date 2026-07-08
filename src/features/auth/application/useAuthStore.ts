@@ -411,13 +411,15 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   },
 
   signOut: async () => {
-    set({ isLoading: true });
+    if (get().status === AuthStatus.UNAUTHENTICATED) return;
+    // Set status early to prevent infinite loops from Supabase onAuthStateChange listener
+    set({ status: AuthStatus.UNAUTHENTICATED, isLoading: true });
     try {
       await authRepository.updateOnlineStatus(false);
       await authRepository.signOut();
     } catch {} finally {
       useProfileCacheStore.getState().clearAll();
-      set({ status: AuthStatus.UNAUTHENTICATED, isLoading: false, user: null });
+      set({ isLoading: false, user: null });
     }
   },
 

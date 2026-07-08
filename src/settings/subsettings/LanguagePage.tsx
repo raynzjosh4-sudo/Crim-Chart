@@ -1,6 +1,6 @@
 import { Check, Search } from 'lucide-react-native';
 import React from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, FlatList } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, FlatList, useWindowDimensions, Platform } from 'react-native';
 import { useTranslation } from '@/core/localization/i18n';
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import { colors } from '@/core/theme/colors';
@@ -13,10 +13,16 @@ const LANGUAGES = [
     { code: 'lg', native: 'Luganda', english: 'Luganda' },
 ];
 
-const LanguagePage: React.FC = () => {
+interface LanguagePageProps {
+    onClose?: () => void;
+}
+
+const LanguagePage: React.FC<LanguagePageProps> = ({ onClose }) => {
     const router = useRouter();
     const { t, lang: currentLang, setLanguage } = useTranslation();
     const [searchQuery, setSearchQuery] = React.useState('');
+    const { width } = useWindowDimensions();
+    const isDesktop = Platform.OS === 'web' && width >= 768;
 
     const filteredLanguages = React.useMemo(() => {
         const query = searchQuery.toLowerCase();
@@ -27,9 +33,14 @@ const LanguagePage: React.FC = () => {
         );
     }, [searchQuery]);
 
+    const handleBack = () => {
+        if (onClose) onClose();
+        else router.back();
+    };
+
     const handleLanguageChange = (code: string) => {
         setLanguage(code as any);
-        router.back();
+        handleBack();
     };
 
     const renderItem = ({ item: lang }: { item: typeof LANGUAGES[0] }) => {
@@ -37,7 +48,7 @@ const LanguagePage: React.FC = () => {
 
         return (
             <TouchableOpacity activeOpacity={1}
-                style={styles.languageItem}
+                style={[styles.languageItem, isDesktop && styles.desktopLanguageItem]}
                 onPress={() => handleLanguageChange(lang.code)}
             >
                 <View>
@@ -52,27 +63,31 @@ const LanguagePage: React.FC = () => {
 
     return (
         <View style={styles.container}>
-            <ChartAppBar title={t('language')} showBorder={true} />
+            <View style={isDesktop ? styles.desktopContainer : styles.mobileContainer}>
+                <ChartAppBar title={t('language')} showBorder={true} onBack={handleBack} />
 
-            <View style={styles.searchContainer}>
-                <View style={styles.searchInputContainer}>
-                    <Search color={colors.primary} size={20} style={styles.searchIcon} />
-                    <TextInput
-                        style={styles.searchInput}
-                        placeholder="Search language"
-                        placeholderTextColor="rgba(255, 255, 255, 0.3)"
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                    />
+                <View style={styles.searchContainer}>
+                    <View style={styles.searchInputContainer}>
+                        <Search color={colors.primary} size={20} style={styles.searchIcon} />
+                        <TextInput
+                            style={styles.searchInput}
+                            placeholder="Search language"
+                            placeholderTextColor="rgba(255, 255, 255, 0.3)"
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
+                            outlineStyle="none"
+                        />
+                    </View>
                 </View>
-            </View>
 
-            <FlatList
-                data={filteredLanguages}
-                keyExtractor={(item) => item.code}
-                renderItem={renderItem}
-                contentContainerStyle={styles.listContent}
-            />
+                <FlatList
+                    data={filteredLanguages}
+                    keyExtractor={(item) => item.code}
+                    renderItem={renderItem}
+                    contentContainerStyle={styles.listContent}
+                    showsVerticalScrollIndicator={false}
+                />
+            </View>
         </View>
     );
 };
@@ -81,6 +96,23 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: colors.background,
+        alignItems: 'center',
+    },
+    mobileContainer: {
+        flex: 1,
+        width: '100%',
+    },
+    desktopContainer: {
+        flex: 1,
+        width: '100%',
+        maxWidth: 600,
+        backgroundColor: colors.background,
+        marginVertical: 40,
+        borderRadius: 16,
+        overflow: 'hidden',
+        ...(Platform.OS === 'web' ? {
+            boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+        } : {}),
     },
     searchContainer: {
         padding: 16,
@@ -98,8 +130,9 @@ const styles = StyleSheet.create({
     },
     searchInput: {
         flex: 1,
-        color: '#FFF',
+        color: colors.text,
         fontSize: 16,
+        ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
     },
     listContent: {
         paddingBottom: 24,
@@ -110,17 +143,19 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 16,
         paddingVertical: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    },
+    desktopLanguageItem: {
+        paddingHorizontal: 24,
+        ...(Platform.OS === 'web' ? { cursor: 'pointer', transition: 'background-color 0.2s ease' } : {}),
     },
     nativeName: {
-        color: '#FFF',
+        color: colors.text,
         fontSize: 16,
         fontWeight: '500',
         marginBottom: 4,
     },
     englishName: {
-        color: 'rgba(255, 255, 255, 0.5)',
+        color: colors.textSecondary,
         fontSize: 14,
     },
 });

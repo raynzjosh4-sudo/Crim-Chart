@@ -7,13 +7,15 @@ interface JoinButtonProps {
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
   fullWidth?: boolean;
+  disabled?: boolean;
 }
 export const JoinButton: React.FC<JoinButtonProps> = ({
   onPress,
   title = 'JOIN',
   style,
   textStyle,
-  fullWidth
+  fullWidth,
+  disabled
 }) => {
   const styles = useStyles(colors => ({
     button: {
@@ -30,10 +32,10 @@ export const JoinButton: React.FC<JoinButtonProps> = ({
       fontSize: 14
     }
   }));
-  return <TouchableOpacity activeOpacity={1} style={[styles.button, fullWidth && {
+  return <TouchableOpacity activeOpacity={1} disabled={disabled} style={[styles.button, fullWidth && {
     width: '100%',
     paddingVertical: 10
-  }, style]} onPress={onPress}>
+  }, disabled && { opacity: 0.5 }, style]} onPress={onPress}>
             <Text style={[styles.text, textStyle]}>
                 {title}
             </Text>

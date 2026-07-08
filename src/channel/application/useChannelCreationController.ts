@@ -1,10 +1,10 @@
-import { create } from 'zustand';
-import { channelRepository } from '../data/channelRepository';
 import { NativeDB } from '@/core/db/NativeDB';
 import { syncQueue } from '@/core/db/SyncQueue';
-import Toast from 'react-native-toast-message';
+import { DeviceEventEmitter } from 'react-native';
 import 'react-native-get-random-values';
+import Toast from 'react-native-toast-message';
 import { v4 as uuidv4 } from 'uuid';
+import { create } from 'zustand';
 
 export enum ChannelCreationStatus {
   idle,
@@ -87,6 +87,8 @@ export const useChannelCreationController = create<ChannelCreationStore>((set) =
       
       // Success (Zero-Latency UI return)
       set({ status: ChannelCreationStatus.success });
+      
+      DeviceEventEmitter.emit('channel_created');
       
       Toast.show({
         type: 'chartToast',

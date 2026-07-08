@@ -2,7 +2,7 @@ import { useStyles } from "@/core/hooks/useStyles";
 import { useCurrentTheme } from "@/core/store/useThemeStore";
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { Compass, MessageCircle, MonitorPlay, Users } from 'lucide-react-native';
+import { Compass, MessageCircle, Aperture, Users } from 'lucide-react-native';
 
 interface ChannelNavBarProps {
   selectedIndex: number;
@@ -66,7 +66,7 @@ export const ChannelNavBar: React.FC<ChannelNavBarProps> = ({
     icon: MessageCircle,
     badge: unreadMessages > 0 ? unreadMessages.toString() : null
   }, {
-    icon: MonitorPlay,
+    icon: Aperture,
     badge: unreadMoments > 0 ? unreadMoments.toString() : null
   }, {
     icon: Users,

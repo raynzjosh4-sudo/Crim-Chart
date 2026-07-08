@@ -171,7 +171,9 @@ export class ChannelRemoteSource {
         status: 'pending'
       });
     if (error) {
-      console.error('Supabase create request error:', error);
+      if (error.code !== '23505' && !error.message?.includes('unique_pending_request_idx')) {
+        console.error('Supabase create request error:', error);
+      }
       throw error;
     }
   }
@@ -181,8 +183,8 @@ export class ChannelRemoteSource {
       .from('channel_requests')
       .select(`
         *,
-        target_user:profiles!channel_requests_target_user_id_fkey(id, display_name, username, profile_image_url),
-        requested_by:profiles!channel_requests_requested_by_id_fkey(id, display_name, username, profile_image_url)
+        target_user:profiles!channel_requests_target_user_id_fkey(id, display_name, profile_image_url),
+        requested_by:profiles!channel_requests_requested_by_id_fkey(id, display_name, profile_image_url)
       `)
       .eq('channel_id', channelId)
       .eq('status', 'pending')

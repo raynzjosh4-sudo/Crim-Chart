@@ -6,9 +6,9 @@ import { ThemeTokens } from '@/core/theme/themes';
 import { SearchResultRow } from '@/explore/widgets/search_results/SearchResultRow';
 import { SearchResultsSkeleton } from '@/explore/widgets/search_results/SearchResultsSkeleton';
 import { Box, Crown, Music, Play, Radio, Search, User } from 'lucide-react-native';
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dimensions, FlatList, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Dimensions, FlatList, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -22,6 +22,25 @@ export default function ExploreScreen() {
   const { t } = useTranslation();
 
   const { query, setQuery, results, isSearching, hasSearched, search, clearSearch } = useSearchStore();
+
+  const [activeFilter, setActiveFilter] = useState<string>('All');
+  const filters = ['All', 'Music', 'People', 'Channels', 'Crowns', 'Posts', 'Videos', 'Boxes'];
+
+  const filteredResults = useMemo(() => {
+    if (activeFilter === 'All') return results;
+    return results.filter(item => {
+      switch (activeFilter) {
+        case 'Music': return item.entity_type.includes('music');
+        case 'People': return item.entity_type === 'profile';
+        case 'Channels': return item.entity_type === 'channel';
+        case 'Crowns': return item.entity_type === 'crown';
+        case 'Posts': return item.entity_type === 'post' || item.entity_type === 'channel_post';
+        case 'Videos': return item.entity_type.includes('video');
+        case 'Boxes': return item.entity_type.includes('box');
+        default: return true;
+      }
+    });
+  }, [results, activeFilter]);
 
   const handleSearchChange = (text: string) => {
     setQuery(text);
@@ -38,7 +57,7 @@ export default function ExploreScreen() {
       return <SearchResultsSkeleton />;
     }
 
-    if (hasSearched && results.length === 0) {
+    if (hasSearched && filteredResults.length === 0) {
       return (
         <View style={styles.emptyStateContainer}>
           <View style={styles.emptyStateIconCircle}>
@@ -87,8 +106,25 @@ export default function ExploreScreen() {
           </View>
         </View>
 
+        {hasSearched && (
+          <View style={styles.filterContainer}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+              {filters.map(f => (
+                <TouchableOpacity
+                  key={f}
+                  style={[styles.filterChip, activeFilter === f && styles.filterChipActive]}
+                  onPress={() => setActiveFilter(f)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.filterChipText, activeFilter === f && styles.filterChipTextActive]}>{f}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         <FlatList
-          data={results}
+          data={filteredResults}
           keyExtractor={item => `${item.entity_type}_${item.entity_id}`}
           contentContainerStyle={styles.listPadding}
           renderItem={({ item }) => <SearchResultRow item={item} />}
@@ -139,6 +175,33 @@ const themeStyles = (colors: ThemeTokens, scale: number) => StyleSheet.create({
     flex: 1,
     color: colors.text,
     fontSize: 16 * scale,
+  },
+  filterContainer: {
+    marginBottom: 8 * scale,
+  },
+  filterScroll: {
+    paddingHorizontal: 16 * scale,
+    gap: 8 * scale,
+  },
+  filterChip: {
+    paddingHorizontal: 16 * scale,
+    paddingVertical: 8 * scale,
+    borderRadius: 20 * scale,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  filterChipActive: {
+    backgroundColor: 'transparent',
+    borderColor: colors.primary,
+  },
+  filterChipText: {
+    color: colors.textSecondary,
+    fontSize: 14 * scale,
+    fontWeight: '600' as const,
+  },
+  filterChipTextActive: {
+    color: colors.primary,
   },
   listPadding: {
     paddingBottom: 100 * scale,

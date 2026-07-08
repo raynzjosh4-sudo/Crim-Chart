@@ -39,7 +39,7 @@ export interface ChannelModel {
 
 export function emptyChannel(): ChannelModel {
   return {
-    id: '', title: 'Unknown Channel', membersCount: 0, momentsCount: 0,
+    id: '', title: '', membersCount: 0, momentsCount: 0,
     messagesCount: 0, tagsCount: 0, likesCount: 0, followersCount: 0,
     unreadCount: 0, pendingRequestsCount: 0, hasActiveMembers: false, visibleToOtherChannelMembers: true, visibleToFollowedUsers: true,
     joinMethod: 'invite', preventLeaving: false, countryRestrictions: ['Global'], allowCommentingBy: 'all', allowPostingBy: 'all',
@@ -53,7 +53,7 @@ export function emptyChannel(): ChannelModel {
 export function channelFromMap(map: Record<string, any>): ChannelModel {
   return {
     id: map.id?.toString() ?? '',
-    title: (map.name ?? map.title ?? 'Channel')?.toString() ?? '',
+    title: (map.name ?? map.title)?.toString() ?? '',
     imageUrl: (map.avatar_url ?? map.imageUrl ?? '') || '',
     description: (map.description ?? map.bio)?.toString() ?? '',
     youtubeChannelId: map.youtube_channel_id?.toString(),

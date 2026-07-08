@@ -310,35 +310,35 @@ export default function CreateChannelPage({
 
         {/* Embedded Settings: Who can see channel */}
         <Text style={styles.sectionHeader}>{tr('set_who_can_see_channel').toUpperCase()}</Text>
-        <ActionTile title={tr('age_restriction')} subtitle={draftAge === 'All Ages' ? tr('all') : draftAge} icon={<Calendar size={20} color="rgba(255,255,255,0.4)" />} onPress={() => setShowAgePicker(true)} />
+        <ActionTile title={tr('age_restriction')} subtitle={draftAge === 'All Ages' ? tr('all') : draftAge} icon={<Calendar size={20} color="rgba(255,255,255,0.4)" />} onPress={() => setShowAgePicker(true)} styles={styles} />
         <AppAgeRestrictionPicker visible={showAgePicker} onClose={() => setShowAgePicker(false)} selectedAge={draftAge as any} onSelect={age => {
           setDraftAge(age);
           setShowAgePicker(false);
         }} />
-        <ToggleTile title={tr('members_in_my_other_channels')} value={membersOtherChannels} onChanged={setMembersOtherChannels} />
-        <ToggleTile title={tr('members_am_following')} value={membersFollowing} onChanged={setMembersFollowing} />
+        <ToggleTile title={tr('members_in_my_other_channels')} value={membersOtherChannels} onChanged={setMembersOtherChannels} styles={styles} />
+        <ToggleTile title={tr('members_am_following')} value={membersFollowing} onChanged={setMembersFollowing} styles={styles} />
 
         <View style={styles.spacer} />
 
         {/* Embedded Settings: How can people join */}
         <Text style={styles.sectionHeader}>{tr('how_can_people_join').toUpperCase()}</Text>
-        <RadioTile title={tr('by_sending_invitation_request')} value="invite" groupValue={joinMethod} onChanged={setJoinMethod} />
-        <RadioTile title={tr('anyone_can_join')} value="anyone" groupValue={joinMethod} onChanged={setJoinMethod} />
+        <RadioTile title={tr('by_sending_invitation_request')} value="invite" groupValue={joinMethod} onChanged={setJoinMethod} styles={styles} />
+        <RadioTile title={tr('anyone_can_join')} value="anyone" groupValue={joinMethod} onChanged={setJoinMethod} styles={styles} />
 
         <View style={styles.spacer} />
 
         {/* Embedded Settings: Allow commenting by */}
         <Text style={styles.sectionHeader}>{tr('allow_commenting_by').toUpperCase()}</Text>
-        <RadioTile title={tr('all')} value="all" groupValue={allowCommentingBy} onChanged={setAllowCommentingBy} />
-        <RadioTile title={tr('followers')} value="followers" groupValue={allowCommentingBy} onChanged={setAllowCommentingBy} />
-        <RadioTile title={tr('joined_members')} value="joined" groupValue={allowCommentingBy} onChanged={setAllowCommentingBy} />
-        <RadioTile title={tr('none_only_me')} value="none" groupValue={allowCommentingBy} onChanged={setAllowCommentingBy} />
+        <RadioTile title={tr('all')} value="all" groupValue={allowCommentingBy} onChanged={setAllowCommentingBy} styles={styles} />
+        <RadioTile title={tr('followers')} value="followers" groupValue={allowCommentingBy} onChanged={setAllowCommentingBy} styles={styles} />
+        <RadioTile title={tr('joined_members')} value="joined" groupValue={allowCommentingBy} onChanged={setAllowCommentingBy} styles={styles} />
+        <RadioTile title={tr('none_only_me')} value="none" groupValue={allowCommentingBy} onChanged={setAllowCommentingBy} styles={styles} />
 
         <View style={styles.spacer} />
 
         {/* Embedded Settings: Global restrictions */}
         <Text style={styles.sectionHeader}>{tr('global_restrictions').toUpperCase()}</Text>
-        <ActionTile title={tr('which_country_allowed')} subtitle={draftCountries.length === 1 && draftCountries[0] === 'Global' ? tr('all') : `${draftCountries.length} Selected`} icon={<Globe size={20} color="rgba(255,255,255,0.4)" />} onPress={() => setShowCountryPicker(true)} />
+        <ActionTile title={tr('which_country_allowed')} subtitle={draftCountries.length === 1 && draftCountries[0] === 'Global' ? tr('all') : `${draftCountries.length} Selected`} icon={<Globe size={20} color="rgba(255,255,255,0.4)" />} onPress={() => setShowCountryPicker(true)} styles={styles} />
         <AppCountryPicker visible={showCountryPicker} onClose={() => setShowCountryPicker(false)} initialCountries={draftCountries.includes('Global') ? [] : draftCountries.map(c => ({
           name: c,
           cca2: c
@@ -350,7 +350,7 @@ export default function CreateChannelPage({
           }
           setShowCountryPicker(false);
         }} />
-        <ToggleTile title={tr('allow_members_not_leave')} value={preventLeaving} onChanged={setPreventLeaving} />
+        <ToggleTile title={tr('allow_members_not_leave')} value={preventLeaving} onChanged={setPreventLeaving} styles={styles} />
         <View style={{
           height: 16
         }} />
@@ -390,7 +390,8 @@ const ActionTile = ({
   title,
   subtitle,
   icon,
-  onPress
+  onPress,
+  styles
 }: any) => <TouchableOpacity activeOpacity={1} style={styles.tile} onPress={onPress}>
     <View style={{
     flex: 1,
@@ -408,7 +409,8 @@ const ActionTile = ({
 const ToggleTile = ({
   title,
   value,
-  onChanged
+  onChanged,
+  styles
 }: any) => <View style={styles.tile}>
     <View style={{
     flex: 1,
@@ -429,7 +431,8 @@ const RadioTile = ({
   title,
   value,
   groupValue,
-  onChanged
+  onChanged,
+  styles
 }: any) => {
   const isSelected = value === groupValue;
   return <TouchableOpacity activeOpacity={1} style={styles.tile} onPress={() => onChanged(value)}>

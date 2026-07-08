@@ -46,7 +46,7 @@ import { VideoTabView } from "@/features/channel/pages/video_tab/VideoTabView";
 import { useChannelStyles } from "./styles/_channelStyyles.styles";
 import { DateDivider } from "./widgets/_datedivider";
 import { ChannelTitleBar } from "./widgets/ChannelTitleBar";
-import { InviteCardWidget } from "./widgets/InviteCardWidget";
+
 
 export default function ChannelPage({ channelIdOverride }: { channelIdOverride?: string }) {
   const styles = useChannelStyles();
@@ -802,13 +802,7 @@ export default function ChannelPage({ channelIdOverride }: { channelIdOverride?:
                       );
                     })}
 
-                    {/* Invite Card */}
-                    <InviteCardWidget
-                      channelName={channel?.title}
-                      channelDescription={channel?.description}
-                      channelImageUrl={channel?.imageUrl}
-                      creatorImageUrl={channel?.creatorUser?.profileImageUrl}
-                    />
+
                   </>
                 )}
 

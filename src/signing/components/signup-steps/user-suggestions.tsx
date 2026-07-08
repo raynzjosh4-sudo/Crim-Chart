@@ -1,3 +1,4 @@
+import { StepProps } from '../signup.types';
 import { useStyles } from "@/core/hooks/useStyles";
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import { FollowUserButton } from '@/components/FollowUserButton';
@@ -6,33 +7,32 @@ import { useTranslation } from '@/core/localization/i18n';
 import { colors } from '@/core/theme/colors';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { useSuggestedUsers } from '@/features/profile/application/useSuggestedUsers';
-import { useRouter } from 'expo-router';
+
 import { User } from 'lucide-react-native';
 import { ActivityShimmer } from '@/components/shimmers/ActivityShimmer';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View , Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-export default function UserSuggestionsPage() {
+export default function UserSuggestionsPage({ onNext, onBack, onClose }: StepProps) {
   const styles = useStyles(colors => ({
     container: {
       flex: 1,
-      backgroundColor: colors.background
+      backgroundColor: Platform.OS === 'web' ? 'transparent' : colors.background
     },
     desktopWrapper: {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
       padding: 20,
-      backgroundColor: 'rgba(255, 255, 255, 0.02)'
+      backgroundColor: 'transparent'
     },
     desktopModal: {
       width: '100%',
       maxWidth: 600,
       maxHeight: 800,
-      backgroundColor: '#16181c',
+      backgroundColor: colors.background,
       borderRadius: 16,
-      borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.1)',
+      borderWidth: 0,
       overflow: 'hidden'
     },
     flexOne: {
@@ -107,7 +107,7 @@ export default function UserSuggestionsPage() {
       left: 0,
       right: 0,
       padding: 24,
-      backgroundColor: colors.background
+      backgroundColor: Platform.OS === 'web' ? 'transparent' : colors.background
     },
     finishButton: {
       backgroundColor: colors.primary,
@@ -130,7 +130,7 @@ export default function UserSuggestionsPage() {
       fontWeight: 'bold'
     }
   }));
-  const router = useRouter();
+  
   const {
     t
   } = useTranslation();
@@ -165,7 +165,7 @@ export default function UserSuggestionsPage() {
     startLoading();
     await new Promise(resolve => setTimeout(resolve, 600));
     stopLoading();
-    router.replace('/signup/channel-intro' as any);
+    onNext('channel-intro');
     setTimeout(() => setIsLoading(false), 1000);
   };
   const handleToggle = (isFollowing: boolean) => {
@@ -176,8 +176,8 @@ export default function UserSuggestionsPage() {
               <Text style={styles.skipText}>{t('skip' as any) || 'Skip'}</Text>
             </TouchableOpacity>]} />}
 
-      <View style={isDesktop ? styles.desktopWrapper : styles.flexOne}>
-        <View style={[styles.content, isDesktop && styles.desktopModal]}>
+      <View style={styles.flexOne}>
+        <View style={styles.content}>
           <Text style={[styles.title, isDesktop && {
           textAlign: 'center',
           marginTop: 40

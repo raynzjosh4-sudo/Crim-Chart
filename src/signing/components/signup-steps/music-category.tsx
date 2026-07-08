@@ -1,20 +1,21 @@
+import { StepProps } from '../signup.types';
 import { useStyles } from "@/core/hooks/useStyles";
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import { ChartToast } from '@/components/showcase/CrimChart_toast';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { colors } from '@/core/theme/colors';
-import { useRouter } from 'expo-router';
+
 import React, { useState } from 'react';
 import { Platform, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import { useTranslation } from '@/core/localization/i18n';
 import { CategoryPickerWidget } from '@/components/compose/CategoryPickerWidget';
-export default function MusicCategoryPage() {
+export default function MusicCategoryPage({ onNext, onBack, onClose }: StepProps) {
   const styles = useStyles(colors => ({
     container: {
       flex: 1,
-      backgroundColor: colors.background
+      backgroundColor: Platform.OS === 'web' ? 'transparent' : colors.background
     },
     flexOne: {
       flex: 1
@@ -42,9 +43,8 @@ export default function MusicCategoryPage() {
       shadowOpacity: 0.3,
       shadowRadius: 24,
       elevation: 10,
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.05)'
-    },
+      borderWidth: 0,
+      },
     title: {
       fontSize: 28,
       fontWeight: 'bold',
@@ -61,7 +61,7 @@ export default function MusicCategoryPage() {
       height: 40
     }
   }));
-  const router = useRouter();
+  
   const {
     t
   } = useTranslation();
@@ -88,7 +88,7 @@ export default function MusicCategoryPage() {
     });
     stopLoading();
     if (success) {
-      router.push('/signup/bio' as any);
+      onNext('bio');
     } else {
       ChartToast.showError(null, {
         title: 'Error',
@@ -100,7 +100,7 @@ export default function MusicCategoryPage() {
   return <SafeAreaView style={styles.container}>
       {!isDesktop && <ChartAppBar title="" showBorder isLoading={isLoading} />}
 
-      <View style={isDesktop ? styles.desktopWrapper : styles.flexOne}>
+      <View style={styles.flexOne}>
         <View style={isDesktop ? styles.desktopModal : styles.content}>
           <Text style={[styles.title, isDesktop && {
           textAlign: 'center',

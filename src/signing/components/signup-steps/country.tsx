@@ -1,44 +1,43 @@
-import { useStyles } from "@/core/hooks/useStyles";
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
-import { colors } from '@/core/theme/colors';
-import { useRouter } from 'expo-router';
-import { useAuthStore } from '@/features/auth/application/useAuthStore';
-import { ChartToast } from '@/components/showcase/CrimChart_toast';
-import { Search } from 'lucide-react-native';
+import { useStyles } from "@/core/hooks/useStyles";
+import { StepProps } from '../signup.types';
+
 import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
-import React, { useState } from 'react';
-import { FlatList, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ChartToast } from '@/components/showcase/CrimChart_toast';
+import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { customArray } from 'country-codes-list';
+import { Search } from 'lucide-react-native';
+import { useState } from 'react';
+import { FlatList, Platform, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 const COUNTRIES = customArray({
   name: '{countryNameEn}',
   code: '{countryCode}',
   phone: '{countryCallingCode}'
 }).sort((a, b) => a.name.localeCompare(b.name));
-export default function CountrySelector() {
+export default function CountrySelector({ onNext, onBack, onClose }: StepProps) {
   const styles = useStyles(colors => ({
     container: {
       flex: 1,
-      backgroundColor: colors.background
+      backgroundColor: Platform.OS === 'web' ? 'transparent' : colors.background
     },
     desktopWrapper: {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
       padding: 20,
-      backgroundColor: 'rgba(255, 255, 255, 0.02)'
+      backgroundColor: 'transparent'
     },
     desktopModal: {
       width: '100%',
       maxWidth: 600,
-      backgroundColor: '#16181c',
+      backgroundColor: colors.background,
       borderRadius: 16,
       paddingTop: 32,
       paddingBottom: 16,
       paddingHorizontal: 16,
       height: '80%',
       maxHeight: 700,
-      borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.1)',
+      borderWidth: 0,
       overflow: 'hidden'
     },
     content: {
@@ -92,7 +91,7 @@ export default function CountrySelector() {
       fontSize: 14
     }
   }));
-  const router = useRouter();
+
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const {
@@ -118,7 +117,7 @@ export default function CountrySelector() {
       });
       stopLoading();
       if (success) {
-        router.replace('/(tabs)' as any);
+        onClose?.();
       } else {
         ChartToast.showError(null, {
           title: 'Error',
@@ -133,7 +132,7 @@ export default function CountrySelector() {
       const success = await authStore.completeGoogleOnboarding();
       stopLoading();
       if (success) {
-        router.push('/signup/username' as any);
+        onNext('username');
       } else {
         ChartToast.showError(null, {
           title: 'Error',
@@ -144,29 +143,29 @@ export default function CountrySelector() {
     } else {
       authStore.startSignUp(country.code || '', country.name);
       stopLoading();
-      router.push('/signup/email' as any);
+      onNext('email');
       setTimeout(() => setIsLoading(false), 1000);
     }
   };
   return <View style={styles.container}>
-      {!isDesktop && <ChartAppBar title="Select Country" centerTitle isLoading={isLoading} onBack={() => router.back()} />}
+    {!isDesktop && <ChartAppBar title="Select Country" centerTitle isLoading={isLoading} onBack={() => onBack()} />}
 
-      <View style={isDesktop ? styles.desktopWrapper : styles.flexOne}>
-        <View style={[styles.content, isDesktop && styles.desktopModal]}>
-          {isDesktop && <Text style={styles.desktopTitle}>
-              Select Country
-            </Text>}
+    <View style={styles.flexOne}>
+      <View style={styles.content}>
+        {isDesktop && <Text style={styles.desktopTitle}>
+          Select Country
+        </Text>}
 
-          <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <Search size={20} color="rgba(255, 255, 255, 0.5)" />
-          <TextInput style={[styles.searchInput, Platform.OS === 'web' ? {
+        <View style={styles.searchContainer}>
+          <View style={styles.searchBar}>
+            <Search size={20} color="rgba(255, 255, 255, 0.5)" />
+            <TextInput style={[styles.searchInput, Platform.OS === 'web' ? {
               outlineStyle: 'none'
             } as any : {}]} placeholder="Search country..." placeholderTextColor="rgba(255, 255, 255, 0.5)" value={search} onChangeText={setSearch} />
+          </View>
         </View>
-      </View>
 
-      <FlatList style={{
+        <FlatList style={{
           flex: 1
         }} data={filteredCountries} keyExtractor={(item, index) => `${item.code}-${index}`} renderItem={({
           item
@@ -174,7 +173,7 @@ export default function CountrySelector() {
             <Text style={styles.countryName}>{item.name}</Text>
             <Text style={styles.countryCode}>{item.code} +{item.phone}</Text>
           </TouchableOpacity>} />
-        </View>
       </View>
-    </View>;
+    </View>
+  </View>;
 }
