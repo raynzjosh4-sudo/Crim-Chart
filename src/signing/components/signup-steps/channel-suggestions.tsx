@@ -10,7 +10,7 @@ import { useDiscoveryChannels } from '@/features/feed/application/useDiscoveryCh
 import ChannelFollowButton from '@/channel/widgets/ChannelFollowButton';
 import { ShimmerEffect } from '@/channel/pages/widgets2/shimmer/ShimmerEffect';
 import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
-const SuggestionsShimmer = () => {
+const SuggestionsShimmer = ({ styles }: { styles: any }) => {
   return <View style={{
     flex: 1,
     paddingHorizontal: 20
@@ -45,7 +45,7 @@ const SuggestionsShimmer = () => {
       </ShimmerEffect>
     </View>;
 };
-export default function ChannelSuggestionsPage({ onNext, onBack, onClose }: StepProps) {
+export default function ChannelSuggestionsPage({ onNext, onBack, onClose, onFinish }: StepProps) {
   const styles = useStyles(colors => ({
     container: {
       flex: 1,
@@ -211,7 +211,7 @@ export default function ChannelSuggestionsPage({ onNext, onBack, onClose }: Step
 
         <View style={styles.spacerMedium} />
 
-        {isLoading ? <SuggestionsShimmer /> : <FlatList data={channels} keyExtractor={item => String(item.id)} contentContainerStyle={channels.length === 0 ? [styles.listPadding, {
+        {isLoading ? <SuggestionsShimmer styles={styles} /> : <FlatList data={channels} keyExtractor={item => String(item.id)} contentContainerStyle={channels.length === 0 ? [styles.listPadding, {
           flex: 1
         }] : styles.listPadding} ListEmptyComponent={<View style={{
           flex: 1,

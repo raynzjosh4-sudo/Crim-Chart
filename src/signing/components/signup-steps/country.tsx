@@ -14,7 +14,7 @@ const COUNTRIES = customArray({
   code: '{countryCode}',
   phone: '{countryCallingCode}'
 }).sort((a, b) => a.name.localeCompare(b.name));
-export default function CountrySelector({ onNext, onBack, onClose }: StepProps) {
+export default function CountrySelector({ onNext, onBack, onClose, onFinish }: StepProps) {
   const styles = useStyles(colors => ({
     container: {
       flex: 1,
