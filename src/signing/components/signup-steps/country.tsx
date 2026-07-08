@@ -117,7 +117,8 @@ export default function CountrySelector({ onNext, onBack, onClose }: StepProps) 
       });
       stopLoading();
       if (success) {
-        onClose?.();
+        if (onFinish) onFinish();
+        else onClose?.();
       } else {
         ChartToast.showError(null, {
           title: 'Error',

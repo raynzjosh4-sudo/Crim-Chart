@@ -21,11 +21,12 @@ import UsernamePage from './signup-steps/username';
 interface SignupModalWidgetProps {
   visible: boolean;
   onClose: () => void;
+  onFinish?: () => void;
   onGoToLogin: () => void;
   initialStep?: string;
 }
 
-export const SignupModalWidget = ({ visible, onClose, onGoToLogin, initialStep = 'country' }: SignupModalWidgetProps) => {
+export const SignupModalWidget = ({ visible, onClose, onFinish, onGoToLogin, initialStep = 'country' }: SignupModalWidgetProps) => {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
   const [currentStep, setCurrentStep] = useState(initialStep);
@@ -65,7 +66,7 @@ export const SignupModalWidget = ({ visible, onClose, onGoToLogin, initialStep =
   };
 
   const renderStep = () => {
-    const props = { onNext: handleNext, onBack: handleBack, onClose: handleClose };
+    const props = { onNext: handleNext, onBack: handleBack, onClose: handleClose, onFinish: onFinish || handleClose };
     switch (currentStep) {
       case 'country': return <CountrySelector {...props} />;
       case 'birthday': return <BirthdayPage {...props} />;

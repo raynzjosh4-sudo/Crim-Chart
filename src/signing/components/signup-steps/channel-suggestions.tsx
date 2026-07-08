@@ -193,7 +193,8 @@ export default function ChannelSuggestionsPage({ onNext, onBack, onClose }: Step
     startLoading();
     await new Promise(resolve => setTimeout(resolve, 600));
     stopLoading();
-    onClose?.();
+    if (onFinish) onFinish();
+    else onClose?.();
     setTimeout(() => setIsFinishing(false), 500);
   };
   return <SafeAreaView style={styles.container}>
