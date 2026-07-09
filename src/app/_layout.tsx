@@ -14,6 +14,7 @@ import { ThemeProvider as AppThemeProvider } from '@/core/theme/theme_provider';
 import { DarkTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { useEffect } from 'react';
+import { useFonts } from 'expo-font';
 import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -33,6 +34,30 @@ if (TouchableOpacity.defaultProps) {
 } else {
   (TouchableOpacity as any).defaultProps = { activeOpacity: 1 };
 }
+
+import { Text, TextInput } from 'react-native';
+
+// Apply global font family
+const customTextProps = {
+  style: {
+    fontFamily: 'ComicRelief-Regular'
+  }
+};
+if ((Text as any).defaultProps == null) {
+  (Text as any).defaultProps = {};
+}
+(Text as any).defaultProps.style = [
+  (Text as any).defaultProps.style,
+  customTextProps.style
+];
+
+if ((TextInput as any).defaultProps == null) {
+  (TextInput as any).defaultProps = {};
+}
+(TextInput as any).defaultProps.style = [
+  (TextInput as any).defaultProps.style,
+  customTextProps.style
+];
 
 import { ProgressProvider } from '@/components/globalProgressBar/GlobalProgressBar';
 import { OfflineStateWidget } from '@/components/offline/OfflineStateWidget';
@@ -99,6 +124,11 @@ const customDarkTheme = {
 };
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    'ComicRelief-Regular': require('@/assets/fonts/Comic_Relief/ComicRelief-Regular.ttf'),
+    'ComicRelief-Bold': require('@/assets/fonts/Comic_Relief/ComicRelief-Bold.ttf'),
+  });
+
   useProtectedRoute();
   useAppPresence();
   usePresenceSyncWorker();
@@ -110,6 +140,10 @@ export default function RootLayout() {
     });
   }, []);
 
+  if (!fontsLoaded) {
+    return null;
+  }
+
   return (
     <SafeAreaProvider style={{ flex: 1, backgroundColor: '#000' }}>
       <LocalizationProvider>
@@ -119,7 +153,8 @@ export default function RootLayout() {
               <AnimatedSplashOverlay />
               <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#000' } }}>
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="landing" options={{ headerShown: false }} />
+                <Stack.Screen name="welcome" options={{ headerShown: false, animation: 'slide_from_right' }} />
+                <Stack.Screen name="landing" options={{ headerShown: false, animation: 'slide_from_right' }} />
                 <Stack.Screen name="login" options={{ headerShown: false }} />
                 <Stack.Screen name="recover" options={{ headerShown: false }} />
                 <Stack.Screen name="onboarding" options={{ headerShown: false, animation: 'fade' }} />

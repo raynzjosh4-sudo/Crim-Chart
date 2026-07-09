@@ -15,7 +15,7 @@ export function useProtectedRoute() {
   useEffect(() => {
     if (status === AuthStatus.UNKNOWN) return; // Wait until we know the status
 
-    const inAuthGroup = segments[0] === 'login' || segments[0] === 'landing' || segments[0] === 'signup' || segments[0] === 'language' || segments[0] === 'recover';
+    const inAuthGroup = segments[0] === 'login' || segments[0] === 'landing' || segments[0] === 'signup' || segments[0] === 'language' || segments[0] === 'recover' || segments[0] === 'welcome';
     
     // Special Rule: Authenticated users can stay on onboarding
     const isSignupSetupRoute = segments[0] === 'onboarding';
@@ -28,7 +28,7 @@ export function useProtectedRoute() {
 
     // Rule 2: Not logged in? Stay on public/auth pages.
     if (status === AuthStatus.UNAUTHENTICATED && !inAuthGroup && !pendingGoogleOnboarding) {
-      router.replace('/landing');
+      router.replace('/welcome');
     } 
     // Rule 3: Logged in? Enforce onboarding completion.
     if (status === AuthStatus.AUTHENTICATED && user) {
