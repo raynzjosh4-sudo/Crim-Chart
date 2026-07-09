@@ -108,8 +108,11 @@ export const InboxDetailPage: React.FC<InboxDetailPageProps> = ({
 
   const [participantStats, setParticipantStats] = useState<UserConnectionStatsModel | null>(null);
 
-  const displayName = participantFromThread?.displayName || propParticipantNameFallback || 'Unknown User';
-  const displayAvatar = participantFromThread?.profileImageUrl || propParticipantAvatarFallback || undefined;
+  const participantNameFallbackParam = params.participantNameFallback as string | undefined;
+  const participantAvatarFallbackParam = params.participantAvatarFallback as string | undefined;
+
+  const displayName = participantFromThread?.displayName || propParticipantNameFallback || participantNameFallbackParam || 'Unknown User';
+  const displayAvatar = participantFromThread?.profileImageUrl || propParticipantAvatarFallback || participantAvatarFallbackParam || undefined;
 
   const displayId = activeParticipantId || '';
 

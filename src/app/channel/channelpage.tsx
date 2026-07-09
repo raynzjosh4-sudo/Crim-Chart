@@ -46,6 +46,7 @@ import { VideoTabView } from "@/features/channel/pages/video_tab/VideoTabView";
 import { useChannelStyles } from "./styles/_channelStyyles.styles";
 import { DateDivider } from "./widgets/_datedivider";
 import { ChannelTitleBar } from "./widgets/ChannelTitleBar";
+import { ChannelPageShimmer } from "@/components/shimmers/channelPageShimmer/ChannelPageShimmer";
 
 
 export default function ChannelPage({ channelIdOverride }: { channelIdOverride?: string }) {
@@ -244,6 +245,7 @@ export default function ChannelPage({ channelIdOverride }: { channelIdOverride?:
       <ChannelRestrictionWrapper
         channelId={id}
         requiredAction="view_channel"
+        loadingComponent={<ChannelPageShimmer />}
         fallback={(reason) => (
           <ChannelRestrictionOverlay
             isVisible={true}

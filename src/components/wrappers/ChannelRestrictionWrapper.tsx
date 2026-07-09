@@ -7,6 +7,7 @@ interface ChannelRestrictionWrapperProps {
   channelId?: string; // Expect channelId instead of the whole channel object
   requiredAction: ChannelAction;
   fallback: React.ReactNode | ((reason: string | null) => React.ReactNode);
+  loadingComponent?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -14,6 +15,7 @@ export const ChannelRestrictionWrapper: React.FC<ChannelRestrictionWrapperProps>
   channelId,
   requiredAction,
   fallback,
+  loadingComponent,
   children,
 }) => {
   const { canView, canJoin, canComment, canPostFeed, canPostStatus, canChat, canInvite, canInviteAdmins, canLeave, canDelete, canReport, role, loading, viewBlockReason } = useChannelPermissions(channelId);
@@ -26,6 +28,7 @@ export const ChannelRestrictionWrapper: React.FC<ChannelRestrictionWrapperProps>
   // otherwise it flashes the page content before showing the restriction overlay.
   if (loading) {
     if (fallback === null) return null;
+    if (loadingComponent) return <>{loadingComponent}</>;
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#FFB300" />

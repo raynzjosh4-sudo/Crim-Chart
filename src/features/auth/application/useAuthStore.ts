@@ -72,69 +72,70 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   checkSession: async () => {
     try {
       if (Platform.OS === 'web') {
-        let sessionToProcess = null;
-        
-        // MANUALLY parse the hash just in case Supabase's detectSessionInUrl is failing
-        // or Expo Router is interfering with it before Supabase can read it.
-        if (typeof window !== 'undefined' && window.location.hash.includes('access_token=')) {
-          const hashStr = window.location.hash.substring(1); // remove '#'
-          const params = new URLSearchParams(hashStr);
-          const accessToken = params.get('access_token');
-          const refreshToken = params.get('refresh_token');
-          
-          if (accessToken && refreshToken) {
-            const { data } = await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken
-            });
-            sessionToProcess = data?.session;
-            // Clear the hash from the URL so it's clean
-            window.history.replaceState(null, '', window.location.pathname);
-          }
-        }
-        
-        // If we didn't manually intercept it, fallback to regular getSession
-        if (!sessionToProcess) {
-          const { data } = await supabase.auth.getSession();
-          sessionToProcess = data?.session;
+        console.log('[AUTH] checkSession() called on web');
+        console.log('[AUTH] URL:', typeof window !== 'undefined' ? window.location.href : 'N/A');
+
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('[AUTH] getSession ERROR:', error);
+          set({ status: AuthStatus.UNAUTHENTICATED });
+          return;
         }
 
-        if (sessionToProcess) {
-          const localUser = await authRepository.local.getUser();
-          if (!localUser) {
-            // We have a session but no local user -> just signed in via Web OAuth
-            const result = await authRepository.handleWebOAuthSession(sessionToProcess);
-            if (result.isNewUser) {
-              set({ 
-                isLoading: false, 
-                status: AuthStatus.UNAUTHENTICATED,
-                pendingGoogleOnboarding: true,
-                pendingSignUp: { 
-                  countryCode: '', 
-                  countryName: '', 
-                  phoneNumber: '', 
-                  email: result.user.email || '', 
-                  username: result.user.username || '' 
-                } 
-              });
-              return;
-            } else {
-              set({ status: AuthStatus.AUTHENTICATED, user: result.user });
-              authRepository.updateOnlineStatus(true);
-              return;
-            }
-          }
+        const session = data?.session;
+        console.log('[AUTH] session found?', !!session, '| user:', session?.user?.email);
+
+        if (!session) {
+          console.log('[AUTH] No session -> UNAUTHENTICATED');
+          set({ status: AuthStatus.UNAUTHENTICATED });
+          return;
         }
+
+        const localUser = await authRepository.local.getUser();
+        console.log('[AUTH] localUser from storage?', !!localUser, '| id:', localUser?.id);
+
+        if (!localUser) {
+          console.log('[AUTH] No local user -> calling handleWebOAuthSession');
+          const result = await authRepository.handleWebOAuthSession(session);
+          console.log('[AUTH] handleWebOAuthSession result -> isNewUser:', result.isNewUser, '| user:', result.user?.email);
+          if (result.isNewUser) {
+            set({
+              isLoading: false,
+              status: AuthStatus.UNAUTHENTICATED,
+              pendingGoogleOnboarding: true,
+              pendingSignUp: {
+                countryCode: '',
+                countryName: '',
+                phoneNumber: '',
+                email: result.user.email || '',
+                username: result.user.username || '',
+              },
+            });
+          } else {
+            console.log('[AUTH] Existing user via OAuth -> AUTHENTICATED');
+            set({ status: AuthStatus.AUTHENTICATED, user: result.user });
+            authRepository.updateOnlineStatus(true);
+          }
+        } else {
+          console.log('[AUTH] Local user exists + valid session -> AUTHENTICATED');
+          set({ status: AuthStatus.AUTHENTICATED, user: localUser });
+          authRepository.updateOnlineStatus(true);
+        }
+        return;
       }
 
+      // Native (iOS/Android)
+      console.log('[AUTH] checkSession() called on native');
       const user = await authRepository.getCurrentUser();
+      console.log('[AUTH] native getCurrentUser?', !!user);
       if (user) {
         set({ status: AuthStatus.AUTHENTICATED, user });
         authRepository.updateOnlineStatus(true);
       } else {
         set({ status: AuthStatus.UNAUTHENTICATED });
       }
-    } catch {
+    } catch (e) {
+      console.error('[AUTH] checkSession EXCEPTION:', e);
       set({ status: AuthStatus.UNAUTHENTICATED });
     }
   },
@@ -363,6 +364,15 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   loginWithGoogle: async () => {
     set({ isLoading: true, errorMessage: null });
     try {
+      if (Platform.OS === 'web') {
+        // On web, GoogleAuthService.signIn() opens a popup and waits for SIGNED_IN
+        // The popup causes Supabase to set the session in storage
+        await authRepository.loginWithGoogle();
+        // After popup closes with a session, call checkSession to hydrate the store
+        await get().checkSession();
+        return get().status === AuthStatus.AUTHENTICATED;
+      }
+
       const result = await authRepository.loginWithGoogle();
       if (result.isNewUser) {
         set({ 
@@ -429,8 +439,8 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
 // Setup listener outside
 if (supabase.auth) {
   supabase.auth.onAuthStateChange(async (event, session) => {
+    const store = useAuthStore.getState();
     if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
-      const store = useAuthStore.getState();
       if (store.status === AuthStatus.AUTHENTICATED) {
         await store.signOut();
       }

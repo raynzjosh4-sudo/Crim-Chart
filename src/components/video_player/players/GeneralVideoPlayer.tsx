@@ -9,7 +9,6 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { Check, Eye, MessageCircle, Play, Tag, Volume2, VolumeX } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
-import { LongVideoPlayerLayout } from '../LongVideoPlayerLayout';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
@@ -264,7 +263,9 @@ export const GeneralVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress,
         style={styles.actionBar}
       />
 
-      {showPlayer && (
+      {showPlayer && (() => {
+        const { LongVideoPlayerLayout } = require('../LongVideoPlayerLayout');
+        return (
         <LongVideoPlayerLayout
           videoUrl={video.videoUrl || video.thumbnailUrl || ''}
           title={isLocal ? localTitle : video.title}
@@ -286,7 +287,8 @@ export const GeneralVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress,
           sourceTable={video.sourceTable}
           onTagPress={isLocal ? undefined : onTagPress}
         />
-      )}
+        );
+      })()}
 
       <CommentSheet
         postId={video.id}

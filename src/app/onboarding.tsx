@@ -12,8 +12,6 @@ export default function OnboardingPage() {
   if (user) {
     if (!user.country) initialStep = 'country';
     else if (!user.birthday) initialStep = 'birthday';
-    else if (!user.profileImageUrl) initialStep = 'profile-picture';
-    else if (!user.bio) initialStep = 'bio';
     else if (!user.crownTitle) initialStep = 'crown-title';
   }
 
@@ -30,7 +28,7 @@ export default function OnboardingPage() {
         onFinish={() => {
           // If they successfully complete a step, re-evaluate or go to tabs
           const updatedUser = useAuthStore.getState().user;
-          if (updatedUser && updatedUser.country && updatedUser.birthday && updatedUser.bio && updatedUser.crownTitle && updatedUser.profileImageUrl) {
+          if (updatedUser && updatedUser.country && updatedUser.birthday && updatedUser.crownTitle) {
             router.replace('/(tabs)');
           }
           // If something is still missing, useProtectedRoute will automatically redirect them back here,

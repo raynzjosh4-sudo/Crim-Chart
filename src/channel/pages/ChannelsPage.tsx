@@ -2,8 +2,9 @@ import { ChannelModel } from '@/channel/models/ChannelModel';
 import ChannelListTile from '@/channel/widgets/ChannelListTile';
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import { useAppRouter } from '@/core/hooks/useAppRouter';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View, Platform, useWindowDimensions } from 'react-native';
+import { useEffect, useState, useCallback } from 'react';
+import { ActivityIndicator, FlatList, StyleSheet, Text, View, Platform, useWindowDimensions, RefreshControl } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { ChannelListSkeleton } from '@/components/skeletons/Skeletons';
 
 // Section Headers and Tab Widgets
@@ -33,6 +34,7 @@ export default function ChannelsPage() {
   const { width } = useWindowDimensions();
 
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState('Channels');
   const [selectedChannel, setSelectedChannel] = useState<ChannelModel | null>(null);
 
@@ -55,6 +57,15 @@ export default function ChannelsPage() {
     }
     return () => { isMounted = false; };
   }, [user?.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.id && !isLoading) {
+        loadOwned(true);
+        loadJoined(true);
+      }
+    }, [user?.id, loadOwned, loadJoined, isLoading])
+  );
 
   const displayedChannels = (() => {
     if (activeFilter === 'Private') return ownedChannels.map(c => c.channel);
@@ -137,6 +148,11 @@ export default function ChannelsPage() {
         keyExtractor={(item) => item.id}
         ListHeaderComponent={renderHeader}
         ListFooterComponent={renderFooter}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={async () => {
+          setIsRefreshing(true);
+          await Promise.all([loadOwned(true), loadJoined(true)]);
+          setIsRefreshing(false);
+        }} tintColor={styles.empty.color} />}
         renderItem={({ item }) => (
           <ChannelListTile
             channel={item}

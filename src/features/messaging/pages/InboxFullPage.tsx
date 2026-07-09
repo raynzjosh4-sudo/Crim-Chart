@@ -163,7 +163,10 @@ export const InboxFullPage = () => {
           router.push({
             pathname: '/inboxDetail',
             params: {
-              threadId: item.id
+              threadId: item.id,
+              participantId: participant?.id,
+              participantNameFallback: participant?.displayName || participant?.username || 'User',
+              participantAvatarFallback: participant?.profileImageUrl || undefined
             }
           });
         }

@@ -84,7 +84,8 @@ const injectWebScrollbarStyle = () => {
     const style = document.createElement('style');
     style.id = 'custom-scrollbar-style';
     style.textContent = `
-      html, body {
+      html, body, #root {
+        height: 100%;
         overflow-y: scroll;
       }
       /* Elegant dark mode scrollbar */

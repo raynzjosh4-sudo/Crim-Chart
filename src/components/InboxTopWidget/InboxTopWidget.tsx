@@ -38,6 +38,7 @@ export const InboxTopWidget: React.FC<InboxTopWidgetProps> = ({
       marginBottom: 6
     },
     status: {
+      color: colors.text,
       fontSize: 16,
       fontWeight: '700',
       textTransform: 'capitalize',
@@ -65,7 +66,12 @@ export const InboxTopWidget: React.FC<InboxTopWidgetProps> = ({
       </View>
       <Text style={styles.name}>{displayName}</Text>
       
-
+      {/* Show Relationship Status if not hidden */}
+      {participantStats?.showStatusText !== false && participantStats?.relationshipStatus && (
+        <Text style={[styles.status, ringColor !== 'transparent' ? { color: ringColor } : {}]}>
+          {participantStats.relationshipStatus}
+        </Text>
+      )}
 
       {/* Show Age Preferences if not hidden */}
       {participantStats?.showAgePref !== false && participantStats?.preferredAgeRanges && participantStats.preferredAgeRanges.length > 0 && <Text style={styles.subStatus}>

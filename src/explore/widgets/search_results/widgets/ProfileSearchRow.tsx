@@ -22,7 +22,7 @@ export const ProfileSearchRow: React.FC<Props> = ({ item }) => {
     if (isDesktop) {
       useDesktopSearchStore.getState().openResult(item);
     } else {
-      router.push(`/user/${item.entity_id}`);
+      router.push(`/(tabs)/profile/${item.entity_id}` as any);
     }
   };
 

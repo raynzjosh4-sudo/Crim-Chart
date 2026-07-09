@@ -1,5 +1,5 @@
-import { Platform } from 'react-native';
 import { supabase } from '@/core/supabase/supabaseConfig';
+import { Platform } from 'react-native';
 import { GoogleSignin } from './googleSigninShim';
 
 export class GoogleAuthService {
@@ -18,16 +18,21 @@ export class GoogleAuthService {
 
   static async signIn() {
     if (Platform.OS === 'web') {
-      const { error } = await supabase.auth.signInWithOAuth({
+      // Use standard redirect flow on web to prevent COOP/popup blocker issues
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: window.location.origin,
         },
       });
+
       if (error) throw error;
-      // On Web, this will redirect the browser. Return a never-resolving promise.
-      return new Promise<{ idToken: string; accessToken: string }>(() => {});
+
+      // On a successful redirect flow, the browser will navigate away.
+      // We return a never-resolving promise to keep the UI in a loading state.
+      return new Promise<{ idToken: string; accessToken: string }>(() => {}); 
     }
+
 
     this.initialize();
 

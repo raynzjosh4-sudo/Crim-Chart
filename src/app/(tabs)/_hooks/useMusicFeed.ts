@@ -170,3 +170,6 @@ export function useMusicFeed(searchQuery?: string, category?: string) {
 
   return { tracks, isLoading, isFetchingMore, hasMore, fetchMore, refetch: () => fetchMusicFeed(true) };
 }
+
+// Dummy default export to satisfy Expo Router (prevents crash on Web)
+export default function DummyRoute() { return null; }

@@ -9,6 +9,7 @@ import { useGlobalAudioPlayer } from '@/core/store/useGlobalAudioPlayer';
 import { useAppNavigation } from '@/core/navigation/useAppNavigation';
 import { Platform, Dimensions } from 'react-native';
 import { useDesktopSearchStore } from '@/explore/application/useDesktopSearchStore';
+import { useAppRouter } from '@/core/hooks/useAppRouter';
 
 interface Props {
   item: GlobalSearchResult;
@@ -16,6 +17,7 @@ interface Props {
 
 export const MusicSearchRow: React.FC<Props> = ({ item }) => {
   const styles = useStyles(themeStyles);
+  const router = useAppRouter();
   const { withPremiumTransition } = useAppNavigation();
 
   const handlePress = async () => {
@@ -28,7 +30,7 @@ export const MusicSearchRow: React.FC<Props> = ({ item }) => {
     // Navigate or play the song
     await withPremiumTransition(async () => {
        console.log('Navigate to music post: ', item.entity_id);
-       // TODO: Add proper navigation when post detail route exists
+       router.push(`/post/${item.entity_id}?type=${item.entity_type}`);
     });
   };
 

@@ -22,7 +22,7 @@ export const ChannelSearchRow: React.FC<Props> = ({ item }) => {
     if (isDesktop) {
       useDesktopSearchStore.getState().openResult(item);
     } else {
-      router.push({ pathname: '/channels', params: { desktopChannelId: item.entity_id } });
+      router.push({ pathname: '/channel/channelpage', params: { id: item.entity_id } } as any);
     }
   };
 

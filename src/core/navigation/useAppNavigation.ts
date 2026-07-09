@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import { NativeDB } from '@/core/db/NativeDB';
-import { setPreloadedMainFeed } from '@/mainFeed/pages/MainFeedPage';
+import { setPreloadedMainFeed } from '@/mainFeed/store/feedCache';
 import { Platform } from 'react-native';
 import { useDesktopComposeStore } from '@/core/store/useDesktopComposeStore';
 import { useGlobalAudioPlayer } from '@/core/store/useGlobalAudioPlayer';

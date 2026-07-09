@@ -26,6 +26,7 @@ export function usePushNotifications() {
   const [notification, setNotification] = useState<Notifications.Notification | any | null>(null);
   const notificationListener = useRef<Notifications.Subscription>();
   const responseListener = useRef<Notifications.Subscription>();
+  const fcmUnsubscribe = useRef<() => void>();
   const { user } = useAuthStore();
 
   useEffect(() => {
@@ -35,28 +36,8 @@ export function usePushNotifications() {
       let token: string | null = null;
 
       if (Platform.OS === 'web') {
-        try {
-          if (firebaseConfig.apiKey === "YOUR_API_KEY") {
-            console.log('[PushNotifications] Web Push skipped: firebaseConfig.ts is not configured yet.');
-            return;
-          }
-          const app = initializeApp(firebaseConfig);
-          const messaging = getMessaging(app);
-          
-          // Request permission first
-          const permission = await Notification.requestPermission();
-          if (permission === 'granted') {
-            token = await getToken(messaging, { vapidKey: FIREBASE_VAPID_KEY });
-            
-            // Listen for foreground web messages
-            onMessage(messaging, (payload) => {
-              console.log('[PushNotifications] Web foreground message received:', payload);
-              setNotification(payload);
-            });
-          }
-        } catch (e) {
-          console.error('[PushNotifications] Web FCM setup failed:', e);
-        }
+        console.log('[PushNotifications] Skipping Push Notifications on Web');
+        return;
       } else {
         token = await registerForPushNotificationsAsync();
         
@@ -94,11 +75,7 @@ export function usePushNotifications() {
             });
           }
         });
-        
-        // Clean up the foreground listener when unmounting
-        return () => {
-          unsubscribe();
-        };
+        fcmUnsubscribe.current = unsubscribe;
       }
 
       if (token && isMounted) {
@@ -145,6 +122,9 @@ export function usePushNotifications() {
       }
       if (responseListener.current) {
         responseListener.current.remove();
+      }
+      if (fcmUnsubscribe.current) {
+        fcmUnsubscribe.current();
       }
     };
   }, [user?.id]);

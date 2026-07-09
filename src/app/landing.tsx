@@ -18,7 +18,7 @@ import { Image, Modal, Platform, SafeAreaView, ScrollView, Text, TouchableOpacit
 
 import { SignupModalWidget } from '@/signing/components/SignupModalWidget';
 
-export default function LandingPage() {
+export default function LandingPage({ asChild }: { asChild?: boolean } = {}) {
   const styles = useStyles(colors => ({
     root: {
       backgroundColor: colors.background,
@@ -240,12 +240,8 @@ export default function LandingPage() {
 
   /* ─── DESKTOP ─────────────────────────────────────────────────── */
   if (isDesktop) {
-    return (
-      <ScrollView
-        style={styles.root}
-        contentContainerStyle={{ paddingBottom: 60 }}
-        showsVerticalScrollIndicator={false}
-      >
+    const desktopContent = (
+      <>
         <HeroLayer
           onGoogleLogin={handleGoogleLogin}
           onCreateAccount={() => setSignupModalVisible(true)}
@@ -290,6 +286,20 @@ export default function LandingPage() {
             <LanguagePage onClose={() => setLanguageModalVisible(false)} />
           </View>
         </Modal>
+      </>
+    );
+
+    if (asChild) {
+      return desktopContent;
+    }
+
+    return (
+      <ScrollView
+        style={styles.root}
+        contentContainerStyle={{ paddingBottom: 60 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {desktopContent}
       </ScrollView>
     );
   }
@@ -297,7 +307,8 @@ export default function LandingPage() {
   /* ─── MOBILE ──────────────────────────────────────────────────── */
   return <SafeAreaView style={{
     flex: 1,
-    backgroundColor: colors.background
+    backgroundColor: colors.background,
+    ...(isWeb ? { minHeight: '100vh' as any } : {})
   }}>
     <ScrollView contentContainerStyle={{
       paddingBottom: 40

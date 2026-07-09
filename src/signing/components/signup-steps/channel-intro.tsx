@@ -11,8 +11,9 @@ import { useTranslation } from '@/core/localization/i18n';
 import { useUserChannels } from '@/channel/hooks/useChannels';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { ChannelAvatarImage } from '@/channel/components/channelavatarimage/ChannelAvatarImage';
+import { useFocusEffect } from '@react-navigation/native';
 
-export default function ChannelIntroPage({ onNext, onBack, onClose }: StepProps) {
+export default function ChannelIntroPage({ onNext, onBack, onClose, onFinish }: StepProps) {
   
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
@@ -49,7 +50,8 @@ export default function ChannelIntroPage({ onNext, onBack, onClose }: StepProps)
     startLoading();
     await new Promise(resolve => setTimeout(resolve, 600));
     stopLoading();
-    onClose?.();
+    if (onFinish) onFinish();
+    else onClose?.();
     setTimeout(() => setIsLoading(false), 1000);
   };
 
@@ -94,14 +96,14 @@ export default function ChannelIntroPage({ onNext, onBack, onClose }: StepProps)
               
               <View style={styles.channelPreviewCard}>
                 <ChannelAvatarImage 
-                  imageUrl={channels[0].channel.imageUrl}
-                  name={channels[0].channel.title}
+                  imageUrl={channels[0]?.channel?.imageUrl}
+                  name={channels[0]?.channel?.title}
                   size={80}
                   showStatusRing={false}
                 />
-                <Text style={styles.channelPreviewTitle} numberOfLines={1}>{channels[0].channel.title}</Text>
+                <Text style={styles.channelPreviewTitle} numberOfLines={1}>{channels[0]?.channel?.title}</Text>
                 <Text style={styles.channelPreviewSubtitle} numberOfLines={2}>
-                  {channels[0].channel.description || 'No description provided'}
+                  {channels[0]?.channel?.description || 'No description provided'}
                 </Text>
               </View>
 
@@ -271,4 +273,3 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 });
-

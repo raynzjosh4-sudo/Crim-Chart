@@ -1,36 +1,34 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, DeviceEventEmitter, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 
-import { ChannelButton } from '@/components/ChannelButton/ChannelButton';
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import { MusicButton } from '@/components/musicbutton/MusicButton';
 import { NativeDB } from '@/core/db/NativeDB';
 import { useStyles } from '@/core/hooks/useStyles';
+import { useAppNavigation } from '@/core/navigation/useAppNavigation';
+import { useNotificationWrapper } from '@/core/notifications/useNotificationWrapper';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { supabase } from '@/core/supabase/supabaseConfig';
 import { ThemeTokens } from '@/core/theme/themes';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
-import { useNotificationWrapper } from '@/core/notifications/useNotificationWrapper';
-import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
 import { useNotificationStore } from '@/features/notifications/application/useNotificationStore';
-import { useAppNavigation } from '@/core/navigation/useAppNavigation';
+import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
 import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
-import { Bell, User, Search } from 'lucide-react-native';
+import { Bell, Search } from 'lucide-react-native';
 import { MixedFeedItem } from '../models/MixedFeedItem';
 import { MainFeedBody } from './main_page_widgets/MainFeedBody';
 import { MainFeedSkeletonCard } from './main_page_widgets/MainFeedSkeletonCard';
 
 
-import { useRealtimePostInteractions } from '@/hooks/useRealtimePostInteractions';
 import { useInteractionStore } from '@/core/store/useInteractionStore';
+import { useRealtimePostInteractions } from '@/hooks/useRealtimePostInteractions';
 
 const PAGE_SIZE = 11;
 const NUKE_KEY = 'db_nuke_v1_done';
 
-export let preloadedMainFeed: MixedFeedItem[] | null = null;
-export const setPreloadedMainFeed = (feed: MixedFeedItem[] | null) => { preloadedMainFeed = feed; };
+import { preloadedMainFeed, setPreloadedMainFeed } from '@/mainFeed/store/feedCache';
 
 export const MainFeedPage = () => {
   useRealtimePostInteractions();
@@ -52,7 +50,7 @@ export const MainFeedPage = () => {
 
   const [cards, setCards] = useState<MixedFeedItem[]>(preloadedMainFeed || []);
   const [discoveredChannels, setDiscoveredChannels] = useState<CrimChartUserModel[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isPaginating, setIsPaginating] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const unreadCount = useNotificationStore(s => s.unreadCount);
@@ -504,23 +502,23 @@ export const MainFeedPage = () => {
 };
 
 const themeStyles = (colors: ThemeTokens, scale: number) => ({
-        root: {flex: 1, backgroundColor: colors.background },
-      appBarTitle: {color: colors.primary, fontSize: 22 * scale, fontWeight: '900' as const, letterSpacing: -1, marginLeft: 8 },
-      headerIconBtn: {padding: 8 },
-      notificationBadge: {
-        position: 'absolute' as const,
-      top: 4,
-      right: 4,
-      backgroundColor: colors.error,
-      borderRadius: 10 * scale,
-      minWidth: 18 * scale,
-      height: 18 * scale,
-      justifyContent: 'center' as const,
-      alignItems: 'center' as const,
-      paddingHorizontal: 4,
-      borderWidth: 1.5,
-      borderColor: colors.background
+  root: { flex: 1, backgroundColor: colors.background },
+  appBarTitle: { color: colors.primary, fontSize: 22 * scale, fontWeight: '900' as const, letterSpacing: -1, marginLeft: 8 },
+  headerIconBtn: { padding: 8 },
+  notificationBadge: {
+    position: 'absolute' as const,
+    top: 4,
+    right: 4,
+    backgroundColor: colors.error,
+    borderRadius: 10 * scale,
+    minWidth: 18 * scale,
+    height: 18 * scale,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: colors.background
   },
-      notificationBadgeText: {color: colors.text, fontSize: 10 * scale, fontWeight: '800' as const }
+  notificationBadgeText: { color: colors.text, fontSize: 10 * scale, fontWeight: '800' as const }
 });
 

@@ -160,24 +160,38 @@ export class AuthRemoteSource {
         .eq('id', authUser.id)
         .maybeSingle();
 
-      if (data && data.birthday) {
-        profile = data;
-      } else {
-        // If no profile or incomplete profile (missing birthday), flag it as a new user
-        // so the UI can redirect to the onboarding screens.
-        profile = {
-          id: authUser.id,
-          username: authUser.email?.split('@')[0] || 'user',
-          display_name: authUser.user_metadata?.full_name || 'User',
-          profile_image_url: authUser.user_metadata?.avatar_url || '',
-        };
+      if (data) {
+        // They have a profile. They might be missing some fields, but they exist.
         return {
           user: CrimChartUserModel.empty().copyWith({
             id: authUser.id,
-            displayName: profile.display_name,
-            username: profile.username,
+            displayName: data.display_name ?? authUser.user_metadata?.full_name ?? 'User',
+            username: data.username,
             email: authUser.email,
-            profileImageUrl: CrimChartUserModel.correctImageUrl(profile.profile_image_url),
+            profileImageUrl: CrimChartUserModel.correctImageUrl(data.profile_image_url ?? authUser.user_metadata?.avatar_url ?? ''),
+            birthday: data.birthday ? new Date(data.birthday) : undefined,
+            country: data.country,
+            gender: data.gender,
+            bio: data.bio,
+            crownTitle: data.crown_title,
+            createdAt: data.created_at ? new Date(data.created_at) : new Date(),
+          }),
+          tokens: {
+            accessToken: session.access_token,
+            refreshToken: session.refresh_token ?? '',
+            expiresAt: new Date(Date.now() + 3600 * 1000),
+          },
+        };
+      } else {
+        // If no profile, flag it as a new user
+        // so the UI can redirect to the onboarding screens.
+        return {
+          user: CrimChartUserModel.empty().copyWith({
+            id: authUser.id,
+            displayName: authUser.user_metadata?.full_name || 'User',
+            username: authUser.email?.split('@')[0] || 'user',
+            email: authUser.email,
+            profileImageUrl: CrimChartUserModel.correctImageUrl(authUser.user_metadata?.avatar_url || ''),
             createdAt: new Date(),
           }),
           tokens: {
@@ -189,26 +203,6 @@ export class AuthRemoteSource {
         };
       }
 
-      return {
-        user: CrimChartUserModel.empty().copyWith({
-          id: authUser.id,
-          displayName: profile.username ?? authUser.email?.split('@')[0] ?? 'User',
-          username: profile.username,
-          email: authUser.email,
-          profileImageUrl: CrimChartUserModel.correctImageUrl(
-            profile.profile_image_url ?? authUser.user_metadata?.avatar_url ?? ''
-          ),
-          birthday: profile?.birthday ? new Date(profile.birthday) : undefined,
-          gender: profile?.gender,
-          country: profile?.country,
-          createdAt: new Date(),
-        }),
-        tokens: {
-          accessToken: session.access_token,
-          refreshToken: session.refresh_token ?? '',
-          expiresAt: new Date(Date.now() + 3600 * 1000),
-        },
-      };
     } catch (e: any) {
       throw new Error(e.message || String(e));
     }

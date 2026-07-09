@@ -5,33 +5,17 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
     },
     "preview": {
       "android": {
         "buildType": "apk"
-      },
-      "env": {
-        "EXPO_PUBLIC_SUPABASE_URL": "https://mrcynipmpismyneyhdwh.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yY3luaXBtcGlzbXluZXloZHdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNTMxNDMsImV4cCI6MjA4OTkyOTE0M30.8yR4BZ4bMDHTQJCVRKnM_sFTGpw6xJAsdmzpRhb0gpo",
-        "EXPO_PUBLIC_CLOUDFLARE_R2_ENDPOINT": "https://3d658adeecc895ef7099eec66a501902.r2.cloudflarestorage.com",
-        "EXPO_PUBLIC_CLOUDFLARE_R2_ACCESS_KEY_ID": "8b70f8bce8e6bde6982684acac1b047a",
-        "EXPO_PUBLIC_CLOUDFLARE_R2_SECRET_ACCESS_KEY": "e0309cde8aa80e2b327de7d3b6cf4fadaa8e8707b886debd332f17d417bf2c46",
-        "EXPO_PUBLIC_CLOUDFLARE_R2_BUCKET_NAME": "crimchart-media-bucket",
-        "EXPO_PUBLIC_CLOUDFLARE_R2_PUBLIC_BASE": "https://cdn.crimchart.com"
       }
     },
-    "production": {
-      "env": {
-        "EXPO_PUBLIC_SUPABASE_URL": "https://mrcynipmpismyneyhdwh.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yY3luaXBtcGlzbXluZXloZHdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNTMxNDMsImV4cCI6MjA4OTkyOTE0M30.8yR4BZ4bMDHTQJCVRKnM_sFTGpw6xJAsdmzpRhb0gpo",
-        "EXPO_PUBLIC_CLOUDFLARE_R2_ENDPOINT": "https://3d658adeecc895ef7099eec66a501902.r2.cloudflarestorage.com",
-        "EXPO_PUBLIC_CLOUDFLARE_R2_ACCESS_KEY_ID": "8b70f8bce8e6bde6982684acac1b047a",
-        "EXPO_PUBLIC_CLOUDFLARE_R2_SECRET_ACCESS_KEY": "e0309cde8aa80e2b327de7d3b6cf4fadaa8e8707b886debd332f17d417bf2c46",
-        "EXPO_PUBLIC_CLOUDFLARE_R2_BUCKET_NAME": "crimchart-media-bucket",
-        "EXPO_PUBLIC_CLOUDFLARE_R2_PUBLIC_BASE": "https://cdn.crimchart.com"
-      }
-    }
+    "production": {}
   },
   "submit": {
     "production": {}

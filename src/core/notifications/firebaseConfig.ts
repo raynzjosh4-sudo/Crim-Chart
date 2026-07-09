@@ -12,4 +12,4 @@ export const firebaseConfig = {
 
 // Web VAPID Key for Push Notifications
 // Generate this in Project Settings -> Cloud Messaging -> Web configuration
-export const FIREBASE_VAPID_KEY = "BImgL2Lg9ZqHxPfvRqqZOUWCOZY35aYp8aI5hgtYJz_DdBh5y5-oGLbdlSGIHwbD-MyshXmENmLyANzELU7eB0g";
+export const FIREBASE_VAPID_KEY = "BAw8zR7sOjDUKwtASoIUSaqmnqC7Y_OnNdZT-xN2SkFcSr9vgNhjNPGv8HT1IB3nBzRq52-ZmOkccAj-dbXoNaA";

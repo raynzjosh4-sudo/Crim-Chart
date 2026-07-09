@@ -70,7 +70,7 @@ export const InboxUserButton: React.FC<InboxUserButtonProps> = ({ targetUserId, 
       if (isDesktop) {
         setActiveChatThread(existingThreadId);
       } else {
-        router.push(`/inboxDetail?threadId=${existingThreadId}&participantId=${targetUserId}`);
+        router.push(`/inboxDetail?threadId=${existingThreadId}&participantId=${targetUserId}&participantNameFallback=${encodeURIComponent(targetUserName || '')}&participantAvatarFallback=${encodeURIComponent(targetUserAvatar || '')}`);
       }
       return;
     }
@@ -109,7 +109,7 @@ export const InboxUserButton: React.FC<InboxUserButtonProps> = ({ targetUserId, 
         if (isDesktop) {
           setActiveChatThread(existingInbox.id);
         } else {
-          router.push(`/inboxDetail?threadId=${existingInbox.id}&participantId=${targetUserId}`);
+          router.push(`/inboxDetail?threadId=${existingInbox.id}&participantId=${targetUserId}&participantNameFallback=${encodeURIComponent(targetUserName || '')}&participantAvatarFallback=${encodeURIComponent(targetUserAvatar || '')}`);
         }
         return;
       }
@@ -130,7 +130,7 @@ export const InboxUserButton: React.FC<InboxUserButtonProps> = ({ targetUserId, 
       if (isDesktop) {
         setActiveChatThread(newThreadId);
       } else {
-        router.push(`/inboxDetail?threadId=${newThreadId}&participantId=${targetUserId}`);
+        router.push(`/inboxDetail?threadId=${newThreadId}&participantId=${targetUserId}&participantNameFallback=${encodeURIComponent(targetUserName || '')}&participantAvatarFallback=${encodeURIComponent(targetUserAvatar || '')}`);
       }
     } catch (err) {
       console.error('Failed to handle inbox navigation:', err);
