@@ -181,7 +181,7 @@ export const VideoPromotionBanner = ({
               }]} />}
                       <View style={styles.postCardOverlay}>
                         <View style={styles.iconCircle}>
-                          <Image source={require('../../../../../../assets/appicon/appicon.png')} style={{
+                          <Image source={require('../../../../../../assets/appicon/big-sized-app-icon.png')} style={{
                     width: 32,
                     height: 32,
                     borderRadius: 8

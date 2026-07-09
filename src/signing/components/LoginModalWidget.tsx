@@ -215,7 +215,7 @@ export function LoginModalWidget({
               <ArrowLeft color={colors.text} size={24} />
             </TouchableOpacity>
             <View style={styles.logoContainer}>
-              <Image source={require('@/assets/appicon/appicon.png')} style={styles.logo} resizeMode="contain" />
+              {/* Logo removed from header as per user request */}
             </View>
             {/* Empty view to balance the header flex */}
             <View style={styles.headerRightSpacer} />
@@ -224,6 +224,11 @@ export function LoginModalWidget({
           {/* Content */}
           <View style={styles.content}>
             {view === 'login' ? <>
+                <Image 
+                  source={require('@/assets/appicon/big-sized-app-icon.png')} 
+                  style={{ width: 44, height: 44, marginBottom: 24 }} 
+                  resizeMode="contain" 
+                />
                 <Text style={[styles.title, {
               color: colors.text
             }]}>Login</Text>
@@ -332,6 +337,11 @@ export function LoginModalWidget({
               }]}>Cookie Use</Text>.
                 </Text>
               </> : <>
+                <Image 
+                  source={require('@/assets/appicon/big-sized-app-icon.png')} 
+                  style={{ width: 44, height: 44, marginBottom: 24 }} 
+                  resizeMode="contain" 
+                />
                 <Text style={[styles.title, {
               color: colors.text,
               marginBottom: 8

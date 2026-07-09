@@ -56,12 +56,16 @@ export function AuthChoiceModalWidget({ visible, onClose, onLoginClick, onSignup
 
   const handleCreateAccount = () => {
     onClose();
-    onSignupClick();
+    setTimeout(() => {
+      onSignupClick();
+    }, 100);
   };
 
   const handleLoginClick = () => {
     onClose();
-    onLoginClick();
+    setTimeout(() => {
+      onLoginClick();
+    }, 100);
   };
 
   return (
@@ -73,12 +77,17 @@ export function AuthChoiceModalWidget({ visible, onClose, onLoginClick, onSignup
               <ArrowLeft color={colors.text} size={24} />
             </TouchableOpacity>
             <View style={styles.logoContainer}>
-              <Image source={require('@/assets/appicon/appicon.png')} style={styles.logo} resizeMode="contain" />
+              {/* Logo removed from header */}
             </View>
             <View style={styles.headerRightSpacer} />
           </View>
 
           <View style={styles.content}>
+            <Image 
+              source={require('@/assets/appicon/big-sized-app-icon.png')} 
+              style={{ width: 44, height: 44, marginBottom: 24, alignSelf: 'flex-start' }} 
+              resizeMode="contain" 
+            />
             <Text style={styles.title}>Join today.</Text>
             
             <View style={{ height: 24 }} />

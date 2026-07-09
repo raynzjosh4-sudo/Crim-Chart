@@ -132,7 +132,7 @@ export default function LoginPage() {
                 <View style={styles.logoContainer}>
                     <View style={[styles.logoGlow, { shadowColor: colors.primary }]} />
                     <Image 
-                        source={require('../../assets/images/react-logo.png')} 
+                        source={require('../../assets/appicon/big-sized-app-icon.png')} 
                         style={styles.logo}
                     />
                 </View>
@@ -262,7 +262,7 @@ export default function LoginPage() {
                         <View style={[styles.desktopBranding, { backgroundColor: 'rgba(255, 255, 255, 0.02)' }]}>
                             <View style={[styles.logoGlow, { shadowColor: colors.primary, width: 250, height: 250, borderRadius: 125, opacity: 0.1 }]} />
                             <Image 
-                                source={require('../../assets/images/react-logo.png')} 
+                                source={require('../../assets/appicon/big-sized-app-icon.png')} 
                                 style={styles.desktopLogo}
                             />
                             <Text style={[styles.brandingTitle, { color: colors.text }]}>CrimChart</Text>

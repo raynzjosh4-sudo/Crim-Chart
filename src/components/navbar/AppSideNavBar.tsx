@@ -40,7 +40,7 @@ export const AppSideNavBar = ({ selectedIndex, onItemTapped, homeBadgeCount = 0 
       {/* Top Logo / Branding */}
       <View style={styles.logoContainer}>
         <TouchableOpacity style={styles.logoButton} activeOpacity={0.7} onPress={() => router.navigate('/')}>
-          <Image source={require('@/assets/appicon/appicon.png')} style={{ width: 48, height: 48 }} resizeMode="contain" />
+          <Image source={require('@/assets/appicon/big-sized-app-icon.png')} style={{ width: 48, height: 48 }} resizeMode="contain" />
           {isExpanded && (
             <Text style={[styles.logoText, { color: colors.primary }]}>
               Crimchart

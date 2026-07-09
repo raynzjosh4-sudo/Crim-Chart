@@ -181,7 +181,7 @@ export const VideoTabView: React.FC<VideoTabViewProps> = ({
                 )}
                 <View style={styles.postCardOverlay}>
                   <View style={styles.iconCircle}>
-                    <Image source={require('../../../../../assets/appicon/appicon.png')} style={{ width: 32, height: 32, borderRadius: 8 }} contentFit="contain" />
+                    <Image source={require('../../../../../assets/appicon/big-sized-app-icon.png')} style={{ width: 32, height: 32, borderRadius: 8 }} contentFit="contain" />
                   </View>
                   <Text style={styles.postCardText}>Add Moment</Text>
                 </View>

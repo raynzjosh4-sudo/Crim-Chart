@@ -306,7 +306,7 @@ export default function LandingPage() {
         padding: 8
       }}>
         {isDark ? <Sun size={20} color={colors.textSecondary} /> : <Moon size={20} color={colors.textSecondary} />}
-      </TouchableOpacity>, <TouchableOpacity activeOpacity={1} key="login" onPress={() => router.push('/login' as any)}>
+      </TouchableOpacity>, <TouchableOpacity activeOpacity={1} key="login" onPress={() => setLoginModalVisible(true)}>
         <Text style={{
           color: colors.primary,
           fontSize: 14,
@@ -320,11 +320,18 @@ export default function LandingPage() {
         height: 40
       }} />
       <View style={{
-        alignItems: 'center'
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: 150
       }}>
         <Image source={require('@/assets/images/logo-glow.png')} style={{
           width: 150,
-          height: 150
+          height: 150,
+          position: 'absolute'
+        }} resizeMode="contain" />
+        <Image source={require('@/assets/appicon/big-sized-app-icon.png')} style={{
+          width: 80,
+          height: 80
         }} resizeMode="contain" />
       </View>
       <View style={{
@@ -354,7 +361,7 @@ export default function LandingPage() {
           borderRadius: 12,
           justifyContent: 'center',
           alignItems: 'center'
-        }} onPress={() => router.push('/signing/EmailSignupPage' as any)}>
+        }} onPress={() => setSignupModalVisible(true)}>
           <Text style={{
             color: colors.background,
             fontSize: 16,
@@ -436,6 +443,22 @@ export default function LandingPage() {
         </Text>
       </View>
     </ScrollView>
+
+    <SignupModalWidget
+      visible={isSignupModalVisible}
+      onClose={() => setSignupModalVisible(false)}
+      onGoToLogin={() => {
+        setSignupModalVisible(false);
+        setLoginModalVisible(true);
+      }}
+    />
+
+    <LoginModalWidget
+      visible={isLoginModalVisible}
+      onClose={() => setLoginModalVisible(false)}
+      initialUsername={topUsername}
+      initialPassword={topPassword}
+    />
   </SafeAreaView>;
 }
 const isWeb = Platform.OS === 'web';
