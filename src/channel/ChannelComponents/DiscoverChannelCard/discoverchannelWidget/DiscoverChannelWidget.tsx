@@ -7,7 +7,8 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { X } from 'lucide-react-native';
 import { useEffect } from 'react';
-import { FlatList, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, ScrollView, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { useDesktopChannelModalStore } from '@/core/store/useDesktopChannelModalStore';
 interface DiscoverChannelWidgetProps {
   userId?: string;
   channelCount?: number;
@@ -165,7 +166,17 @@ export const DiscoverChannelWidget: React.FC<DiscoverChannelWidgetProps> = ({
           <X size={16} color={theme.colors.textSecondary} />
         </TouchableOpacity>
 
-        <TouchableOpacity activeOpacity={1} style={styles.cardContent} onPress={() => router.push(`/channel/${item.id}` as any)}>
+        <TouchableOpacity 
+          activeOpacity={1} 
+          style={styles.cardContent} 
+          onPress={() => {
+            if (Platform.OS === 'web' && window.innerWidth >= 768) {
+              useDesktopChannelModalStore.getState().openChannel(item.id);
+            } else {
+              router.push({ pathname: '/channel/channelpage', params: { id: item.id } } as any);
+            }
+          }}
+        >
           <Image source={{
             uri: item.imageUrl
           }} style={styles.channelIcon} />

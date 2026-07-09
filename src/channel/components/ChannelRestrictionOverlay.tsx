@@ -15,6 +15,7 @@ interface ChannelRestrictionOverlayProps {
     channelName?: string;
     channelImage?: string;
     channelId?: string;
+    isModal?: boolean;
 }
 
 export const ChannelRestrictionOverlay: React.FC<ChannelRestrictionOverlayProps> = ({ 
@@ -23,7 +24,8 @@ export const ChannelRestrictionOverlay: React.FC<ChannelRestrictionOverlayProps>
     reason = "You do not have permission to view this channel.",
     channelName = "",
     channelImage = "",
-    channelId
+    channelId,
+    isModal = false
 }) => {
     const theme = useCurrentTheme();
     const styles = useStyles(colors => ({
@@ -57,7 +59,7 @@ export const ChannelRestrictionOverlay: React.FC<ChannelRestrictionOverlayProps>
         <SafeAreaView style={styles.container}>
             <ChartAppBar 
                 title="" 
-                showBack={true} 
+                showBack={!isModal} 
                 backgroundColor="transparent" 
                 showBorder={false} 
                 useSafeArea={false} 

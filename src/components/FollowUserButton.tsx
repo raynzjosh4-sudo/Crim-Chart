@@ -59,7 +59,7 @@ export const FollowUserButton: React.FC<FollowUserButtonProps> = ({
         const {
           data,
           error
-        } = await supabase.from('follows').select('follower_id').eq('follower_id', currentUser.id).eq('following_id', targetUserId).single();
+        } = await supabase.from('follows').select('follower_id').eq('follower_id', currentUser.id).eq('following_id', targetUserId).maybeSingle();
         if (data) {
           setIsFollowing(true);
         }

@@ -17,6 +17,25 @@ type InboxUserMapped = {
   hasStatus: boolean;
 };
 export const BouncingTypingIndicator = () => {
+  const styles = useStyles(colors => ({
+    typingBubble: {
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      borderWidth: 0,
+      paddingHorizontal: 0,
+      paddingVertical: 2,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center'
+    },
+    dot: {
+      width: 5,
+      height: 5,
+      borderRadius: 2.5,
+      backgroundColor: '#FFD700',
+      marginHorizontal: 2
+    }
+  }));
   const anim1 = useRef(new Animated.Value(0)).current;
   const anim2 = useRef(new Animated.Value(0)).current;
   const anim3 = useRef(new Animated.Value(0)).current;
@@ -76,26 +95,6 @@ export const InboxSectionHeader: React.FC<InboxSectionHeaderProps> = ({
       justifyContent: 'center',
       alignItems: 'center',
       marginBottom: 0
-    },
-    typingContainer: {
-      // Removed
-    },
-    typingBubble: {
-      backgroundColor: colors.background,
-      borderRadius: 12,
-      borderWidth: 0,
-      paddingHorizontal: 0,
-      paddingVertical: 2,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center'
-    },
-    dot: {
-      width: 5,
-      height: 5,
-      borderRadius: 2.5,
-      backgroundColor: '#FFD700',
-      marginHorizontal: 2
     },
     nameText: {
       width: 64,

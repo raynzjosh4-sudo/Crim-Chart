@@ -117,7 +117,19 @@ export default function AppAvatar({
     }
 
     // Segmented ring
-    const gapAngle = 0.12; // radians
+    // To prevent rounded linecaps from overlapping, the physical gap must be at least RING_THICKNESS + desired_visual_gap
+    const desiredVisualGap = 2;
+    const gapAngle = (RING_THICKNESS + desiredVisualGap) / r;
+    
+    // If the gap is too large (e.g. many segments on a small radius), fallback to a solid ring to avoid breaking
+    if (gapAngle * statusSegmentCount >= 2 * Math.PI) {
+      return (
+        <Svg width={totalSize} height={totalSize} style={StyleSheet.absoluteFillObject}>
+          <Circle cx={cx} cy={cy} r={r} stroke={ringColorResolved} strokeWidth={RING_THICKNESS} fill="none" strokeOpacity={0.9} />
+        </Svg>
+      );
+    }
+
     const arcLength =
       (2 * Math.PI - statusSegmentCount * gapAngle) / statusSegmentCount;
     const segments: React.ReactNode[] = [];
@@ -129,6 +141,7 @@ export default function AppAvatar({
       const y1 = cy + r * Math.sin(startAngle);
       const x2 = cx + r * Math.cos(endAngle);
       const y2 = cy + r * Math.sin(endAngle);
+      // For a very small number of segments (e.g. 2), the arc might be > 180 degrees
       const largeArc = arcLength > Math.PI ? 1 : 0;
 
       segments.push(

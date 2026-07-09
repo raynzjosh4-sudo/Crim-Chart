@@ -1,11 +1,12 @@
 import { useStyles } from '@/core/hooks/useStyles';
+import { useDesktopChannelModalStore } from '@/core/store/useDesktopChannelModalStore';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
 import { useRouter } from 'expo-router';
-import { MoreHorizontal, Tag } from 'lucide-react-native';
+import { Tag } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Platform, Text, TouchableOpacity, View } from 'react-native';
 
 import { LikeAction } from '@/channel/CRimChartMassageBubble/comment_action/like/LikeAction';
 import { CommentActionWidget } from '@/channel/CRimChartMassageBubble/comments/CommentActionWidget';
@@ -112,14 +113,18 @@ export const ChannelPostCard: React.FC<ChannelPostCardProps> = ({
         source_type={source_type}
         timeAgo={timeAgo}
         onAvatarTap={goToProfile}
-        onMoreTap={() => {}} // TODO: add more options
+        onMoreTap={() => { }} // TODO: add more options
         channelId={channelId}
         channelAvatarUrl={currentChannelAvatar || sourceChannelAvatar}
         channelName={channelName}
         channelDescription={channelDescription}
         onChannelAvatarTap={() => {
           if (channelId) {
-            router.push(`/channel/${channelId}` as any);
+            if (Platform.OS === 'web' && window.innerWidth >= 768) {
+              useDesktopChannelModalStore.getState().openChannel(channelId);
+            } else {
+              router.push({ pathname: '/channel/channelpage', params: { id: channelId } } as any);
+            }
           }
         }}
       />

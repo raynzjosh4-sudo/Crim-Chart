@@ -36,6 +36,7 @@ import { ChannelRestrictionOverlay } from "@/channel/components/ChannelRestricti
 import { useChannelData } from "@/channel/hooks/useChannelData";
 import UserAvatar from "@/components/avatar/UserAvatar";
 import { ChannelRestrictionWrapper } from "@/components/wrappers/ChannelRestrictionWrapper";
+import { useCurrentTheme } from "@/core/store/useThemeStore";
 import { MembersTabView } from "@/features/channel/pages/members_tab/MembersTabView";
 import { ActiveUsersBar } from "@/features/channel/pages/messages_tab/widgets/ActiveUsersBar";
 import { StatusViewer, StatusGroup } from '@/channel/pages/widgets2/status/StatusViewer';
@@ -49,7 +50,7 @@ import { ChannelTitleBar } from "./widgets/ChannelTitleBar";
 import { ChannelPageShimmer } from "@/components/shimmers/channelPageShimmer/ChannelPageShimmer";
 
 
-export default function ChannelPage({ channelIdOverride }: { channelIdOverride?: string }) {
+export default function ChannelPage({ channelIdOverride, isModal }: { channelIdOverride?: string, isModal?: boolean }) {
   const styles = useChannelStyles();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -59,6 +60,7 @@ export default function ChannelPage({ channelIdOverride }: { channelIdOverride?:
   const router = useRouter();
   const { channel, loading } = useChannelData(id);
   const user = useAuthStore((s) => s.user);
+  const theme = useCurrentTheme();
   const { statuses: channelStatuses, loadMore: loadMoreChannelStatuses } = useChannelStatuses(id as string);
   const { posts: channelPosts } = useChannelPosts(id as string);
 
@@ -240,6 +242,14 @@ export default function ChannelPage({ channelIdOverride }: { channelIdOverride?:
       style={[
         styles.container,
         { paddingTop: insets.top, paddingBottom: insets.bottom },
+        isDesktop && {
+          width: '100%',
+          maxWidth: 600,
+          marginHorizontal: 'auto',
+          borderLeftWidth: 1,
+          borderRightWidth: 1,
+          borderColor: theme.colors.surfaceVariant,
+        }
       ]}
     >
       <ChannelRestrictionWrapper
@@ -259,6 +269,7 @@ export default function ChannelPage({ channelIdOverride }: { channelIdOverride?:
               channel?.imageUrl || "https://picsum.photos/400/400?random=11"
             }
             channelId={id as string}
+            isModal={isModal}
           />
         )}
       >

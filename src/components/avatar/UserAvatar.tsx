@@ -18,6 +18,7 @@ interface UserAvatarProps {
   forceOnline?: boolean;
   forceHasStatus?: boolean;
   forceStatusCount?: number;
+  disableSegments?: boolean;
 }
 
 export default function UserAvatar({
@@ -30,6 +31,7 @@ export default function UserAvatar({
   forceOnline,
   forceHasStatus,
   forceStatusCount,
+  disableSegments,
 }: UserAvatarProps) {
   const router = useRouter();
   const profile = useProfileCacheStore(state => state.profiles[userId]);
@@ -75,7 +77,9 @@ export default function UserAvatar({
   
   // A user is deemed to have statuses if statusCount > 0
   const hasStatus = profile?.statusCount !== undefined ? profile.statusCount > 0 : forceHasStatus;
-  const statusSegmentCount = profile?.statusCount !== undefined ? profile.statusCount : forceStatusCount;
+  const statusSegmentCount = disableSegments 
+    ? 1 
+    : (profile?.statusCount !== undefined ? profile.statusCount : forceStatusCount);
 
   const handleTap = () => {
     if (hasStatus) {

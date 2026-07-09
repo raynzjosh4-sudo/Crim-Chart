@@ -2,6 +2,7 @@ import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
+import { useDesktopChannelModalStore } from '@/core/store/useDesktopChannelModalStore';
 import { useRouter } from 'expo-router';
 import { Eye, Tag } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -118,7 +119,11 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
         channelName={channelName}
         onChannelAvatarTap={() => {
           if (channelId) {
-            router.push(`/channel/${channelId}` as any);
+            if (Platform.OS === 'web' && window.innerWidth >= 768) {
+              useDesktopChannelModalStore.getState().openChannel(channelId);
+            } else {
+              router.push({ pathname: '/channel/channelpage', params: { id: channelId } } as any);
+            }
           }
         }}
       />

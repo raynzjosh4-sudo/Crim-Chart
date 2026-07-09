@@ -12,9 +12,9 @@ import { LocalizationProvider } from '@/core/localization/LocalizationProvider';
 import { useProtectedRoute } from '@/core/router/useProtectedRoute';
 import { ThemeProvider as AppThemeProvider } from '@/core/theme/theme_provider';
 import { DarkTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { useEffect } from 'react';
-import { useFonts } from 'expo-font';
 import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -59,12 +59,13 @@ if ((TextInput as any).defaultProps == null) {
   customTextProps.style
 ];
 
+import { ExploreChannelsPage } from '@/channel/pages/ExploreChannelsPage';
+import { useExploreStore } from '@/channel/store/useExploreStore';
+import { DesktopChannelModal } from '@/channel/widgets/DesktopChannelModal';
 import { ProgressProvider } from '@/components/globalProgressBar/GlobalProgressBar';
 import { OfflineStateWidget } from '@/components/offline/OfflineStateWidget';
 import { useAppPresence } from '@/core/hooks/useAppPresence';
 import { usePresenceSyncWorker } from '@/core/sync/usePresenceSyncWorker';
-import { useExploreStore } from '@/channel/store/useExploreStore';
-import { ExploreChannelsPage } from '@/channel/pages/ExploreChannelsPage';
 import { Modal } from 'react-native';
 
 const GlobalExploreModal = () => {
@@ -101,7 +102,7 @@ const injectWebScrollbarStyle = () => {
         border-radius: 10px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: rgba(255, 255, 255, 0.25);
+        background: rgba(255, 255, 255, 0.02);
       }
       * {
         scrollbar-width: thin;
@@ -163,6 +164,7 @@ export default function RootLayout() {
               </Stack>
               <OfflineStateWidget />
               <GlobalExploreModal />
+              <DesktopChannelModal />
               <Toast config={{ ...chartToastConfig, ...toastConfig }} />
             </ProgressProvider>
           </NavThemeProvider>

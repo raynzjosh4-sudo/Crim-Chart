@@ -52,6 +52,7 @@ export const PostHeader: React.FC<PostHeaderProps> = ({ author, source_type, tim
             forceOnline={author.isActive}
             forceHasStatus={author.hasStatus}
             forceStatusCount={author.statusCount}
+            disableSegments={true}
             onTap={() => {
               if (onAvatarTap) onAvatarTap();
             }}
@@ -65,6 +66,13 @@ export const PostHeader: React.FC<PostHeaderProps> = ({ author, source_type, tim
       <TouchableOpacity
         style={styles.textContainer}
         activeOpacity={1}
+        onPress={() => {
+          if (isChannelPost && onChannelAvatarTap) {
+            onChannelAvatarTap();
+          } else if (!isChannelPost && onAvatarTap) {
+            onAvatarTap();
+          }
+        }}
         onLongPress={() => {
           console.log(source_type);
         }}

@@ -3,6 +3,22 @@ import { View, StyleSheet, ScrollView } from 'react-native';
 import ThemeShimmer from '@/components/ui/ThemeShimmer';
 import { MoviePostingItemShimmer } from '@/components/shimmers/MoviePostingShimmer';
 
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingTop: 16,
+  },
+  widgetContainer: {
+    marginBottom: 32,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    marginVertical: 20,
+    marginHorizontal: 16,
+  },
+});
+
 export const FullPageShimmer = () => {
   return (
     <ScrollView style={styles.container} scrollEnabled={false} showsVerticalScrollIndicator={false}>
@@ -43,19 +59,3 @@ export const FullPageShimmer = () => {
     </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 16,
-  },
-  widgetContainer: {
-    marginBottom: 32,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    marginVertical: 20,
-    marginHorizontal: 16,
-  },
-});
