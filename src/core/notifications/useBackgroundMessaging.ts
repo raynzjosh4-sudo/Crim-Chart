@@ -1,4 +1,4 @@
-import notifee, { AndroidImportance } from '@notifee/react-native';
+import notifee, { AndroidImportance, AndroidStyle } from '@notifee/react-native';
 import messaging from '@react-native-firebase/messaging';
 
 // This handler must be registered at the root of the app, outside of any React components.
@@ -9,6 +9,7 @@ messaging().setBackgroundMessageHandler(async remoteMessage => {
     const title = remoteMessage.data.title as string | undefined;
     const body = remoteMessage.data.body as string | undefined;
     const imageUrl = remoteMessage.data.imageUrl as string | undefined;
+    const postImageUrl = remoteMessage.data.postImageUrl as string | undefined;
 
     // Request permissions (required for iOS)
     await notifee.requestPermission();
@@ -26,7 +27,12 @@ messaging().setBackgroundMessageHandler(async remoteMessage => {
       body: body || 'You have a new notification',
       android: {
         channelId,
-        largeIcon: imageUrl ? imageUrl : undefined,
+        largeIcon: imageUrl || undefined, // Big round user image
+        circularLargeIcon: !!imageUrl,    // Make it round
+        style: postImageUrl ? {
+          type: AndroidStyle.BIGPICTURE,
+          picture: postImageUrl,
+        } : undefined,
         pressAction: {
           id: 'default',
         },

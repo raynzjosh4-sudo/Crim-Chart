@@ -25,6 +25,9 @@ class DatabaseService {
       try {
         await _db.execAsync(`ALTER TABLE users ADD COLUMN crown_title TEXT`);
       } catch (e) {}
+      try {
+        await _db.execAsync(`ALTER TABLE users ADD COLUMN downloads_count INTEGER DEFAULT 0`);
+      } catch (e) {}
 
       // Migrations for user_connection_stats
       try { await _db.execAsync(`ALTER TABLE user_connection_stats ADD COLUMN preferred_countries TEXT DEFAULT '[]'`); } catch (e) {}

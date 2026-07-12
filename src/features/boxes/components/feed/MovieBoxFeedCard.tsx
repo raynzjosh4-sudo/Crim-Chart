@@ -8,6 +8,7 @@ import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import { PostFooter } from '@/components/PostFooter/PostFooter';
 import { PostHeader } from '@/components/PostHeader/PostHeader';
 import { Film, MoreHorizontal, Play, Plus } from 'lucide-react-native';
@@ -18,14 +19,17 @@ import { MovieBoxVideoPreviewTile } from './MovieBoxVideoPreviewTile';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
+import { useTranslation } from 'react-i18next';
 
 interface Props { boxId?: string; prefetchedData?: any; }
 export const MovieBoxFeedCard = ({ boxId, prefetchedData }: Props) => {
   if (!boxId) return null;
   const router = useRouter();
+  const { startLoading, stopLoading } = useGlobalProgress();
   const [tagOverlayVisible, setTagOverlayVisible] = useState(false);
   const styles = useStyles(themeStyles);
   const theme = useCurrentTheme();
+  const { t } = useTranslation();
 
   return (
     <BoxFeedCardWrapper boxId={boxId} prefetchedData={prefetchedData}>
@@ -43,7 +47,7 @@ export const MovieBoxFeedCard = ({ boxId, prefetchedData }: Props) => {
               {ownerModel ? (
                 <PostHeader
                   author={ownerModel}
-                  timeAgo="Curated a new Video Box"
+                  timeAgo={t('Curated a new Video Box')}
                   onAvatarTap={() => router.push(`/profile/${ownerModel.id}` as any)}
                 />
               ) : null}
@@ -71,11 +75,15 @@ export const MovieBoxFeedCard = ({ boxId, prefetchedData }: Props) => {
 
             {/* Up Next / Video Preview Rail */}
             <View style={styles.upNextSection}>
-              <Text style={styles.upNextHeader}>Video Preview</Text>
+              <Text style={styles.upNextHeader}>{t('Video Preview')}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.railContent}>
                 {/* Add Yours Tile */}
-                <TouchableOpacity activeOpacity={1} style={styles.addYoursTile} onPress={() => {
-                  router.push(`/movie-box/post/${boxId}` as any);
+                <TouchableOpacity activeOpacity={0.8} style={styles.addYoursTile} onPress={() => {
+                  startLoading();
+                  setTimeout(() => {
+                    router.push(`/movie-box/post/${boxId}` as any);
+                    stopLoading();
+                  }, 400);
                 }}>
                   <View style={styles.addYoursIconContainer}>
                     <Play size={20} color={theme.colors.text} fill={theme.colors.text} />
@@ -83,7 +91,7 @@ export const MovieBoxFeedCard = ({ boxId, prefetchedData }: Props) => {
                       <Plus size={10} color={theme.colors.background} strokeWidth={3} />
                     </View>
                   </View>
-                  <Text style={styles.addYoursText}>Add Yours</Text>
+                  <Text style={styles.addYoursText}>{t('Add Yours')}</Text>
                 </TouchableOpacity>
 
                 {/* Mapped Videos (Max 10) */}
@@ -93,9 +101,15 @@ export const MovieBoxFeedCard = ({ boxId, prefetchedData }: Props) => {
 
                 {/* Show More Tile */}
                 {(rawData.trendingTracks || []).length > 10 && (
-                  <TouchableOpacity activeOpacity={1} style={styles.showMoreTile} onPress={() => router.push(`/movie-box/${boxId}` as any)}>
+                  <TouchableOpacity activeOpacity={0.8} style={styles.showMoreTile} onPress={() => {
+                    startLoading();
+                    setTimeout(() => {
+                      router.push(`/movie-box/${boxId}` as any);
+                      stopLoading();
+                    }, 400);
+                  }}>
                     <MoreHorizontal size={24} color={theme.colors.text} />
-                    <Text style={styles.showMoreText}>Show More</Text>
+                    <Text style={styles.showMoreText}>{t('Show More')}</Text>
                   </TouchableOpacity>
                 )}
               </ScrollView>
@@ -116,11 +130,21 @@ export const MovieBoxFeedCard = ({ boxId, prefetchedData }: Props) => {
               isTagged={interactionState?.isTagged ?? false}
               onTagPress={() => {
                 if (boxModel.postId) {
-                  setTagOverlayVisible(true);
+                  startLoading();
+                  setTimeout(() => {
+                    setTagOverlayVisible(true);
+                    stopLoading();
+                  }, 400);
                 }
               }}
               iconSize={24}
-              rightContent={<OpenBoxButton onPress={() => router.push(`/movie-box/${boxId}` as any)} />}
+              rightContent={<OpenBoxButton onPress={() => {
+                startLoading();
+                setTimeout(() => {
+                  router.push(`/movie-box/${boxId}` as any);
+                  stopLoading();
+                }, 400);
+              }} />}
               style={{ paddingTop: 20, paddingHorizontal: 16 }}
             />
 

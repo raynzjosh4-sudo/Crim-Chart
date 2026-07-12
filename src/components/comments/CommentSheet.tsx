@@ -194,9 +194,7 @@ export const CommentSheet: React.FC<CommentSheetProps> = ({ postId, visible, onC
         </TouchableOpacity>
       </View>
 
-      {isLoading ? (
-        <CommentListSkeleton count={10} />
-      ) : comments.length === 0 ? (
+      {comments.length === 0 && !isLoading ? (
         <View style={styles.emptyContainer}>
           <MessageSquare size={48} color="rgba(255,255,255,0.1)" style={{ marginBottom: 12 }} />
           <Text style={styles.emptyText}>Be the first to speak</Text>

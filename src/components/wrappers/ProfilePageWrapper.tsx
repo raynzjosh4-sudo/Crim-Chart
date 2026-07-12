@@ -111,6 +111,7 @@ export const ProfilePageWrapper: React.FC<ProfilePageWrapperProps> = ({
             boxSubmissionsCount: data.box_submissions_count || 0,
             postsCount: data.posts_count || 0,
             inboxCount: data.inbox_count || 0,
+            downloadsCount: data.downloads_count || 0,
             crownTitle: data.crown_title
           } as CrimChartUserModel);
         }

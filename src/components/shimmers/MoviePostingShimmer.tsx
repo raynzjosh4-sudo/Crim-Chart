@@ -2,52 +2,75 @@ import { useCurrentTheme } from "@/core/store/useThemeStore";
 import { useStyles } from "@/core/hooks/useStyles";
 import { useEffect, useRef } from 'react';
 import { Animated, Dimensions, StyleSheet, View } from 'react-native';
-const {
-  width
-} = Dimensions.get('window');
-const AnimatedShimmerBlock = ({
-  width,
-  height,
-  borderRadius,
-  style
-}: any) => {
+import { ThemeTokens } from "@/core/theme/themes";
+
+const { width } = Dimensions.get('window');
+
+const themeStyles = (colors: ThemeTokens) => StyleSheet.create({
+  itemContainer: {
+    marginBottom: 24,
+    backgroundColor: colors.background
+  },
+  shimmerBlock: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)'
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 12
+  },
+  headerText: {
+    marginLeft: 10,
+    flex: 1
+  },
+  thumbnailContainer: {
+    width: '100%',
+    marginBottom: 12
+  },
+  info: {
+    paddingHorizontal: 16,
+    marginBottom: 12
+  },
+  actionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.05)'
+  }
+});
+
+const AnimatedShimmerBlock = ({ width, height, borderRadius, style }: any) => {
+  const styles = useStyles(themeStyles);
   const animatedValue = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
-    Animated.loop(Animated.sequence([Animated.timing(animatedValue, {
-      toValue: 1,
-      duration: 1000,
-      useNativeDriver: true
-    }), Animated.timing(animatedValue, {
-      toValue: 0,
-      duration: 1000,
-      useNativeDriver: true
-    })])).start();
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(animatedValue, { toValue: 1, duration: 1000, useNativeDriver: true }),
+        Animated.timing(animatedValue, { toValue: 0, duration: 1000, useNativeDriver: true })
+      ])
+    ).start();
   }, [animatedValue]);
-  const opacity = animatedValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.3, 0.7]
-  });
-  return <Animated.View style={[styles.shimmerBlock, {
-    width,
-    height,
-    borderRadius,
-    opacity
-  }, style]} />;
+
+  const opacity = animatedValue.interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.7] });
+  return <Animated.View style={[styles.shimmerBlock, { width, height, borderRadius, opacity }, style]} />;
 };
+
 export const MoviePostingItemShimmer = () => {
-  return <View style={styles.itemContainer}>
+  const styles = useStyles(themeStyles);
+  return (
+    <View style={styles.itemContainer}>
       {/* Header */}
       <View style={styles.header}>
         <AnimatedShimmerBlock width={44} height={44} borderRadius={22} />
         <View style={styles.headerText}>
           <AnimatedShimmerBlock width={120} height={14} borderRadius={4} />
-          <AnimatedShimmerBlock width={180} height={12} borderRadius={4} style={{
-          marginTop: 6
-        }} />
+          <AnimatedShimmerBlock width={180} height={12} borderRadius={4} style={{ marginTop: 6 }} />
         </View>
-        <AnimatedShimmerBlock width={60} height={28} borderRadius={14} style={{
-        marginLeft: 'auto'
-      }} />
+        <AnimatedShimmerBlock width={60} height={28} borderRadius={14} style={{ marginLeft: 'auto' }} />
       </View>
 
       {/* Video Thumbnail (3/4 ratio) */}
@@ -58,65 +81,25 @@ export const MoviePostingItemShimmer = () => {
       {/* Video Info */}
       <View style={styles.info}>
         <AnimatedShimmerBlock width={200} height={18} borderRadius={4} />
-        <AnimatedShimmerBlock width={80} height={14} borderRadius={4} style={{
-        marginTop: 6
-      }} />
+        <AnimatedShimmerBlock width={80} height={14} borderRadius={4} style={{ marginTop: 6 }} />
       </View>
 
       {/* Action Bar */}
       <View style={styles.actionBar}>
         <AnimatedShimmerBlock width={40} height={20} borderRadius={4} />
-        <AnimatedShimmerBlock width={40} height={20} borderRadius={4} style={{
-        marginLeft: 24
-      }} />
-        <AnimatedShimmerBlock width={60} height={28} borderRadius={14} style={{
-        marginLeft: 'auto'
-      }} />
+        <AnimatedShimmerBlock width={40} height={20} borderRadius={4} style={{ marginLeft: 24 }} />
+        <AnimatedShimmerBlock width={60} height={28} borderRadius={14} style={{ marginLeft: 'auto' }} />
       </View>
-    </View>;
+    </View>
+  );
 };
+
 export const MoviePostingPageShimmer = () => {
   const theme = useCurrentTheme();
-  const styles = useStyles(colors => ({
-    itemContainer: {
-      marginBottom: 24,
-      backgroundColor: colors.background
-    },
-    shimmerBlock: {
-      backgroundColor: 'rgba(255, 255, 255, 0.1)'
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 16,
-      marginBottom: 12
-    },
-    headerText: {
-      marginLeft: 10,
-      flex: 1
-    },
-    thumbnailContainer: {
-      width: '100%',
-      marginBottom: 12
-    },
-    info: {
-      paddingHorizontal: 16,
-      marginBottom: 12
-    },
-    actionBar: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-      borderTopWidth: 1,
-      borderTopColor: 'rgba(255, 255, 255, 0.05)'
-    }
-  }));
-  return <View style={{
-    flex: 1,
-    backgroundColor: theme.colors.background
-  }}>
+  return (
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <MoviePostingItemShimmer />
       <MoviePostingItemShimmer />
-    </View>;
+    </View>
+  );
 };

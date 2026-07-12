@@ -8,4 +8,5 @@ export interface MixedFeedItem {
   created_at: string;
   hydratedCard?: MainFeedCardModel; // Hydrated post details, if applicable
   prefetchedData?: any; // Raw prefetched data for the feed item
+  duplicateCount?: number;
 }

@@ -17,3 +17,13 @@ CREATE POLICY "Enable read access for all users" ON public.box_item_likes
     FOR SELECT
     TO public
     USING (true);
+
+-- Enable RLS on channel_post_likes
+ALTER TABLE public.channel_post_likes ENABLE ROW LEVEL SECURITY;
+
+-- Allow users to read all channel_post_likes
+DROP POLICY IF EXISTS "Enable read access for all users" ON public.channel_post_likes;
+CREATE POLICY "Enable read access for all users" ON public.channel_post_likes
+    FOR SELECT
+    TO public
+    USING (true);

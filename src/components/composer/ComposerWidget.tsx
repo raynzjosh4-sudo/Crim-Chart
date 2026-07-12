@@ -15,7 +15,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as MediaLibrary from 'expo-media-library';
 import { useRouter } from 'expo-router';
 import { Music, Smile } from 'lucide-react-native';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { ComposerMediaInput } from './ComposerMediaInput';
 import { useDraftStore } from '@/core/store/useDraftStore';
@@ -144,6 +144,8 @@ export const ComposerWidget = ({
   const [isPickingMusic, setIsPickingMusic] = useState(false);
   const [showDraftsList, setShowDraftsList] = useState(false);
   const [prefetchedAssets, setPrefetchedAssets] = useState<MediaLibrary.Asset[] | null>(null);
+  const [autoOpenLyrics, setAutoOpenLyrics] = useState(false);
+  const captionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const {
     startLoading,
     stopLoading
@@ -154,6 +156,45 @@ export const ComposerWidget = ({
   const isDesktop = width >= 768;
   const showMusicBadge = useTooltipSchedule(isMusicBadgeDismissed);
   const router = useRouter();
+  
+  // Track if we've auto-opened category
+  const hasAutoOpenedCategory = useRef(false);
+
+  // Auto-open category on mount if music post
+  useEffect(() => {
+    if (initialAudio && !category && !hasAutoOpenedCategory.current) {
+      setShowCategories(true);
+      hasAutoOpenedCategory.current = true;
+    }
+  }, [initialAudio, category]);
+
+  // Auto-draft on unmount/leave
+  useEffect(() => {
+    return () => {
+      // If there's text or audio and we are not successfully posting right now
+      if ((text.trim() || selectedAudio) && !isPosting) {
+        const mediaList = selectedAudio ? [{
+          path: selectedAudio.uri,
+          type: MediaType.audio,
+          source: 'device',
+          title: title || selectedAudio.name,
+          artist: artist || selectedAudio.artist,
+          lyrics: lyrics || selectedAudio.lyrics,
+          thumbnailUrl: customThumbnail || selectedAudio.thumbnailUri || undefined
+        }] : [];
+        
+        useDraftStore.getState().saveDraft({
+          text: text.trim(),
+          media: mediaList,
+          post_type: 'post'
+        });
+      }
+      if (captionTimeoutRef.current) {
+        clearTimeout(captionTimeoutRef.current);
+      }
+    };
+  }, [text, selectedAudio, title, artist, lyrics, customThumbnail, isPosting]);
+
   const handlePickMusic = async () => {
     setIsMusicBadgeDismissed(true);
     if (Platform.OS === 'android') {
@@ -227,9 +268,20 @@ export const ComposerWidget = ({
       allowComments: true,
       category: category || user?.musicCategory || undefined
     });
-    stopLoading();
+    
+    // Background post - don't wait for success to return
+    if (onPostSuccess) {
+      onPostSuccess();
+    } else {
+      router.back();
+    }
+    
     setIsPosting(false);
+    
+    // Note: Since we navigated away, the store handles the background upload
+    // We just clear our local state to be safe.
     if (success) {
+      ChartToast.showSuccess(null, { title: 'Post published!', message: 'Your post is now live.' });
       setText('');
       setTitle('');
       setArtist('');
@@ -237,11 +289,6 @@ export const ComposerWidget = ({
       setSelectedAudio(null);
       setCustomThumbnail(null);
       setCategory(null);
-      if (onPostSuccess) {
-        onPostSuccess();
-      } else {
-        router.back();
-      }
     }
   };
   const renderInputArea = () => <View style={styles.inputArea}>
@@ -302,7 +349,19 @@ export const ComposerWidget = ({
     </View> : <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
       {renderInputArea()}
 
-      <ComposerMediaInput title={title} setTitle={setTitle} artist={artist} setArtist={setArtist} lyrics={lyrics} setLyrics={setLyrics} selectedAudio={selectedAudio} onRemoveAudio={() => setSelectedAudio(null)} customThumbnail={customThumbnail} setCustomThumbnail={setCustomThumbnail} />
+      <ComposerMediaInput 
+        title={title} 
+        setTitle={setTitle} 
+        artist={artist} 
+        setArtist={setArtist} 
+        lyrics={lyrics} 
+        setLyrics={setLyrics} 
+        selectedAudio={selectedAudio} 
+        onRemoveAudio={() => setSelectedAudio(null)} 
+        customThumbnail={customThumbnail} 
+        setCustomThumbnail={setCustomThumbnail} 
+        autoOpenLyrics={autoOpenLyrics}
+      />
     </ScrollView>}
 
     {showEmojiPicker && <>
@@ -322,7 +381,14 @@ export const ComposerWidget = ({
         zIndex: 9998,
         backgroundColor: 'rgba(0,0,0,0.5)',
         cursor: 'default' as any
-      }]} onPress={() => setShowCategories(false)} />
+      }]} onPress={() => {
+        // Prevent closing if category is required for audio
+        if (selectedAudio && !category) {
+          ChartToast.showError(null, { title: 'Category Required', message: 'Please select a category for your music.' });
+          return;
+        }
+        setShowCategories(false);
+      }} />
       <View style={[styles.musicDetailsSheet, {
         backgroundColor: theme.colors.background
       }, isDesktop && {
@@ -342,6 +408,24 @@ export const ComposerWidget = ({
           setCategory(categoryId);
           setShowCategories(false);
           setIsPickingMusic(false); // Return to composer view
+          
+          if (selectedAudio && !lyrics) {
+            setAutoOpenLyrics(true);
+            
+            if (captionTimeoutRef.current) clearTimeout(captionTimeoutRef.current);
+            captionTimeoutRef.current = setTimeout(() => {
+              // Auto generate caption if empty
+              setText(prevText => {
+                if (!prevText.trim()) {
+                  const emojis = ['🔥', '🎵', '🎸', '🎧', '🎶', '🎹', '✨', '🤘'];
+                  let randomEmojis = '';
+                  for(let i=0; i<4; i++) randomEmojis += emojis[Math.floor(Math.random() * emojis.length)];
+                  return `${title || selectedAudio.name} by ${artist || selectedAudio.artist} ${randomEmojis}`;
+                }
+                return prevText;
+              });
+            }, 30000);
+          }
         }} />
       </View>
     </>}

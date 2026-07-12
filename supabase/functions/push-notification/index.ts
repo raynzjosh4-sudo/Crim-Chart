@@ -98,37 +98,51 @@ serve(async (req) => {
       }
     }
 
-    let title = 'Crimchart';
+    let title = actorName || 'Crimchart';
     let body = '';
 
     if (record.action_text) {
-      body = `${actorName} ${record.action_text}`;
+      body = record.action_text;
     } else {
       switch (type) {
         case 'like':
-          body = `${actorName} liked your post.`;
+          body = `liked your post.`;
           break;
         case 'comment':
-          body = `${actorName} commented on your post.`;
+          body = `commented on your post.`;
           break;
         case 'follow':
-          body = `${actorName} started following you.`;
+          body = `started following you.`;
           break;
         case 'channel_invite':
-          body = `${actorName} invited you to a channel.`;
+          body = `invited you to a channel.`;
           break;
         case 'channel_request':
-          body = `${actorName} requested to join your channel.`;
+          body = `requested to join your channel.`;
           break;
         case 'mention':
-          body = `${actorName} mentioned you.`;
+          body = `mentioned you.`;
           break;
         case 'post_tag':
-          body = `${actorName} tagged you in a post.`;
+          body = `tagged you in a post.`;
           break;
         default:
-          body = `${actorName} interacted with you.`;
+          body = `interacted with you.`;
           break;
+      }
+    }
+
+    // Try to fetch the post image for the action image
+    let postImageUrl = null;
+    if (record.reference_id && (type === 'like' || type === 'comment' || type === 'post_tag' || type === 'mention')) {
+      const { data: post } = await supabase.from('posts').select('media_urls').eq('id', record.reference_id).single();
+      if (post?.media_urls && post.media_urls.length > 0) {
+        postImageUrl = post.media_urls[0];
+      } else {
+        const { data: channelPost } = await supabase.from('channel_posts').select('media_urls').eq('id', record.reference_id).single();
+        if (channelPost?.media_urls && channelPost.media_urls.length > 0) {
+          postImageUrl = channelPost.media_urls[0];
+        }
       }
     }
 
@@ -150,13 +164,15 @@ serve(async (req) => {
           sound: 'default',
           title,
           body,
-          data: { type: type, path: '/notifications' },
+          data: { 
+            type: type, 
+            path: '/notifications',
+            title: title,
+            body: body,
+            imageUrl: imageUrl,
+            postImageUrl: postImageUrl
+          },
         };
-        // Expo doesn't officially support 'image' for free without a plugin,
-        // but we can pass it in 'data' so Android local handler could potentially use it
-        if (imageUrl) {
-          msg.data.imageUrl = imageUrl;
-        }
         return msg;
       });
 
@@ -198,6 +214,9 @@ serve(async (req) => {
 
         if (imageUrl) {
           message.data.imageUrl = imageUrl;
+        }
+        if (postImageUrl) {
+          message.data.postImageUrl = postImageUrl;
         }
 
         try {

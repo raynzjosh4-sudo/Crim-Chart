@@ -46,20 +46,24 @@ class CommentSyncManager {
             }
           }
 
+          const sanitizeUuid = (val: any) => (!val || val === 'null' || val === 'undefined' || val === '') ? null : val;
+
           // Format for Supabase (no is_pending field in remote DB)
           const remoteComment = {
-            id: comment.id,
-            post_id: comment.post_id,
-            author_id: comment.author_id,
+            id: sanitizeUuid(comment.id),
+            post_id: sanitizeUuid(comment.post_id),
+            author_id: sanitizeUuid(comment.author_id),
             author_username: comment.author_username,
             author_avatar_url: comment.author_avatar_url,
             text: comment.text,
             media_url: publicMediaUrl,
             media_type: comment.media_type,
-            reply_to_id: comment.reply_to_id,
+            reply_to_id: sanitizeUuid(comment.reply_to_id),
             created_at: comment.created_at,
             likes_count: comment.likes_count,
           };
+
+          console.log('[CommentSyncManager] UPSERTING:', JSON.stringify(remoteComment, null, 2));
 
           const { error } = await supabase.from('comments').upsert(remoteComment);
 

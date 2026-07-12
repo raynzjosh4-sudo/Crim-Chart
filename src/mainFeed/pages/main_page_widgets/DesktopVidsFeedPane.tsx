@@ -50,13 +50,18 @@ export const DesktopVidsFeedPane: React.FC = () => {
   useEffect(() => {
     let isMounted = true;
     (async () => {
+      if (!user?.id) {
+        console.log('[DEBUG DesktopVidsFeedPane] user.id is missing! Waiting for auth...');
+        return; // Wait until auth is fully loaded
+      }
+      
       try {
         setIsLoading(true);
-        
         const { data, error } = await supabase.rpc('get_short_video_feed_with_data', {
-          p_user_id: user?.id ?? null,
+          p_user_id: user.id,
           p_limit: 30,
           p_offset: 0,
+          p_seed: Math.random(),
         });
 
         if (error) {
@@ -90,7 +95,10 @@ export const DesktopVidsFeedPane: React.FC = () => {
           prefetchedData: postsMap.get(row.id) ?? row,
         }));
 
-        if (isMounted) setItems(mapped);
+        if (isMounted) {
+          console.log(`[DEBUG DesktopVidsFeedPane] fetched ${mapped.length} videos from Supabase`);
+          setItems(mapped);
+        }
 
         if (postIds.length > 0) {
           useInteractionStore.getState().syncPostInteractions(postIds);

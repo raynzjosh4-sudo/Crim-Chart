@@ -108,7 +108,7 @@ export const useGlobalAudioPlayer = create<GlobalAudioPlayerState>((set, get) =>
       if (e?.name === 'AbortError' || e?.message?.includes('AbortError')) {
         return;
       }
-      console.error('[GlobalAudioPlayer] playTrack error:', e);
+      console.warn('[GlobalAudioPlayer] playTrack error:', e);
       set({ isPlaying: false });
     }
   },
@@ -117,22 +117,30 @@ export const useGlobalAudioPlayer = create<GlobalAudioPlayerState>((set, get) =>
     ++_playRequestId; // Abort any pending loads
     try {
       if (_sound) {
-        await _sound.pauseAsync();
+        await _sound.pauseAsync().catch((e) => {
+          if (!e.message?.includes('not loaded')) {
+            throw e;
+          }
+        });
       }
       set({ isPlaying: false });
     } catch (e) {
-      console.error('[GlobalAudioPlayer] pauseCurrent error:', e);
+      console.warn('[GlobalAudioPlayer] pauseCurrent error:', e);
     }
   },
 
   resumeCurrent: async () => {
     try {
       if (_sound) {
-        await _sound.playAsync();
+        await _sound.playAsync().catch((e) => {
+          if (!e.message?.includes('not loaded')) {
+            throw e;
+          }
+        });
         set({ isPlaying: true });
       }
     } catch (e) {
-      console.error('[GlobalAudioPlayer] resumeCurrent error:', e);
+      console.warn('[GlobalAudioPlayer] resumeCurrent error:', e);
     }
   },
 

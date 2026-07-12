@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 interface AlbumDropdownPopoverProps {
   visible: boolean;
   onClose: () => void;
-  activeTabIndex: number;
+  activeTabKey: string;
   onSelectRecents: () => void;
   onSelectAllAlbums: () => void;
   isRecentsSelected: boolean;
@@ -17,7 +17,7 @@ interface AlbumDropdownPopoverProps {
 export const AlbumDropdownPopover: React.FC<AlbumDropdownPopoverProps> = ({
   visible,
   onClose,
-  activeTabIndex,
+  activeTabKey,
   onSelectRecents,
   onSelectAllAlbums,
   isRecentsSelected
@@ -68,10 +68,10 @@ export const AlbumDropdownPopover: React.FC<AlbumDropdownPopoverProps> = ({
   let MainIcon = ImageIcon;
   let mainText = t('common.photos', 'Photos');
   
-  if (activeTabIndex === 1) {
+  if (activeTabKey === 'videos') {
     MainIcon = Play;
     mainText = t('common.videos', 'Videos');
-  } else if (activeTabIndex === 2) {
+  } else if (activeTabKey === 'music') {
     MainIcon = Music;
     mainText = t('common.music', 'Music');
   }

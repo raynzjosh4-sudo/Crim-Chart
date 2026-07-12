@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { FlatList, View, StyleSheet, Dimensions, Text } from 'react-native';
+import { MediaGalleryBottomSheet } from '@/channel/pages/messages_tab/bottom_sheets/MediaGalleryBottomSheet';
 import { ProfileImageItem } from '@/components/profileTabsWidgets/ProfileImageItem';
-import { SkeletonChartCard } from '../widgets/SkeletonChartCard';
 import { SkeletonBox } from '@/components/skeletons/SkeletonBox';
 import { NativeDB } from '@/core/db/NativeDB';
 import { supabase } from '@/core/supabase/client';
+import { useEffect, useState } from 'react';
+import { Dimensions, FlatList, StyleSheet, Text, View } from 'react-native';
 
 interface PhotosProfileTabProps {
   userId?: string;
@@ -13,6 +13,7 @@ interface PhotosProfileTabProps {
 interface PhotoItem {
   id: string;
   image_urls?: string[];
+  caption?: string;
   created_at: string;
 }
 
@@ -26,7 +27,17 @@ export const PhotosProfileTab: React.FC<PhotosProfileTabProps> = ({ userId }) =>
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [galleryVisible, setGalleryVisible] = useState(false);
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const [showSkeleton, setShowSkeleton] = useState(false);
   const LIMIT = 10;
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setShowSkeleton(true);
+    }, 100);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     if (!userId) return;
@@ -51,12 +62,13 @@ export const PhotosProfileTab: React.FC<PhotosProfileTabProps> = ({ userId }) =>
         });
 
         if (error) throw error;
-        
+
         if (data) {
           await NativeDB.upsertProfileMedia(data, 'photo');
           const parsedItems: PhotoItem[] = data.map((p: any) => ({
             id: p.id,
             image_urls: p.image_urls,
+            caption: p.caption,
             created_at: p.created_at,
           }));
           setPhotos(parsedItems);
@@ -88,10 +100,11 @@ export const PhotosProfileTab: React.FC<PhotosProfileTabProps> = ({ userId }) =>
 
       if (data && data.length > 0) {
         await NativeDB.upsertProfileMedia(data, 'photo');
-        
+
         const newItems: PhotoItem[] = data.map((p: any) => ({
           id: p.id,
           image_urls: p.image_urls,
+          caption: p.caption,
           created_at: p.created_at,
         }));
 
@@ -112,10 +125,11 @@ export const PhotosProfileTab: React.FC<PhotosProfileTabProps> = ({ userId }) =>
   };
 
   if (isLoading && photos.length === 0) {
+    if (!showSkeleton) return <View style={{ flex: 1, backgroundColor: 'transparent' }} />;
     return (
       <View style={styles.skeletonGrid}>
         {Array.from({ length: 9 }).map((_, i) => (
-          <View key={i} style={{ width: '33.33%', aspectRatio: 2/3, padding: 1 }}>
+          <View key={i} style={{ width: '33.33%', aspectRatio: 2 / 3, padding: 1 }}>
             <SkeletonBox width="100%" height="100%" />
           </View>
         ))}
@@ -131,25 +145,52 @@ export const PhotosProfileTab: React.FC<PhotosProfileTabProps> = ({ userId }) =>
     );
   }
 
+  const galleryGroups = photos.map(p => {
+    if (!p.image_urls || p.image_urls.length === 0) return [];
+    return p.image_urls.map(url => ({
+      url,
+      type: 'image',
+      caption: p.caption
+    }));
+  }).filter(g => g.length > 0);
+
+  const handlePhotoPress = (index: number) => {
+    setGalleryIndex(index);
+    setGalleryVisible(true);
+  };
+
   return (
-    <FlatList
-      data={photos}
-      scrollEnabled={false}
-      numColumns={COLS}
-      keyExtractor={item => item.id}
-      renderItem={({ item }) => {
-        const url = (item.image_urls && item.image_urls.length > 0) ? item.image_urls[0] : null;
-        return (
-          <View style={{ flex: 1/3, padding: 1 }}>
-            <ProfileImageItem imageUrl={url} size="100%" />
-          </View>
-        );
-      }}
-      contentContainerStyle={styles.grid}
-      showsVerticalScrollIndicator={false}
-      onEndReached={loadMore}
-      onEndReachedThreshold={0.5}
-    />
+    <>
+      <FlatList
+        data={photos}
+        scrollEnabled={false}
+        numColumns={COLS}
+        keyExtractor={item => item.id}
+        renderItem={({ item, index }) => {
+          const url = (item.image_urls && item.image_urls.length > 0) ? item.image_urls[0] : null;
+          return (
+            <View style={{ flex: 1 / 3, padding: 1 }}>
+              <ProfileImageItem
+                imageUrl={url}
+                size="100%"
+                onPress={() => handlePhotoPress(index)}
+              />
+            </View>
+          );
+        }}
+        contentContainerStyle={styles.grid}
+        showsVerticalScrollIndicator={false}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+      />
+      <MediaGalleryBottomSheet
+        visible={galleryVisible}
+        onClose={() => setGalleryVisible(false)}
+        groups={galleryGroups as any}
+        initialGroupIndex={galleryIndex}
+        initialIndex={0}
+      />
+    </>
   );
 };
 

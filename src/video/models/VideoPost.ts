@@ -18,6 +18,7 @@ export function videoPostFromMap(map: Record<string, unknown>): VideoPost {
     id: String(map['id'] ?? ''),
     postId: String(map['post_id'] ?? map['id'] ?? ''),
     videoUrl: String(map['video_url'] ?? map['videoUrl'] ?? ''),
+    videoUrls: Array.isArray(map['video_urls']) ? map['video_urls'].map(String) : (map['videoUrls'] as string[] | undefined),
     thumbnailUrl: map['thumbnail_url'] as string | undefined,
     caption: map['caption'] as string | undefined,
     authorId: String(map['author_id'] ?? ''),

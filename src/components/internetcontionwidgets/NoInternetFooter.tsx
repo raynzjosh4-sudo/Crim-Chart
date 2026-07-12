@@ -1,26 +1,43 @@
+import { useStyles } from '@/core/hooks/useStyles';
 import { useThemeSettings } from '@/core/theme/theme_provider';
-import { useTheme } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
 import { useNetInfo } from '@react-native-community/netinfo';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import React, { useState } from 'react';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 
 interface NoInternetFooterProps {
   isPaginating?: boolean;
-  onRetry?: () => void;
+  onRetry?: () => void | Promise<void>;
 }
 
 
 export const NoInternetFooter: React.FC<NoInternetFooterProps> = ({ isPaginating, onRetry }) => {
   const netInfo = useNetInfo();
-  const { colors } = useTheme();
   const { displayScale: scale } = useThemeSettings();
+  const styles = useStyles(themeStyles);
+  const { t } = useTranslation();
+  const { startLoading, stopLoading } = useGlobalProgress();
+  const [isRetrying, setIsRetrying] = useState(false);
+
+  const handleRetry = async () => {
+    if (!onRetry || isRetrying) return;
+    setIsRetrying(true);
+    startLoading();
+    try {
+      await onRetry();
+    } finally {
+      stopLoading();
+      setIsRetrying(false);
+    }
+  };
 
   // If internet connection state is currently unknown or true, just show the spinner if paginating
   if (netInfo.isConnected !== false) {
     if (!isPaginating) return null;
     return (
-      <View style={[styles.container, { paddingVertical: 20 }]}>
-        <ActivityIndicator size="small" color={colors.primary} />
+      <View style={styles.spinnerContainer}>
+        <ActivityIndicator size="small" color={styles.spinner.color} />
       </View>
     );
   }
@@ -28,37 +45,56 @@ export const NoInternetFooter: React.FC<NoInternetFooterProps> = ({ isPaginating
   // No internet
   return (
     <View style={styles.container}>
-      <Ionicons name="cloud-offline" size={24 * scale} color={colors.textSecondary} style={{ marginBottom: 8 }} />
-      <Text style={[styles.text, { color: colors.textSecondary, fontSize: 13 * scale }]}>
-        No internet connection
+      <Text style={[styles.title, { fontSize: 15 * scale }]}>
+        {t('offline.something_went_wrong', "Something went wrong. Try reloading.")}
       </Text>
+
       {onRetry && (
-        <TouchableOpacity style={[styles.retryBtn, { borderColor: colors.border }]} onPress={onRetry}>
-          <Text style={[styles.retryText, { color: colors.primary, fontSize: 14 * scale }]}>Retry</Text>
+        <TouchableOpacity 
+          style={[styles.retryBtn, isRetrying && { opacity: 0.5 }]} 
+          onPress={handleRetry} 
+          activeOpacity={0.8}
+          disabled={isRetrying}
+        >
+          <Text style={[styles.retryText, { fontSize: 14 * scale }]}>
+            {isRetrying ? t('offline.retrying', 'Retrying...') : t('offline.retry', 'Retry')}
+          </Text>
         </TouchableOpacity>
       )}
     </View>
   );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = (colors: any) => StyleSheet.create({
   container: {
-    padding: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 32,
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
   },
-  text: {
-    fontWeight: '600',
-    marginBottom: 12,
+  spinnerContainer: {
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  spinner: {
+    color: colors.primary,
+  },
+  title: {
+    color: colors.textSecondary,
+    marginBottom: 16,
+    textAlign: 'center',
   },
   retryBtn: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingVertical: 10,
-    borderRadius: 20,
-    borderWidth: 1,
+    borderRadius: 24,
+    backgroundColor: colors.primary,
   },
   retryText: {
-    fontWeight: 'bold',
+    fontWeight: '700',
+    color: colors.onPrimary,
   }
 });

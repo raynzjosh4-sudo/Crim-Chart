@@ -22,6 +22,7 @@ import { FullPageShimmer } from '../../components/details/MusicBoxDetailShimmer'
 import { MusicBoxDetailTrackTile } from '../../components/details/MusicBoxDetailTrackTile';
 import { TrendingInBoxWidget } from '../../components/details/TrendingInBoxWidget';
 import { MusicPostingPage } from '../../components/music_posting/MusicPostingPage';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 const {
   width: windowWidth
 } = Dimensions.get('window');
@@ -132,6 +133,14 @@ export const MusicBoxDetailPage = ({
       trackInteraction(id, currentUser.id, 'view');
     }
   }, [id, currentUser?.id, trackInteraction]);
+
+  const { stopLoading } = useGlobalProgress();
+  React.useEffect(() => {
+    if (!isLoading && !isItemsLoading) {
+      stopLoading();
+    }
+  }, [isLoading, isItemsLoading]);
+
   const displayedItems = React.useMemo(() => {
     return fetchedItems.map(item => ({
       id: item.id,
@@ -273,13 +282,7 @@ export const MusicBoxDetailPage = ({
             </Text>
           </View>} title={''} />
 
-        {(isLoading || isItemsLoading || isFetchingMore) && <View style={{
-        height: 2,
-        width: '100%',
-        backgroundColor: 'transparent'
-      }}>
-            <ChartLinearLoader isLoading={true} />
-          </View>}
+        {/* Removed redundant ChartLinearLoader */}
 
         {showInitialLoading ? <FullPageShimmer /> : filteredItems.length === 0 ? <View style={{
         flex: 1

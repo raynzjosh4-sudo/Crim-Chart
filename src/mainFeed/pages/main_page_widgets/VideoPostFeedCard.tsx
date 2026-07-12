@@ -41,7 +41,7 @@ export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
 }) => {
   const router = useRouter();
 
-  const constructInitialState = (data: any, eType?: string) => {
+  const constructInitialState = React.useCallback((data: any, eType?: string) => {
     let sourceTable = data.channel_id ? 'channel_posts' : 'posts';
 
     // Safely parse thumbnail_urls
@@ -104,15 +104,24 @@ export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
     };
 
     return { videoData: hydratedData, canComment: resolvedCanComment };
-  };
+  }, []);
 
-  const [state, setState] = useState<{ videoData: any | null, canComment: boolean }>(
-    prefetchedData ? constructInitialState(prefetchedData, entityType) : { videoData: null, canComment: true }
-  );
+  const [fetchedState, setFetchedState] = useState<{ videoData: any | null, canComment: boolean } | null>(null);
 
-  const videoData = state.videoData;
-  const canComment = state.canComment;
-  const [loading, setLoading] = useState(!state.videoData);
+  const { videoData, canComment } = React.useMemo(() => {
+    if (prefetchedData) return constructInitialState(prefetchedData, entityType);
+    if (fetchedState) return fetchedState;
+    return { videoData: null, canComment: true };
+  }, [prefetchedData, fetchedState, entityType, constructInitialState]);
+
+  const [loading, setLoading] = useState(!videoData);
+
+  useEffect(() => {
+    if (!prefetchedData) {
+      setFetchedState(null);
+      setLoading(true);
+    }
+  }, [postId, prefetchedData]);
   const [postOptionsVisible, setPostOptionsVisible] = useState(false);
   const [postOptionsPosition, setPostOptionsPosition] = useState<{ x: number; y: number } | undefined>(undefined);
 
@@ -125,12 +134,14 @@ export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
     let isMounted = true;
 
     const fetchVideo = async () => {
-      if (videoData) return;
+      if (prefetchedData) {
+        setLoading(false);
+        return;
+      }
 
       try {
         setLoading(true);
-
-        let data = prefetchedData;
+        let data = null;
 
         if (!data) {
           // Try channel_posts first
@@ -155,7 +166,7 @@ export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
 
         if (!data || !isMounted) return;
 
-        setState(constructInitialState(data, entityType));
+        if (isMounted) setFetchedState(constructInitialState(data, entityType));
       } catch (err) {
         console.error('[VideoPostFeedCard] fetch error:', err);
       } finally {

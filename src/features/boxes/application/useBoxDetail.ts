@@ -35,8 +35,6 @@ export function useBoxDetail(id: string) {
     };
 
     const fetchBox = async () => {
-      // Don't set loading to true if we already have cache
-      if (!box) setIsLoading(true);
       setError(null);
       try {
         const { data, error } = await supabase

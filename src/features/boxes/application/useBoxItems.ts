@@ -94,8 +94,9 @@ export function useBoxItems(boxId: string) {
   const fetchNetworkItems = useCallback(async (targetPage: number) => {
     if (!boxId) return;
 
-    if (targetPage === 0) setIsLoading(true);
-    else setIsFetchingMore(true);
+    if (targetPage > 0) {
+      setIsFetchingMore(true);
+    }
 
     try {
       const { data, error } = await supabase.rpc('get_box_items_with_details', {

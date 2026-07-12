@@ -1,3 +1,4 @@
+import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import CrimchartBackButton from '@/components/CrimChartBackButton/CrimChart_back_button';
 import { useStyles } from '@/core/hooks/useStyles';
 import { ThemeTokens } from '@/core/theme/themes';
@@ -26,6 +27,7 @@ import { PhotosProfileTab } from '../tabs/PhotosProfileTab';
 import { PostsProfileTab } from '../tabs/PostsProfileTab';
 import { VideosProfileTab } from '../tabs/VideosProfileTab';
 import { getStatusText } from '../utils/ConnectionStatsUtils';
+import { MediaGalleryBottomSheet } from '@/channel/pages/messages_tab/bottom_sheets/MediaGalleryBottomSheet';
 
 interface ProfilePageProps {
   userId?: string;
@@ -59,6 +61,15 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
   const [activeTab, setActiveTab] = useState<TabId>(isDesktop ? 'posts' : 'photos');
   const [showScrolledActions, setShowScrolledActions] = useState(false);
+  const [isGalleryVisible, setIsGalleryVisible] = useState(false);
+
+  const handleAvatarPress = () => {
+    if (isCurrentUser) {
+      goToEditImage();
+    } else if (user?.profileImageUrl) {
+      setIsGalleryVisible(true);
+    }
+  };
 
   const openConnections = (tab: 'followers' | 'following') => {
     const targetId = userId ?? user?.id ?? currentUser?.id ?? '';
@@ -101,38 +112,21 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         <StatusBar barStyle="light-content" />
 
         {/* App Bar */}
-        <View style={[
-          styles.appBar,
-          isDesktop && {
-            backgroundColor: showScrolledActions ? 'rgba(13, 13, 13, 0.98)' : 'transparent',
-            position: 'absolute',
-            top: 0, left: 0, right: 0,
-            zIndex: 100,
-            borderBottomWidth: showScrolledActions ? 1 : 0,
-            borderBottomColor: 'rgba(255,255,255,0.1)'
-          }
-        ]}>
-          {showBack ? (
-            <CrimchartBackButton onPress={() => router.back()} color={theme.colors.text} />
-          ) : <View style={styles.appBarBtn} />}
-
-          <View style={{ flex: 1, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }}>
-            {isDesktop && showScrolledActions ? (
-              <Text style={styles.appBarTitle} numberOfLines={1}>{user?.displayName}</Text>
-            ) : (
-              <Text style={styles.appBarTitle} numberOfLines={1}></Text>
-            )}
-          </View>
-
-          <View style={{ flexDirection: 'row', alignItems: 'center', minWidth: 44, justifyContent: 'flex-end', gap: 10 }}>
-            {isDesktop && showScrolledActions ? customActions : null}
-            {!isDesktop && (
+        <ChartAppBar
+          showBack={showBack}
+          title={(isDesktop && showScrolledActions) ? user?.displayName || '' : ''}
+          backgroundColor={isDesktop ? (showScrolledActions ? 'rgba(13, 13, 13, 0.98)' : 'transparent') : 'transparent'}
+          showBorder={isDesktop && showScrolledActions}
+          useSafeArea={false}
+          actions={[
+            isDesktop && showScrolledActions ? customActions : null,
+            !isDesktop && isCurrentUser ? (
               <TouchableOpacity activeOpacity={1} onPress={goToSettings} style={styles.appBarBtn}>
-                {isCurrentUser && <Settings color={theme.colors.text} size={22} />}
+                <Settings color={theme.colors.text} size={22} />
               </TouchableOpacity>
-            )}
-          </View>
-        </View>
+            ) : null
+          ].filter(Boolean) as React.ReactNode[]}
+        />
 
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -148,8 +142,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                   {/* Desktop: Avatar & Actions Row */}
                   <View style={styles.avatarActionRow}>
                     <TouchableOpacity
-                      onPress={isCurrentUser ? goToEditImage : undefined}
-                      activeOpacity={isCurrentUser ? 0.8 : 1}
+                      onPress={handleAvatarPress}
+                      activeOpacity={0.8}
                     >
                       <Image
                         source={{ uri: user?.profileImageUrl ?? '' }}
@@ -198,6 +192,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                     <Text style={styles.followStatText}>
                       <Text style={styles.followStatNumber}>{isLoading ? '-' : (user?.inboxCount ?? 0)}</Text> Inboxes
                     </Text>
+                    <Text style={styles.followStatText}>
+                      <Text style={styles.followStatNumber}>{isLoading ? '-' : (user?.downloadsCount ?? 0)}</Text> Downloads
+                    </Text>
                   </View>
 
                   {/* Desktop: Connection Stats Widget */}
@@ -225,8 +222,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                       {user?.bio ? <Text style={styles.bioMobile}>{user.bio}</Text> : null}
                     </View>
                     <TouchableOpacity
-                      onPress={isCurrentUser ? goToEditImage : undefined}
-                      activeOpacity={isCurrentUser ? 0.8 : 1}
+                      onPress={handleAvatarPress}
+                      activeOpacity={0.8}
                     >
                       <Image
                         source={{ uri: user?.profileImageUrl ?? '' }}
@@ -268,6 +265,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                     <Text style={{ color: theme.colors.muted, fontSize: 13 }}> • </Text>
                     <Text style={{ color: theme.colors.textSecondary, fontSize: 13 }}>
                       <Text style={{ color: theme.colors.text, fontWeight: '700' }}>{isLoading ? '-' : (user?.inboxCount ?? '-')}</Text> inboxes
+                    </Text>
+                    <Text style={{ color: theme.colors.muted, fontSize: 13 }}> • </Text>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: 13 }}>
+                      <Text style={{ color: theme.colors.text, fontWeight: '700' }}>{isLoading ? '-' : (user?.downloadsCount ?? '-')}</Text> downloads
                     </Text>
                   </View>
                 </>
@@ -316,11 +317,17 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           <View style={{ minHeight: 400 }}>
             {activeTab === 'posts' && <PostsProfileTab userId={userId} userData={user as any} />}
             {activeTab === 'photos' && <PhotosProfileTab userId={userId} />}
-            {activeTab === 'videos' && <VideosProfileTab userId={userId} />}
+            {activeTab === 'videos' && <VideosProfileTab userId={userId} userData={user as any} />}
             {activeTab === 'music' && <MusicProfileTab userId={userId} />}
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      <MediaGalleryBottomSheet
+        visible={isGalleryVisible}
+        onClose={() => setIsGalleryVisible(false)}
+        items={user?.profileImageUrl ? [{ url: user.profileImageUrl, type: 'image' }] : []}
+      />
     </>
   );
 };

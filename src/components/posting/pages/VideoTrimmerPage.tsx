@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Text, Dimensions, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Text, Dimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { CircleDot, Hash, Settings } from 'lucide-react-native';
@@ -45,8 +45,7 @@ export const VideoTrimmerPage: React.FC = () => {
   const [isAdvancedSettingsVisible, setIsAdvancedSettingsVisible] = useState(false);
   const [isPublic, setIsPublic] = useState(true);
   const [allowComments, setAllowComments] = useState(true);
-
-  const [isPosting, setIsPosting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Initialize Video Player
   const player = useVideoPlayer(videoItem?.path, player => {
@@ -61,10 +60,9 @@ export const VideoTrimmerPage: React.FC = () => {
     setSelectedChannels(newChannels);
   };
 
-  const handlePost = async () => {
-    setIsPosting(true);
-    ChartToast.showInfo(null, { title: 'Uploading...', message: 'You can leave this page while we finish!' });
-
+  const handlePost = () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     let primaryPostType = 'feed';
     if (isManifesto) primaryPostType = PostType.manifesto;
     if (isChannelPost) primaryPostType = PostType.channel;
@@ -75,7 +73,7 @@ export const VideoTrimmerPage: React.FC = () => {
     // If 'text' is selected, ignore media. Otherwise use videoItem
     const mediaToUpload = postFormat === 'text' ? [] : [videoItem];
 
-    const success = await createPost({
+    const postParams = {
       media: mediaToUpload,
       caption,
       channelId: targetChannelId,
@@ -87,9 +85,21 @@ export const VideoTrimmerPage: React.FC = () => {
       isPublicFeed: isPublic,
       aspectRatio: mediaToUpload.length > 0 ? mediaToUpload[0].aspectRatio : undefined,
       isShortClip: postFormat === 'short',
-    });
+    };
 
-    if (success) {
+    // ─── Navigate immediately — the pending post is already visible in the feed ───
+    if (targetChannelId && (isChannelPost || isChannelStatus || isChannelMoment || isManifesto)) {
+      router.push({ pathname: '/channel/channelpage', params: { id: targetChannelId } } as any);
+    } else {
+      router.push('/(tabs)');
+    }
+
+    // ─── Fire upload in the background — no await, no waiting ───
+    createPost(postParams).then(async (success) => {
+      if (!success) {
+        console.error('[VideoTrimmerPage] Background upload failed:', usePostingStore.getState().errorMessage);
+        return;
+      }
       if (shareToStatus && !isManifesto) {
         await createPost({
           media: mediaToUpload,
@@ -101,20 +111,13 @@ export const VideoTrimmerPage: React.FC = () => {
           isShortClip: postFormat === 'short',
         });
       }
-
-      setIsPosting(false);
-      ChartToast.showSuccess(null, { title: 'Success', message: 'Post created successfully!' });
-
-      if (targetChannelId && (isChannelPost || isChannelStatus || isChannelMoment || isManifesto)) {
-        router.push({ pathname: '/channel/channelpage', params: { id: targetChannelId } } as any);
-      } else {
-        router.push('/(tabs)');
-      }
-    } else {
-      setIsPosting(false);
-      ChartToast.showError(null, { title: 'Error', message: 'Failed to create post' });
-    }
+    }).catch((e) => {
+      console.error('[VideoTrimmerPage] Unhandled upload error:', e);
+    }).finally(() => {
+      setIsSubmitting(false); // Only unlocks if navigation fails or is extremely slow
+    });
   };
+
 
   return (
     <View style={styles.root}>
@@ -194,14 +197,17 @@ export const VideoTrimmerPage: React.FC = () => {
         
         <View style={styles.bottomSpacing} />
 
-        {/* Small Post Button at bottom right */}
-        <TouchableOpacity 
-          style={styles.postButtonBig}
-          onPress={handlePost}
-          disabled={isPosting}
-        >
-          {isPosting ? <ActivityIndicator size="small" color="#000" /> : <Text style={styles.postButtonTextBig}>POST</Text>}
-        </TouchableOpacity>
+        {/* Small Post Button */}
+        <View style={styles.footer}>
+          <TouchableOpacity 
+            style={[styles.postButtonBig, isSubmitting && { opacity: 0.5 }]} 
+            onPress={handlePost} 
+            disabled={isSubmitting} 
+            activeOpacity={0.8}
+          >
+            <Text style={styles.postButtonTextBig}>{isSubmitting ? '...' : 'POST'}</Text>
+          </TouchableOpacity>
+        </View>
 
       </ScrollView>
 

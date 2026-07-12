@@ -36,15 +36,50 @@ export function usePushNotifications() {
       let token: string | null = null;
 
       if (Platform.OS === 'web') {
-        console.log('[PushNotifications] Skipping Push Notifications on Web');
-        return;
+        try {
+          if (typeof window !== 'undefined' && 'Notification' in window) {
+            const permission = await window.Notification.requestPermission();
+            if (permission === 'granted') {
+              const app = initializeApp(firebaseConfig);
+              const messaging = getMessaging(app);
+              
+              if ('serviceWorker' in navigator) {
+                try {
+                  const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                  token = await getToken(messaging, { 
+                    vapidKey: FIREBASE_VAPID_KEY,
+                    serviceWorkerRegistration: registration
+                  });
+                  console.log('[PushNotifications] Web FCM Token retrieved:', token);
+                } catch (swError) {
+                  console.log('[PushNotifications] Service worker registration failed or is blocked. Push notifications will be disabled for Web.', swError);
+                }
+              }
+
+              const unsubscribe = onMessage(messaging, (payload) => {
+                console.log('[PushNotifications] Web foreground message received:', payload);
+                if (payload.notification) {
+                  new window.Notification(payload.notification.title || 'Crimchart', {
+                    body: payload.notification.body,
+                    icon: payload.notification.image || '/favicon.ico',
+                  });
+                }
+              });
+              fcmUnsubscribe.current = unsubscribe;
+            } else {
+              console.log('[PushNotifications] Web push permission denied');
+            }
+          }
+        } catch (e) {
+          console.error('[PushNotifications] Error setting up Web FCM:', e);
+        }
       } else {
         token = await registerForPushNotificationsAsync();
         
         // Listen for foreground Native FCM messages
         const notifeeModule = require('@notifee/react-native');
         const notifee = notifeeModule.default || notifeeModule;
-        const { AndroidImportance } = notifeeModule;
+        const { AndroidImportance, AndroidStyle } = notifeeModule;
         const rnMessagingModule = require('@react-native-firebase/messaging');
         const rnMessaging = rnMessagingModule.default || rnMessagingModule;
 
@@ -55,6 +90,7 @@ export function usePushNotifications() {
             const title = remoteMessage.data.title as string | undefined;
             const body = remoteMessage.data.body as string | undefined;
             const imageUrl = remoteMessage.data.imageUrl as string | undefined;
+            const postImageUrl = remoteMessage.data.postImageUrl as string | undefined;
             
             const channelId = await notifee.createChannel({
               id: 'default',
@@ -68,6 +104,11 @@ export function usePushNotifications() {
               android: {
                 channelId,
                 largeIcon: imageUrl || undefined,
+                circularLargeIcon: !!imageUrl,
+                style: postImageUrl ? {
+                  type: AndroidStyle.BIGPICTURE,
+                  picture: postImageUrl,
+                } : undefined,
                 pressAction: {
                   id: 'default',
                 },

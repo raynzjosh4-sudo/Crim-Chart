@@ -36,7 +36,7 @@ export const SmartPostWidget: React.FC<SmartPostWidgetProps> = React.memo(({
   prefetchedData
 }) => {
   const user = useAuthStore(s => s.user);
-  const constructInitialState = (data: any, type?: string) => {
+  const constructInitialState = React.useCallback((data: any, type?: string) => {
     // Safely parse JSONs
     let images: string[] = [];
     try { images = typeof data.image_urls === 'string' ? JSON.parse(data.image_urls) : (data.image_urls || []); } catch(e) {}
@@ -108,27 +108,38 @@ export const SmartPostWidget: React.FC<SmartPostWidgetProps> = React.memo(({
     }
 
     return { postData: hydrated, canComment: resolvedCanComment };
-  };
+  }, []);
 
-  const [state, setState] = useState<{ postData: MainFeedCardModel | null, canComment: boolean }>(
-    prefetchedData ? constructInitialState(prefetchedData, sourceType) : { postData: null, canComment: true }
-  );
+  const [fetchedState, setFetchedState] = useState<{ postData: MainFeedCardModel | null, canComment: boolean } | null>(null);
   
-  const postData = state.postData;
-  const canComment = state.canComment;
-  const [loading, setLoading] = useState(!state.postData);
+  const { postData, canComment } = React.useMemo(() => {
+    if (prefetchedData) return constructInitialState(prefetchedData, sourceType);
+    if (fetchedState) return fetchedState;
+    return { postData: null, canComment: true };
+  }, [prefetchedData, fetchedState, sourceType, constructInitialState]);
+
+  const [loading, setLoading] = useState(!postData);
+
+  useEffect(() => {
+    if (!prefetchedData) {
+      setFetchedState(null);
+      setLoading(true);
+    }
+  }, [postId, prefetchedData]);
 
   useEffect(() => {
     let isMounted = true;
 
     const fetchPost = async () => {
-      // Skip if initialized synchronously
-      if (postData) return;
+      if (prefetchedData) {
+        setLoading(false);
+        return;
+      }
 
       try {
         setLoading(true);
 
-        let data = prefetchedData;
+        let data = null;
         
         if (!data) {
           // Fallback if not prefetched
@@ -173,7 +184,7 @@ export const SmartPostWidget: React.FC<SmartPostWidgetProps> = React.memo(({
         }
 
         const initializedState = constructInitialState(data, sourceType);
-        setState(initializedState);
+        if (isMounted) setFetchedState(initializedState);
       } catch (error) {
         console.error('Failed to fetch smart post:', error);
       } finally {

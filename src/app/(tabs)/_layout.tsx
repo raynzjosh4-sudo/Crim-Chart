@@ -2,6 +2,7 @@ import CreateChannelPage from '@/app/channel/create';
 import { DesktopChannelNavigator } from '@/channel/widgets/DesktopChannelNavigator';
 import { UniversalComposeModal } from '@/components/compose/UniversalComposeModal';
 import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+import { MiniPlayerBar } from '@/components/musicPlayer/MiniPlayerBar';
 import { AppBottomNavBar } from '@/components/navbar/AppBottomNavBar';
 import { AppSideNavBar } from '@/components/navbar/AppSideNavBar';
 import { DesktopBoxDetailPane } from '@/components/navbar/DesktopBoxDetailPane';
@@ -10,20 +11,19 @@ import { DesktopVidsRightSidebar } from '@/components/navbar/DesktopVidsRightSid
 import { DraggableProfileButton } from '@/components/profile/DraggableProfileButton';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useAppNavigation } from '@/core/navigation/useAppNavigation';
+import { usePushNotifications } from '@/core/notifications/usePushNotifications';
 import { useGlobalAudioPlayer } from '@/core/store/useGlobalAudioPlayer';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
-import { useDesktopBoxStore } from '@/features/boxes/application/useDesktopBoxStore';
-import { InboxDetailPage } from '@/features/messaging/pages/InboxDetailPage';
-import { DesktopVidsFeedPane } from '@/mainFeed/pages/main_page_widgets/DesktopVidsFeedPane';
-import { usePushNotifications } from '@/core/notifications/usePushNotifications';
-import { MiniPlayerBar } from '@/components/musicPlayer/MiniPlayerBar';
 import { useDesktopSearchStore } from '@/explore/application/useDesktopSearchStore';
 import { DesktopSearchDetailPane } from '@/explore/widgets/search_results/DesktopSearchDetailPane';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { useDesktopBoxStore } from '@/features/boxes/application/useDesktopBoxStore';
+import { InboxDetailPage } from '@/features/messaging/pages/InboxDetailPage';
 import { useNotificationStore } from '@/features/notifications/application/useNotificationStore';
+import { DesktopVidsFeedPane } from '@/mainFeed/pages/main_page_widgets/DesktopVidsFeedPane';
 
-import { Slot, useGlobalSearchParams, useRouter, useSegments, usePathname } from 'expo-router';
+import { Slot, useGlobalSearchParams, usePathname, useRouter, useSegments } from 'expo-router';
 import { MessageSquare } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { DeviceEventEmitter, Platform, Text, useWindowDimensions, View } from 'react-native';
@@ -45,7 +45,7 @@ export default function TabLayout() {
     if (user?.id) {
       useNotificationStore.getState().fetchNotifications(user.id);
       useNotificationStore.getState().subscribeToNotifications(user.id);
-      
+
       return () => {
         useNotificationStore.getState().unsubscribe();
       };
@@ -61,10 +61,10 @@ export default function TabLayout() {
   } = useGlobalProgress();
   const isDesktop = width >= 768;
 
-  const hideMobileBottomNav = pathname.startsWith('/profile') || 
-                              pathname.startsWith('/notifications') || 
-                              pathname.startsWith('/my-music') || 
-                              pathname.startsWith('/statuses');
+  const hideMobileBottomNav = pathname.startsWith('/profile') ||
+    pathname.startsWith('/notifications') ||
+    pathname.startsWith('/my-music') ||
+    pathname.startsWith('/statuses');
 
   // Global desktop box store
   const { activeBoxId } = useDesktopBoxStore();
@@ -175,7 +175,8 @@ export default function TabLayout() {
   };
   return <View style={[styles.container, {
     backgroundColor: theme.colors.background,
-    flexDirection: isDesktop ? 'row' : 'column'
+    flexDirection: isDesktop ? 'row' : 'column',
+    justifyContent: isDesktop ? 'center' : 'flex-start'
   }]}>
     {/* Desktop Side Navigation */}
     {isDesktop && <AppSideNavBar selectedIndex={selectedIndex} onItemTapped={onItemTapped} />}

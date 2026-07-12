@@ -1,20 +1,39 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { Play } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 
 interface MovieBoxVideoPreviewTileProps {
   key?: React.Key;
   video: {
     id: string;
+    post_id?: string;
     thumbnailUrl: string;
-    duration: string;
+    duration?: string;
   };
 }
 
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+
 export const MovieBoxVideoPreviewTile: React.FC<MovieBoxVideoPreviewTileProps> = ({ video }) => {
+  const router = useRouter();
+  const { startLoading, stopLoading } = useGlobalProgress();
+  
   return (
-    <View style={styles.videoPreview}>
+    <TouchableOpacity 
+      activeOpacity={0.8} 
+      style={styles.videoPreview}
+      onPress={() => {
+        if (video.post_id) {
+          startLoading();
+          setTimeout(() => {
+            router.push(`/post/${video.post_id}` as any);
+            stopLoading();
+          }, 400);
+        }
+      }}
+    >
       {video.thumbnailUrl ? (
         <Image source={{ uri: video.thumbnailUrl }} style={styles.videoThumb} contentFit="cover" />
       ) : (
@@ -22,13 +41,15 @@ export const MovieBoxVideoPreviewTile: React.FC<MovieBoxVideoPreviewTileProps> =
           <Play size={24} color="rgba(255,255,255,0.2)" />
         </View>
       )}
-      <View style={styles.durationBadge}>
-        <Text style={styles.durationText}>{video.duration}</Text>
-      </View>
+      {video.duration ? (
+        <View style={styles.durationBadge}>
+          <Text style={styles.durationText}>{video.duration}</Text>
+        </View>
+      ) : null}
       <View style={styles.videoOverlay}>
         <Play size={16} color="#FFF" fill="#FFF" />
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 

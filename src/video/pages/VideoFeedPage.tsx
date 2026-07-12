@@ -1,14 +1,18 @@
 import CommentInputField from '@/commentingsheets/widgets/CommentInputField';
 import { CommentSheet } from '@/components/comments/CommentSheet';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+import { ChartLinearLoader } from '@/components/loader/ChartLinearLoader';
 import { MediaData } from '@/components/media/types';
 import { VideoCardSkeleton } from '@/components/skeletons/Skeletons';
 import { ShortVideoPlayerCard } from '@/components/video_player/ShortVideoPlayerCard';
 import { useAppRouter } from '@/core/hooks/useAppRouter';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useInteractionStore } from '@/core/store/useInteractionStore';
+import { usePostingStore } from '@/core/store/usePostingStore';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { supabase } from '@/core/supabase/supabaseConfig';
 import { ThemeTokens } from '@/core/theme/themes';
+import { useNetInfo } from '@react-native-community/netinfo';
 import { useNavigation } from '@react-navigation/native';
 import { Camera, ChevronLeft } from 'lucide-react-native';
 import React, { useCallback, useRef, useState } from 'react';
@@ -27,6 +31,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FeedScrollList } from '../components/FeedScrollList';
 import { VideoNetworkWidget } from '../components/VideoNetworkWidget';
+import { useLocalGalleryVideos } from '../hooks/useLocalGalleryVideos';
 import { VideoPost } from '../models/VideoPost';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
@@ -41,6 +46,8 @@ interface VideoFeedPageProps {
   initialTab?: VideoFeedTab;
   onBack?: () => void;
   disableInteractions?: boolean;
+  disablePagination?: boolean;
+  onLoadMore?: () => void;
 }
 
 import { useRealtimePostInteractions } from '@/hooks/useRealtimePostInteractions';
@@ -53,11 +60,14 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
   initialTab = VideoFeedTab.explore,
   onBack,
   disableInteractions = false,
+  disablePagination = false,
+  onLoadMore,
 }) => {
   useRealtimePostInteractions();
 
   const router = useAppRouter();
   const navigation = useNavigation();
+  const { startLoading, stopLoading, activeRequests } = useGlobalProgress();
   const [videos, setVideos] = useState<VideoPost[]>(initialVideos ?? []);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
@@ -70,6 +80,40 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
   const theme = useCurrentTheme();
   const [isReady, setIsReady] = useState(false);
   const [containerHeight, setContainerHeight] = useState(SCREEN_H);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const offsetRef = useRef(0);
+  const seedRef = useRef(Math.random());
+
+  const netInfo = useNetInfo();
+  const isOffline = netInfo.isConnected === false || netInfo.isInternetReachable === false;
+  const { localVideos, fetchLocalVideos, isFetchingLocal } = useLocalGalleryVideos();
+  const pendingPosts = usePostingStore(s => s.pendingPosts);
+
+  // Map pending video posts to VideoPost so they appear instantly in the feed
+  const pendingVideos: VideoPost[] = React.useMemo(() => {
+    return pendingPosts
+      .filter(p => p.isPending && p.isVideo)
+      .map((p): VideoPost => ({
+        id: p.id,
+        postId: p.id,
+        videoUrl: p.videoUrl || '',
+        caption: p.title || '',
+        authorId: p.addedBy?.id || '',
+        authorName: p.addedBy?.name || 'You',
+        authorAvatarUrl: p.addedBy?.avatarUrl || '',
+        likesCount: 0,
+        commentsCount: 0,
+        isLiked: false,
+        createdAt: new Date(p.createdAt || Date.now()),
+        isCompetition: false,
+        chartPoints: 0,
+        isCharted: false,
+        sharesCount: 0,
+        tagsCount: 0,
+        sourceType: p.sourceTable === 'channel_posts' ? 'channel_post' : 'post',
+        isPending: true,
+      }));
+  }, [pendingPosts]);
 
   console.log(`[VideoFeedPage] 🔄 Render cycle! isReady=${isReady}, isLoading=${isLoading}`);
 
@@ -81,6 +125,12 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
     }, 100);
     return () => clearTimeout(timer);
   }, []);
+
+  React.useEffect(() => {
+    if (initialVideos && initialVideos.length > 0) {
+      setVideos(initialVideos);
+    }
+  }, [initialVideos]);
 
   const openImagePicker = () => {
     setIsInputModalOpen(false);
@@ -104,8 +154,14 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
     }).start();
   }, [isCommentsOpen]);
 
-  const loadVideos = useCallback(async () => {
-    setIsLoading(true);
+  const loadVideos = useCallback(async (isLoadMore = false) => {
+    if (isLoadMore) {
+      if (isFetchingMore) return;
+      setIsFetchingMore(true);
+    } else {
+      setIsLoading(true);
+      offsetRef.current = 0;
+    }
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -116,52 +172,120 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
       const { data, error } = await supabase.rpc('get_short_video_feed_with_data', {
         p_user_id: session.user.id,
         p_limit: 30,
-        p_offset: 0
+        p_offset: offsetRef.current,
+        p_seed: Math.random(),
       });
 
       if (error) {
         throw error;
       }
 
-      const mapped = (data ?? []).map((row: any): VideoPost => ({
-        id: row.pointer_id, // We use the pointer ID as the unique key in the FlatList
-        postId: row.id,
-        videoUrl: row.video_url ?? '',
-        caption: row.caption,
-        authorId: row.profiles?.id ?? '',
-        authorName: row.profiles?.display_name ?? 'User',
-        authorAvatarUrl: row.profiles?.profile_image_url,
-        channelId: row.channels?.id,
-        channelName: row.channels?.name,
-        likesCount: row.likes_count ?? 0,
-        commentsCount: row.comments_count ?? 0,
-        isLiked: false,
-        createdAt: new Date(row.created_at),
-        isCompetition: false,
-        chartPoints: 0,
-        isCharted: false,
-        sharesCount: 0,
-        tagsCount: row.tags_count ?? 0,
-        sourceType: row.source_type,
-      }));
-      setVideos(mapped);
+      const mapped = (data ?? []).map((row: any, index: number): VideoPost => {
+        // 1. Safely determine the real post ID regardless of the RPC column name
+        const realPostId = row.entity_id || row.post_id || row.id;
+
+        // 2. Guarantee a strictly unique ID for the FlatList key
+        const uniqueListKey = row.pointer_id || `${realPostId}-${offsetRef.current + index}`;
+
+        // Safely parse videoUrls for Web MP4 fallback
+        let videoUrls: string[] | undefined = undefined;
+        if (row.video_urls) {
+          try {
+            videoUrls = typeof row.video_urls === 'string' ? JSON.parse(row.video_urls) : row.video_urls;
+          } catch (e) { }
+        }
+
+        return {
+          id: uniqueListKey,
+          postId: realPostId,
+          videoUrl: row.video_url ?? '',
+          videoUrls: videoUrls,
+          caption: row.caption,
+          authorId: row.profiles?.id ?? '',
+          authorName: row.profiles?.display_name ?? 'User',
+          authorAvatarUrl: row.profiles?.profile_image_url,
+          channelId: row.channels?.id,
+          channelName: row.channels?.name,
+          likesCount: row.likes_count ?? 0,
+          commentsCount: row.comments_count ?? 0,
+          isLiked: false,
+          createdAt: new Date(row.created_at || Date.now()),
+          isCompetition: false,
+          chartPoints: 0,
+          isCharted: false,
+          sharesCount: 0,
+          tagsCount: row.tags_count ?? 0,
+          sourceType: row.source_type || 'post',
+        };
+      });
+
+      offsetRef.current += mapped.length;
+
+      setVideos(((prevVideos: VideoPost[]) => {
+        const combined = isLoadMore ? [...prevVideos, ...mapped] : mapped;
+        // Create a clean array where duplicate postIds are ignored
+        return combined.filter((item, index, self) =>
+          index === self.findIndex((t) => t.postId === item.postId)
+        );
+      }) as any);
 
       const postIds = mapped.map(v => v.postId);
+
+      // Fetch missing video_urls for Web MP4 fallback
       if (postIds.length > 0) {
+        const { data: postsData } = await supabase
+          .from('posts')
+          .select('id, video_urls')
+          .in('id', postIds);
+
+        if (postsData) {
+          const postsMap = new Map(postsData.map((p: any) => [p.id, p]));
+          mapped.forEach(m => {
+            const p = postsMap.get(m.postId) as any;
+            if (p && p.video_urls && !m.videoUrls) {
+              try {
+                m.videoUrls = typeof p.video_urls === 'string' ? JSON.parse(p.video_urls) : p.video_urls;
+              } catch (e) { }
+            }
+          });
+        }
         useInteractionStore.getState().syncPostInteractions(postIds);
       }
     } catch (e) {
       console.error('[VideoFeedPage] Fatal Error loading videos:', e);
     } finally {
-      setIsLoading(false);
+      if (isLoadMore) {
+        setIsFetchingMore(false);
+      } else {
+        setIsLoading(false);
+      }
     }
-  }, [channelId]);
+  }, [channelId, isFetchingMore]);
 
   React.useEffect(() => {
     if (isReady && (!initialVideos || initialVideos.length === 0)) {
-      loadVideos();
+      if (!isOffline) {
+        loadVideos();
+      }
     }
-  }, [loadVideos, initialVideos, isReady]);
+  }, [loadVideos, initialVideos, isReady, isOffline]);
+
+  React.useEffect(() => {
+    if (isOffline) {
+      if (localVideos.length === 0 && !isFetchingLocal) {
+        fetchLocalVideos();
+      }
+    }
+  }, [isOffline, fetchLocalVideos, localVideos.length, isFetchingLocal]);
+
+  const displayVideos = React.useMemo(() => {
+    const base = isOffline ? localVideos : videos;
+    // Prepend pending (optimistic) videos that aren't already in the list
+    const pendingFiltered = pendingVideos.filter(
+      p => !base.some(v => v.id === p.id)
+    );
+    return [...pendingFiltered, ...base];
+  }, [isOffline, localVideos, videos, pendingVideos]);
 
   const renderVideoItem = useCallback(({ item, index }: { item: VideoPost, index: number }) => {
     let preloadStatus: 'playing' | 'preloading' | 'idle' = 'idle';
@@ -178,13 +302,19 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
           preloadStatus={preloadStatus}
           isShrunken={isCommentsOpen && index === currentIndex}
           hideBottomInput={!showBack}
-          disableInteractions={disableInteractions}
-          onComment={() => setIsCommentsOpen(true)}
+          disableInteractions={disableInteractions || isOffline}
+          onComment={() => {
+            startLoading();
+            setTimeout(() => {
+              stopLoading();
+              setIsCommentsOpen(true);
+            }, 400);
+          }}
           onShrunkenTap={() => setIsInputModalOpen(true)}
         />
       </View>
     );
-  }, [currentIndex, isCommentsOpen, showBack, disableInteractions, containerHeight]);
+  }, [currentIndex, isCommentsOpen, showBack, disableInteractions, containerHeight, isOffline, startLoading, stopLoading]);
 
   const onViewableChanged = useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
@@ -228,6 +358,9 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
         }
       }}
     >
+      <View style={{ position: 'absolute', top: insets.top, left: 0, right: 0, zIndex: 9999 }}>
+        <ChartLinearLoader isLoading={activeRequests > 0} />
+      </View>
       <VideoNetworkWidget />
       <Animated.View style={[styles.playerContainer, {
         width: animatedWidth,
@@ -243,7 +376,7 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
         {isReady ? (
           <FeedScrollList
             ref={flatListRef as any}
-            data={videos}
+            data={displayVideos}
             itemHeight={containerHeight}
             keyExtractor={item => item.id}
             renderItem={renderVideoItem}
@@ -251,9 +384,17 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
             viewabilityConfig={{ itemVisiblePercentThreshold: 80 }}
             initialScrollIndex={initialIndex}
             getItemLayout={(data, index) => ({ length: containerHeight, offset: containerHeight * index, index })}
+            onEndReached={() => {
+              if (onLoadMore) {
+                onLoadMore();
+              } else if (!isOffline && !disablePagination) {
+                loadVideos(true);
+              }
+            }}
+            onEndReachedThreshold={0.5}
           />
         ) : null}
-        {(!isReady || isLoading) && (
+        {(!isReady || (isLoading && !isOffline) || (isOffline && isFetchingLocal)) && (
           <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#000' }]}>
             <VideoCardSkeleton />
           </View>
@@ -303,9 +444,9 @@ export const VideoFeedPage: React.FC<VideoFeedPageProps> = ({
         styles.commentsSheetWrapper,
         { bottom: animatedCommentsBottom }
       ]}>
-        {videos.length > 0 && (
+        {displayVideos.length > 0 && (
           <CommentSheet
-            postId={videos[currentIndex].postId}
+            postId={displayVideos[currentIndex]?.postId || ''}
             visible={isCommentsOpen}
             isEmbedded={true}
             onClose={() => setIsCommentsOpen(false)}

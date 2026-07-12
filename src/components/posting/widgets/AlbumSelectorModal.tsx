@@ -16,13 +16,13 @@ export interface AlbumData {
 }
 
 interface AlbumSelectorModalProps {
-  activeTabIndex: number; // 0 = photos, 1 = videos, 2 = music
+  activeTabKey: string; // 'photos', 'videos', 'music'
   selectedAlbum: string | null;
   onAlbumSelected: (albumId: string | null) => void;
 }
 
 export const AlbumSelectorModal: React.FC<AlbumSelectorModalProps> = ({
-  activeTabIndex,
+  activeTabKey,
   selectedAlbum,
   onAlbumSelected
 }) => {
@@ -99,9 +99,9 @@ export const AlbumSelectorModal: React.FC<AlbumSelectorModalProps> = ({
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') return;
 
-      const mediaType = activeTabIndex === 1
+      const mediaType = activeTabKey === 'videos'
         ? MediaLibrary.MediaType.video
-        : activeTabIndex === 2
+        : activeTabKey === 'music'
           ? MediaLibrary.MediaType.audio
           : MediaLibrary.MediaType.photo;
 
@@ -141,7 +141,7 @@ export const AlbumSelectorModal: React.FC<AlbumSelectorModalProps> = ({
       setAlbums(filteredAlbums);
     };
     fetchAlbums();
-  }, [t, activeTabIndex]);
+  }, [t, activeTabKey]);
 
   const currentAlbumName = selectedAlbum
     ? albums.find((a) => a.id === selectedAlbum)?.title || t('common.recents', 'Recents')
@@ -188,7 +188,7 @@ export const AlbumSelectorModal: React.FC<AlbumSelectorModalProps> = ({
       <AlbumDropdownPopover
         visible={isPopoverVisible}
         onClose={() => setPopoverVisible(false)}
-        activeTabIndex={activeTabIndex}
+        activeTabKey={activeTabKey}
         isRecentsSelected={selectedAlbum === null}
         onSelectRecents={() => {
           setPopoverVisible(false);

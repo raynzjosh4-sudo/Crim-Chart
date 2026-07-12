@@ -30,6 +30,34 @@ const NUKE_KEY = 'db_nuke_v1_done';
 
 import { preloadedMainFeed, setPreloadedMainFeed } from '@/mainFeed/store/feedCache';
 
+// Helper to inject synthetic carousels at specific intervals
+const formatFeedWithCarousels = (items: MixedFeedItem[], startIndex: number) => {
+  const result = [...items];
+  // startIndex tracks the global absolute index of the items in the feed.
+  // We want to insert at global index 10, 21, 32, etc.
+  
+  let resultIndex = 0;
+  while (resultIndex < result.length) {
+    const globalIndex = startIndex + resultIndex;
+    
+    // Inject at global index 10, 21, 32...
+    if (globalIndex > 0 && globalIndex % 11 === 10) {
+      const isChannel = Math.floor(globalIndex / 11) % 2 !== 0;
+      result.splice(resultIndex, 0, {
+        id: `synthetic_carousel_${globalIndex}`,
+        entity_type: isChannel ? 'channel_recommendation_carousel' : 'user_recommendation_carousel',
+        entity_id: `carousel_${globalIndex}`,
+        source_type: 'carousel',
+        created_at: new Date().toISOString()
+      } as any);
+      // Skip over the injected item
+      resultIndex++;
+    }
+    resultIndex++;
+  }
+  return result;
+};
+
 export const MainFeedPage = () => {
   useRealtimePostInteractions();
 
@@ -69,6 +97,14 @@ export const MainFeedPage = () => {
   const isDesktop = width >= 768;
 
   const [isReady, setIsReady] = useState(true);
+  const [showSkeleton, setShowSkeleton] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setShowSkeleton(true);
+    }, 100);
+    return () => clearTimeout(t);
+  }, []);
 
   // Load from local SQLite cache immediately for instant display on re-navigation
   useEffect(() => {
@@ -192,7 +228,10 @@ export const MainFeedPage = () => {
         cardsRef.current.forEach(c => seenEntities.add(c.entity_id));
       }
       rawCards = rawCards.filter(c => {
-        if (seenEntities.has(c.entity_id)) return false;
+        if (seenEntities.has(c.entity_id)) {
+          console.warn(`[MainFeedPage] 🔴 DUPLICATE DETECTED IN RPC PAYLOAD! entity_id: ${c.entity_id}. Dropping duplicate pointer.`);
+          return false;
+        }
         seenEntities.add(c.entity_id);
         return true;
       });
@@ -347,8 +386,9 @@ export const MainFeedPage = () => {
 
       if (reset) {
         pageRef.current = 1;
-        cardsRef.current = newCards;
-        setCards(newCards);
+        const formattedCards = formatFeedWithCarousels(newCards, 0);
+        cardsRef.current = formattedCards;
+        setCards(formattedCards);
         setPage(1);
         setHasMore(rawRpcCount >= PAGE_SIZE);
         // Persist fresh page-0 data to SQLite so next navigation is instant
@@ -360,11 +400,22 @@ export const MainFeedPage = () => {
       } else {
         pageRef.current += 1;
         // Deduplicate new cards by entity_id
-        const existingIds = new Set(cardsRef.current.map(c => c.entity_id));
-        const uniqueNewCards = newCards.filter(c => !existingIds.has(c.entity_id));
+        const existingMap = new Map<string, MixedFeedItem>();
+        cardsRef.current.forEach(c => existingMap.set(c.entity_id, c));
 
-        cardsRef.current = [...cardsRef.current, ...uniqueNewCards];
-        setCards(cardsRef.current);
+        const uniqueNewCards = newCards.filter(c => {
+          if (existingMap.has(c.entity_id)) {
+            console.warn(`[MainFeedPage] 🔴 PAGINATION DUPLICATE DETECTED! entity_id: ${c.entity_id} is already in cardsRef! Incrementing UI counter instead of adding.`);
+            const existing = existingMap.get(c.entity_id);
+            if (existing) existing.duplicateCount = (existing.duplicateCount || 1) + 1;
+            return false;
+          }
+          return true;
+        });
+
+        const formattedNewCards = formatFeedWithCarousels(uniqueNewCards, cardsRef.current.length);
+        cardsRef.current = [...cardsRef.current, ...formattedNewCards];
+        setCards([...cardsRef.current]); // trigger re-render to show updated duplicateCount
         setPage(pageRef.current);
         // Break the loop if we only got duplicates
         if (uniqueNewCards.length === 0 && newCards.length > 0) {
@@ -490,12 +541,14 @@ export const MainFeedPage = () => {
             }}
           />
         </View>
-      ) : (
+      ) : showSkeleton ? (
         <View style={{ flex: 1, backgroundColor: '#000' }}>
           {Array.from({ length: 3 }).map((_, i) => (
             <MainFeedSkeletonCard key={i} />
           ))}
         </View>
+      ) : (
+        <View style={{ flex: 1, backgroundColor: theme.colors.background }} />
       )}
     </View>
   );

@@ -35,9 +35,9 @@ export const FirstPostMainPage: React.FC = () => {
 
   const [index, setIndex] = useState(0);
   const routes = [
+    { key: 'music', title: t('common.music', 'Music') },
     { key: 'photos', title: t('common.photos', 'Photos') },
     { key: 'videos', title: t('common.videos', 'Videos') },
-    { key: 'music', title: t('common.music', 'Music') },
   ];
 
   const [selectedItems, setSelectedItems] = useState<Record<string, MediaItem>>({});
@@ -158,7 +158,7 @@ export const FirstPostMainPage: React.FC = () => {
           <View style={{ paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ flex: 1, alignItems: 'flex-start' }}>
               <AlbumSelectorModal
-                activeTabIndex={index}
+                activeTabKey={routes[index].key}
                 selectedAlbum={selectedAlbum}
                 onAlbumSelected={(album) => setSelectedAlbum(album)}
               />

@@ -2,11 +2,23 @@ import { ChartToast } from '@/components/showcase/CrimChart_toast';
 import { PermissionDialog } from '@/components/ui/PermissionDialog';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
+import * as Notifications from 'expo-notifications';
 import { DownloadCloud } from 'lucide-react-native';
 import { useState } from 'react';
 import { Linking, Platform } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { RequireAuthWrapper } from './RequireAuthWrapper';
+
+// Ensure notifications show even when app is in foreground
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 export interface MediaDownloadWrapperProps {
   mediaUrl?: string;
@@ -218,10 +230,22 @@ export const MediaDownloadWrapper: React.FC<MediaDownloadWrapperProps> = ({
       }
 
       if (mediaSuccess) {
-        ChartToast.showSuccess(null, {
-          title: 'Download Complete',
-          message: coverUrl && coverSuccess ? 'Saved media and cover art!' : 'Saved to your device!'
-        });
+        try {
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title: 'Download Complete',
+              body: `Saved to your device in album: ${albumName}`,
+            },
+            trigger: null, // trigger immediately
+          });
+        } catch (e) {
+          console.warn("Failed to schedule notification:", e);
+          // Fallback to Toast if notifications fail (e.g. permission denied)
+          ChartToast.showSuccess(null, {
+            title: 'Download Complete',
+            message: `Saved to your device in album: ${albumName}`
+          });
+        }
         if (onDownloadSuccess) onDownloadSuccess();
       } else {
         throw new Error("Download failed");

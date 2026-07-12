@@ -1,7 +1,7 @@
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import { FollowUserButton } from '@/components/FollowUserButton';
 import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
-import { OfflineStateWidget } from '@/components/offline/OfflineStateWidget';
+import { OfflineNoDataWidget } from '@/components/offlineIndicators';
 import { supabase } from '@/core/supabase/supabaseConfig';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { useStyles } from '@/core/hooks/useStyles';
@@ -184,7 +184,7 @@ export const FollowersListPage: React.FC<FollowersListPageProps> = ({
 
       {/* Offline / Error state */}
       {hasError ? (
-        <OfflineStateWidget
+        <OfflineNoDataWidget
           onRetry={() => {
             fetchFollowers();
             fetchFollowing();

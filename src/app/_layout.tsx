@@ -63,7 +63,7 @@ import { ExploreChannelsPage } from '@/channel/pages/ExploreChannelsPage';
 import { useExploreStore } from '@/channel/store/useExploreStore';
 import { DesktopChannelModal } from '@/channel/widgets/DesktopChannelModal';
 import { ProgressProvider } from '@/components/globalProgressBar/GlobalProgressBar';
-import { OfflineStateWidget } from '@/components/offline/OfflineStateWidget';
+import { OfflineStaleDataBanner, SlowConnectionBanner } from '@/components/offlineIndicators';
 import { useAppPresence } from '@/core/hooks/useAppPresence';
 import { usePresenceSyncWorker } from '@/core/sync/usePresenceSyncWorker';
 import { Modal } from 'react-native';
@@ -85,31 +85,63 @@ const injectWebScrollbarStyle = () => {
     const style = document.createElement('style');
     style.id = 'custom-scrollbar-style';
     style.textContent = `
-      html, body, #root {
+      /* 1. Reset margins and force black background on all root layers */
+      html, body, #root, #__next {
+        width: 100%;
         height: 100%;
-        overflow-y: scroll;
+        margin: 0 !important;
+        padding: 0 !important;
+        background-color: #000000 !important;
+        overflow: hidden !important; 
+        color-scheme: dark !important;
       }
-      /* Elegant dark mode scrollbar */
-      ::-webkit-scrollbar {
-        height: 6px;
-        width: 6px;
+
+      /* 2. Target EVERY element to hide inner ScrollView/FlatList scrollbars */
+      *::-webkit-scrollbar {
+        display: none !important;
+        width: 0px !important;
+        height: 0px !important;
+        background: transparent !important;
+        -webkit-appearance: none !important;
       }
-      ::-webkit-scrollbar-track {
-        background: transparent;
+      
+      *::-webkit-scrollbar-track {
+        background: transparent !important;
+        border: none !important;
       }
-      ::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.15);
-        border-radius: 10px;
+
+      *::-webkit-scrollbar-thumb {
+        background: transparent !important;
+        border: none !important;
       }
-      ::-webkit-scrollbar-thumb:hover {
-        background: rgba(255, 255, 255, 0.02);
-      }
+
+      /* 3. Firefox universal hide */
       * {
-        scrollbar-width: thin;
-        scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+        scrollbar-width: none !important;
       }
     `;
     document.head.appendChild(style);
+
+    // Force inline styles on root elements to guarantee no native window scrolling
+    document.documentElement.style.overflow = 'hidden';
+    document.documentElement.style.width = '100%';
+    document.documentElement.style.height = '100%';
+    document.documentElement.style.margin = '0';
+    document.documentElement.style.padding = '0';
+    document.documentElement.style.backgroundColor = '#000000';
+    
+    document.body.style.overflow = 'hidden';
+    document.body.style.width = '100%';
+    document.body.style.height = '100%';
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
+    document.body.style.backgroundColor = '#000000';
+    
+    const rootEl = document.getElementById('root');
+    if (rootEl) {
+      rootEl.style.overflow = 'hidden';
+      rootEl.style.backgroundColor = '#000000';
+    }
   }
 };
 
@@ -162,7 +194,8 @@ export default function RootLayout() {
                 <Stack.Screen name="onboarding" options={{ headerShown: false, animation: 'fade' }} />
                 <Stack.Screen name="add-post" options={{ presentation: 'transparentModal', animation: 'fade' }} />
               </Stack>
-              <OfflineStateWidget />
+              <OfflineStaleDataBanner />
+              <SlowConnectionBanner />
               <GlobalExploreModal />
               <DesktopChannelModal />
               <Toast config={{ ...chartToastConfig, ...toastConfig }} />

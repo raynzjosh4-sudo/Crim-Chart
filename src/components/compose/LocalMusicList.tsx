@@ -6,6 +6,10 @@ import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { AudioPreviewWidget } from './AudioPreviewWidget';
 import { MusicListShimmer } from './MusicListShimmer';
+import { Music } from 'lucide-react-native';
+import { CoverArtSelectorSheet, CoverArtSelectorSheetRef } from './CoverArtSelectorSheet';
+import { useRef } from 'react';
+
 interface LocalMusicListProps {
   onSelect: (media: any) => void;
   selectedId?: string;
@@ -27,6 +31,37 @@ export const LocalMusicList: React.FC<LocalMusicListProps> = ({
       paddingVertical: 12,
       borderBottomWidth: StyleSheet.hairlineWidth,
       paddingHorizontal: 8
+    },
+    simpleItemContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: 'rgba(255,255,255,0.1)',
+    },
+    iconContainer: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: 'rgba(255,255,255,0.05)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 16,
+    },
+    textContainer: {
+      flex: 1,
+      justifyContent: 'center',
+    },
+    songTitle: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: '600',
+      marginBottom: 4,
+    },
+    songArtist: {
+      color: colors.textSecondary || 'rgba(255,255,255,0.6)',
+      fontSize: 14,
     }
   }));
   const theme = useCurrentTheme();
@@ -37,6 +72,8 @@ export const LocalMusicList: React.FC<LocalMusicListProps> = ({
   const [assets, setAssets] = useState<MediaLibrary.Asset[]>(prefetchedAssets ?? []);
   const [loading, setLoading] = useState(!prefetchedAssets);
   const [permissionResponse, requestPermission] = MediaLibrary.usePermissions();
+  const coverArtSheetRef = useRef<CoverArtSelectorSheetRef | null>(null);
+
   useEffect(() => {
     // If the parent already pre-fetched, skip internal fetch
     if (prefetchedAssets) return;
@@ -93,31 +130,48 @@ export const LocalMusicList: React.FC<LocalMusicListProps> = ({
   return <View style={styles.container}>
       <FlatList data={assets} keyExtractor={item => item.id} contentContainerStyle={{
       paddingBottom: 40
-    }} renderItem={({
-      item
-    }) => <View style={[styles.itemContainer, {
-      borderBottomColor: 'rgba(255,255,255,0.1)'
-    }]}>
-            <AudioPreviewWidget media={{
-        id: item.id,
-        uri: item.uri,
-        name: item.filename,
-        artist: 'Unknown Artist',
-        lyrics: '',
-        thumbnailUri: null
-      }} onUpdate={() => {}} onSelect={async media => {
-        startLoading();
-        await new Promise(r => setTimeout(r, 400));
-        stopLoading();
-        onSelect(media);
-      }} isSelected={item.id === selectedId} />
-          </View>} ListEmptyComponent={<View style={{
-      padding: 20,
-      alignItems: 'center'
-    }}>
+    }}
+      renderItem={({ item }) => (
+        <TouchableOpacity 
+          style={styles.simpleItemContainer}
+          activeOpacity={0.8}
+          onPress={() => {
+            coverArtSheetRef.current?.present({
+              id: item.id,
+              uri: item.uri,
+              name: item.filename,
+              artist: 'Unknown Artist',
+              lyrics: '',
+              thumbnailUri: null
+            });
+          }}
+        >
+          <View style={styles.iconContainer}>
+            <Music color={theme.colors.primary} size={24} />
+          </View>
+          <View style={styles.textContainer}>
+            <Text style={styles.songTitle} numberOfLines={1}>{item.filename}</Text>
+            <Text style={styles.songArtist} numberOfLines={1}>Unknown Artist</Text>
+          </View>
+        </TouchableOpacity>
+      )}
+      ListEmptyComponent={<View style={{
+        padding: 20,
+        alignItems: 'center'
+      }}>
             <Text style={{
         color: theme.colors.text + '80'
       }}>No audio files found on device.</Text>
           </View>} />
+          
+      <CoverArtSelectorSheet 
+        ref={coverArtSheetRef} 
+        onSelectArtwork={(media, artworkUrl) => {
+          onSelect({
+            ...media,
+            thumbnail: artworkUrl
+          });
+        }}
+      />
     </View>;
 };

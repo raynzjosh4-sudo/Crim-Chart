@@ -47,45 +47,47 @@ const MemoizedFeedItem = React.memo(({
   if (item.entity_type.includes('carousel')) {
     console.log('[MainFeedPage] FlashList is actively trying to render the carousel:', item.entity_type);
   }
+  let content = null;
   switch (item.entity_type) {
     case 'long_video_post':
-      return <VideoPostFeedCard postId={item.entity_id} isActive={isActive} entityType="long_video_post" sourceType={item.source_type} prefetchedData={item.prefetchedData} />;
+      content = <VideoPostFeedCard postId={item.entity_id} isActive={isActive} entityType="long_video_post" sourceType={item.source_type} prefetchedData={item.prefetchedData} />;
+      break;
     case 'short_video_post':
-      return <VideoPostFeedCard postId={item.entity_id} isActive={isActive} entityType="short_video_post" sourceType={item.source_type} prefetchedData={item.prefetchedData} />;
+      content = <VideoPostFeedCard postId={item.entity_id} isActive={isActive} entityType="short_video_post" sourceType={item.source_type} prefetchedData={item.prefetchedData} />;
+      break;
     case 'audio_post':
     case 'image_post':
     case 'standard_post':
     case 'channel_post':
     case 'post':
-      return <SmartPostWidget postId={item.entity_id} entityType={item.entity_type} sourceType={item.source_type} isActive={isActive} prefetchedData={item.prefetchedData} />;
-    /*
-    case 'box':
-    case 'box_store':
-    case 'box_marketplace':
-      return <StoreBoxFeedCard boxId={item.entity_id} prefetchedData={item.prefetchedData} />;
-    case 'box_movie':
-    case 'box_video':
-      return <MovieBoxFeedCard boxId={item.entity_id} prefetchedData={item.prefetchedData} />;
-    case 'box_music':
-    case 'box_audio':
-      return <MusicBoxFeedCard boxId={item.entity_id} prefetchedData={item.prefetchedData} />;
-    case 'box_sports':
-      return <SportsBoxFeedCard boxId={item.entity_id} prefetchedData={item.prefetchedData} />;
-    case 'box_voting':
-    case 'box_contest':
-      return <VotingBoxFeedCard boxId={item.entity_id} prefetchedData={item.prefetchedData} />;
-    */
+      content = <SmartPostWidget postId={item.entity_id} entityType={item.entity_type} sourceType={item.source_type} isActive={isActive} prefetchedData={item.prefetchedData} />;
+      break;
     case 'user_recommendation_carousel':
-      return <UserRecommendationCarousel />;
+      content = <UserRecommendationCarousel />;
+      break;
     case 'channel_recommendation_carousel':
-      return (
+      content = (
         <View style={{ marginVertical: 24, width: '100%' }}>
           <DiscoverChannelWidget channelCount={0} userId={useAuthStore.getState().user?.id} />
         </View>
       );
+      break;
     default:
-      return null;
+      content = null;
   }
+
+  if (!content) return null;
+
+  return (
+    <View>
+      {item.duplicateCount && item.duplicateCount > 1 && (
+        <View style={{ position: 'absolute', top: 10, left: 10, backgroundColor: 'red', padding: 8, borderRadius: 8, zIndex: 999 }}>
+          <Text style={{ color: 'white', fontWeight: 'bold' }}>DUPLICATE x{item.duplicateCount} ({item.entity_id.substring(0,6)})</Text>
+        </View>
+      )}
+      {content}
+    </View>
+  );
 }, (prevProps, nextProps) => {
   if (prevProps.item.id !== nextProps.item.id) return false;
   if (prevProps.isActive !== nextProps.isActive) return false;

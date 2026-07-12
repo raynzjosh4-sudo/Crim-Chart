@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring } from 'react-native-reanimated';
 import { StyleSheet, Text, TouchableOpacity, View, ViewStyle, StyleProp } from 'react-native';
 import { Eye, Heart, MessageCircle, Tag } from 'lucide-react-native';
+import { RequireAuthWrapper } from '@/components/wrappers/RequireAuthWrapper';
 
 export interface PostFooterProps {
   isLocal?: boolean;
@@ -39,8 +40,8 @@ export const PostFooter: React.FC<PostFooterProps> = ({
   onLikePress,
   commentsCount = 0,
   onCommentPress,
-  viewsCount = 0,
-  tagsCount = 0,
+  viewsCount,
+  tagsCount,
   isTagged = false,
   onTagPress,
   onViewPress,
@@ -87,27 +88,35 @@ export const PostFooter: React.FC<PostFooterProps> = ({
           leftContent
         ) : (
           <>
-            <TouchableOpacity 
-              activeOpacity={1}
-              style={[styles.actionBtn, isLocal && { opacity: 0.3 }]}
-              disabled={isLocal}
-              onPress={handleLikePress}
-            >
-              <Animated.View style={animatedStyle}>
-                <Heart size={iconSize} color={localIsLiked ? "#E21" : "#FFF"} fill={localIsLiked ? "#E21" : "transparent"} />
-              </Animated.View>
-              <Text style={styles.actionText}>{localLikesCount}</Text>
-            </TouchableOpacity>
+            <RequireAuthWrapper>
+              {({ checkAuth }) => (
+                <TouchableOpacity 
+                  activeOpacity={1}
+                  style={[styles.actionBtn, isLocal && { opacity: 0.3 }]}
+                  disabled={isLocal}
+                  onPress={(e) => checkAuth(handleLikePress, e)}
+                >
+                  <Animated.View style={animatedStyle}>
+                    <Heart size={iconSize} color={localIsLiked ? "#E21" : "#FFF"} fill={localIsLiked ? "#E21" : "transparent"} />
+                  </Animated.View>
+                  <Text style={styles.actionText}>{localLikesCount}</Text>
+                </TouchableOpacity>
+              )}
+            </RequireAuthWrapper>
 
-            <TouchableOpacity 
-              activeOpacity={1}
-              style={[styles.actionBtn, isLocal && { opacity: 0.3 }]}
-              disabled={isLocal}
-              onPress={onCommentPress}
-            >
-              <MessageCircle size={iconSize} color="#FFF" />
-              <Text style={styles.actionText}>{commentsCount}</Text>
-            </TouchableOpacity>
+            <RequireAuthWrapper>
+              {({ checkAuth }) => (
+                <TouchableOpacity 
+                  activeOpacity={1}
+                  style={[styles.actionBtn, isLocal && { opacity: 0.3 }]}
+                  disabled={isLocal}
+                  onPress={(e) => checkAuth(() => { if (onCommentPress) onCommentPress(); }, e)}
+                >
+                  <MessageCircle size={iconSize} color="#FFF" />
+                  <Text style={styles.actionText}>{commentsCount}</Text>
+                </TouchableOpacity>
+              )}
+            </RequireAuthWrapper>
 
             {(viewsCount !== undefined || onViewPress) && (
               <TouchableOpacity 

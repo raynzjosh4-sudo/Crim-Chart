@@ -3,6 +3,7 @@ import { CommentSheet } from '@/components/comments/CommentSheet';
 import { MessageCircle } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { RequireAuthWrapper } from '@/components/wrappers/RequireAuthWrapper';
 interface CommentActionWidgetProps {
   commentsCount: number;
   postId?: string;
@@ -57,10 +58,14 @@ export const CommentActionWidget: React.FC<CommentActionWidgetProps> = ({
     }
   };
   return <>
-      <TouchableOpacity style={styles.container} onPress={handlePress} activeOpacity={0.7}>
-        <MessageCircle size={24} color="#FACD11" />
-        <Text style={styles.text}>{commentsCount}</Text>
-      </TouchableOpacity>
+      <RequireAuthWrapper>
+        {({ checkAuth }) => (
+          <TouchableOpacity style={styles.container} onPress={(e) => checkAuth(handlePress, e)} activeOpacity={0.7}>
+            <MessageCircle size={24} color="#FACD11" />
+            <Text style={styles.text}>{commentsCount}</Text>
+          </TouchableOpacity>
+        )}
+      </RequireAuthWrapper>
 
       {postId && <CommentSheet postId={postId} visible={isSheetVisible} onClose={() => setIsSheetVisible(false)} onCommentAdded={() => setCommentsCount(commentsCount + 1)} />}
     </>;

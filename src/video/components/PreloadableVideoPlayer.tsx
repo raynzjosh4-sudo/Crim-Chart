@@ -1,6 +1,6 @@
 import { useVideoPlayer, VideoView } from 'expo-video';
-import React, { useEffect } from 'react';
-import { StyleProp, ViewStyle, View, Platform } from 'react-native';
+import { useEffect } from 'react';
+import { Platform, StyleProp, View, ViewStyle } from 'react-native';
 import { VideoBufferingSpinner } from './VideoBufferingSpinner';
 
 export type PreloadStatus = 'playing' | 'preloading' | 'idle';
@@ -43,9 +43,21 @@ export const PreloadableVideoPlayer: React.FC<PreloadableVideoPlayerProps> = ({
 
   // Pass null to useVideoPlayer when idle to completely free up memory
   const player = useVideoPlayer(preloadStatus === 'idle' ? null : activeUrl, (p) => {
+    console.log(`[DEBUG Preloadable] INIT player for ${activeUrl}`);
     p.loop = true;
     p.muted = isMuted;
   });
+
+  useEffect(() => {
+    if (!player) return;
+    const sub = player.addListener('statusChange', (event: any) => {
+      console.log(`[DEBUG Preloadable] statusChange:`, event);
+      if (event.status === 'error') {
+        console.error(`[DEBUG Preloadable] ERROR playing ${activeUrl}`, event.error);
+      }
+    });
+    return () => sub.remove();
+  }, [player, activeUrl]);
 
   useEffect(() => {
     if (!player) return;

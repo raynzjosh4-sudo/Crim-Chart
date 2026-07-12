@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { Pause, Play } from 'lucide-react-native';
 
 export interface AnimatedDiskProps {
-  imageUrl?: string;
+  imageUrl?: string | any;
   size?: number;
   isPlaying: boolean;
   onPress: () => void;
@@ -94,7 +94,7 @@ export const AnimatedDisk: React.FC<AnimatedDiskProps> = ({
       ]}>
         {imageUrl && !imageLoadError ? (
           <Image
-            source={{ uri: imageUrl }}
+            source={typeof imageUrl === 'string' ? { uri: imageUrl } : imageUrl}
             style={{ width: '100%', height: '100%', borderRadius: size / 2 }}
             contentFit="cover"
             onError={() => setImageLoadError(true)}

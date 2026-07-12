@@ -1,21 +1,20 @@
 import UserAvatar from '@/components/avatar/UserAvatar';
 import { AnimatedPostButton } from '@/components/buttons/AnimatedPostButton';
 import { CommentSheet } from '@/components/comments/CommentSheet';
-import { CommentAction } from '@/features/feed/components/CommentAction';
 import { PostFooter } from '@/components/PostFooter/PostFooter';
-import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
-import { useVideoPlayer, VideoView } from 'expo-video';
-import { Check, Eye, MessageCircle, Play, Tag, Volume2, VolumeX, X } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
-import { Modal, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions, Platform } from 'react-native';
-import { ShortVideoPlayerCard } from '../ShortVideoPlayerCard';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
+import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
+import { Check, Play, Tag, Volume2, VolumeX, X } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import { Modal, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { ShortVideoPlayerCard } from '../ShortVideoPlayerCard';
 
-import { PreloadableVideoPlayer, PreloadStatus } from '@/video/components/PreloadableVideoPlayer';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import { useDesktopVidsStore } from '@/mainFeed/pages/main_page_widgets/useDesktopVidsStore';
+import { PreloadableVideoPlayer, PreloadStatus } from '@/video/components/PreloadableVideoPlayer';
 
 export interface ShortVideoPlayerProps {
   video: {
@@ -70,6 +69,7 @@ export const ShortVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress, o
   const theme = useCurrentTheme();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const { startLoading, stopLoading } = useGlobalProgress();
 
   useEffect(() => {
     setLocalCommentsCount(Number(video.commentsCount) || 0);
@@ -233,7 +233,13 @@ export const ShortVideoPlayer = ({ video, onAddPress, onTagPress, onLikePress, o
         isLiked={isLiked || false}
         onLikePress={onLikePress}
         commentsCount={localCommentsCount}
-        onCommentPress={() => setIsCommentSheetVisible(true)}
+        onCommentPress={() => {
+          startLoading();
+          setTimeout(() => {
+            stopLoading();
+            setIsCommentSheetVisible(true);
+          }, 400);
+        }}
         viewsCount={video.viewsCount || 0}
         iconSize={20}
         rightContent={

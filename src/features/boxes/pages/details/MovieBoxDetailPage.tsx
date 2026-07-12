@@ -17,6 +17,7 @@ import { MoviePostingItemShimmer } from '@/components/shimmers/MoviePostingShimm
 import { FullPageShimmer } from '@/features/boxes/components/details/MovieBoxDetailShimmer';
 import { VideoFeedPage } from '@/video/pages/VideoFeedPage';
 import { MoviePostingPage } from '@/features/boxes/components/video_posting/MoviePostingPage';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Modal, SafeAreaView, StyleSheet, Text, View, Platform, useWindowDimensions } from 'react-native';
@@ -83,6 +84,15 @@ export const MovieBoxDetailPage: React.FC<MovieBoxDetailPageProps> = ({
   const {
     trackInteraction
   } = useBoxInteractionTracker();
+
+  const { stopLoading } = useGlobalProgress();
+
+  React.useEffect(() => {
+    if (!isLoading && !isItemsLoading) {
+      stopLoading();
+    }
+  }, [isLoading, isItemsLoading]);
+
   const displayedVideos = React.useMemo(() => {
     return fetchedItems.map(item => {
       const isShort = item.post.postType === 'short' || (item.post.aspectRatio ? item.post.aspectRatio < 1 : false);
@@ -232,13 +242,7 @@ export const MovieBoxDetailPage: React.FC<MovieBoxDetailPageProps> = ({
               </Text>
             </View>} />
 
-        {(isLoading || isItemsLoading || isFetchingMore) && <View style={{
-        height: 2,
-        width: '100%',
-        backgroundColor: 'transparent'
-      }}>
-            <ChartLinearLoader isLoading={true} />
-          </View>}
+        {/* Removed redundant ChartLinearLoader */}
 
         {showInitialLoading ? <FullPageShimmer /> : filteredVideos.length === 0 ? <View style={{
         flex: 1

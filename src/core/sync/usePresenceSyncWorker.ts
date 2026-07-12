@@ -42,7 +42,10 @@ export function usePresenceSyncWorker() {
             .in('id', chunk);
 
           if (error) {
-            console.error('[PresenceSyncWorker] Supabase error:', error);
+            const isNetworkError = error.message?.includes('Network request failed') || error.message?.includes('Failed to fetch');
+            if (!isNetworkError) {
+              console.warn('[PresenceSyncWorker] Supabase error:', error);
+            }
             // Re-queue failed IDs for the next cycle
             chunk.forEach(id => state.requestSync(id));
             continue;
@@ -109,8 +112,11 @@ export function usePresenceSyncWorker() {
           state.updateProfiles(results);
         }
 
-      } catch (error) {
-        console.error('[PresenceSyncWorker] Fatal sync error:', error);
+      } catch (error: any) {
+        const isNetworkError = error.message?.includes('Network request failed') || error.message?.includes('Failed to fetch');
+        if (!isNetworkError) {
+          console.warn('[PresenceSyncWorker] Fatal sync error:', error);
+        }
       }
 
     }, 3000); // Process the queue every 3 seconds

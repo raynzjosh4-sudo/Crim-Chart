@@ -1,7 +1,9 @@
 import { NativeDB } from '@/core/db/NativeDB';
 import { cloudMediaService } from '@/core/network/cloudMediaService';
+import { notificationService } from '@/core/notifications/NotificationService';
 import { useProfileCacheStore } from '@/core/store/useProfileCacheStore';
 import { supabase } from '@/core/supabase/client';
+import NetInfo from '@react-native-community/netinfo';
 import { DeviceEventEmitter, Platform } from 'react-native';
 import { create } from 'zustand';
 
@@ -82,14 +84,17 @@ export const usePostingStore = create<PostingState>((set) => ({
 
   createPost: async (params) => {
     set({ isPosting: true, errorMessage: null });
+    // Generate a unique task ID for tracking this upload's notification
+    const taskId = `post-${Date.now()}`;
+    let pendingPostId: string | null = null;
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Show a toast notification for background posting
+      // Initialize notifee channel + fire the opening notification
       if (Platform.OS !== 'web') {
-        const { ChartToast } = require('@/components/showcase/CrimChart_toast');
-        ChartToast.showInfo(null, { title: 'Posting...', message: 'Your post is uploading in the background.' });
+        await notificationService.init();
+        await notificationService.showUploadProgress(taskId, 0);
       }
 
       // Optimistic Update: inject pending post for offline-first feel
@@ -98,9 +103,9 @@ export const usePostingStore = create<PostingState>((set) => ({
           (m) => m.type === MediaType.photo || m.type === MediaType.video
         );
         const isVideo = visualMedia.some((m) => m.type === MediaType.video);
-        
+        pendingPostId = `pending-${Date.now()}`;
         const pendingPost = {
-          id: `pending-${Date.now()}`,
+          id: pendingPostId,
           channel_id: params.channelId ?? 'general',
           title: params.caption || '',
           thumbnailUrl: visualMedia.length > 0 ? (visualMedia[0].thumbnailUrl || visualMedia[0].path) : null,
@@ -172,29 +177,52 @@ export const usePostingStore = create<PostingState>((set) => ({
       const galleryThumbs: string[] = [];
       let finalAudioUrl: string | null = null;
 
-      // Ensure all videos have a local thumbnail generated if not provided, or if it is an mp4
+      // ── STEP 1: Always generate thumbnails for video items before uploading (10%)
       for (const m of visualMedia) {
-        if (m.type === MediaType.video && (!m.thumbnailUrl || m.thumbnailUrl.endsWith('.mp4'))) {
-          try {
-            const VideoThumbnails = require('expo-video-thumbnails');
-            const { uri } = await VideoThumbnails.getThumbnailAsync(m.path, { time: 1000 });
-            m.thumbnailUrl = uri;
-          } catch (e) {
-            console.warn('[usePostingStore] Fallback thumbnail generation failed:', e);
+        if (m.type === MediaType.video) {
+          const hasGoodThumb = m.thumbnailUrl &&
+            !m.thumbnailUrl.endsWith('.mp4') &&
+            !m.thumbnailUrl.endsWith('.mov');
+          if (!hasGoodThumb) {
+            try {
+              const VideoThumbnails = require('expo-video-thumbnails');
+              const { uri } = await VideoThumbnails.getThumbnailAsync(m.path, { time: 1000 });
+              m.thumbnailUrl = uri;
+            } catch (e) {
+              console.warn('[usePostingStore] Thumbnail generation failed:', e);
+            }
           }
         }
       }
+      if (Platform.OS !== 'web') await notificationService.showUploadProgress(taskId, 10);
+
+      // ── STEP 2: Check network before starting upload. Pause if offline.
+      const checkAndWaitForNetwork = async () => {
+        const state = await NetInfo.fetch();
+        if (!state.isConnected || state.isInternetReachable === false) {
+          if (Platform.OS !== 'web') await notificationService.showPostPaused(taskId);
+          await notificationService.waitForNetwork();
+          if (Platform.OS !== 'web') await notificationService.showPostResuming(taskId);
+          // small delay so the "resuming" notification is visible
+          await new Promise(res => setTimeout(res, 1200));
+        }
+      };
+      await checkAndWaitForNetwork();
 
       for (const m of visualMedia) {
         let uploadedMainUrl = m.path;
 
         if (m.type === MediaType.video && (m.path.startsWith('file://') || m.path.startsWith('/') || m.path.startsWith('blob:'))) {
-          console.log('[usePostingStore] 1️⃣ Uploading raw video to Cloudflare R2 for Coconut...');
+          console.log('[usePostingStore] 1️⃣ Uploading raw video...');
           const videoFilename = `${user.id}_${Date.now()}.mp4`;
           
+          // Re-check network before this heavy upload step
+          await checkAndWaitForNetwork();
+          await notificationService.showUploadProgress(taskId, 30);
           await cloudMediaService.uploadRawVideoForTranscoding(m.path, videoFilename);
 
-          console.log('[usePostingStore] 2️⃣ Triggering Coconut Video Processor Edge Function...');
+          console.log('[usePostingStore] 2️⃣ Processing video...');
+          await notificationService.showUploadProgress(taskId, 60);
           const { data: functionData, error: functionError } = await supabase.functions.invoke('process-video', {
             body: { 
               videoFilename: videoFilename,
@@ -202,23 +230,27 @@ export const usePostingStore = create<PostingState>((set) => ({
             }
           });
 
-          // Add this line to catch the real error we are forcing through:
           if (functionData?.error) throw new Error(functionData.error); 
-          
-          if (functionError) throw new Error("Network failed");
-
-          console.log('[usePostingStore] ✅ Processing Started! Future Stream URL:', functionData.streamUrl);
+          if (functionError) throw new Error('Posting failed');
+          // Guard: never store a raw .mp4 URL in the database
+          if (!functionData.streamUrl || functionData.streamUrl.endsWith('.mp4')) {
+            throw new Error('Posting failed: video not ready yet');
+          }
+          console.log('[usePostingStore] ✅ Video ready!');
           
           uploadedMainUrl = functionData.streamUrl;
           galleryUrls.push(uploadedMainUrl);
           galleryThumbs.push(functionData.thumbnailUrl);
+          await notificationService.showUploadProgress(taskId, 75);
 
         } else if (m.path.startsWith('file://') || m.path.startsWith('/') || m.path.startsWith('blob:')) {
           // blob: URLs come from the web image picker — upload to R2
-          console.log('[usePostingStore] ☁️ Uploading image to Cloudflare R2...', m.path.substring(0, 60));
+          console.log('[usePostingStore] ☁️ Uploading image...');
+          await checkAndWaitForNetwork();
           uploadedMainUrl = await cloudMediaService.uploadMedia(m.path, 'posts_media', user.id);
-          console.log('[usePostingStore] ✅ Uploaded:', uploadedMainUrl);
+          console.log('[usePostingStore] ✅ Image uploaded.');
           galleryUrls.push(uploadedMainUrl);
+          await notificationService.showUploadProgress(taskId, 75);
         } else {
           galleryUrls.push(m.path);
         }
@@ -472,12 +504,42 @@ export const usePostingStore = create<PostingState>((set) => ({
         }
       }
 
-      // Status posting is now explicitly handled by the UI calling createPost with PostType.status
-      set({ isPosting: false });
+      // All done!
+      if (Platform.OS !== 'web') await notificationService.showUploadProgress(taskId, 95);
+      if (Platform.OS !== 'web') await notificationService.finishUpload(taskId);
+
+      // Remove the optimistic pending post — the real post is now in the feed
+      if (pendingPostId) {
+        if (Platform.OS !== 'web') {
+          NativeDB.deleteFromDiscoveryFeed(pendingPostId).catch(e => console.warn('[usePostingStore] DB delete err:', e));
+        }
+        set((state) => ({
+          isPosting: false,
+          pendingPosts: state.pendingPosts.filter(p => p.id !== pendingPostId),
+        }));
+      } else {
+        set({ isPosting: false });
+      }
       return true;
     } catch (e: any) {
       console.error('[usePostingStore] createPost caught error:', e);
-      set({ isPosting: false, errorMessage: e.message });
+      // Fire a real native OS failure notification — visible even outside the app
+      if (Platform.OS !== 'web') {
+        notificationService.showFailureNotification(taskId).catch(console.warn);
+      }
+      // Remove the ghost pending post so broken posts don't linger in the feed
+      if (pendingPostId) {
+        if (Platform.OS !== 'web') {
+          NativeDB.deleteFromDiscoveryFeed(pendingPostId).catch(e => console.warn('[usePostingStore] DB delete err:', e));
+        }
+        set((state) => ({
+          isPosting: false,
+          errorMessage: e.message,
+          pendingPosts: state.pendingPosts.filter(p => p.id !== pendingPostId),
+        }));
+      } else {
+        set({ isPosting: false, errorMessage: e.message });
+      }
       return false;
     }
   },

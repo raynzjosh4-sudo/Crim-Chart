@@ -67,7 +67,8 @@ BEGIN
         NEW.created_at
     FROM public.channel_members cm
     WHERE cm.channel_id = NEW.channel_id
-      AND cm.user_id != NEW.author_id; 
+      AND cm.user_id != NEW.author_id
+    ON CONFLICT (target_user_id, entity_id, entity_type) DO NOTHING;
 
     RETURN NEW;
 END;
@@ -118,7 +119,8 @@ BEGIN
 
         -- GROUP 2: The Author themselves
         SELECT NEW.author_id AS target_id
-    ) AS targets;
+    ) AS targets
+    ON CONFLICT (target_user_id, entity_id, entity_type) DO NOTHING;
 
     RETURN NEW;
 END;
@@ -153,7 +155,8 @@ BEGIN
 
         -- GROUP 2: The Owner themselves
         SELECT NEW.owner_id AS target_id
-    ) AS targets;
+    ) AS targets
+    ON CONFLICT (target_user_id, entity_id, entity_type) DO NOTHING;
 
     RETURN NEW;
 END;
@@ -177,116 +180,57 @@ RETURNS TABLE (
     entity_type text,
     entity_id text,
     source_type text,
-    created_at timestamp with time zone
-) AS $$
-DECLARE
-    start_i int;
-    end_i int;
-    start_post_index int;
-    end_post_index int;
-    req_limit int;
-    req_offset int;
+    created_at timestamptz
+)
+AS $$
 BEGIN
-    -- Math to determine how many actual posts we need from the DB 
-    -- accounting for the synthetic carousels we inject every 10 posts.
-    start_i := p_offset + 1;
-    end_i := p_offset + p_limit;
-    start_post_index := start_i - (start_i / 11);
-    end_post_index := end_i - (end_i / 11);
-    req_limit := end_post_index - start_post_index + 1;
-    req_offset := start_post_index - 1;
-
     RETURN QUERY
-    WITH deduplicated_pointers AS (
-        SELECT DISTINCT ON (ufp.entity_id)
-            ufp.id::text,
-            ufp.entity_type,
-            ufp.entity_id,
-            ufp.source_type,
-            ufp.created_at
-        FROM public.user_feed_pointers ufp
-        WHERE ufp.target_user_id = p_user_id
-        ORDER BY ufp.entity_id, ufp.created_at DESC
-    ),
-    real_feed AS (
-        SELECT 
-            d.id, 
-            d.entity_type, 
-            d.entity_id, 
-            d.source_type,
-            d.created_at,
-            (ROW_NUMBER() OVER (ORDER BY d.created_at DESC, d.id DESC)) as base_rn
-        FROM deduplicated_pointers d
-        ORDER BY d.created_at DESC, d.id DESC
-        LIMIT req_limit OFFSET req_offset
-    ),
-    global_fallback AS (
-        SELECT 
-            'fallback_' || p.id AS id,
-            CASE 
-                WHEN p.is_video = true AND p.type ILIKE '%short%' THEN 'short_video_post'
-                WHEN p.is_video = true THEN 'long_video_post'
-                WHEN p.is_audio = true THEN 'audio_post'
-                WHEN jsonb_array_length(COALESCE(p.image_urls, '[]'::jsonb)) > 0 THEN 'image_post'
-                ELSE 'standard_post'
-            END AS entity_type,
-            p.id::text AS entity_id,
-            'post'::text AS source_type,
-            p.created_at,
-            (ROW_NUMBER() OVER (ORDER BY p.created_at DESC, p.id DESC)) as base_rn
-        FROM public.posts p
-        WHERE NOT EXISTS (SELECT 1 FROM deduplicated_pointers LIMIT 1)
-          AND p.privacy = 'public'
-        ORDER BY p.created_at DESC, p.id DESC
-        LIMIT req_limit OFFSET req_offset
-    ),
-    base_feed AS (
-        SELECT * FROM real_feed
-        UNION ALL
-        SELECT * FROM global_fallback WHERE NOT EXISTS (SELECT 1 FROM real_feed LIMIT 1)
-    ),
-    page_indices AS (
-        SELECT i
-        FROM generate_series(start_i, end_i) AS i
-    ),
-    final_combined AS (
-        SELECT 
-            i.i AS sort_rn,
-            CASE 
-                WHEN i.i % 11 = 0 AND (i.i / 11) % 2 = 1 THEN 'synthetic_channel_carousel_' || i.i
-                WHEN i.i % 11 = 0 AND (i.i / 11) % 2 = 0 THEN 'synthetic_user_carousel_' || i.i
-                ELSE b.id 
-            END AS id,
-            CASE 
-                WHEN i.i % 11 = 0 AND (i.i / 11) % 2 = 1 THEN 'channel_recommendation_carousel'
-                WHEN i.i % 11 = 0 AND (i.i / 11) % 2 = 0 THEN 'user_recommendation_carousel'
-                ELSE b.entity_type 
-            END AS entity_type,
-            CASE 
-                WHEN i.i % 11 = 0 AND (i.i / 11) % 2 = 1 THEN 'carousel_channel_' || i.i
-                WHEN i.i % 11 = 0 AND (i.i / 11) % 2 = 0 THEN 'carousel_user_' || i.i
-                ELSE b.entity_id 
-            END AS entity_id,
-            CASE 
-                WHEN i.i % 11 = 0 THEN 'carousel'::text
-                ELSE b.source_type 
-            END AS source_type,
-            CASE 
-                WHEN i.i % 11 = 0 THEN now()
-                ELSE b.created_at 
-            END AS created_at
-        FROM page_indices i
-        LEFT JOIN base_feed b 
-            ON b.base_rn = i.i - (i.i / 11)
-        WHERE b.id IS NOT NULL 
-           OR (i.i % 11 = 0 AND EXISTS (
-                  SELECT 1 FROM base_feed 
-                  WHERE base_rn >= i.i - (i.i / 11) - 1
-              ))
-    )
-    SELECT fc.id, fc.entity_type, fc.entity_id, fc.source_type, fc.created_at
-    FROM final_combined fc
-    ORDER BY fc.sort_rn ASC;
+    SELECT 
+        distinct_feed.c_id, 
+        distinct_feed.c_entity_type, 
+        distinct_feed.c_entity_id, 
+        distinct_feed.c_source_type, 
+        distinct_feed.c_created_at 
+    FROM (
+        SELECT DISTINCT ON (combined_feed.c_entity_id)
+            combined_feed.c_id::text,
+            combined_feed.c_entity_type,
+            combined_feed.c_entity_id,
+            combined_feed.c_source_type,
+            combined_feed.c_created_at
+        FROM (
+            -- Source 1: Followed content pointers
+            SELECT 
+                ufp.id::text AS c_id, 
+                ufp.entity_type AS c_entity_type, 
+                ufp.entity_id AS c_entity_id, 
+                ufp.source_type AS c_source_type, 
+                ufp.created_at AS c_created_at
+            FROM public.user_feed_pointers ufp
+            WHERE ufp.target_user_id = p_user_id
+            
+            UNION ALL
+            
+            -- Source 2: Fallback (only if needed)
+            SELECT 
+                ('fallback_' || p.id)::text AS c_id, 
+                CASE 
+                    WHEN p.is_video = true AND p.type ILIKE '%short%' THEN 'short_video_post'
+                    WHEN p.is_video = true THEN 'long_video_post'
+                    WHEN p.is_audio = true THEN 'audio_post'
+                    WHEN jsonb_array_length(COALESCE(p.image_urls, '[]'::jsonb)) > 0 THEN 'image_post'
+                    ELSE 'standard_post'
+                END AS c_entity_type,
+                p.id::text AS c_entity_id, 
+                'post'::text AS c_source_type, 
+                p.created_at AS c_created_at
+            FROM public.posts p
+            WHERE NOT EXISTS (SELECT 1 FROM public.user_feed_pointers ufp2 WHERE ufp2.target_user_id = p_user_id)
+            AND p.privacy = 'public'
+        ) AS combined_feed
+    ) AS distinct_feed
+    ORDER BY distinct_feed.c_created_at DESC, distinct_feed.c_entity_id DESC
+    LIMIT p_limit OFFSET p_offset;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

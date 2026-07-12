@@ -62,7 +62,8 @@ BEGIN
     -- Explore Mix: Only write if the channel is completely public ('anyone')
     IF v_channel_join_method = 'anyone' THEN
         INSERT INTO public.short_video_pointers (target_user_id, entity_id, source_type, feed_context, created_at)
-        VALUES (NULL, NEW.id::text, 'channel_post', 'explore', NEW.created_at);
+        VALUES (NULL, NEW.id::text, 'channel_post', 'explore', NEW.created_at)
+        ON CONFLICT (target_user_id, entity_id, feed_context) DO NOTHING;
     END IF;
 
     -- Channel Tab: Write for all channel members (including author for testing/verification)
@@ -74,7 +75,8 @@ BEGIN
         'channel',
         NEW.created_at
     FROM public.channel_members cm
-    WHERE cm.channel_id = NEW.channel_id;
+    WHERE cm.channel_id = NEW.channel_id
+    ON CONFLICT (target_user_id, entity_id, feed_context) DO NOTHING;
 
     RETURN NEW;
 END;
@@ -101,7 +103,8 @@ BEGIN
     -- Explore Mix: Only write if the post is explicitly public
     IF NEW.privacy = 'public' THEN
         INSERT INTO public.short_video_pointers (target_user_id, entity_id, source_type, feed_context, created_at)
-        VALUES (NULL, NEW.id::text, 'post', 'explore', NEW.created_at);
+        VALUES (NULL, NEW.id::text, 'post', 'explore', NEW.created_at)
+        ON CONFLICT (target_user_id, entity_id, feed_context) DO NOTHING;
     END IF;
 
     -- Friends Tab: Write to all direct followers AND the author themselves
@@ -112,7 +115,8 @@ BEGIN
             SELECT follower_id AS target_id FROM public.follows WHERE following_id = NEW.author_id
             UNION
             SELECT NEW.author_id AS target_id
-        ) targets;
+        ) targets
+        ON CONFLICT (target_user_id, entity_id, feed_context) DO NOTHING;
     END IF;
 
     RETURN NEW;

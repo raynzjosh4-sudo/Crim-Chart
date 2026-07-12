@@ -9,4 +9,5 @@ export interface MessageMediaItem {
   type: MessageMediaType | string;
   url: string;
   thumbnail?: string;
+  caption?: string;
 }

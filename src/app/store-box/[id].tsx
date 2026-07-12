@@ -7,6 +7,7 @@ import { useBoxMembers } from '@/features/boxes/application/useBoxMembers';
 import { RecentContributorsWidget } from '@/features/boxes/components/contributors/RecentContributorsWidget';
 import { StoreItemTile } from '@/features/boxes/components/details/StoreItemTile';
 import { StoreItem } from '@/features/boxes/data/dummyStoreBoxData';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Tag } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
@@ -95,6 +96,15 @@ export default function StoreBoxDetailPage() {
     loadMore
   } = useBoxItems(id as string);
   const [selectedSellerId, setSelectedSellerId] = useState<string | null>(null);
+
+  const { stopLoading } = useGlobalProgress();
+
+  useEffect(() => {
+    if (!isLoading) {
+      stopLoading();
+    }
+  }, [isLoading]);
+
   useEffect(() => {
     console.log('[StoreBoxDetailPage] items count:', items.length);
     console.log('[StoreBoxDetailPage] raw items:', JSON.stringify(items, null, 2));

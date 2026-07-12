@@ -18,6 +18,8 @@ export interface FeedVideoItem {
   createdAt: Date;
   viewsCount?: number;
   sourceType?: string;
+  /** True while this post is still uploading (optimistic UI) */
+  isPending?: boolean;
 }
 
 export function feedVideoFromMap(map: Record<string, unknown>): FeedVideoItem {

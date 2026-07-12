@@ -35,7 +35,8 @@ export const SCHEMA = `
     last_seen TEXT,
     has_status INTEGER DEFAULT 0,
     status_count INTEGER DEFAULT 0,
-    inbox_permission TEXT DEFAULT 'everyone'
+    inbox_permission TEXT DEFAULT 'everyone',
+    downloads_count INTEGER DEFAULT 0
   );
 
   CREATE TABLE IF NOT EXISTS ${TABLES.DRAFTS} (

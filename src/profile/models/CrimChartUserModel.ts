@@ -33,6 +33,7 @@ export class CrimChartUserModel {
   public boxSubmissionsCount?: number;
   public postsCount?: number;
   public inboxCount?: number;
+  public downloadsCount?: number;
   public giftsEarned?: number;
   public coinsEarned?: number;
   public isActive?: boolean;
@@ -66,6 +67,7 @@ export class CrimChartUserModel {
     boxSubmissionsCount?: number;
     postsCount?: number;
     inboxCount?: number;
+    downloadsCount?: number;
     giftsEarned?: number;
     coinsEarned?: number;
     isActive?: boolean;
@@ -98,6 +100,7 @@ export class CrimChartUserModel {
     this.boxSubmissionsCount = params.boxSubmissionsCount ?? 0;
     this.postsCount = params.postsCount ?? 0;
     this.inboxCount = params.inboxCount ?? 0;
+    this.downloadsCount = params.downloadsCount ?? 0;
     this.giftsEarned = params.giftsEarned ?? 0;
     this.coinsEarned = params.coinsEarned ?? 0;
     this.isActive = params.isActive;
@@ -139,6 +142,7 @@ export class CrimChartUserModel {
       boxSubmissionsCount: Number(map.box_submissions_count ?? map.boxSubmissionsCount ?? 0),
       postsCount: Number(map.posts_count ?? map.postsCount ?? 0),
       inboxCount: Number(map.inbox_count ?? map.inboxCount ?? 0),
+      downloadsCount: Number(map.downloads_count ?? map.downloadsCount ?? 0),
       giftsEarned: Number(map.gifts_earned ?? map.giftsEarned ?? 0),
       coinsEarned: Number(map.coins_earned ?? map.coinsEarned ?? 0),
       isActive: map.is_active,

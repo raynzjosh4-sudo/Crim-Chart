@@ -18,9 +18,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoPost } from '../../video/models/VideoPost';
 import { LikeButton } from '../../video/widgets/LikeButton';
+import { FollowUserButton } from '@/components/FollowUserButton';
+import ChannelFollowButton from '@/channel/widgets/ChannelFollowButton';
 import { VideoScrubber } from './VideoScrubber';
 
 interface ShortVideoPlayerCardProps {
@@ -54,6 +56,7 @@ const ShortVideoPlayerCardComponent = ({
   disableInteractions = false,
 }: ShortVideoPlayerCardProps) => {
   const router = useAppRouter();
+  const insets = useSafeAreaInsets();
   
   // Seed the global store on mount with this video's initial data
   useEffect(() => {
@@ -93,6 +96,13 @@ const ShortVideoPlayerCardComponent = ({
     isPausedByUserRef.current = isPausedByUser;
   }, [isPausedByUser]);
 
+  // If the video URL changes (e.g. recycled list item), update it
+  useEffect(() => {
+    if (video.videoUrl !== currentVideoUrl) {
+      setCurrentVideoUrl(video.videoUrl);
+    }
+  }, [video.videoUrl]);
+
   const isPlaying = (preloadStatus === 'playing') && !isPausedByUser && !isScrubbing;
 
   // Initialize player only if it's not idle to save memory
@@ -101,7 +111,6 @@ const ShortVideoPlayerCardComponent = ({
     p.timeUpdateEventInterval = 0.25; // Trigger timeUpdate 4 times a second
   });
 
-  // Fallback from HLS to MP4 if HLS is still processing (returns 404)
   useEffect(() => {
     if (!player) return;
     const subscription = player.addListener('statusChange', (event: any) => {
@@ -119,9 +128,22 @@ const ShortVideoPlayerCardComponent = ({
 
   // Keep currentVideoUrl in sync if video prop changes (FlatList recycling)
   useEffect(() => {
+    console.log(`[DEBUG VideoPlayer] INIT video ${video.postId} with URL:`, video.videoUrl);
     setCurrentVideoUrl(video.videoUrl);
     setIsPausedByUser(false);
-  }, [video.videoUrl]);
+  }, [video.videoUrl, video.postId]);
+
+  // Debug player state
+  useEffect(() => {
+    if (!player) return;
+    const sub = player.addListener('statusChange', (event: any) => {
+      console.log(`[DEBUG VideoPlayer] statusChange for ${video.postId}:`, event);
+      if (event.status === 'error') {
+        console.error(`[DEBUG VideoPlayer] ERROR playing ${video.videoUrl}`, event.error);
+      }
+    });
+    return () => sub.remove();
+  }, [player, video.postId, video.videoUrl]);
 
   // Keep track of whether we've counted a view for this session
   const hasViewedRef = useRef(false);
@@ -231,24 +253,13 @@ const ShortVideoPlayerCardComponent = ({
         ) : null}
 
         {player ? (
-          <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
-            {Platform.OS === 'web' && (
-              <View dangerouslySetInnerHTML={{
-                __html: `<style>
-                video { 
-                  object-fit: contain !important; 
-                  width: 100% !important; 
-                  height: 100% !important; 
-                }
-              </style>` }} />
-            )}
-            <VideoView
-              player={player}
-              style={{ width: '100%', height: '100%' }}
-              contentFit="contain"
-              nativeControls={false}
-            />
-          </View>
+          <VideoView
+            player={player}
+            style={StyleSheet.absoluteFillObject}
+            contentFit="contain"
+            nativeControls={false}
+            pointerEvents="none"
+          />
         ) : null}
       </Pressable>
 
@@ -265,19 +276,27 @@ const ShortVideoPlayerCardComponent = ({
         {!isShrunken && (
           <>
             {/* Bottom info */}
-            <View style={[styles.bottomInfo, hideBottomInput ? { bottom: 12 } : { bottom: 70 }]} pointerEvents="box-none">
+            <View style={[styles.bottomInfo, hideBottomInput ? { bottom: 12 + insets.bottom } : { bottom: 70 + insets.bottom }]} pointerEvents="box-none">
 
               {/* Author Row */}
-              <TouchableOpacity style={styles.authorRow} onPress={handleAuthorPress} activeOpacity={0.8}>
-                <Image
-                  source={{ uri: video.authorAvatarUrl || undefined }}
-                  style={styles.avatar}
-                />
-                <Text style={styles.authorName}>{video.authorName}</Text>
-                <TouchableOpacity style={styles.followButton}>
-                  <Text style={styles.followButtonText}>Follow</Text>
+              <View style={styles.authorRow}>
+                <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }} onPress={handleAuthorPress} activeOpacity={0.8}>
+                  <Image
+                    source={{ uri: video.authorAvatarUrl || undefined }}
+                    style={styles.avatar}
+                  />
+                  <Text style={styles.authorName}>{video.authorName}</Text>
                 </TouchableOpacity>
-              </TouchableOpacity>
+                {video.sourceType === 'post' && video.authorId ? (
+                  <View style={{ transform: [{ scale: 0.85 }], marginLeft: 2 }}>
+                    <FollowUserButton targetUserId={video.authorId} size="small" />
+                  </View>
+                ) : video.sourceType === 'channel_post' && video.channelId ? (
+                  <View style={{ transform: [{ scale: 0.8 }], marginLeft: 2 }}>
+                    <ChannelFollowButton channelId={video.channelId} />
+                  </View>
+                ) : null}
+              </View>
 
               {/* Caption */}
               <Text style={styles.caption} numberOfLines={2}>
@@ -292,7 +311,7 @@ const ShortVideoPlayerCardComponent = ({
 
             {/* Right-side action buttons */}
             <View
-              style={[styles.actions, hideBottomInput ? { bottom: 12 } : { bottom: 70 }]}
+              style={[styles.actions, hideBottomInput ? { bottom: 12 + insets.bottom } : { bottom: 70 + insets.bottom }]}
               pointerEvents={disableInteractions ? 'none' : 'auto'}
             >
               <ActionBtn
@@ -336,7 +355,7 @@ const ShortVideoPlayerCardComponent = ({
 
             {/* Bottom Input Area */}
             {!hideBottomInput && (
-              <View style={styles.inputContainerWrapper} pointerEvents={disableInteractions ? 'none' : 'auto'}>
+              <View style={[styles.inputContainerWrapper, { paddingBottom: Math.max(insets.bottom, 16) }]} pointerEvents={disableInteractions ? 'none' : 'auto'}>
                 <TouchableOpacity style={styles.commentButton} onPress={onComment} activeOpacity={0.8}>
                   <Text style={styles.commentButtonText}>Add comment...</Text>
                 </TouchableOpacity>
@@ -361,12 +380,50 @@ const ShortVideoPlayerCardComponent = ({
           sourceChannelId={video.channelId ?? ''}
           linkChain={[]}
         />
+
+        {/* Uploading overlay — shown while post is pending */}
+        {video.isPending && (
+          <View style={styles.pendingOverlay} pointerEvents="none">
+            <PendingSpinner />
+            <Text style={styles.pendingText}>Posting...</Text>
+          </View>
+        )}
       </SafeAreaView>
     </View>
   );
 };
 
 export const ShortVideoPlayerCard = React.memo(ShortVideoPlayerCardComponent);
+
+/** Animated arc spinner used for the pending upload overlay */
+const PendingSpinner: React.FC = () => {
+  const rotation = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(rotation, {
+        toValue: 1,
+        duration: 900,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
+  const spin = rotation.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  return (
+    <Animated.View style={[pendingSpinnerStyles.ring, { transform: [{ rotate: spin }] }]} />
+  );
+};
+
+const pendingSpinnerStyles = StyleSheet.create({
+  ring: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 4,
+    borderColor: 'rgba(255,255,255,0.9)',
+    borderTopColor: 'transparent',
+    marginBottom: 12,
+  },
+});
 
 interface ActionBtnProps {
   icon: React.ReactNode;
@@ -402,6 +459,21 @@ const ActionBtn = ({ icon, count, label, onPress, noBackground }: ActionBtnProps
 };
 
 const styles = StyleSheet.create({
+  pendingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    zIndex: 50,
+  },
+  pendingText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700' as const,
+    letterSpacing: 0.5,
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowRadius: 4,
+  },
   container: {
     flex: 1,
     height: '100%', // Use 100% to fit exactly within the parent container
@@ -445,19 +517,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   authorName: { color: '#FFF', fontWeight: 'bold', fontSize: 16, textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 4 },
-  followButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.5)',
-    marginLeft: 2,
-  },
-  followButtonText: {
-    color: '#FFF',
-    fontSize: 13,
-    fontWeight: '600',
-  },
   caption: {
     color: '#FFF',
     fontSize: 15,

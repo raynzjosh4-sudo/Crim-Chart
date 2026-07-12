@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TouchableOpacity, Text } from 'react-native';
+import { RequireAuthWrapper } from '@/components/wrappers/RequireAuthWrapper';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring } from 'react-native-reanimated';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
@@ -44,12 +45,16 @@ export const LikeAction: React.FC<LikeActionProps> = ({
   };
 
   return (
-    <TouchableOpacity activeOpacity={1} style={styles.actionButton} onPress={handleLikePress}>
-      <Animated.View style={animatedStyle}>
-        <Heart size={24} color={isLiked ? theme.colors.error : theme.colors.text} fill={isLiked ? theme.colors.error : 'transparent'} />
-      </Animated.View>
-      <Text style={styles.actionText}>{likesCount}</Text>
-    </TouchableOpacity>
+    <RequireAuthWrapper>
+      {({ checkAuth }) => (
+        <TouchableOpacity activeOpacity={1} style={styles.actionButton} onPress={(e) => checkAuth(handleLikePress, e)}>
+          <Animated.View style={animatedStyle}>
+            <Heart size={24} color={isLiked ? theme.colors.error : theme.colors.text} fill={isLiked ? theme.colors.error : 'transparent'} />
+          </Animated.View>
+          <Text style={styles.actionText}>{likesCount}</Text>
+        </TouchableOpacity>
+      )}
+    </RequireAuthWrapper>
   );
 };
 

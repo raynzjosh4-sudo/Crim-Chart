@@ -54,6 +54,12 @@ export class NativeDB {
     }));
   }
 
+  static async deleteFromDiscoveryFeed(id: string) {
+    const sql = `DELETE FROM ${TABLES.DISCOVERY_FEED} WHERE id = ?`;
+    await dbService.execute(sql, [id]);
+  }
+
+
   static async saveBoxItems(boxId: string, items: any[]) {
     const db = dbService.database;
     try {

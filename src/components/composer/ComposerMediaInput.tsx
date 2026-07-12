@@ -21,6 +21,7 @@ export interface ComposerMediaInputProps {
   onRemoveAudio?: () => void;
   customThumbnail: string | null;
   setCustomThumbnail: (val: string | null) => void;
+  autoOpenLyrics?: boolean;
 }
 export const ComposerMediaInput: React.FC<ComposerMediaInputProps> = ({
   title,
@@ -32,7 +33,8 @@ export const ComposerMediaInput: React.FC<ComposerMediaInputProps> = ({
   selectedAudio,
   onRemoveAudio,
   customThumbnail,
-  setCustomThumbnail
+  setCustomThumbnail,
+  autoOpenLyrics
 }) => {
   const styles = useStyles(colors => ({
     diskContainer: {
@@ -97,6 +99,12 @@ export const ComposerMediaInput: React.FC<ComposerMediaInputProps> = ({
   const [isLyricsSheetOpen, setIsLyricsSheetOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
+
+  useEffect(() => {
+    if (autoOpenLyrics && !lyrics) {
+      setIsLyricsSheetOpen(true);
+    }
+  }, [autoOpenLyrics]);
 
   // Stop audio when the component unmounts (e.g. user navigates away)
   useEffect(() => {

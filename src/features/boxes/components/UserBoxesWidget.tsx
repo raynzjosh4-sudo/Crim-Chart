@@ -10,6 +10,8 @@ import { BoxCard, BoxModel } from './BoxCard';
 import { CreateBoxSheet, BoxCategory } from './CreateBoxSheet';
 import { CreateBoxPage } from '../pages/creation/CreateBoxPage';
 import { useDesktopBoxStore } from '../application/useDesktopBoxStore';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+import { NativeDB } from '@/core/db/NativeDB';
 
 interface UserBoxesWidgetProps {
   userId?: string;
@@ -20,6 +22,7 @@ const LIMIT = 10;
 
 export const UserBoxesWidget: React.FC<UserBoxesWidgetProps> = ({ userId, isCurrentUser }) => {
   const router = useRouter();
+  const { startLoading } = useGlobalProgress();
   const [isCreateSheetVisible, setCreateSheetVisible] = useState(false);
   const [selectedBoxType, setSelectedBoxType] = useState<BoxCategory | null>(null);
 
@@ -119,7 +122,7 @@ export const UserBoxesWidget: React.FC<UserBoxesWidgetProps> = ({ userId, isCurr
     }
   };
 
-  const handleBoxPress = (box: BoxModel) => {
+  const handleBoxPress = async (box: BoxModel) => {
     const isDesktop = Platform.OS === 'web' && width >= 1024; // Desktop Right pane is usually visible at >= 1024 in layout
 
     if (isDesktop) {
@@ -127,13 +130,18 @@ export const UserBoxesWidget: React.FC<UserBoxesWidgetProps> = ({ userId, isCurr
       return;
     }
 
-    switch (box.boxType) {
-      case 'music': router.push(`/music-box/${box.id}` as any); break;
-      case 'movie': router.push(`/movie-box/${box.id}` as any); break;
-      case 'store': router.push(`/store-box/${box.id}` as any); break;
-      case 'sports': router.push(`/sports-box/${box.id}` as any); break;
-      case 'voting': router.push(`/voting-box/${box.id}` as any); break;
-    }
+    startLoading();
+    // Use a small 50ms delay to allow the JS thread to process the startLoading state update
+    // so the global progress bar appears before the heavy navigation task blocks the thread.
+    setTimeout(() => {
+      switch (box.boxType) {
+        case 'music': router.push(`/music-box/${box.id}` as any); break;
+        case 'movie': router.push(`/movie-box/${box.id}` as any); break;
+        case 'store': router.push(`/store-box/${box.id}` as any); break;
+        case 'sports': router.push(`/sports-box/${box.id}` as any); break;
+        case 'voting': router.push(`/voting-box/${box.id}` as any); break;
+      }
+    }, 50);
   };
 
   if (!isCurrentUser && boxes.length === 0 && !isLoading) {

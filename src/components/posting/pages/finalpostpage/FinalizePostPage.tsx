@@ -46,8 +46,8 @@ export const FinalizePostPage: React.FC = () => {
   const [isAdvancedSettingsVisible, setIsAdvancedSettingsVisible] = useState(false);
   const [isPublic, setIsPublic] = useState(true);
   const [allowComments, setAllowComments] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [isPosting, setIsPosting] = useState(false);
   const [isShortClip, setIsShortClip] = useState(true);
 
   // If none of the new flags are set, but targetChannelId is present, it's a legacy manifesto
@@ -78,12 +78,10 @@ export const FinalizePostPage: React.FC = () => {
     router.push('/(tabs)');
   };
 
-  const handlePost = async () => {
-    console.log('[FinalizePostPage] Starting handlePost...');
-    console.log('[FinalizePostPage] Inputs:', { caption, targetChannelId, isChannelPost, isChannelStatus, isManifesto, shareToStatus, allowComments, isPublic, selectedChannelsLength: selectedChannels.length });
-
-    setIsPosting(true);
-    ChartToast.showInfo(null, { title: 'Uploading...', message: 'You can leave this page while we finish!' });
+  const handlePost = () => {
+    if (selectedMedia.length === 0 || isSubmitting) return;
+    setIsSubmitting(true);
+    console.log('[FinalizePostPage] Starting handlePost (fire-and-forget)...');
 
     // Determine the post type dynamically
     let primaryPostType = 'feed';
@@ -93,30 +91,44 @@ export const FinalizePostPage: React.FC = () => {
     if (isChannelMoment) primaryPostType = PostType.channel_moment;
     if (isGlobalStatus) primaryPostType = PostType.status;
 
-    console.log(`[FinalizePostPage] Step 1: Submitting main post as ${primaryPostType}...`);
-    const success = await createPost({
+    const postParams = {
       media: selectedMedia,
       caption,
-      channelId: targetChannelId, // Relevant for manifesto, channel post, channel status
+      channelId: targetChannelId,
       channelName,
       channelAvatarUrl,
       postType: primaryPostType,
-      shareToStatus: false, // We handle this explicitly below
+      shareToStatus: false,
       allowComments,
       isPublicFeed: isPublic,
       aspectRatio: selectedMedia.length > 0 ? selectedMedia[0].aspectRatio : undefined,
       isShortClip,
-    });
-    console.log('[FinalizePostPage] Main post success?', success);
-    if (!success) {
-      console.error('[FinalizePostPage] Post insertion failed! Reason:', usePostingStore.getState().errorMessage);
+    };
+
+    // ─── STEP 1: Navigate immediately — the pending post is already visible in the feed ───
+    if (draftId) {
+      useDraftStore.getState().deleteDraft(draftId);
     }
 
-    if (success) {
-      // 2. Reuse the existing status insertion wrapper logic if switch is on
+    if (targetChannelId && (isChannelPost || isChannelStatus || isChannelMoment || isManifesto)) {
+      router.dismissAll();
+      setTimeout(() => {
+        router.push({ pathname: '/channel/channelpage', params: { id: targetChannelId } } as any);
+      }, 80);
+    } else {
+      router.dismissAll();
+    }
+
+    // ─── STEP 2: Fire the real upload in the background (no await) ───
+    createPost(postParams).then(async (success) => {
+      if (!success) {
+        console.error('[FinalizePostPage] Background upload failed:', usePostingStore.getState().errorMessage);
+        return;
+      }
+
+      // Also share to status if the user toggled that switch
       if (shareToStatus && !isManifesto) {
-        console.log('[FinalizePostPage] Step 2: Submitting post to status because shareToStatus is ON...');
-        const statusSuccess = await createPost({
+        await createPost({
           media: selectedMedia,
           caption,
           postType: PostType.status,
@@ -125,41 +137,14 @@ export const FinalizePostPage: React.FC = () => {
           isPublicFeed: isPublic,
           isShortClip,
         });
-        console.log('[FinalizePostPage] Status post success?', statusSuccess);
-      } else {
-        console.log('[FinalizePostPage] Step 2 Skipped: shareToStatus is', shareToStatus);
       }
-
-      // 3. Defer channel posts logic as per the architecture plan
-      if (selectedChannels.length > 0) {
-        // TODO: In the future, we will call a hook from src/channel here 
-        // e.g., await broadcastToChannels(postId, selectedChannels);
-        console.log(`[FinalizePostPage] Step 3: Deferred broadcasting to channels:`, selectedChannels);
-      } else {
-        console.log(`[FinalizePostPage] Step 3 Skipped: No channels selected.`);
-      }
-
-      console.log('[FinalizePostPage] All tasks completed successfully, navigating.');
-      setIsPosting(false);
-      ChartToast.showSuccess(null, { title: 'Success', message: 'Post created successfully!' });
-
-      if (draftId) {
-        useDraftStore.getState().deleteDraft(draftId);
-      }
-
-      if (targetChannelId && (isChannelPost || isChannelStatus || isChannelMoment || isManifesto)) {
-        router.dismissAll();
-        setTimeout(() => {
-          router.push({ pathname: '/channel/channelpage', params: { id: targetChannelId } } as any);
-        }, 100);
-      } else {
-        router.dismissAll();
-      }
-    } else {
-      setIsPosting(false);
-      ChartToast.showError(null, { title: 'Error', message: 'Failed to create post' });
-    }
+    }).catch((e) => {
+      console.error('[FinalizePostPage] Unhandled upload error:', e);
+    }).finally(() => {
+      setIsSubmitting(false);
+    });
   };
+
 
   const getHeaderTitle = () => {
     if (isManifesto) return 'New Manifesto';
@@ -173,8 +158,6 @@ export const FinalizePostPage: React.FC = () => {
       <ChartAppBar
         title={getHeaderTitle()}
         onBack={() => router.back()}
-        isLoading={isPosting}
-        loadingProgress={0.5}
       />
 
       <View style={styles.body}>
@@ -233,8 +216,8 @@ export const FinalizePostPage: React.FC = () => {
 
         <FinalizeShareButton
           onTap={handlePost}
-          isLoading={isPosting}
-          statusText={isPosting ? 'UPLOADING... YOU CAN LEAVE' : 'SHARE'}
+          isLoading={false}
+          statusText="SHARE"
         />
       </View>
 

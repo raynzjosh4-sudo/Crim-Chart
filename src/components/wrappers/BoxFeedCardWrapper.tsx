@@ -13,8 +13,10 @@ interface BoxFeedCardWrapperProps {
 }
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 export const BoxFeedCardWrapper: React.FC<BoxFeedCardWrapperProps> = React.memo(({ boxId, prefetchedData, children }) => {
+  const { t } = useTranslation();
   const constructBoxData = (data: any) => {
     let ownerModel: CrimChartUserModel | null = null;
     if (data.owner) {
@@ -173,12 +175,12 @@ export const BoxFeedCardWrapper: React.FC<BoxFeedCardWrapperProps> = React.memo(
             return {
               id: item.id,
               post_id: item.post_id,
-              title: post.caption || metadata.title || metadata.name || 'Unknown Item',
-              artist: metadata.artist || metadata.creatorName || metadata.author || 'Unknown Artist',
+              title: post.caption || metadata.title || metadata.name || t('Unknown Item'),
+              artist: metadata.artist || metadata.creatorName || metadata.author || t('Unknown Artist'),
               thumbnailUrl: thumbUrl,
               likes: item.likes_count || 0,
               price: metadata.price || undefined, // For Store boxes
-              mediaUrl: metadata.mediaUrl || metadata.videoUrl || metadata.audioUrl || '',
+              mediaUrl: post.video_url || post.audio_url || metadata.mediaUrl || metadata.videoUrl || metadata.audioUrl || '',
             };
           });
           data.trendingTracks = mappedTrendingTracks;

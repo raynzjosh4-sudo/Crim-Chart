@@ -1,17 +1,14 @@
 import UserAvatar from '@/components/avatar/UserAvatar';
-import { FollowUserButton } from '@/components/FollowUserButton';
-import { BoxReactions } from '@/components/reactions/BoxReactions';
 import { DownloadButton } from '@/components/buttons/DownloadButton';
-import { useDelayedAutoPlay } from '@/features/auto_play/useDelayedAutoPlay';
+import { FollowUserButton } from '@/components/FollowUserButton';
+import { PostFooter } from '@/components/PostFooter/PostFooter';
 import { useUserProfile } from '@/features/auth/application/useUserProfile';
 import { InteractionType } from '@/features/boxes/application/useBoxInteractionTracker';
-import { CommentAction } from '@/features/feed/components/CommentAction';
-import { PostFooter } from '@/components/PostFooter/PostFooter';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { Download, Eye, MessageCircle, Play } from 'lucide-react-native';
-import { useEffect } from 'react';
+import { Volume2, VolumeX } from 'lucide-react-native';
+import React, { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export interface CommentPreview {
@@ -56,11 +53,17 @@ export interface MovieBoxDetailVideoTileProps {
   onInteraction?: (boxId: string, userId: string, type: InteractionType) => void;
 }
 
-const TileVideoPlayer = ({ videoUrl, isPlaying, style }: { videoUrl: string; isPlaying: boolean; style: any }) => {
+const TileVideoPlayer = ({ videoUrl, isPlaying, isMuted, style }: { videoUrl: string; isPlaying: boolean; isMuted: boolean; style: any }) => {
   const player = useVideoPlayer(isPlaying ? videoUrl : null, p => {
     p.loop = true;
-    p.muted = true;
+    p.muted = isMuted;
   });
+
+  useEffect(() => {
+    if (player) {
+      player.muted = isMuted;
+    }
+  }, [isMuted, player]);
 
   useEffect(() => {
     if (!player) return;
@@ -82,7 +85,7 @@ const TileVideoPlayer = ({ videoUrl, isPlaying, style }: { videoUrl: string; isP
 
 export const MovieBoxDetailVideoTile = ({ video, isPlaying, onVideoPress, onCommentPress, currentUserId, onInteraction }: MovieBoxDetailVideoTileProps) => {
   const router = useRouter();
-  const { shouldPlay } = useDelayedAutoPlay(!!isPlaying, 5000);
+  const [isMuted, setIsMuted] = React.useState(true);
   const profile = useUserProfile(video.addedBy?.id);
   const crownTitle = profile?.crownTitle || 'Added a video';
 
@@ -108,8 +111,8 @@ export const MovieBoxDetailVideoTile = ({ video, isPlaying, onVideoPress, onComm
           <View style={styles.headerLeft} />
         )}
 
-        <DownloadButton 
-          onPress={() => {}}
+        <DownloadButton
+          onPress={() => { }}
           style={styles.downloadBtn}
           color="rgba(255,255,255,0.8)"
           size={20}
@@ -117,13 +120,18 @@ export const MovieBoxDetailVideoTile = ({ video, isPlaying, onVideoPress, onComm
       </View>
 
       {/* Cinematic Video Header */}
-      <TouchableOpacity
-        style={[styles.thumbnailContainer, video.isShort && { aspectRatio: 4 / 5, borderRadius: 0 }]}
-        onPress={onVideoPress}
-        activeOpacity={0.8}
-      >
-        {shouldPlay && video.videoUrl ? (
-          <TileVideoPlayer videoUrl={video.videoUrl} isPlaying={shouldPlay} style={styles.videoThumbnail} />
+      <View style={[styles.thumbnailContainer, video.isShort && { aspectRatio: 4 / 5, borderRadius: 0 }]}>
+        {!!isPlaying && video.videoUrl ? (
+          <>
+            <TileVideoPlayer videoUrl={video.videoUrl} isPlaying={!!isPlaying} isMuted={isMuted} style={styles.videoThumbnail} />
+            <TouchableOpacity
+              style={styles.muteButton}
+              onPress={() => setIsMuted(!isMuted)}
+              activeOpacity={0.8}
+            >
+              {isMuted ? <VolumeX color="#FFF" size={20} /> : <Volume2 color="#FFF" size={20} />}
+            </TouchableOpacity>
+          </>
         ) : (
           <Image source={video.thumbnailUrl ? { uri: video.thumbnailUrl } : undefined} style={styles.videoThumbnail} contentFit="cover" />
         )}
@@ -131,12 +139,6 @@ export const MovieBoxDetailVideoTile = ({ video, isPlaying, onVideoPress, onComm
         <View style={styles.durationBadge}>
           <Text style={styles.durationText}>{video.duration}</Text>
         </View>
-
-        {!shouldPlay && (
-          <View style={styles.playOverlay}>
-            <Play size={24} color="#FFF" fill="#FFF" />
-          </View>
-        )}
 
         {/* Avatar of the original user if the track was linked from somewhere */}
         {video.linkedFrom && (
@@ -149,7 +151,7 @@ export const MovieBoxDetailVideoTile = ({ video, isPlaying, onVideoPress, onComm
             />
           </View>
         )}
-      </TouchableOpacity>
+      </View>
 
       <View style={styles.videoInfo}>
         <Text style={styles.videoTitle}>{video.title}</Text>
@@ -226,6 +228,16 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 30,
     backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  muteButton: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    padding: 6,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },

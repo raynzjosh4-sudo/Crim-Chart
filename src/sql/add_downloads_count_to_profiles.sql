@@ -1,0 +1,2 @@
+ALTER TABLE public.profiles
+ADD COLUMN IF NOT EXISTS downloads_count INTEGER DEFAULT 0;
