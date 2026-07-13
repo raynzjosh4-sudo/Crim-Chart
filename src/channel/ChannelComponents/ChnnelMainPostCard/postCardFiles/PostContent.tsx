@@ -10,7 +10,7 @@ interface PostContentProps {
 export const PostContent: React.FC<PostContentProps> = ({ content }) => {
   const styles = useStyles(themeStyles);
 
-  if (!content) return null;
+  if (!content || content.trim().length === 0) return null;
 
   return (
     <View style={styles.container}>

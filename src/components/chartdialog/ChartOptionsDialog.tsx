@@ -4,7 +4,9 @@ import { useTheme } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import { ChevronRight, RefreshCw, TriangleAlert, User } from 'lucide-react-native';
 import { useState } from 'react';
-import { Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { Alert, Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { OfflineStaleDataBanner, SlowConnectionBanner } from '@/components/offlineIndicators';
 interface ChartOptionsDialogProps {
   visible: boolean;
   onClose: () => void;
@@ -16,6 +18,9 @@ interface ChartOptionsDialogProps {
   onChartTap: () => void;
   onProfileTap: () => void;
   onSaveTap?: () => void;
+  crownTitle?: string;
+  targetUserId?: string;
+  onBlockUserTap?: (userId: string) => void;
 }
 export const ChartOptionsDialog: React.FC<ChartOptionsDialogProps> = ({
   visible,
@@ -27,7 +32,10 @@ export const ChartOptionsDialog: React.FC<ChartOptionsDialogProps> = ({
   themeColor,
   onChartTap,
   onProfileTap,
-  onSaveTap
+  onSaveTap,
+  crownTitle,
+  targetUserId,
+  onBlockUserTap
 }) => {
   const [showChannels, setShowChannels] = useState(false);
   const [selectedChannelIndex, setSelectedChannelIndex] = useState(-1);
@@ -38,6 +46,7 @@ export const ChartOptionsDialog: React.FC<ChartOptionsDialogProps> = ({
     width,
     height: screenHeight
   } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const isDesktop = Platform.OS === 'web' && width >= 768;
 
   const styles = useStyles(colors => ({
@@ -144,82 +153,59 @@ export const ChartOptionsDialog: React.FC<ChartOptionsDialogProps> = ({
       {onTap && <ChevronRight size={16} color="rgba(255, 255, 255, 0.3)" />}
     </TouchableOpacity>;
   };
-  return <Modal visible={visible} animationType={isDesktop ? "fade" : "slide"} transparent>
-    <View style={[styles.overlay, isDesktop && {
-      justifyContent: 'center',
-      alignItems: 'center'
-    }]}>
-      <TouchableOpacity style={styles.backdrop} onPress={onClose} activeOpacity={1} />
-      <View style={[styles.sheetContainer, {
-        backgroundColor: colors.background
-      }, isDesktop && {
-        width: 400,
-        borderRadius: 24,
-        paddingBottom: 16
+  return (
+    <Modal visible={visible} animationType={isDesktop ? "fade" : "slide"} transparent>
+      <View style={[styles.overlay, isDesktop && {
+        justifyContent: 'center',
+        alignItems: 'center'
       }]}>
-        <SafeAreaView>
-          <ScrollView style={{
-            maxHeight: screenHeight * 0.85
-          }}>
-            {!isDesktop && <View style={[styles.handle, {
-              backgroundColor: 'rgba(255, 255, 255, 0.2)'
-            }]} />}
-
-            <View style={styles.headerArea}>
-              <View style={styles.userRow}>
-                <AppAvatar size={32} imageUrl={userProfileImageUrl} showStatusRing showActiveDot={false} onImageTap={() => {
-                  onClose();
-                  onProfileTap();
-                }} />
-                <View style={styles.userInfo}>
-                  <Text style={[styles.username, {
-                    color: colors.text
-                  }]}>{username}</Text>
-                  <Text style={[styles.hisUserText, {
-                    color: colors.primary
-                  }]}>His User</Text>
+        <TouchableOpacity style={styles.backdrop} onPress={onClose} activeOpacity={1} />
+        <View style={[styles.sheetContainer, {
+          backgroundColor: colors.background
+        }, isDesktop && {
+          width: 400,
+          borderRadius: 24,
+          paddingBottom: 16
+        }]}>
+          <SafeAreaView>
+            <ScrollView style={{ maxHeight: screenHeight * 0.85 }} contentContainerStyle={{ paddingBottom: Platform.OS === 'android' ? Math.max(insets.bottom, 24) : 0 }}>
+              {!isDesktop && <View style={[styles.handle, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]} />}
+              <OfflineStaleDataBanner />
+              <SlowConnectionBanner />
+              <View style={styles.headerArea}>
+                <View style={styles.userRow}>
+                  <AppAvatar imageUrl={userProfileImageUrl} size={36} />
+                  <View style={styles.userInfo}>
+                    <Text style={[styles.username, { color: colors.text }]}>{username}</Text>
+                    {crownTitle && <Text style={[styles.hisUserText, { color: themeColor }]}>{crownTitle}</Text>}
+                  </View>
+                </View>
+                <View style={styles.contentRow}>
+                  <View style={{ width: 42 }} />
+                  <Image source={{ uri: statusImageUrl }} style={styles.statusThumbnail} contentFit="cover" />
+                  <View style={styles.expansionToggle}>
+                    <TouchableOpacity activeOpacity={1} style={[styles.toggleButton, { backgroundColor: showChannels ? 'rgba(255, 184, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)' }]} onPress={() => setShowChannels(!showChannels)}>
+                      <RefreshCw size={26} color={showChannels ? colors.primary : 'rgba(255, 255, 255, 0.6)'} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
-
-              <View style={styles.contentRow}>
-                <View style={{
-                  width: 42
-                }} />
-                <Image source={{
-                  uri: statusImageUrl
-                }} style={styles.statusThumbnail} contentFit="cover" />
-                <View style={styles.expansionToggle}>
-                  <TouchableOpacity activeOpacity={1} style={[styles.toggleButton, {
-                    backgroundColor: showChannels ? 'rgba(255, 184, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)'
-                  }]} onPress={() => setShowChannels(!showChannels)}>
-                    <RefreshCw size={26} color={showChannels ? colors.primary : 'rgba(255, 255, 255, 0.6)'} />
-                  </TouchableOpacity>
-                </View>
+              {showChannels && <View style={{ marginBottom: 8, padding: 16 }}>
+                {/* Channel selector */}
+              </View>}
+              <View style={styles.actionsContainer}>
+                <ActionButton title={`Block ${username}`} isDestructive onTap={() => { if (!targetUserId || !onBlockUserTap) return; onBlockUserTap(targetUserId); }} />
+                <ActionButton title="Report Post" isDestructive />
+                <ActionButton title={`Report ${username}`} isDestructive />
+                <ActionButton title="View Profile" onTap={onProfileTap} />
+                {onSaveTap && <ActionButton title="Save Status" onTap={onSaveTap} />}
+                <ActionButton title="Share Status" />
               </View>
-            </View>
-
-            {showChannels && <View style={{
-              marginBottom: 8,
-              padding: 16
-            }}>
-              {/* Channel selector – coming soon */}
-            </View>}
-
-            <View style={styles.actionsContainer}>
-              <ActionButton title={`Block ${username}`} isDestructive />
-              <ActionButton title="Report Post" isDestructive />
-              <ActionButton title={`Report ${username}`} isDestructive />
-              <ActionButton title="View Profile" onTap={onProfileTap} />
-              {onSaveTap && <ActionButton title="Save Status" onTap={onSaveTap} />}
-              <ActionButton title="Share Status" />
-            </View>
-
-            <View style={{
-              height: 12
-            }} />
-          </ScrollView>
-        </SafeAreaView>
+              <View style={{ height: 12 }} />
+            </ScrollView>
+          </SafeAreaView>
+        </View>
       </View>
-    </View>
-  </Modal>;
+    </Modal>
+  );
 };

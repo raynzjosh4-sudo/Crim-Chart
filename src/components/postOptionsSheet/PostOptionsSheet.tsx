@@ -1,4 +1,10 @@
-import React from 'react';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
+import { ThemeTokens } from '@/core/theme/themes';
+import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { useBlockUser } from '@/features/profile/hooks/useBlockUser';
+import { Flag, Link2, Share, UserX, X } from 'lucide-react-native';
 import {
   Modal,
   Platform,
@@ -10,34 +16,48 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Flag, Link2, Share, X } from 'lucide-react-native';
-import { useStyles } from '@/core/hooks/useStyles';
-import { useCurrentTheme } from '@/core/store/useThemeStore';
-import { ThemeTokens } from '@/core/theme/themes';
 
 interface PostOptionsSheetProps {
   postId: string;
+  authorId?: string | null;
+  authorName?: string | null;
+  authorAvatarUrl?: string | null;
   visible: boolean;
   onClose: () => void;
   anchorPosition?: { x: number; y: number };
 }
 
-export const PostOptionsSheet: React.FC<PostOptionsSheetProps> = ({ postId, visible, onClose, anchorPosition }) => {
+export const PostOptionsSheet: React.FC<PostOptionsSheetProps> = ({ postId, authorId, authorName, authorAvatarUrl, visible, onClose, anchorPosition }) => {
   const insets = useSafeAreaInsets();
   const styles = useStyles(themeStyles);
   const theme = useCurrentTheme();
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
+  const { blockUser } = useBlockUser();
+  const currentUser = useAuthStore(state => state.user);
+  const { startLoading, stopLoading } = useGlobalProgress();
+
+  const handleBlockUser = async () => {
+    if (!authorId) return;
+    startLoading();
+    // Simulate a brief delay for a premium UI feel (as per AGENTS.md rule)
+    await new Promise(res => setTimeout(res, 400));
+    const success = await blockUser(authorId, authorName ?? undefined, authorAvatarUrl ?? undefined);
+    stopLoading();
+    if (success) {
+      onClose();
+    }
+  };
 
   const getDesktopStyle = () => {
     if (!anchorPosition) return {};
-    
+
     let left = anchorPosition.x - 200;
     if (left + 250 > width) {
       left = width - 260;
     }
     if (left < 10) left = 10;
-    
+
     return {
       position: 'absolute' as const,
       top: anchorPosition.y + 10,
@@ -69,7 +89,7 @@ export const PostOptionsSheet: React.FC<PostOptionsSheetProps> = ({ postId, visi
         <TouchableWithoutFeedback onPress={onClose}>
           <View style={styles.backdrop} />
         </TouchableWithoutFeedback>
-        
+
         <View style={isDesktop ? getDesktopStyle() : [styles.container, { paddingBottom: Math.max(insets.bottom, 24) }]}>
           {!isDesktop && (
             <View style={styles.header}>
@@ -80,19 +100,28 @@ export const PostOptionsSheet: React.FC<PostOptionsSheetProps> = ({ postId, visi
               </TouchableOpacity>
             </View>
           )}
-          
+
           <View style={styles.optionsContainer}>
             <TouchableOpacity style={styles.optionRow} onPress={() => { /* TODO */ }}>
               <Share size={24} color={theme.colors.text} />
               <Text style={styles.optionText}>Share via...</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.optionRow} onPress={() => { /* TODO */ }}>
+
+            <TouchableOpacity style={styles.optionRow} onPress={() => { /* TODO */ }} activeOpacity={0.8}>
               <Link2 size={24} color={theme.colors.text} />
               <Text style={styles.optionText}>Copy Link</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.optionRow} onPress={() => { /* TODO */ }}>
+
+            {authorId && currentUser?.id !== authorId && (
+              <TouchableOpacity style={styles.optionRow} onPress={handleBlockUser} activeOpacity={0.8}>
+                <UserX size={24} color={theme.colors.error} />
+                <Text style={[styles.optionText, { color: theme.colors.error }]}>
+                  Block {authorName || 'User'}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity style={styles.optionRow} onPress={() => { /* TODO */ }} activeOpacity={0.8}>
               <Flag size={24} color={theme.colors.error} />
               <Text style={[styles.optionText, { color: theme.colors.error }]}>Report Post</Text>
             </TouchableOpacity>

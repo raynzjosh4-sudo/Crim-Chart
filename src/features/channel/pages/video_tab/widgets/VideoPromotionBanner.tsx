@@ -2,7 +2,7 @@ import { useStyles } from "@/core/hooks/useStyles";
 import { StatusGroup, StatusViewer } from '@/channel/pages/widgets2/status/StatusViewer';
 import { supabase } from '@/core/supabase/supabaseConfig';
 import { colors } from '@/core/theme/colors';
-import { MomentData } from '@/data/mockVideoData';
+
 import { Plus } from 'lucide-react-native';
 import React, { useRef } from 'react';
 import { Animated, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -15,7 +15,7 @@ interface VideoPromotionBannerProps {
   channelName?: string;
   channelTitle?: string;
   onPostMoment: () => void;
-  moments?: MomentData[];
+  moments?: any[];
 }
 export const VideoPromotionBanner = ({
   channelName,
@@ -129,6 +129,7 @@ export const VideoPromotionBanner = ({
     avatarUrl: m.authorAvatarUrl || 'https://i.pravatar.cc/150',
     media: [{
       id: m.id,
+      authorId: (m as any).authorId || (m as any).channel_id || m.id,
       url: m.mediaUrl,
       type: 'image',
       caption: m.caption
@@ -204,7 +205,7 @@ export const VideoPromotionBanner = ({
           setInitialViewerIndex(actualIndex !== -1 ? actualIndex : 0);
           setViewerVisible(true);
         }}>
-                  <PromotionBannerCard moment={item as MomentData} />
+                  <PromotionBannerCard moment={item as any} />
                 </TouchableOpacity>
               </Animated.View>;
     }} />

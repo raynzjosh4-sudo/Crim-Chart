@@ -1,16 +1,18 @@
-import React, { useCallback, useState, useRef, useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, Platform } from 'react-native';
-import BottomSheet, { BottomSheetBackdrop, BottomSheetFlatList } from '@gorhom/bottom-sheet';
-import { GestureHandlerRootView as _GestureHandlerRootView } from 'react-native-gesture-handler';
-
-const GestureHandlerRootView = _GestureHandlerRootView as any;
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LocalMusicImages } from '@/assets_musicImages';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+import { OfflineStaleDataBanner, SlowConnectionBanner } from '@/components/offlineIndicators';
 import { useStyles } from '@/core/hooks/useStyles';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
+import BottomSheet, { BottomSheetBackdrop, BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { Upload, X, Search } from 'lucide-react-native';
-import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
-import { LocalMusicImages } from '@/assets_musicImages';
+import { Search, Upload, X } from 'lucide-react-native';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { GestureHandlerRootView as _GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const GestureHandlerRootView = _GestureHandlerRootView as any;
 
 export interface CoverArtSelectorSheetRef {
   present: (media: any) => void;
@@ -33,7 +35,8 @@ export const CoverArtSelectorSheet = React.forwardRef(({ onSelectArtwork }: Cove
   const [visible, setVisible] = useState(false);
   const insets = useSafeAreaInsets();
   const { startLoading, stopLoading } = useGlobalProgress();
-  
+  const theme = useCurrentTheme();
+
   const [currentMedia, setCurrentMedia] = useState<any>(null);
   const [artworks, setArtworks] = useState<ArtworkResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -42,7 +45,7 @@ export const CoverArtSelectorSheet = React.forwardRef(({ onSelectArtwork }: Cove
   const snapPoints = useMemo(() => ['85%', '100%'], []);
   const styles = useStyles((colors, scale) => ({
     sheetBackground: {
-      backgroundColor: colors.surface,
+      backgroundColor: colors.background,
     },
     header: {
       flexDirection: 'row',
@@ -73,7 +76,7 @@ export const CoverArtSelectorSheet = React.forwardRef(({ onSelectArtwork }: Cove
       margin: 8 * scale,
       borderRadius: 12 * scale,
       overflow: 'hidden',
-      backgroundColor: 'rgba(255,255,255,0.05)',
+      backgroundColor: colors.text + '0D', // ~5% opacity
     },
     image: {
       width: '100%',
@@ -89,7 +92,7 @@ export const CoverArtSelectorSheet = React.forwardRef(({ onSelectArtwork }: Cove
       borderStyle: 'dashed',
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: 'rgba(255,255,255,0.02)',
+      backgroundColor: colors.text + '05', // ~2% opacity
     },
     uploadText: {
       color: colors.primary,
@@ -106,7 +109,7 @@ export const CoverArtSelectorSheet = React.forwardRef(({ onSelectArtwork }: Cove
     queryBadge: {
       paddingHorizontal: 12 * scale,
       paddingVertical: 6 * scale,
-      backgroundColor: 'rgba(255,255,255,0.1)',
+      backgroundColor: colors.text + '1A', // ~10% opacity
       borderRadius: 16 * scale,
     },
     queryText: {
@@ -124,38 +127,38 @@ export const CoverArtSelectorSheet = React.forwardRef(({ onSelectArtwork }: Cove
   const parseFilename = (filename: string): string[] => {
     let clean = filename.replace(/\.(mp3|m4a|wav|ogg|flac|aac)$/i, '');
     const queries = new Set<string>();
-    queries.add(clean.replace(/[-_]/g, ' ').trim()); 
-    
+    queries.add(clean.replace(/[-_]/g, ' ').trim());
+
     const parts = clean.split(/[-_]/);
     if (parts.length >= 2) {
-      queries.add(parts[0].trim()); 
-      queries.add(parts[1].trim()); 
+      queries.add(parts[0].trim());
+      queries.add(parts[1].trim());
     }
-    
+
     return Array.from(queries).filter(q => q.length > 2 && !q.toLowerCase().includes('unknown'));
   };
 
   const fetchiTunesArt = async (queries: string[]) => {
     setIsSearching(true);
     let results: ArtworkResult[] = [];
-    
+
     try {
       for (const query of queries) {
         if (!query) continue;
         const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=5`);
         const data = await response.json();
-        
+
         if (data.results) {
           const newArt = data.results
             .filter((item: any) => item.artworkUrl100)
             .map((item: any) => ({
               id: `itunes-${item.trackId}`,
-              url: item.artworkUrl100.replace('100x100bb', '600x600bb'), 
+              url: item.artworkUrl100.replace('100x100bb', '600x600bb'),
               source: 'itunes',
               title: item.trackName,
               artist: item.artistName
             }));
-            
+
           newArt.forEach((art: ArtworkResult) => {
             if (!results.some(r => r.id === art.id || r.url === art.url)) {
               results.push(art);
@@ -172,19 +175,19 @@ export const CoverArtSelectorSheet = React.forwardRef(({ onSelectArtwork }: Cove
   };
 
   const handlePresent = useCallback(async (media: any) => {
-    startLoading(); 
+    startLoading();
     setCurrentMedia(media);
     setArtworks([]);
-    
+
     const queries = parseFilename(media.name || 'Unknown Audio');
     setSearchQueries(queries);
-    
+
     // Enforce a minimum 400ms delay for premium UI transition
     const fetchPromise = fetchiTunesArt(queries);
     const delayPromise = new Promise(resolve => setTimeout(resolve, 400));
-    
+
     await Promise.all([fetchPromise, delayPromise]);
-    
+
     setVisible(true);
     stopLoading();
   }, [startLoading, stopLoading]);
@@ -208,7 +211,7 @@ export const CoverArtSelectorSheet = React.forwardRef(({ onSelectArtwork }: Cove
         await new Promise(r => setTimeout(r, 300));
         stopLoading();
         setVisible(false);
-        
+
         // If uploading manually, at least use the cleanest parsed filename
         const updatedMedia = { ...currentMedia };
         if (searchQueries.length > 0) {
@@ -226,14 +229,18 @@ export const CoverArtSelectorSheet = React.forwardRef(({ onSelectArtwork }: Cove
     await new Promise(r => setTimeout(r, 300));
     stopLoading();
     setVisible(false);
-    
+
     // Inject the official iTunes title and artist!
     const updatedMedia = { ...currentMedia };
     if (item.source === 'itunes') {
       if (item.title) updatedMedia.name = item.title;
       if (item.artist) updatedMedia.artist = item.artist;
+    } else {
+      if (searchQueries.length > 0) {
+        updatedMedia.name = searchQueries[0];
+      }
     }
-    
+
     onSelectArtwork(updatedMedia, item.url);
   };
 
@@ -254,7 +261,7 @@ export const CoverArtSelectorSheet = React.forwardRef(({ onSelectArtwork }: Cove
             <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} onPress={handleClose} />
           )}
           backgroundStyle={styles.sheetBackground}
-          handleIndicatorStyle={{ backgroundColor: 'rgba(255,255,255,0.3)' }}
+          handleIndicatorStyle={{ backgroundColor: theme.colors.text + '50' }}
           topInset={insets.top}
         >
           <View style={styles.header}>
@@ -266,6 +273,9 @@ export const CoverArtSelectorSheet = React.forwardRef(({ onSelectArtwork }: Cove
               <X color={styles.title.color} size={24} />
             </TouchableOpacity>
           </View>
+
+          <OfflineStaleDataBanner />
+          <SlowConnectionBanner />
 
           {searchQueries.length > 0 && (
             <View style={styles.queriesContainer}>
@@ -280,13 +290,13 @@ export const CoverArtSelectorSheet = React.forwardRef(({ onSelectArtwork }: Cove
 
           {isSearching && artworks.length === 0 ? (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-              <ActivityIndicator size="large" color="#FACD11" />
+              <ActivityIndicator size="large" color={theme.colors.primary} />
               <Text style={{ color: styles.title.color, marginTop: 16, opacity: 0.7 }}>Searching artwork...</Text>
             </View>
           ) : (
             <BottomSheetFlatList
               data={[
-                { id: 'upload-btn', url: '', source: 'upload' as const }, 
+                { id: 'upload-btn', url: '', source: 'upload' as const },
                 ...artworks,
                 ...LocalMusicImages.map((imgResource, idx) => ({ id: `local-${idx}`, url: imgResource, source: 'local' as const }))
               ]}
@@ -297,14 +307,14 @@ export const CoverArtSelectorSheet = React.forwardRef(({ onSelectArtwork }: Cove
                 if (item.id === 'upload-btn') {
                   return (
                     <TouchableOpacity style={styles.uploadButton} onPress={handlePickImage} activeOpacity={0.8}>
-                      <Upload color="#FACD11" size={32} />
+                      <Upload color={theme.colors.primary} size={32} />
                       <Text style={styles.uploadText}>Upload Image</Text>
                     </TouchableOpacity>
                   );
                 }
                 return (
-                  <TouchableOpacity 
-                    style={styles.imageContainer} 
+                  <TouchableOpacity
+                    style={styles.imageContainer}
                     activeOpacity={0.8}
                     onPress={() => handleSelectArt(item)}
                   >

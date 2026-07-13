@@ -20,6 +20,7 @@ export const TABLES = {
   CHANNEL_STATUSES: 'channel_statuses',
   MUSIC_FEED: 'music_feed',
   DRAFTS: 'drafts',
+  BLOCKED_USERS: 'blocked_users',
 };
 
 export const SCHEMA = `
@@ -44,6 +45,15 @@ export const SCHEMA = `
     text TEXT,
     media TEXT,
     post_type TEXT,
+    created_at TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS ${TABLES.BLOCKED_USERS} (
+    id TEXT PRIMARY KEY,
+    blocker_id TEXT NOT NULL,
+    blocked_id TEXT NOT NULL,
+    blocked_username TEXT,
+    blocked_avatar_url TEXT,
     created_at TEXT
   );
 

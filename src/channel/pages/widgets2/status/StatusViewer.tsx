@@ -1,9 +1,10 @@
 import AppAvatar from '@/components/avatar/AppAvatar';
-import { useStyles } from '@/core/hooks/useStyles';
 import { GlassShimmer } from '@/components/shimmers/statusViewerShimmer/GlassShimmer';
+import { useStyles } from '@/core/hooks/useStyles';
 import { saveMediaToDevice } from '@/core/utils/mediaDownload';
 import { useMediaViewTracker } from '@/hooks/useMediaViewTracker';
 import { Image as ExpoImage } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { ChevronLeft, ChevronRight, MoreHorizontal, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
@@ -11,7 +12,6 @@ import { Dimensions, Modal, Platform, StatusBar, StyleSheet, Text, TouchableOpac
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { AudioStatusOverlay } from './AudioStatusOverlay';
 import { StatusProgressBar } from './StatusProgressBar';
 
@@ -52,7 +52,9 @@ const StatusVideo = ({ url, isPaused, onLoad, isPlaying, contentFit = 'cover' }:
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+import { BlockUserDialog } from '@/components/chartdialog/BlockUserDialog';
 import { ChartOptionsDialog } from '@/components/chartdialog/ChartOptionsDialog';
+import { useBlockUser } from '@/features/profile/hooks/useBlockUser';
 
 // Extended type to support multiple media items
 export type MediaItem = {
@@ -100,6 +102,23 @@ export const StatusViewer: React.FC<StatusViewerProps> = ({
   const [isMediaLoaded, setIsMediaLoaded] = useState(false);
   const [mediaDuration, setMediaDuration] = useState(5000);
 
+  const [pendingBlockUserId, setPendingBlockUserId] = useState<string | null>(null);
+  const { blockUser } = useBlockUser();
+
+  const executeBlockUser = async () => {
+    if (pendingBlockUserId) {
+      const success = await blockUser(
+        pendingBlockUserId,
+        statusGroups[groupIndex]?.channelName,
+        statusGroups[groupIndex]?.avatarUrl
+      );
+      if (success) {
+        setPendingBlockUserId(null);
+        onClose(); // Close the viewer since the user is blocked
+      }
+    }
+  };
+
   const styles = useStyles(colors => ({
     overlay: {
       flex: 1,
@@ -135,6 +154,17 @@ export const StatusViewer: React.FC<StatusViewerProps> = ({
       backgroundColor: colors.surface,
       justifyContent: 'center',
       alignItems: 'center',
+    },
+    desktopActionButton: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.1)',
+      cursor: 'pointer',
     },
     container: {
       flex: 1,
@@ -327,178 +357,206 @@ export const StatusViewer: React.FC<StatusViewerProps> = ({
       <View style={[styles.overlay, isDesktop && styles.overlayDesktop]}>
         {isDesktop && <TouchableWithoutFeedback onPress={onClose}><View style={styles.backdrop} /></TouchableWithoutFeedback>}
 
-        {/* @ts-ignore - React 19 typing conflict with RNGH */}
-        <GestureHandlerRootView style={[{ flex: 1, backgroundColor: 'transparent', width: '100%' }, isDesktop && { display: 'flex', width: viewerWidth, height: viewerHeight, borderRadius: 24, overflow: 'hidden' }]}>
-          <GestureDetector gesture={panGesture}>
-            <Animated.View style={[styles.container, animatedStyle, isDesktop && { borderRadius: 24, overflow: 'hidden' }]}>
-              <View style={[styles.content, isDesktop && { borderRadius: 24 }]}>
+        <View style={isDesktop ? { flexDirection: 'row', alignItems: 'flex-start' } : { flex: 1, width: '100%' }}>
+          {/* @ts-ignore - React 19 typing conflict with RNGH */}
+          <GestureHandlerRootView style={[!isDesktop && { flex: 1, backgroundColor: 'transparent', width: '100%' }, isDesktop && { display: 'flex', width: viewerWidth, height: viewerHeight, borderRadius: 24, overflow: 'hidden' }]}>
+            {(() => {
+              const innerContent = (
+                <Animated.View style={[styles.container, animatedStyle, isDesktop && { borderRadius: 24, overflow: 'hidden' }]}>
+                  <View style={[styles.content, isDesktop && { borderRadius: 24 }]}>
 
-                {/* Media Layer */}
-                <TouchableWithoutFeedback
-                  onPress={handlePress}
-                  onPressIn={() => setIsPaused(true)}
-                  onPressOut={() => setIsPaused(false)}
-                >
-                  <View style={StyleSheet.absoluteFillObject}>
-                    {isLoadingData && statusGroups.length === 0 ? (
-                      <GlassShimmer skeletonUser={skeletonUser} />
-                    ) : currentMedia?.type === 'image' ? (
-                      <>
-                        <ExpoImage
-                          source={{ uri: currentMedia.url }}
-                          style={StyleSheet.absoluteFillObject}
-                          contentFit="cover"
-                          blurRadius={40}
-                        />
-                        <ExpoImage
-                          source={{ uri: currentMedia.url }}
-                          style={StyleSheet.absoluteFillObject}
-                          contentFit="contain"
-                          onLoadStart={() => setIsMediaLoaded(false)}
-                          onLoad={() => setIsMediaLoaded(true)}
-                        />
-                      </>
-                    ) : currentMedia?.type === 'video' ? (
-                      <>
-                        {/* For audio statuses, keep the blurred thumbnail background persistent */}
-                        {/* On desktop, video is contained, so we also show the blurred background */}
-                        {(!isMediaLoaded || currentMedia.isAudio || isDesktop) && currentMedia.thumbnail && (
+                    {/* Media Layer */}
+                    <TouchableWithoutFeedback
+                      onPress={handlePress}
+                      onPressIn={() => setIsPaused(true)}
+                      onPressOut={() => setIsPaused(false)}
+                    >
+                      <View style={StyleSheet.absoluteFillObject}>
+                        {isLoadingData && statusGroups.length === 0 ? (
+                          <GlassShimmer skeletonUser={skeletonUser} />
+                        ) : currentMedia?.type === 'image' ? (
+                          <>
+                            <ExpoImage
+                              source={{ uri: currentMedia.url }}
+                              style={StyleSheet.absoluteFillObject}
+                              contentFit="cover"
+                              blurRadius={40}
+                            />
+                            <ExpoImage
+                              source={{ uri: currentMedia.url }}
+                              style={StyleSheet.absoluteFillObject}
+                              contentFit="contain"
+                              onLoadStart={() => setIsMediaLoaded(false)}
+                              onLoad={() => setIsMediaLoaded(true)}
+                            />
+                          </>
+                        ) : currentMedia?.type === 'video' ? (
+                          <>
+                            {/* For audio statuses, keep the blurred thumbnail background persistent */}
+                            {/* On desktop, video is contained, so we also show the blurred background */}
+                            {(!isMediaLoaded || currentMedia.isAudio || isDesktop) && currentMedia.thumbnail && (
+                              <ExpoImage
+                                source={{ uri: currentMedia.thumbnail }}
+                                style={StyleSheet.absoluteFillObject}
+                                contentFit="cover"
+                                blurRadius={currentMedia.isAudio ? 20 : 40}
+                              />
+                            )}
+
+                            {/* The video player will play both video and audio. For audio, it will be invisible. */}
+                            <View style={currentMedia.isAudio ? { width: 1, height: 1, opacity: 0, position: 'absolute' } : [StyleSheet.absoluteFillObject, { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }]}>
+                              <StatusVideo
+                                url={currentMedia.url}
+                                isPaused={isPaused || showOptions}
+                                isPlaying={true}
+                                contentFit={isDesktop ? 'contain' : 'cover'}
+                                onLoad={(dur) => {
+                                  if (dur && !isNaN(dur)) setMediaDuration(dur);
+                                  setIsMediaLoaded(true);
+                                }}
+                              />
+                            </View>
+
+                            {/* Render Audio Widget on top if it is an audio status */}
+                            {currentMedia.isAudio && (
+                              <AudioStatusOverlay
+                                title={currentMedia.title}
+                                artist={currentMedia.artist}
+                                lyrics={currentMedia.lyrics}
+                                thumbnail={currentMedia.thumbnail}
+                              />
+                            )}
+                          </>
+                        ) : null}
+
+                        {/* Prefetch Next Media */}
+                        {nextMedia?.type === 'image' && (
                           <ExpoImage
-                            source={{ uri: currentMedia.thumbnail }}
-                            style={StyleSheet.absoluteFillObject}
-                            contentFit="cover"
-                            blurRadius={currentMedia.isAudio ? 20 : 40}
+                            source={{ uri: nextMedia.url }}
+                            style={{ width: 1, height: 1, opacity: 0, position: 'absolute' }}
+                            contentFit="contain"
                           />
                         )}
-
-                        {/* The video player will play both video and audio. For audio, it will be invisible. */}
-                        <View style={currentMedia.isAudio ? { width: 1, height: 1, opacity: 0, position: 'absolute' } : [StyleSheet.absoluteFillObject, { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }]}>
-                          <StatusVideo
-                            url={currentMedia.url}
-                            isPaused={isPaused || showOptions}
-                            isPlaying={true}
-                            contentFit={isDesktop ? 'contain' : 'cover'}
-                            onLoad={(dur) => {
-                              if (dur && !isNaN(dur)) setMediaDuration(dur);
-                              setIsMediaLoaded(true);
-                            }}
-                          />
-                        </View>
-
-                        {/* Render Audio Widget on top if it is an audio status */}
-                        {currentMedia.isAudio && (
-                          <AudioStatusOverlay
-                            title={currentMedia.title}
-                            artist={currentMedia.artist}
-                            lyrics={currentMedia.lyrics}
-                            thumbnail={currentMedia.thumbnail}
-                          />
+                        {nextMedia?.type === 'video' && (
+                          <View style={{ width: 1, height: 1, opacity: 0, position: 'absolute' }}>
+                            <StatusVideo
+                              url={nextMedia.url}
+                              isPaused={true}
+                              isPlaying={false}
+                              onLoad={() => { }}
+                            />
+                          </View>
                         )}
-                      </>
-                    ) : null}
+                      </View>
+                    </TouchableWithoutFeedback>
 
-                    {/* Prefetch Next Media */}
-                    {nextMedia?.type === 'image' && (
-                      <ExpoImage
-                        source={{ uri: nextMedia.url }}
-                        style={{ width: 1, height: 1, opacity: 0, position: 'absolute' }}
-                        contentFit="contain"
+                    {/* Gradient Overlay for Header */}
+                    {(!isLoadingData || statusGroups.length > 0) && (
+                      <LinearGradient
+                        colors={['rgba(0,0,0,0.7)', 'transparent']}
+                        style={styles.topGradient}
                       />
                     )}
-                    {nextMedia?.type === 'video' && (
-                      <View style={{ width: 1, height: 1, opacity: 0, position: 'absolute' }}>
-                        <StatusVideo
-                          url={nextMedia.url}
-                          isPaused={true}
-                          isPlaying={false}
-                          onLoad={() => { }}
-                        />
+
+                    {/* UI Layer */}
+                    {(!isLoadingData || statusGroups.length > 0) && (
+                      <View style={[styles.safeArea, { paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || insets.top) + 16 : Math.max(insets.top, 16) }]}>
+                        {currentGroup && (
+                          <>
+                            <StatusProgressBar
+                              count={currentGroup.media.length}
+                              currentIndex={mediaIndex}
+                              duration={mediaDuration}
+                              isPaused={isPaused || showOptions || !!pendingBlockUserId || !isMediaLoaded}
+                              onComplete={goNext}
+                            />
+
+                            <View style={styles.header}>
+                              <AppAvatar imageUrl={currentGroup.avatarUrl} size={40} />
+                              <View style={styles.headerTextContainer}>
+                                <Text style={styles.username}>{currentGroup.channelName}</Text>
+                                <Text style={styles.counter}>{`${mediaIndex + 1} of ${currentGroup.media.length}`}</Text>
+                              </View>
+                              {!isDesktop && (
+                                <>
+                                  <TouchableWithoutFeedback onPress={() => setShowOptions(true)}>
+                                    <View style={styles.iconButton}>
+                                      <MoreHorizontal color={styles.username.color as string} size={24} />
+                                    </View>
+                                  </TouchableWithoutFeedback>
+                                  <TouchableWithoutFeedback onPress={onClose}>
+                                    <View style={styles.iconButton}>
+                                      <X color={styles.username.color as string} size={24} />
+                                    </View>
+                                  </TouchableWithoutFeedback>
+                                </>
+                              )}
+                            </View>
+                          </>
+                        )}
                       </View>
                     )}
-                  </View>
-                </TouchableWithoutFeedback>
 
-                {/* Gradient Overlay for Header */}
-                {(!isLoadingData || statusGroups.length > 0) && (
-                  <LinearGradient
-                    colors={['rgba(0,0,0,0.7)', 'transparent']}
-                    style={styles.topGradient}
-                  />
-                )}
+                    {/* Caption Layer */}
+                    {!!currentMedia?.caption && (
+                      <LinearGradient
+                        colors={['transparent', 'rgba(0,0,0,0.8)']}
+                        style={styles.captionContainer}
+                      >
+                        <Text style={styles.captionText}>{currentMedia.caption}</Text>
+                      </LinearGradient>
+                    )}
 
-                {/* UI Layer */}
-                {(!isLoadingData || statusGroups.length > 0) && (
-                  <View style={[styles.safeArea, { paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || insets.top) + 16 : Math.max(insets.top, 16) }]}>
-                    {currentGroup && (
+                    {/* Navigation Arrows */}
+                    {isDesktop && (
                       <>
-                        <StatusProgressBar
-                          count={currentGroup.media.length}
-                          currentIndex={mediaIndex}
-                          duration={mediaDuration}
-                          isPaused={isPaused || showOptions || !isMediaLoaded}
-                          onComplete={goNext}
-                        />
-
-                        <View style={styles.header}>
-                          <AppAvatar imageUrl={currentGroup.avatarUrl} size={40} />
-                          <View style={styles.headerTextContainer}>
-                            <Text style={styles.username}>{currentGroup.channelName}</Text>
-                            <Text style={styles.counter}>{`${mediaIndex + 1} of ${currentGroup.media.length}`}</Text>
-                          </View>
-                          <TouchableWithoutFeedback onPress={() => setShowOptions(true)}>
-                            <View style={styles.iconButton}>
-                              <MoreHorizontal color={styles.username.color as string} size={24} />
+                        {(mediaIndex > 0 || groupIndex > 0) && (
+                          <TouchableWithoutFeedback onPress={goBack}>
+                            <View style={styles.leftArrow}>
+                              <View style={styles.arrowCircle}>
+                                <ChevronLeft color={styles.username.color as string} size={32} />
+                              </View>
                             </View>
                           </TouchableWithoutFeedback>
-                          <TouchableWithoutFeedback onPress={onClose}>
-                            <View style={styles.iconButton}>
-                              <X color={styles.username.color as string} size={24} />
+                        )}
+                        {(mediaIndex < currentGroup?.media?.length - 1 || groupIndex < statusGroups.length - 1) && (
+                          <TouchableWithoutFeedback onPress={goNext}>
+                            <View style={styles.rightArrow}>
+                              <View style={styles.arrowCircle}>
+                                <ChevronRight color={styles.username.color as string} size={32} />
+                              </View>
                             </View>
                           </TouchableWithoutFeedback>
-                        </View>
+                        )}
                       </>
                     )}
+
                   </View>
-                )}
+                </Animated.View>
+              );
 
-                {/* Caption Layer */}
-                {!!currentMedia?.caption && (
-                  <LinearGradient
-                    colors={['transparent', 'rgba(0,0,0,0.8)']}
-                    style={styles.captionContainer}
-                  >
-                    <Text style={styles.captionText}>{currentMedia.caption}</Text>
-                  </LinearGradient>
-                )}
+              if (isDesktop) {
+                return innerContent;
+              }
+              return (
+                <GestureDetector gesture={panGesture}>
+                  {innerContent}
+                </GestureDetector>
+              );
+            })()}
+          </GestureHandlerRootView>
 
-                {/* Navigation Arrows */}
-                {isDesktop && (
-                  <>
-                    {(mediaIndex > 0 || groupIndex > 0) && (
-                      <TouchableWithoutFeedback onPress={goBack}>
-                        <View style={styles.leftArrow}>
-                          <View style={styles.arrowCircle}>
-                            <ChevronLeft color={styles.username.color as string} size={32} />
-                          </View>
-                        </View>
-                      </TouchableWithoutFeedback>
-                    )}
-                    {(mediaIndex < currentGroup?.media?.length - 1 || groupIndex < statusGroups.length - 1) && (
-                      <TouchableWithoutFeedback onPress={goNext}>
-                        <View style={styles.rightArrow}>
-                          <View style={styles.arrowCircle}>
-                            <ChevronRight color={styles.username.color as string} size={32} />
-                          </View>
-                        </View>
-                      </TouchableWithoutFeedback>
-                    )}
-                  </>
-                )}
-
-              </View>
-            </Animated.View>
-          </GestureDetector>
-        </GestureHandlerRootView>
+          {isDesktop && (
+            <View style={{ marginLeft: 24, marginTop: 16 }}>
+              <TouchableOpacity style={styles.desktopActionButton} onPress={() => setShowOptions(true)} activeOpacity={0.7}>
+                <MoreHorizontal color="#FFF" size={24} />
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.desktopActionButton, { marginTop: 16 }]} onPress={onClose} activeOpacity={0.7}>
+                <X color="#FFF" size={24} />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
 
         {currentGroup && (
           <ChartOptionsDialog
@@ -515,8 +573,20 @@ export const StatusViewer: React.FC<StatusViewerProps> = ({
               saveMediaToDevice(currentMedia.url, currentMedia.isAudio);
               setShowOptions(false);
             } : undefined}
+            targetUserId={currentGroup.id}
+            onBlockUserTap={(userId) => {
+              setShowOptions(false);
+              setPendingBlockUserId(userId);
+            }}
           />
         )}
+
+        <BlockUserDialog
+          visible={!!pendingBlockUserId}
+          username={currentGroup?.channelName || ''}
+          onCancel={() => setPendingBlockUserId(null)}
+          onConfirm={executeBlockUser}
+        />
       </View>
     </Modal>
   );

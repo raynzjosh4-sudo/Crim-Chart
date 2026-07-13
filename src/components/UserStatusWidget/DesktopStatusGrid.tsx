@@ -71,6 +71,7 @@ export const DesktopStatusGrid = ({ isExpanded, targetUserId }: DesktopStatusGri
       avatarUrl: group.user.profileImageUrl || '',
       media: group.statuses.map((s: any) => ({
         id: s.id,
+        authorId: s.authorId || s.author_id || group.user.id || group.id,
         url: s.videoUrl || s.audioUrl || s.imageUrls?.[0] || '',
         type: s.isVideo ? 'video' : s.isAudio ? 'video' : 'image', // Treat audio as video to let expo-video play it
         isAudio: s.isAudio,

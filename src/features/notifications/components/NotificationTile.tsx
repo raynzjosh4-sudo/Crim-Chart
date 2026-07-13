@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { AppNotification } from '../data/NotificationRepository';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
 import UserAvatar from '@/components/avatar/UserAvatar';
+import { Heart, MessageCircle, UserPlus, Users, AtSign, Tag, Bell } from 'lucide-react-native';
 
 interface NotificationTileProps {
   notification: AppNotification;
@@ -19,26 +20,31 @@ export const NotificationTile = ({ notification, onPress }: NotificationTileProp
   const actor = notification.actor;
   const isUnread = !notification.is_read;
 
-  const getActionText = () => {
-    if (notification.action_text) {
-      return notification.action_text;
-    }
-
+  const getActionDetails = () => {
     switch (notification.type) {
-      case 'like': return `liked your post.`;
-      case 'comment': return `commented on your post.`;
-      case 'follow': return `started following you.`;
-      case 'channel_invite': return `invited you to a channel.`;
-      case 'channel_request': return `requested to join your channel.`;
-      case 'mention': return `mentioned you in a comment.`;
-      case 'post_tag': return `tagged you in a post.`;
-      default: return `interacted with you.`;
+      case 'like':
+        return { text: `liked your post`, icon: <Heart size={12} color="#FFF" fill="#FFF" />, bgColor: '#FF3B30' };
+      case 'comment':
+        return { text: `commented on your post`, icon: <MessageCircle size={12} color="#FFF" fill="#FFF" />, bgColor: '#0A7AFF' };
+      case 'follow':
+        return { text: `started following you`, icon: <UserPlus size={12} color="#FFF" />, bgColor: '#34C759' };
+      case 'channel_invite':
+        return { text: `invited you to a channel`, icon: <Users size={12} color="#FFF" />, bgColor: '#AF52DE' };
+      case 'channel_request':
+        return { text: `requested to join your channel`, icon: <Users size={12} color="#FFF" />, bgColor: '#FF9500' };
+      case 'mention':
+        return { text: `mentioned you in a comment`, icon: <AtSign size={12} color="#FFF" />, bgColor: '#FF2D55' };
+      case 'post_tag':
+        return { text: `tagged you in a post`, icon: <Tag size={12} color="#FFF" />, bgColor: '#5856D6' };
+      default:
+        return { text: `interacted with you`, icon: <Bell size={12} color="#FFF" />, bgColor: colors.primary };
     }
   };
 
-  const text = getActionText();
+  const actionDetails = getActionDetails();
+  const actionText = notification.action_text || actionDetails.text;
 
-  // Simple relative time formatter (e.g. "2h", "1d", "3w")
+  // Simple relative time formatter
   const getRelativeTime = (dateStr: string) => {
     const date = new Date(dateStr);
     const now = new Date();
@@ -57,85 +63,114 @@ export const NotificationTile = ({ notification, onPress }: NotificationTileProp
 
   return (
     <TouchableOpacity
-      activeOpacity={0.8}
+      activeOpacity={0.7}
       onPress={() => onPress(notification)}
       style={[
         styles.container,
-        isUnread && { backgroundColor: Platform.OS === 'web' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(128, 128, 128, 0.1)' }
+        isUnread && styles.unreadContainer
       ]}
     >
+      {/* Unread Indicator Bar */}
+      {isUnread && <View style={styles.unreadIndicatorBar} />}
+
       <View style={styles.avatarColumn}>
         {actor ? (
           <UserAvatar
             userId={actor.id}
             name={actor.display_name}
             fallbackUrl={actor.profile_image_url}
-            size={44}
+            size={48}
           />
         ) : (
           <View style={[styles.fallbackAvatar, { backgroundColor: colors.surfaceVariant }]} />
         )}
+        
+        {/* Action Icon Badge */}
+        <View style={[styles.iconBadge, { backgroundColor: actionDetails.bgColor, borderColor: isUnread ? colors.surfaceDark : colors.background }]}>
+          {actionDetails.icon}
+        </View>
       </View>
       
       <View style={styles.contentColumn}>
-        <Text style={styles.messageText} numberOfLines={3}>
-          <Text style={styles.actorName}>{actor?.display_name || 'Someone'}</Text>
-          {' '}
-          {text}
-          {' '}
+        <View style={styles.headerRow}>
+          <Text style={styles.actorName} numberOfLines={1}>
+            {actor?.display_name || 'Someone'}
+          </Text>
           <Text style={styles.timeText}>{getRelativeTime(notification.created_at)}</Text>
+        </View>
+        <Text style={styles.messageText} numberOfLines={2}>
+          {actionText}
         </Text>
-      </View>
-
-      <View style={styles.rightColumn}>
-        {/* We can add a Follow button or Post Thumbnail here in the future! */}
-        {isUnread && <View style={styles.unreadDot} />}
       </View>
     </TouchableOpacity>
   );
 };
 
-const themeStyles = (colors: ThemeTokens, scale: number): any => ({
+const themeStyles = (colors: ThemeTokens, scale: number) => StyleSheet.create({
   container: {
-    flexDirection: 'row' as const,
-    paddingVertical: 12 * scale,
+    flexDirection: 'row',
+    paddingVertical: 14 * scale,
     paddingHorizontal: 16 * scale,
-    alignItems: 'center' as const,
+    alignItems: 'flex-start',
+    backgroundColor: colors.background,
+  },
+  unreadContainer: {
+    backgroundColor: Platform.OS === 'web' ? 'rgba(150, 150, 150, 0.05)' : colors.surfaceDark,
+  },
+  unreadIndicatorBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4 * scale,
+    backgroundColor: colors.primary,
   },
   avatarColumn: {
-    marginRight: 12 * scale,
+    position: 'relative',
+    marginRight: 14 * scale,
   },
   fallbackAvatar: {
-    width: 44 * scale,
-    height: 44 * scale,
-    borderRadius: 22 * scale,
+    width: 48 * scale,
+    height: 48 * scale,
+    borderRadius: 24 * scale,
+  },
+  iconBadge: {
+    position: 'absolute',
+    bottom: -2 * scale,
+    right: -2 * scale,
+    width: 20 * scale,
+    height: 20 * scale,
+    borderRadius: 10 * scale,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2 * scale,
   },
   contentColumn: {
     flex: 1,
-    justifyContent: 'center' as const,
+    justifyContent: 'center',
+    paddingTop: 2 * scale, // Align text slightly better with avatar top
   },
-  messageText: {
-    color: colors.text,
-    fontSize: 14 * scale,
-    lineHeight: 18 * scale,
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginBottom: 4 * scale,
   },
   actorName: {
-    fontWeight: 'bold' as const,
+    color: colors.text,
+    fontSize: 15 * scale,
+    fontWeight: '700',
+    flex: 1,
+    marginRight: 8 * scale,
   },
   timeText: {
     color: colors.textSecondary,
+    fontSize: 13 * scale,
+    fontWeight: '500',
+  },
+  messageText: {
+    color: colors.textSecondary,
     fontSize: 14 * scale,
+    lineHeight: 18 * scale,
   },
-  rightColumn: {
-    marginLeft: 12 * scale,
-    justifyContent: 'center' as const,
-    alignItems: 'flex-end' as const,
-    minWidth: 12 * scale,
-  },
-  unreadDot: {
-    width: 8 * scale,
-    height: 8 * scale,
-    borderRadius: 4 * scale,
-    backgroundColor: colors.primary,
-  }
 });

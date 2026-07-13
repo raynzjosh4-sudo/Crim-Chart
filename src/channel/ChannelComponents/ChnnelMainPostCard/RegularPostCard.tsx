@@ -179,6 +179,9 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
 
       <PostOptionsSheet
         postId={postId ?? ''}
+        authorId={author?.id}
+        authorName={author?.username}
+        authorAvatarUrl={author?.profileImageUrl}
         visible={postOptionsVisible}
         onClose={() => setPostOptionsVisible(false)}
         anchorPosition={postOptionsPosition}

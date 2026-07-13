@@ -3,9 +3,9 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MomentData } from '@/data/mockVideoData';
+
 interface PromotionBannerCardProps {
-  moment: MomentData;
+  moment: any;
 }
 export const PromotionBannerCard: React.FC<PromotionBannerCardProps> = ({
   moment

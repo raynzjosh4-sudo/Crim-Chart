@@ -51,6 +51,7 @@ export const UserStatusViewer: React.FC<UserStatusViewerProps> = ({ userId, chan
               avatarUrl: userAvatarUrl || data[0].profile_image_url || 'https://via.placeholder.com/60',
               media: data.map((item: any) => ({
                 id: item.id,
+                authorId: item.author_id || item.user_id || activeId,
                 url: item.video_url || (item.image_urls && item.image_urls[0]) || item.thumbnail_url || '',
                 type: item.is_video ? 'video' : 'image',
                 caption: item.caption || '',

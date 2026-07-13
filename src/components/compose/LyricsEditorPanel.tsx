@@ -21,12 +21,15 @@ export interface LyricsEditorPanelProps {
   initialArtist?: string;
   /** Pre-fill song title search field */
   initialSong?: string;
+  /** Whether the panel is currently visible to the user */
+  visible?: boolean;
 }
 export const LyricsEditorPanel: React.FC<LyricsEditorPanelProps> = ({
   value,
   onChange,
   initialArtist = '',
-  initialSong = ''
+  initialSong = '',
+  visible = true
 }) => {
   const styles = useStyles(colors => ({
     editPanel: {
@@ -97,6 +100,7 @@ export const LyricsEditorPanel: React.FC<LyricsEditorPanelProps> = ({
   const [searchArtist, setSearchArtist] = useState(initialArtist);
   const [searchSong, setSearchSong] = useState(initialSong);
   const [searchError, setSearchError] = useState('');
+  const lastAutoSearched = React.useRef('');
   const {
     startLoading,
     stopLoading
@@ -104,39 +108,66 @@ export const LyricsEditorPanel: React.FC<LyricsEditorPanelProps> = ({
   const webStyle = Platform.OS === 'web' ? {
     outlineStyle: 'none'
   } as any : {};
-  const handleSearch = async () => {
-    if (!searchArtist.trim() || !searchSong.trim()) {
-      setSearchError('Please enter both artist and song name.');
+
+  const performSearch = async (artist: string, song: string) => {
+    if (!artist.trim() && !song.trim()) {
+      setSearchError('Please enter an artist or song name.');
+      setShowSearch(true);
       return;
     }
+    setSearchArtist(artist);
+    setSearchSong(song);
     startLoading();
     setSearchError('');
     try {
-      const params = new URLSearchParams({
-        track_name: searchSong.trim(),
-        artist_name: searchArtist.trim()
-      }).toString();
-      const res = await fetch(`https://lrclib.net/api/search?${params}`);
-      const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        const found = data[0];
-        const fetched = found.plainLyrics || found.syncedLyrics || '';
-        if (fetched) {
-          onChange(fetched);
+      const query = encodeURIComponent(`${artist.trim()} ${song.trim()}`.trim());
+      
+      // 1. Search for the most likely song match
+      const suggestRes = await fetch(`https://api.lyrics.ovh/suggest/${query}`);
+      const suggestData = await suggestRes.json();
+      
+      if (suggestData.data && suggestData.data.length > 0) {
+        const found = suggestData.data[0];
+        const foundArtist = found.artist.name;
+        const foundTitle = found.title;
+        
+        // 2. Fetch the lyrics for the matched song
+        const lyricsRes = await fetch(`https://api.lyrics.ovh/v1/${encodeURIComponent(foundArtist)}/${encodeURIComponent(foundTitle)}`);
+        const lyricsData = await lyricsRes.json();
+        
+        if (lyricsData.lyrics) {
+          onChange(lyricsData.lyrics);
           setShowSearch(false);
           setSearchError('');
         } else {
           setSearchError('No lyrics text found for this song. Try another.');
+          setShowSearch(true);
         }
       } else {
         setSearchError('No results found. Check the spelling and try again.');
+        setShowSearch(true);
       }
     } catch {
       setSearchError('Network error. Check your connection and try again.');
+      setShowSearch(true);
     } finally {
       stopLoading();
     }
   };
+
+  const handleSearchBtnClick = () => performSearch(searchArtist, searchSong);
+
+  React.useEffect(() => {
+    if (visible && !value && (initialArtist || initialSong)) {
+      const queryKey = `${initialArtist.toLowerCase()}-${initialSong.toLowerCase()}`;
+      if (lastAutoSearched.current !== queryKey) {
+        lastAutoSearched.current = queryKey;
+        setShowSearch(true);
+        performSearch(initialArtist, initialSong);
+      }
+    }
+  }, [visible, value, initialArtist, initialSong]);
+
   if (showSearch) {
     return <View style={styles.searchPanel}>
         <>
@@ -153,7 +184,7 @@ export const LyricsEditorPanel: React.FC<LyricsEditorPanelProps> = ({
           }}>
                 <Text style={styles.actionBtnText}>Back</Text>
               </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.8} style={[styles.actionBtn, styles.searchBtn]} onPress={handleSearch}>
+              <TouchableOpacity activeOpacity={0.8} style={[styles.actionBtn, styles.searchBtn]} onPress={handleSearchBtnClick}>
                 <Text style={[styles.actionBtnText, {
               color: colors.background,
               fontWeight: 'bold'

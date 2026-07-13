@@ -18,8 +18,7 @@ export const CommentActionWidget: React.FC<CommentActionWidgetProps> = ({
     container: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
-      marginLeft: 24
+      gap: 6
     },
     text: {
       color: colors.text,

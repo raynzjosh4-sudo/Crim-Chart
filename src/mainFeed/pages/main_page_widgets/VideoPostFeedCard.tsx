@@ -257,6 +257,9 @@ export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
               />
               <PostOptionsSheet
                 postId={videoData.id}
+                authorId={videoData.author_id}
+                authorName={videoData.author_name}
+                authorAvatarUrl={videoData.author_avatar}
                 visible={postOptionsVisible}
                 onClose={() => setPostOptionsVisible(false)}
                 anchorPosition={postOptionsPosition}
@@ -290,6 +293,9 @@ export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
             />
             <PostOptionsSheet
               postId={videoData.id}
+              authorId={videoData.author_id}
+              authorName={videoData.author_name}
+              authorAvatarUrl={videoData.author_avatar}
               visible={postOptionsVisible}
               onClose={() => setPostOptionsVisible(false)}
               anchorPosition={postOptionsPosition}

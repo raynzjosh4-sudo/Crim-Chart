@@ -102,6 +102,9 @@ export const StatusFeedWidget: React.FC<StatusFeedWidgetProps> = ({
 
       <PostOptionsSheet
         postId={statusId}
+        authorId={author?.id}
+        authorName={author?.username}
+        authorAvatarUrl={author?.profileImageUrl}
         visible={postOptionsVisible}
         onClose={() => setPostOptionsVisible(false)}
         anchorPosition={postOptionsPosition}

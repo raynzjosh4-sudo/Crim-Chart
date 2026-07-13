@@ -63,6 +63,7 @@ import { ExploreChannelsPage } from '@/channel/pages/ExploreChannelsPage';
 import { useExploreStore } from '@/channel/store/useExploreStore';
 import { DesktopChannelModal } from '@/channel/widgets/DesktopChannelModal';
 import { ProgressProvider } from '@/components/globalProgressBar/GlobalProgressBar';
+import { WhatsAppOverlayRoot } from '@/components/showcase/WhatsAppOverlayWidget';
 import { OfflineStaleDataBanner, SlowConnectionBanner } from '@/components/offlineIndicators';
 import { useAppPresence } from '@/core/hooks/useAppPresence';
 import { usePresenceSyncWorker } from '@/core/sync/usePresenceSyncWorker';
@@ -198,6 +199,7 @@ export default function RootLayout() {
               <SlowConnectionBanner />
               <GlobalExploreModal />
               <DesktopChannelModal />
+              <WhatsAppOverlayRoot />
               <Toast config={{ ...chartToastConfig, ...toastConfig }} />
             </ProgressProvider>
           </NavThemeProvider>

@@ -76,6 +76,7 @@ export default function ChannelPage({ channelIdOverride, isModal }: { channelIdO
       avatarUrl: item.user.profileImageUrl || 'https://via.placeholder.com/150',
       media: item.statuses?.map(s => ({
         id: s.id,
+        authorId: item.user.id,
         url: s.videoUrl || s.audioUrl || (s.imageUrls && s.imageUrls[0]) || s.thumbnailUrl || '',
         type: (s.isVideo || s.isAudio) ? 'video' : 'image', // StatusViewer uses 'video' for both and checks isAudio
         isAudio: s.isAudio,

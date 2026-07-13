@@ -1,6 +1,7 @@
 import { useStyles } from "@/core/hooks/useStyles";
 import { colors } from '@/core/theme/colors';
 import { LyricsEditorPanel } from '@/components/compose/LyricsEditorPanel';
+import { OfflineStaleDataBanner, SlowConnectionBanner, OfflineNoDataWidget } from '@/components/offlineIndicators';
 import { X } from 'lucide-react-native';
 import React, { useState, useEffect } from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View, Platform, KeyboardAvoidingView, ScrollView } from 'react-native';
@@ -107,12 +108,14 @@ export const ComposerLyricsSheet: React.FC<ComposerLyricsSheetProps> = ({
               <X size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
+          <OfflineStaleDataBanner />
+          <SlowConnectionBanner />
           <ScrollView style={{
           flex: 1
         }} contentContainerStyle={{
           flexGrow: 1
         }} keyboardShouldPersistTaps="handled">
-            <LyricsEditorPanel value={lyrics} onChange={setLyrics} initialArtist={artistName} initialSong={songTitle} />
+            <LyricsEditorPanel value={lyrics} onChange={setLyrics} initialArtist={artistName} initialSong={songTitle} visible={visible} />
           </ScrollView>
           <TouchableOpacity activeOpacity={0.8} style={styles.saveButton} onPress={handleSave}>
             <Text style={styles.saveButtonText}>Save Lyrics</Text>

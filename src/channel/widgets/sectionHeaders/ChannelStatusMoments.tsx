@@ -43,6 +43,7 @@ export const ChannelStatusMoments: React.FC<ChannelStatusMomentsProps> = ({ disp
     avatarUrl: group.channel_avatar_url || 'https://i.pravatar.cc/151',
     media: group.moments.map(m => ({
       id: m.id,
+      authorId: m.author_id || group.channel_id,
       url: m.media_url,
       type: m.media_type as 'image' | 'video',
       caption: m.caption || ''

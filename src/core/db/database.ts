@@ -59,6 +59,10 @@ class DatabaseService {
       // Migrations for channel messages
       try { await _db.execAsync(`ALTER TABLE channel_messages ADD COLUMN metadata TEXT`); } catch (e) {}
 
+      // Migrations for blocked_users offline
+      try { await _db.execAsync(`ALTER TABLE blocked_users ADD COLUMN blocked_username TEXT`); } catch (e) {}
+      try { await _db.execAsync(`ALTER TABLE blocked_users ADD COLUMN blocked_avatar_url TEXT`); } catch (e) {}
+
       // Migration: cached_feed_statuses table for offline-first status ring
       try {
         await _db.execAsync(`

@@ -128,6 +128,7 @@ export const VideoTabView: React.FC<VideoTabViewProps> = ({
     avatarUrl: m.authorAvatarUrl || 'https://i.pravatar.cc/150',
     media: [{
       id: m.id,
+      authorId: (m as any).authorId || (m as any).channel_id || m.id,
       url: m.mediaUrl,
       type: 'image', // Adjust type if video moments are supported
       caption: m.caption

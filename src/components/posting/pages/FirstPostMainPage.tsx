@@ -77,6 +77,21 @@ export const FirstPostMainPage: React.FC = () => {
     });
   };
 
+  const handleDirectVideoSelect = (item: MediaItem) => {
+    router.push({
+      pathname: '/trim-video',
+      params: {
+        ...(targetChannelId ? { targetChannelId } : {}),
+        ...(params.channelName ? { channelName: params.channelName } : {}),
+        ...(params.channelAvatarUrl ? { channelAvatarUrl: params.channelAvatarUrl } : {}),
+        isManifestoContext: String(isManifestoContext),
+        ...(isChannelPost ? { isChannelPost: 'true' } : {}),
+        ...(isChannelStatus ? { isChannelStatus: 'true' } : {}),
+        selectedMediaJson: JSON.stringify([item])
+      }
+    });
+  };
+
   React.useEffect(() => {
     const checkPermissions = async () => {
       const { status, canAskAgain } = await MediaLibrary.getPermissionsAsync();
@@ -109,7 +124,7 @@ export const FirstPostMainPage: React.FC = () => {
       case 'photos':
         return <PhotosTab selectedItems={selectedItems} onToggleSelection={toggleSelection} externalSelectedAlbum={selectedAlbum} />;
       case 'videos':
-        return <VideosTab selectedItems={selectedItems} onToggleSelection={toggleSelection} externalSelectedAlbum={selectedAlbum} />;
+        return <VideosTab selectedItems={{}} onToggleSelection={(_, item) => handleDirectVideoSelect(item)} externalSelectedAlbum={selectedAlbum} />;
       case 'music':
         return (
           <LocalMusicList 
@@ -147,11 +162,6 @@ export const FirstPostMainPage: React.FC = () => {
               <X color="#FFFFFF" size={24} />
             </TouchableOpacity>
 
-            {Object.keys(selectedItems).length > 0 && (
-              <TouchableOpacity style={styles.nextButtonContainer} onPress={handleNext}>
-                <Text style={styles.nextText}>Next</Text>
-              </TouchableOpacity>
-            )}
           </View>
 
           {/* Second Row: Album Selector & Drafts Button */}
@@ -185,15 +195,22 @@ export const FirstPostMainPage: React.FC = () => {
           style={{ flex: 1 }}
         />
 
-        {/* Floating Bottom Pill Tabs */}
-        <BottomPillTabs
-          tabs={routes}
-          activeIndex={index}
-          onChange={(newIndex) => {
-            setIndex(newIndex);
-            setSelectedAlbum(null);
-          }}
-        />
+        {Object.keys(selectedItems).length === 0 ? (
+          <BottomPillTabs
+            tabs={routes}
+            activeIndex={index}
+            onChange={(newIndex) => {
+              setIndex(newIndex);
+              setSelectedAlbum(null);
+            }}
+          />
+        ) : (
+          <View style={styles.bottomBarContainer}>
+            <TouchableOpacity style={styles.rightAlignedNextButton} onPress={handleNext}>
+              <Text style={styles.rightAlignedNextText}>Next</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <PermissionDialog
           visible={showPermissionDialog}
@@ -244,6 +261,26 @@ const styles = StyleSheet.create({
   nextText: {
     color: '#FACD11',
     fontWeight: '900',
+    fontSize: 16,
+  },
+  bottomBarContainer: {
+    backgroundColor: '#000000',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    height: 80, // Approximate height to match the old widget
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  rightAlignedNextButton: {
+    backgroundColor: '#FACD11',
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 20,
+  },
+  rightAlignedNextText: {
+    color: '#000000',
+    fontWeight: 'bold',
     fontSize: 16,
   }
 });

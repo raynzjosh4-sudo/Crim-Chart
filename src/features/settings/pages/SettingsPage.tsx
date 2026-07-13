@@ -60,8 +60,8 @@ export default function SettingsPage({ isSplitPane = false }: { isSplitPane?: bo
         />
         <SettingsItem
           icon={Ban}
-          title={t('blocked')}
-          onTap={() => { }}
+          title={t('blocked' as any)}
+          onTap={() => router.push('/settings/blocked' as any)}
         />
         <SettingsItem
           icon={Camera}

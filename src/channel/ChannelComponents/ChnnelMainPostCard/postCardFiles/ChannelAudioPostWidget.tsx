@@ -49,18 +49,20 @@ export const ChannelAudioPostWidget: React.FC<ChannelAudioPostWidgetProps> = ({
   postId,
   sourceTable,
 }) => {
-  const [position, setPosition] = useState(0);
-  const [totalDuration, setTotalDuration] = useState(30);
-  const heights = useRef(generateHeights(audioUrl)).current;
-
   // Global audio player — one track across the entire app
   const currentTrackId = useGlobalAudioPlayer(state => state.currentTrackId);
   const globalIsPlaying = useGlobalAudioPlayer(state => state.isPlaying);
   const toggleTrack = useGlobalAudioPlayer(state => state.toggleTrack);
   const pauseCurrent = useGlobalAudioPlayer(state => state.pauseCurrent);
-  
+  const globalPosition = useGlobalAudioPlayer(state => state.position);
+  const globalDuration = useGlobalAudioPlayer(state => state.duration);
+
   const trackId = `audio_widget_${audioUrl}`;
   const isPlaying = currentTrackId === trackId && globalIsPlaying;
+
+  const position = (currentTrackId === trackId) ? globalPosition / 1000 : 0;
+  const totalDuration = (currentTrackId === trackId && globalDuration > 0) ? globalDuration / 1000 : 30;
+  const heights = useRef(generateHeights(audioUrl)).current;
 
   const songTitle = metadata?.title || metadata?.songName || 'Unknown Title';
   const songArtist = metadata?.artist || metadata?.singer || 'Unknown Artist';
@@ -129,23 +131,30 @@ export const ChannelAudioPostWidget: React.FC<ChannelAudioPostWidgetProps> = ({
   const spinValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    let animation: Animated.CompositeAnimation;
+    let isActive = true;
     if (isPlaying) {
-      animation = Animated.loop(
+      const spinLoop = () => {
+        if (!isActive) return;
+        spinValue.extractOffset();
         Animated.timing(spinValue, {
           toValue: 1,
           duration: 3000,
           easing: Easing.linear,
           useNativeDriver: true,
-        })
-      );
-      animation.start();
+        }).start(({ finished }) => {
+          if (finished && isActive) {
+            spinLoop();
+          }
+        });
+      };
+      spinLoop();
     } else {
       spinValue.stopAnimation();
-      // Optionally reset rotation on stop: spinValue.setValue(0);
+      spinValue.extractOffset();
     }
     return () => {
-      if (animation) animation.stop();
+      isActive = false;
+      spinValue.stopAnimation();
     };
   }, [isPlaying, spinValue]);
 
