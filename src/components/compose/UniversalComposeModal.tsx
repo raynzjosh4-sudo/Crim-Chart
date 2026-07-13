@@ -8,7 +8,7 @@ import {
   Smile,
   X
 } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -30,6 +30,8 @@ import { MediaSource, MediaType, PostType, usePostingStore } from '@/core/store/
 import { colors } from '@/core/theme/colors';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import LottieView from 'lottie-react-native';
+import { CoverArtSelectorSheet, CoverArtSelectorSheetRef } from '@/components/compose/CoverArtSelectorSheet';
+import { OPTIONAL_EMOJIS } from '@/components/optionalEmojis';
 import { AudioPreviewWidget } from './AudioPreviewWidget';
 import { DraftsListModal } from './DraftsListModal';
 import { MobileMediaPickerMenu } from './MobileMediaPickerMenu';
@@ -41,6 +43,8 @@ export const UniversalComposeModal: React.FC = () => {
   const { createPost } = usePostingStore();
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
+
+  const coverArtSheetRef = useRef<CoverArtSelectorSheetRef | null>(null);
 
   const [text, setText] = useState('');
   const [selectedMedia, setSelectedMedia] = useState<any[]>([]);
@@ -158,13 +162,15 @@ export const UniversalComposeModal: React.FC = () => {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
-        const newMedia = {
-          id: Math.random().toString(),
+        
+        // Prepare metadata and open the cover art sheet
+        const mediaMeta = {
           uri: asset.uri,
-          type: 'audio',
           name: asset.name,
+          artist: 'Unknown Artist',
+          mimeType: asset.mimeType,
         };
-        setSelectedMedia([...selectedMedia, newMedia]);
+        coverArtSheetRef.current?.present(mediaMeta as any);
       }
     } catch (err) {
       console.log('Error picking audio:', err);
@@ -202,7 +208,8 @@ export const UniversalComposeModal: React.FC = () => {
     setIsPosting(true);
     let primaryPostType = options?.postType || 'post';
 
-    const success = await createPost({
+    // Fire and forget upload
+    createPost({
       media: selectedMedia.map((m: any) => ({
         path: m.uri || m.path || '',
         type: m.type === 'video' ? MediaType.video : m.type === 'audio' ? MediaType.audio : MediaType.photo,
@@ -222,16 +229,16 @@ export const UniversalComposeModal: React.FC = () => {
       allowComments: allowComments,
       isPublicFeed: isPublic,
       isShortClip: selectedMedia.some((m: any) => m.type === 'video') ? isShortClip : undefined,
+    }).then(success => {
+      if (success) {
+        ChartToast.showSuccess(null, { title: 'Posted successfully!', message: 'Your post is now live.' });
+      } else {
+        ChartToast.showError(null, { title: 'Failed to post', message: 'Something went wrong, please try again.' });
+      }
     });
 
     setIsPosting(false);
-
-    if (success) {
-      ChartToast.showSuccess(null, { title: 'Posted successfully!', message: 'Your post is now live.' });
-      closeModal();
-    } else {
-      ChartToast.showError(null, { title: 'Failed to post', message: 'Something went wrong, please try again.' });
-    }
+    closeModal();
   };
 
   const handleSaveDraft = () => {
@@ -532,6 +539,28 @@ export const UniversalComposeModal: React.FC = () => {
             visible={showDraftsList}
             onClose={() => setShowDraftsList(false)}
             onSelectDraft={handleSelectDraft}
+          />
+
+          <CoverArtSelectorSheet
+            ref={coverArtSheetRef}
+            onSelectArtwork={(media, artworkUrl) => {
+              const newMedia = {
+                id: Math.random().toString(),
+                uri: media.uri,
+                type: 'audio',
+                name: media.name,
+                artist: media.artist || 'Unknown Artist',
+                thumbnailUri: artworkUrl,
+                mimeType: media.mimeType,
+              };
+              setSelectedMedia([...selectedMedia, newMedia]);
+              
+              if (!text.trim()) {
+                let randomEmojis = '';
+                for(let i=0; i<4; i++) randomEmojis += OPTIONAL_EMOJIS[Math.floor(Math.random() * OPTIONAL_EMOJIS.length)];
+                setText(`${media.name || ''} by ${media.artist || 'Unknown Artist'} ${randomEmojis}`);
+              }
+            }}
           />
         </Pressable>
       </Pressable>

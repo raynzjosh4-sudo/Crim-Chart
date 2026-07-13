@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import { NativeDB } from '@/core/db/NativeDB';
 import { setPreloadedMainFeed } from '@/mainFeed/store/feedCache';
-import { Platform } from 'react-native';
+import { Platform, useWindowDimensions } from 'react-native';
 import { useDesktopComposeStore } from '@/core/store/useDesktopComposeStore';
 import { useGlobalAudioPlayer } from '@/core/store/useGlobalAudioPlayer';
 
@@ -68,13 +68,20 @@ export const useAppNavigation = () => {
     }
   };
 
+  const { width } = useWindowDimensions();
+  const isMobileWeb = Platform.OS === 'web' && width < 768;
+
   const navigateToCompose = async () => {
     startLoading();
     // Premium simulated delay per rules before opening a modal/sheet
     await new Promise(resolve => setTimeout(resolve, 400));
     stopLoading();
     if (Platform.OS === 'web') {
-      useDesktopComposeStore.getState().openModal();
+      if (isMobileWeb) {
+        router.navigate('/ent' as any);
+      } else {
+        useDesktopComposeStore.getState().openModal();
+      }
     } else {
       router.navigate('/first-post');
     }

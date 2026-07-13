@@ -89,9 +89,9 @@ export const VideoTrimmerPage: React.FC = () => {
 
     // ─── Navigate immediately — the pending post is already visible in the feed ───
     if (targetChannelId && (isChannelPost || isChannelStatus || isChannelMoment || isManifesto)) {
-      router.push({ pathname: '/channel/channelpage', params: { id: targetChannelId } } as any);
+      router.replace({ pathname: '/channel/channelpage', params: { id: targetChannelId } } as any);
     } else {
-      router.push('/(tabs)');
+      router.replace('/');
     }
 
     // ─── Fire upload in the background — no await, no waiting ───
@@ -304,4 +304,8 @@ const styles = StyleSheet.create({
   spacing: { height: 16 },
   spacingSmall: { height: 8 },
   bottomSpacing: { height: 24 },
+  footer: {
+    width: '100%',
+    paddingBottom: 24,
+  },
 });

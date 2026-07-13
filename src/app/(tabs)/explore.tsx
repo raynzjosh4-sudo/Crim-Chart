@@ -73,12 +73,12 @@ export default function ExploreScreen() {
       // Show quick category pills when haven't searched yet
       return (
         <View style={styles.categoriesContainer}>
-          <CategoryPill icon={<User color="#FFF" size={16} />} label={t('search_people')} />
-          <CategoryPill icon={<Radio color="#FFF" size={16} />} label={t('search_channels')} />
-          <CategoryPill icon={<Music color="#FFF" size={16} />} label={t('search_music')} />
-          <CategoryPill icon={<Play color="#FFF" size={16} />} label={t('search_videos')} />
-          <CategoryPill icon={<Box color="#FFF" size={16} />} label={t('search_boxes')} />
-          <CategoryPill icon={<Crown color="#FFF" size={16} />} label={t('search_crowns')} />
+          <CategoryPill icon={<User color="#FFF" size={14} />} label={t('search_people')} />
+          <CategoryPill icon={<Radio color="#FFF" size={14} />} label={t('search_channels')} />
+          <CategoryPill icon={<Music color="#FFF" size={14} />} label={t('search_music')} />
+          <CategoryPill icon={<Play color="#FFF" size={14} />} label={t('search_videos')} />
+          <CategoryPill icon={<Box color="#FFF" size={14} />} label={t('search_boxes')} />
+          <CategoryPill icon={<Crown color="#FFF" size={14} />} label={t('search_crowns')} />
         </View>
       );
     }
@@ -250,14 +250,14 @@ const themeStyles = (colors: ThemeTokens, scale: number) => StyleSheet.create({
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     backgroundColor: colors.surfaceVariant,
-    paddingHorizontal: 16 * scale,
-    paddingVertical: 10 * scale,
-    borderRadius: 20 * scale,
-    gap: 8 * scale,
+    paddingHorizontal: 12 * scale,
+    paddingVertical: 6 * scale,
+    borderRadius: 16 * scale,
+    gap: 6 * scale,
   },
   categoryPillText: {
     color: colors.text,
-    fontSize: 14 * scale,
+    fontSize: 13 * scale,
     fontWeight: '600' as const,
   }
 });

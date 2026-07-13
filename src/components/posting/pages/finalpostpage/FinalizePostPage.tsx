@@ -111,12 +111,9 @@ export const FinalizePostPage: React.FC = () => {
     }
 
     if (targetChannelId && (isChannelPost || isChannelStatus || isChannelMoment || isManifesto)) {
-      router.dismissAll();
-      setTimeout(() => {
-        router.push({ pathname: '/channel/channelpage', params: { id: targetChannelId } } as any);
-      }, 80);
+      router.replace({ pathname: '/channel/channelpage', params: { id: targetChannelId } } as any);
     } else {
-      router.dismissAll();
+      router.replace('/');
     }
 
     // ─── STEP 2: Fire the real upload in the background (no await) ───

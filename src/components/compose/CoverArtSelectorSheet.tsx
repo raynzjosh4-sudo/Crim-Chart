@@ -8,7 +8,7 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { Search, Upload, X } from 'lucide-react-native';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { GestureHandlerRootView as _GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -36,6 +36,8 @@ export const CoverArtSelectorSheet = React.forwardRef(({ onSelectArtwork }: Cove
   const insets = useSafeAreaInsets();
   const { startLoading, stopLoading } = useGlobalProgress();
   const theme = useCurrentTheme();
+  const { width } = useWindowDimensions();
+  const isDesktop = width > 768;
 
   const [currentMedia, setCurrentMedia] = useState<any>(null);
   const [artworks, setArtworks] = useState<ArtworkResult[]>([]);
@@ -255,6 +257,7 @@ export const CoverArtSelectorSheet = React.forwardRef(({ onSelectArtwork }: Cove
           ref={bottomSheetRef}
           index={0}
           snapPoints={snapPoints}
+          style={isDesktop ? { alignSelf: 'center', width: 600, maxWidth: '100%' } : undefined}
           enablePanDownToClose
           onClose={() => setVisible(false)}
           backdropComponent={(props) => (

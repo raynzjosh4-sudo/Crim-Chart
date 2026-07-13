@@ -18,7 +18,10 @@ export default function AddPostPage() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ChartAppBar title="" showBack={true} />
-      <ComposerWidget initialAudio={initialAudio} />
+      <ComposerWidget 
+        initialAudio={initialAudio} 
+        onPostSuccess={() => router.replace('/')} 
+      />
     </SafeAreaView>
   );
 }

@@ -21,6 +21,7 @@ import { ComposerMediaInput } from './ComposerMediaInput';
 import { useDraftStore } from '@/core/store/useDraftStore';
 import { DraftsListModal } from '@/components/compose/DraftsListModal';
 import { ChartToast } from '@/components/showcase/CrimChart_toast';
+import { OPTIONAL_EMOJIS } from '@/components/optionalEmojis';
 
 export const ComposerWidget = ({
   onPostSuccess,
@@ -145,7 +146,7 @@ export const ComposerWidget = ({
   const [showDraftsList, setShowDraftsList] = useState(false);
   const [prefetchedAssets, setPrefetchedAssets] = useState<MediaLibrary.Asset[] | null>(null);
   const [autoOpenLyrics, setAutoOpenLyrics] = useState(false);
-  const captionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const captionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const {
     startLoading,
     stopLoading
@@ -163,10 +164,31 @@ export const ComposerWidget = ({
   // Auto-open category on mount if music post
   useEffect(() => {
     if (initialAudio && !category && !hasAutoOpenedCategory.current) {
-      setShowCategories(true);
       hasAutoOpenedCategory.current = true;
+      
+      // Auto-fill initial text right away if empty
+      if (!text.trim()) {
+        let randomEmojis = '';
+        for(let i=0; i<4; i++) randomEmojis += OPTIONAL_EMOJIS[Math.floor(Math.random() * OPTIONAL_EMOJIS.length)];
+        setText(`${initialAudio.name || ''} by ${initialAudio.artist || 'Unknown Artist'} ${randomEmojis}`);
+      }
+
+      const openIt = async () => {
+        startLoading();
+        await new Promise(r => setTimeout(r, 400));
+        stopLoading();
+        setShowCategories(true);
+      };
+      openIt();
     }
   }, [initialAudio, category]);
+
+  const handleOpenCategories = async () => {
+    startLoading();
+    await new Promise(r => setTimeout(r, 400));
+    stopLoading();
+    setShowCategories(true);
+  };
 
   // Auto-draft on unmount/leave
   useEffect(() => {
@@ -237,7 +259,7 @@ export const ComposerWidget = ({
         });
 
         // Auto-open category widget
-        setShowCategories(true);
+        handleOpenCategories();
       }
     } catch (error) {
       console.log('Error picking audio:', error);
@@ -259,36 +281,38 @@ export const ComposerWidget = ({
         thumbnailUrl: customThumbnail || selectedAudio.thumbnailUri || undefined
       });
     }
-    const success = await usePostingStore.getState().createPost({
+    
+    // Fire and forget background post
+    usePostingStore.getState().createPost({
       media,
       caption: text,
       postType: 'post',
-      // Default regular post
       isPublicFeed: true,
       allowComments: true,
       category: category || user?.musicCategory || undefined
+    }).then(success => {
+      if (success) {
+        ChartToast.showSuccess(null, { title: 'Post published!', message: 'Your post is now live.' });
+      }
     });
     
-    // Background post - don't wait for success to return
+    // Clear state so it's fresh next time
+    setText('');
+    setTitle('');
+    setArtist('');
+    setLyrics('');
+    setSelectedAudio(null);
+    setCustomThumbnail(null);
+    setCategory(null);
+    
+    // Background post - navigate away immediately
+    stopLoading();
+    setIsPosting(false);
+    
     if (onPostSuccess) {
       onPostSuccess();
     } else {
       router.back();
-    }
-    
-    setIsPosting(false);
-    
-    // Note: Since we navigated away, the store handles the background upload
-    // We just clear our local state to be safe.
-    if (success) {
-      ChartToast.showSuccess(null, { title: 'Post published!', message: 'Your post is now live.' });
-      setText('');
-      setTitle('');
-      setArtist('');
-      setLyrics('');
-      setSelectedAudio(null);
-      setCustomThumbnail(null);
-      setCategory(null);
     }
   };
   const renderInputArea = () => <View style={styles.inputArea}>
@@ -344,7 +368,13 @@ export const ComposerWidget = ({
         if (media.thumbnail) {
           setCustomThumbnail(media.thumbnail);
         }
-        setShowCategories(true);
+        // Instantly populate text
+        if (!text.trim()) {
+          let randomEmojis = '';
+          for(let i=0; i<4; i++) randomEmojis += OPTIONAL_EMOJIS[Math.floor(Math.random() * OPTIONAL_EMOJIS.length)];
+          setText(`${media.name || ''} by ${media.artist || 'Unknown Artist'} ${randomEmojis}`);
+        }
+        handleOpenCategories();
       }} />
     </View> : <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
       {renderInputArea()}
@@ -404,27 +434,23 @@ export const ComposerWidget = ({
         }],
         borderRadius: 16
       }]}>
-        <CategoryPickerWidget onSelectCategory={categoryId => {
+        <CategoryPickerWidget onSelectCategory={async categoryId => {
           setCategory(categoryId);
           setShowCategories(false);
           setIsPickingMusic(false); // Return to composer view
           
           if (selectedAudio && !lyrics) {
+            startLoading();
+            await new Promise(r => setTimeout(r, 400));
+            stopLoading();
             setAutoOpenLyrics(true);
-            
-            if (captionTimeoutRef.current) clearTimeout(captionTimeoutRef.current);
-            captionTimeoutRef.current = setTimeout(() => {
-              // Auto generate caption if empty
-              setText(prevText => {
-                if (!prevText.trim()) {
-                  const emojis = ['🔥', '🎵', '🎸', '🎧', '🎶', '🎹', '✨', '🤘'];
-                  let randomEmojis = '';
-                  for(let i=0; i<4; i++) randomEmojis += emojis[Math.floor(Math.random() * emojis.length)];
-                  return `${title || selectedAudio.name} by ${artist || selectedAudio.artist} ${randomEmojis}`;
-                }
-                return prevText;
-              });
-            }, 30000);
+          }
+          
+          // Auto generate caption if empty (fallback)
+          if (!text.trim()) {
+            let randomEmojis = '';
+            for(let i=0; i<4; i++) randomEmojis += OPTIONAL_EMOJIS[Math.floor(Math.random() * OPTIONAL_EMOJIS.length)];
+            setText(`${title || selectedAudio?.name || ''} by ${artist || selectedAudio?.artist || ''} ${randomEmojis}`);
           }
         }} />
       </View>
@@ -449,7 +475,7 @@ export const ComposerWidget = ({
         {/* Category Chip */}
         <TouchableOpacity activeOpacity={0.8} style={[styles.categoryChip, {
           backgroundColor: category ? theme.colors.primary + '33' : 'rgba(255,255,255,0.1)'
-        }]} onPress={() => setShowCategories(true)}>
+        }]} onPress={handleOpenCategories}>
           <Text style={{
             color: category ? theme.colors.primary : colors.text,
             fontSize: 12,

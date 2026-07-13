@@ -32,7 +32,7 @@ export const SlowConnectionBanner: React.FC<SlowConnectionBannerProps> = ({ over
             runOnJS(setVisible)(false);
           }
         });
-      }, 20000); // 20 seconds auto-dismiss
+      }, 3000); // 3 seconds auto-dismiss
     } else {
       translateY.value = withTiming(-150, { duration: 300 }, (finished) => {
         if (finished) {
@@ -67,26 +67,24 @@ const themeStyles = (colors: any) => StyleSheet.create({
   container: {
     position: 'absolute',
     alignSelf: 'center',
-    width: '90%',
-    maxWidth: 400,
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: 12,
+    backgroundColor: colors.surfaceVariant || '#333333',
+    borderRadius: 20,
+    paddingVertical: 8,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 99999,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowRadius: 4,
+    elevation: 4,
   },
   text: {
-    color: colors.onPrimary,
-    fontSize: 14,
-    fontWeight: '700',
+    color: colors.text || '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
     textAlign: 'center',
   },
 });
