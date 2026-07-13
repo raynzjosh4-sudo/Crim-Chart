@@ -1,6 +1,7 @@
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import { useStyles } from "@/core/hooks/useStyles";
 import { useSearchStore } from '@/core/store/useSearchStore';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { colors } from '@/core/theme/colors';
 import { ThemeTokens } from '@/core/theme/themes';
 import { SearchResultRow } from '@/explore/widgets/search_results/SearchResultRow';
@@ -20,6 +21,7 @@ export default function ExploreScreen() {
   const styles = useStyles(themeStyles);
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const theme = useCurrentTheme();
 
   const { query, setQuery, results, isSearching, hasSearched, search, clearSearch } = useSearchStore();
 

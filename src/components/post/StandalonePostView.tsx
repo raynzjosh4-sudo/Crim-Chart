@@ -23,10 +23,13 @@ export const StandalonePostView: React.FC<StandalonePostViewProps> = ({ postId, 
       case 'image_post':
       case 'standard_post':
       case 'channel_post':
+      case 'channel_music':
+      case 'channel_video':
       case 'post':
       default:
         // Use SmartPostWidget for standard posts
-        return <SmartPostWidget postId={postId} entityType={entityType} isActive={true} />;
+        const isChannel = entityType?.startsWith('channel_');
+        return <SmartPostWidget postId={postId} entityType={entityType} sourceType={isChannel ? 'channel_post' : 'post'} isActive={true} />;
     }
   };
 

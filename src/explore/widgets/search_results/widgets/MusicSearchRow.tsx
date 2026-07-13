@@ -1,15 +1,12 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Image } from 'expo-image';
-import { Music } from 'lucide-react-native';
-import { GlobalSearchResult } from '../../../models/GlobalSearchResult';
-import { useStyles } from '@/core/hooks/useStyles';
-import { ThemeTokens } from '@/core/theme/themes';
-import { useGlobalAudioPlayer } from '@/core/store/useGlobalAudioPlayer';
-import { useAppNavigation } from '@/core/navigation/useAppNavigation';
-import { Platform, Dimensions } from 'react-native';
-import { useDesktopSearchStore } from '@/explore/application/useDesktopSearchStore';
 import { useAppRouter } from '@/core/hooks/useAppRouter';
+import { useStyles } from '@/core/hooks/useStyles';
+import { useAppNavigation } from '@/core/navigation/useAppNavigation';
+import { ThemeTokens } from '@/core/theme/themes';
+import { useDesktopSearchStore } from '@/explore/application/useDesktopSearchStore';
+import { Image } from 'expo-image';
+import { Music, Play } from 'lucide-react-native';
+import { Dimensions, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { GlobalSearchResult } from '../../../models/GlobalSearchResult';
 
 interface Props {
   item: GlobalSearchResult;
@@ -29,8 +26,8 @@ export const MusicSearchRow: React.FC<Props> = ({ item }) => {
 
     // Navigate or play the song
     await withPremiumTransition(async () => {
-       console.log('Navigate to music post: ', item.entity_id);
-       router.push(`/post/${item.entity_id}?type=${item.entity_type}`);
+      console.log('Navigate to music post: ', item.entity_id);
+      router.push(`/post/${item.entity_id}?type=${item.entity_type}`);
     });
   };
 
@@ -44,6 +41,9 @@ export const MusicSearchRow: React.FC<Props> = ({ item }) => {
             <Music color="#FFF" size={24} />
           </View>
         )}
+        <View style={styles.playOverlay}>
+          <Play fill="#FFF" color="#FFF" size={16} />
+        </View>
         <View style={styles.musicBadge}>
           <Music color="#000" size={10} />
         </View>
@@ -79,6 +79,13 @@ const themeStyles = (colors: ThemeTokens, scale: number) => ({
     height: '100%' as any,
     borderRadius: 8 * scale,
     backgroundColor: colors.surfaceVariant,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  playOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 8 * scale,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   },

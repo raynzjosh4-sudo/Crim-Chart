@@ -7,11 +7,13 @@ import { useThemeSettings } from '@/core/theme/theme_provider';
 import { useLocalization } from '@/core/localization/LocalizationProvider';
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import { colors } from '@/core/theme/colors';
+import { useLocalSearchParams } from 'expo-router';
 
 export default function PhotoEditPage() {
     const router = useRouter();
     const { tr } = useLocalization();
     const { themeMode } = useThemeSettings();
+    const { fromSignup } = useLocalSearchParams<{ fromSignup?: string }>();
 
     const [isLoading, setIsLoading] = useState(false);
     const [pickerVisible, setPickerVisible] = useState(false);
@@ -20,10 +22,12 @@ export default function PhotoEditPage() {
         setIsLoading(true);
         await new Promise(resolve => setTimeout(resolve, 800));
         setIsLoading(false);
-        if (router.canGoBack()) {
+        if (fromSignup === 'true') {
+            router.replace('/(tabs)' as any);
+        } else if (router.canGoBack()) {
             router.back();
         } else {
-            router.push('/channelIntro' as any);
+            router.replace('/(tabs)' as any);
         }
     };
 

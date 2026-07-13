@@ -2,6 +2,7 @@ import UserAvatar from '@/components/avatar/UserAvatar';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useDesktopComposeStore } from '@/core/store/useDesktopComposeStore';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
+import { SearchPromptBadge } from '@/components/badge/SearchPromptBadge';
 import { ThemeTokens } from '@/core/theme/themes';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { useNotificationStore } from '@/features/notifications/application/useNotificationStore';
@@ -64,8 +65,18 @@ export const AppSideNavBar = ({ selectedIndex, onItemTapped, homeBadgeCount = 0 
           index={6}
           selectedIndex={selectedIndex}
           onTap={onItemTapped}
-          icon={<Search size={28} />}
-          selectedIcon={<Search size={28} fill={colors.text} />}
+          icon={
+            <View style={{ position: 'relative', zIndex: 100 }}>
+              <Search size={28} />
+              <SearchPromptBadge placement="bottom" />
+            </View>
+          }
+          selectedIcon={
+            <View style={{ position: 'relative', zIndex: 100 }}>
+              <Search size={28} fill={colors.text} />
+              <SearchPromptBadge placement="bottom" />
+            </View>
+          }
           label="Search"
           isExpanded={isExpanded}
         />

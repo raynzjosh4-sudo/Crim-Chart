@@ -28,6 +28,8 @@ export const DesktopSearchDetailPane = () => {
       case 'video':
       case 'post':
       case 'channel_post':
+      case 'channel_music':
+      case 'channel_video':
         // The user requested opening the result in the right pane.
         // For posts/media, we show the full StandalonePostView.
         return (

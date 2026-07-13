@@ -4,6 +4,7 @@ import { AppState, DeviceEventEmitter, Text, TouchableOpacity, useWindowDimensio
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import { MusicButton } from '@/components/musicbutton/MusicButton';
+import { SearchPromptBadge } from '@/components/badge/SearchPromptBadge';
 import { NativeDB } from '@/core/db/NativeDB';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useAppNavigation } from '@/core/navigation/useAppNavigation';
@@ -505,8 +506,9 @@ export const MainFeedPage = () => {
         backgroundColor={theme.colors.background}
         showBorder={false}
         actions={!isDesktop ? [
-          <TouchableOpacity activeOpacity={0.8} key="search" onPress={handleSearchPress} style={styles.headerIconBtn}>
+          <TouchableOpacity activeOpacity={0.8} key="search" onPress={handleSearchPress} style={[styles.headerIconBtn, { position: 'relative' }]}>
             <Search color={theme.colors.primary} size={24} />
+            <SearchPromptBadge placement="bottom" />
           </TouchableOpacity>,
           <MusicButton key="my-music" />,
           <TouchableOpacity activeOpacity={1} key="bell" onPress={navigateToNotifications} style={[styles.headerIconBtn, { position: 'relative' }]}>

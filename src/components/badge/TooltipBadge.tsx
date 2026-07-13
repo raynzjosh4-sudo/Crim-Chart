@@ -6,20 +6,22 @@ export interface TooltipBadgeProps {
   text: string;
   color?: string;
   width?: number;
+  placement?: 'top' | 'bottom' | 'right';
 }
 export const TooltipBadge: React.FC<TooltipBadgeProps> = ({
   visible,
   text,
   color = '#FF3B30',
-  width = 90
+  width = 90,
+  placement = 'top'
 }) => {
   const styles = useStyles(colors => ({
     tooltipContainer: {
       position: 'absolute',
-      bottom: '100%',
-      left: '50%',
+      ...(placement === 'top' && { bottom: '100%', left: '50%', paddingBottom: 4 }),
+      ...(placement === 'bottom' && { top: '100%', left: '50%', paddingTop: 4 }),
+      ...(placement === 'right' && { left: '100%', top: '50%', paddingLeft: 4 }),
       alignItems: 'center',
-      paddingBottom: 4,
       zIndex: 100
     },
     tooltipBubble: {
@@ -36,7 +38,7 @@ export const TooltipBadge: React.FC<TooltipBadgeProps> = ({
       elevation: 4
     },
     tooltipText: {
-      color: colors.text,
+      color: '#FFFFFF',
       fontSize: 12,
       fontWeight: 'bold',
       textAlign: 'center'
@@ -44,11 +46,30 @@ export const TooltipBadge: React.FC<TooltipBadgeProps> = ({
     tooltipArrow: {
       width: 0,
       height: 0,
-      borderLeftWidth: 6,
-      borderRightWidth: 6,
-      borderTopWidth: 6,
-      borderLeftColor: 'transparent',
-      borderRightColor: 'transparent'
+      ...(placement === 'top' && {
+        borderLeftWidth: 6,
+        borderRightWidth: 6,
+        borderTopWidth: 6,
+        borderBottomWidth: 0,
+        borderLeftColor: 'transparent',
+        borderRightColor: 'transparent',
+      }),
+      ...(placement === 'bottom' && {
+        borderLeftWidth: 6,
+        borderRightWidth: 6,
+        borderBottomWidth: 6,
+        borderTopWidth: 0,
+        borderLeftColor: 'transparent',
+        borderRightColor: 'transparent',
+      }),
+      ...(placement === 'right' && {
+        borderTopWidth: 6,
+        borderBottomWidth: 6,
+        borderRightWidth: 6,
+        borderLeftWidth: 0,
+        borderTopColor: 'transparent',
+        borderBottomColor: 'transparent',
+      })
     }
   }));
   const opacity = useRef(new Animated.Value(0)).current;
@@ -58,42 +79,44 @@ export const TooltipBadge: React.FC<TooltipBadgeProps> = ({
       Animated.parallel([Animated.timing(opacity, {
         toValue: 1,
         duration: 300,
-        useNativeDriver: true
+        useNativeDriver: false
       }), Animated.spring(translateY, {
         toValue: 0,
         friction: 5,
         tension: 40,
-        useNativeDriver: true
+        useNativeDriver: false
       })]).start();
     } else {
       Animated.parallel([Animated.timing(opacity, {
         toValue: 0,
         duration: 250,
-        useNativeDriver: true
+        useNativeDriver: false
       }), Animated.timing(translateY, {
         toValue: 10,
         duration: 250,
-        useNativeDriver: true
+        useNativeDriver: false
       })]).start();
     }
   }, [visible]);
   return <Animated.View style={[styles.tooltipContainer, {
     width,
-    transform: [{
-      translateX: -(width / 2)
-    }, {
-      translateY
-    }],
+    transform: [
+      ...(placement === 'top' || placement === 'bottom' ? [{ translateX: -(width / 2) }] : []),
+      ...(placement === 'right' ? [{ translateY: -15 }] : []), // Center vertically, roughly half of 30px height
+      ...(placement === 'top' ? [{ translateY }] : []),
+      ...(placement === 'bottom' ? [{ translateY: Animated.multiply(translateY, -1) }] : []),
+      ...(placement === 'right' ? [{ translateX: Animated.multiply(translateY, -1) }] : [])
+    ],
     opacity,
     pointerEvents: visible ? 'auto' : 'none'
   }]}>
-      <View style={[styles.tooltipBubble, {
-      backgroundColor: color
-    }]}>
+      {placement === 'bottom' && <View style={[styles.tooltipArrow, { borderBottomColor: color }]} />}
+      {placement === 'right' && <View style={[styles.tooltipArrow, { borderRightColor: color }]} />}
+      
+      <View style={[styles.tooltipBubble, { backgroundColor: color }]}>
         <Text style={styles.tooltipText}>{text}</Text>
       </View>
-      <View style={[styles.tooltipArrow, {
-      borderTopColor: color
-    }]} />
+      
+      {placement === 'top' && <View style={[styles.tooltipArrow, { borderTopColor: color }]} />}
     </Animated.View>;
 };

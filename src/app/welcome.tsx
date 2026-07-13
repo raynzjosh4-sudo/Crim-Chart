@@ -2,8 +2,14 @@ import { colors } from '@/core/theme/colors';
 import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Image, Modal, Platform, SafeAreaView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Animated, Easing, Image, Modal, Platform, SafeAreaView, Text, TouchableOpacity, View, useWindowDimensions, StyleSheet } from 'react-native';
 import LandingPage from './landing';
+import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { ChartToast } from '@/components/showcase/CrimChart_toast';
+import { useTranslation } from '@/core/localization/i18n';
+import { SignupModalWidget } from '@/signing/components/SignupModalWidget';
+import { LoginModalWidget } from '@/signing/components/LoginModalWidget';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const allImages = [
   require('@/assets/images/welcome-floating/avatar1.webp'),
@@ -76,19 +82,20 @@ export default function WelcomePage() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
+  const { t } = useTranslation();
+  const authStore = useAuthStore();
 
-  const [showLandingLayer, setShowLandingLayer] = useState(false);
+  const [activeSheet, setActiveSheet] = useState<'none' | 'getStarted' | 'login'>('none');
+  const [showSignupWidget, setShowSignupWidget] = useState(false);
+  const [showLoginWidget, setShowLoginWidget] = useState(false);
 
-  const handleContinue = () => {
-    if (isDesktop) {
-      setShowLandingLayer(true);
-    } else {
-      router.push('/landing' as any);
-    }
-  };
+  // Return desktop landing page directly
+  if (isDesktop) {
+    return <LandingPage />;
+  }
 
   const gap = 12;
-  const numCols = isDesktop ? 6 : 3;
+  const numCols = 3; // Mobile only now
   // Calculate column width keeping a little bit of overflow on edges
   const colWidth = (width - gap * (numCols + 1)) / numCols;
 
@@ -98,6 +105,25 @@ export default function WelcomePage() {
   extendedImages.forEach((img, i) => {
     columns[i % numCols].push(img);
   });
+
+  const handleGoogleLogin = async () => {
+    try {
+      const success = await authStore.loginWithGoogle();
+      if (success) {
+        setActiveSheet('none');
+        if (useAuthStore.getState().pendingGoogleOnboarding) {
+          setShowSignupWidget(true);
+        } else {
+          router.replace('/(tabs)' as any);
+        }
+      } else {
+        const errorMsg = useAuthStore.getState().errorMessage;
+        ChartToast.showError(null, { title: t('error_title') || 'Error', message: errorMsg || 'Google login failed' });
+      }
+    } catch (error: any) {
+      ChartToast.showError(null, { title: t('error_title') || 'Error', message: error.message || 'Google login failed' });
+    }
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -110,7 +136,7 @@ export default function WelcomePage() {
           flexDirection: 'row',
           paddingHorizontal: gap,
           gap: gap,
-          opacity: 0.6
+          opacity: 0.4
         }}>
           {columns.map((col, i) => (
             <MarqueeColumn
@@ -123,108 +149,161 @@ export default function WelcomePage() {
           ))}
         </View>
 
-        {/* Removed black widget backgrounds */}
         {/* Foreground Content */}
-        <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', padding: 24, zIndex: 10 }}>
-          <View style={{ width: '100%', maxWidth: 480, alignItems: 'center', paddingBottom: 40 }}>
+        <View style={{ flex: 1, zIndex: 10 }}>
+          
+          {/* Top Logo */}
+          <View style={{ alignItems: 'center', marginTop: 40 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Image source={require('@/assets/appicon/big-sized-app-icon.png')} style={{ width: 32, height: 32 }} resizeMode="contain" />
+              <Text style={{ fontSize: 24, fontWeight: 'bold', color: colors.primary }}>crimchart</Text>
+            </View>
+          </View>
 
-            {isDesktop && (
-              <Text style={{
-                fontSize: 64,
-                fontWeight: '900',
-                color: colors.primary,
-                textAlign: 'center',
-                marginBottom: 8,
-                textShadowColor: 'rgba(0,0,0,0.8)',
-                textShadowOffset: { width: 0, height: 4 },
-                textShadowRadius: 16
-              }}>
-                CrimChart
-              </Text>
-            )}
+          <View style={{ flex: 1 }} />
 
+          {/* Bottom Content Area */}
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.8)', '#000000']}
+            style={{ width: '100%', paddingHorizontal: 24, paddingTop: 60, paddingBottom: 40, alignItems: 'center' }}
+          >
             <Text style={{
-              fontSize: 42,
+              fontSize: 32,
               fontWeight: '900',
               color: colors.text,
               textAlign: 'center',
-              lineHeight: 50,
-              letterSpacing: -1,
-              marginBottom: 16,
+              lineHeight: 40,
+              letterSpacing: -0.5,
+              marginBottom: 40,
               textShadowColor: 'rgba(0,0,0,0.9)',
               textShadowOffset: { width: 0, height: 4 },
               textShadowRadius: 12
             }}>
-              Share your favourite music with friends.
+              The most real place for sharing music
             </Text>
 
-            <Text style={{
-              fontSize: 17,
-              color: colors.textSecondary,
-              textAlign: 'center',
-              lineHeight: 26,
-              marginBottom: 48,
-              textShadowColor: 'rgba(0,0,0,0.9)',
-              textShadowOffset: { width: 0, height: 2 },
-              textShadowRadius: 8
-            }}>
-              Know what your friends are listening to on CrimChart.
-            </Text>
-
+            {/* Buttons */}
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={handleContinue}
+              onPress={() => setActiveSheet('getStarted')}
               style={{
-                backgroundColor: colors.primary,
-                paddingVertical: 18,
+                backgroundColor: '#FFFFFF',
+                paddingVertical: 16,
                 paddingHorizontal: 32,
                 borderRadius: 9999,
                 width: '100%',
                 alignItems: 'center',
-                ...(Platform.OS === 'web' && { cursor: 'pointer' as any }),
-                shadowColor: colors.primary,
-                shadowOffset: { width: 0, height: 8 },
-                shadowOpacity: 0.4,
-                shadowRadius: 16,
-                elevation: 10
+                marginBottom: 16
               }}
             >
-              <Text style={{ color: colors.background, fontSize: 18, fontWeight: 'bold' }}>
-                Get Started
-              </Text>
+              <Text style={{ color: '#000000', fontSize: 16, fontWeight: 'bold' }}>Get Started</Text>
             </TouchableOpacity>
-          </View>
-        </View>
-
-      </View>
-
-      {isDesktop && (
-        <Modal visible={showLandingLayer} animationType="slide" transparent={true}>
-          <View style={{ flex: 1, backgroundColor: colors.background }}>
-            <LandingPage />
 
             <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => setShowLandingLayer(false)}
+              activeOpacity={0.8}
+              onPress={() => setActiveSheet('login')}
               style={{
-                position: 'absolute',
-                top: 24,
-                left: 24,
-                zIndex: 999,
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: 'rgba(255,255,255,0.1)',
+                backgroundColor: 'transparent',
+                borderColor: 'rgba(255,255,255,0.3)',
+                borderWidth: 1,
+                paddingVertical: 16,
+                paddingHorizontal: 32,
+                borderRadius: 9999,
+                width: '100%',
                 alignItems: 'center',
-                justifyContent: 'center',
-                ...(Platform.OS === 'web' && { cursor: 'pointer' as any })
               }}
             >
-              <ArrowLeft color={colors.text} size={24} />
+              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' }}>I already have an account</Text>
             </TouchableOpacity>
-          </View>
+          </LinearGradient>
+        </View>
+
+        {/* Bottom Sheets Overlay */}
+        <Modal visible={activeSheet !== 'none'} transparent animationType="slide">
+          <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }} activeOpacity={1} onPress={() => setActiveSheet('none')}>
+            <TouchableOpacity activeOpacity={1} style={{ backgroundColor: '#111', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}>
+              
+              <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#FFF', marginBottom: 24, textAlign: 'center' }}>
+                {activeSheet === 'getStarted' ? 'Get Started' : 'Log In'}
+              </Text>
+
+              {/* Google Button */}
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={handleGoogleLogin}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: 'transparent',
+                  borderColor: 'rgba(255,255,255,0.3)',
+                  borderWidth: 1,
+                  paddingVertical: 16,
+                  borderRadius: 9999,
+                  marginBottom: 16
+                }}
+              >
+                <Image source={{ uri: 'https://www.gstatic.com/images/branding/product/2x/googleg_96dp.png' }} style={{ width: 20, height: 20, marginRight: 12 }} />
+                <Text style={{ color: '#FFF', fontSize: 16, fontWeight: 'bold' }}>Continue with Google</Text>
+              </TouchableOpacity>
+
+              {/* Email Button */}
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => {
+                  setActiveSheet('none');
+                  if (activeSheet === 'getStarted') {
+                    setShowSignupWidget(true);
+                  } else {
+                    setShowLoginWidget(true);
+                  }
+                }}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: 'transparent',
+                  borderColor: 'rgba(255,255,255,0.3)',
+                  borderWidth: 1,
+                  paddingVertical: 16,
+                  borderRadius: 9999,
+                  marginBottom: 24
+                }}
+              >
+                <Text style={{ color: '#FFF', fontSize: 16, fontWeight: 'bold' }}>
+                  {activeSheet === 'getStarted' ? 'Continue with email' : 'Use email or username'}
+                </Text>
+              </TouchableOpacity>
+
+              <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, textAlign: 'center', marginBottom: 24, lineHeight: 18 }}>
+                By continuing, you agree to our <Text style={{ fontWeight: 'bold', color: '#FFF' }}>User Agreement</Text> and acknowledge that you understand the <Text style={{ fontWeight: 'bold', color: '#FFF' }}>Privacy Policy</Text>.
+              </Text>
+
+              <TouchableOpacity onPress={() => setActiveSheet('none')} style={{ alignItems: 'center', paddingVertical: 12 }}>
+                <Text style={{ color: '#FFF', fontSize: 14, fontWeight: 'bold' }}>Cancel</Text>
+              </TouchableOpacity>
+
+            </TouchableOpacity>
+          </TouchableOpacity>
         </Modal>
-      )}
+
+        {/* Existing Widgets for email flow fallback */}
+        {showSignupWidget && (
+          <SignupModalWidget 
+            visible={showSignupWidget} 
+            onClose={() => setShowSignupWidget(false)} 
+            onGoToLogin={() => { setShowSignupWidget(false); setShowLoginWidget(true); }} 
+            onFinish={() => router.replace('/(tabs)' as any)}
+          />
+        )}
+        {showLoginWidget && (
+          <LoginModalWidget 
+            visible={showLoginWidget} 
+            onClose={() => setShowLoginWidget(false)} 
+          />
+        )}
+
+      </View>
     </SafeAreaView>
   );
 }

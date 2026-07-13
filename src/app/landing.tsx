@@ -13,7 +13,7 @@ import { AuthChoiceModalWidget } from '@/signing/components/AuthChoiceModalWidge
 import { LoginModalWidget } from '@/signing/components/LoginModalWidget';
 import { useRouter } from 'expo-router';
 import { ChevronDown, Moon, Sun } from 'lucide-react-native';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Image, Modal, Platform, SafeAreaView, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 
 import { SignupModalWidget } from '@/signing/components/SignupModalWidget';
@@ -305,171 +305,14 @@ export default function LandingPage({ asChild }: { asChild?: boolean } = {}) {
   }
 
   /* ─── MOBILE ──────────────────────────────────────────────────── */
-  return <SafeAreaView style={{
-    flex: 1,
-    backgroundColor: colors.background,
-    ...(isWeb ? { minHeight: '100vh' as any } : {})
-  }}>
-    <ScrollView contentContainerStyle={{
-      paddingBottom: 40
-    }}>
-      <ChartAppBar title="" showBack={false} actions={[<TouchableOpacity activeOpacity={1} key="theme" style={{
-        padding: 8
-      }}>
-        {isDark ? <Sun size={20} color={colors.textSecondary} /> : <Moon size={20} color={colors.textSecondary} />}
-      </TouchableOpacity>, <TouchableOpacity activeOpacity={1} key="login" onPress={() => setLoginModalVisible(true)}>
-        <Text style={{
-          color: colors.primary,
-          fontSize: 14,
-          fontWeight: 'bold',
-          paddingHorizontal: 8
-        }}>
-          {t('log_in')}
-        </Text>
-      </TouchableOpacity>]} />
-      <View style={{
-        height: 40
-      }} />
-      <View style={{
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: 150
-      }}>
-        <Image source={require('@/assets/images/logo-glow.png')} style={{
-          width: 150,
-          height: 150,
-          position: 'absolute'
-        }} resizeMode="contain" />
-        <Image source={require('@/assets/appicon/big-sized-app-icon.png')} style={{
-          width: 80,
-          height: 80
-        }} resizeMode="contain" />
-      </View>
-      <View style={{
-        height: 32
-      }} />
-      <TouchableOpacity activeOpacity={0.7} style={{
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 4
-      }} onPress={() => router.push('/language' as any)}>
-        <Text style={{
-          color: colors.textSecondary,
-          fontSize: 14
-        }}>{t('native_name') || 'English'}</Text>
-        <ChevronDown size={20} color={colors.textSecondary} />
-      </TouchableOpacity>
-      <View style={{
-        height: 60
-      }} />
-      <View style={{
-        paddingHorizontal: 24
-      }}>
-        <TouchableOpacity activeOpacity={0.8} style={{
-          backgroundColor: colors.primary,
-          height: 52,
-          borderRadius: 12,
-          justifyContent: 'center',
-          alignItems: 'center'
-        }} onPress={() => setSignupModalVisible(true)}>
-          <Text style={{
-            color: colors.background,
-            fontSize: 16,
-            fontWeight: 'bold'
-          }}>{t('create_account')}</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={{
-        height: 24
-      }} />
-      <View style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 24
-      }}>
-        <View style={{
-          flex: 1,
-          height: 1,
-          backgroundColor: 'rgba(255,255,255,0.1)'
-        }} />
-        <Text style={{
-          color: colors.textSecondary,
-          fontSize: 12,
-          fontWeight: 'bold',
-          paddingHorizontal: 16
-        }}>{t('or')}</Text>
-        <View style={{
-          flex: 1,
-          height: 1,
-          backgroundColor: 'rgba(255,255,255,0.1)'
-        }} />
-      </View>
-      <View style={{
-        height: 24
-      }} />
-      <TouchableOpacity activeOpacity={0.8} style={{
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 12,
-        gap: 12,
-        alignSelf: 'center'
-      }} onPress={handleGoogleLogin}>
-        <Image source={{
-          uri: 'https://www.gstatic.com/images/branding/product/2x/googleg_96dp.png'
-        }} style={{
-          width: 20,
-          height: 20
-        }} />
-        <Text style={{
-          color: colors.text,
-          fontSize: 14,
-          fontWeight: 'bold'
-        }}>{t('try_with_google')}</Text>
-      </TouchableOpacity>
-      <View style={{
-        height: 40
-      }} />
-      <View style={{
-        paddingHorizontal: 40,
-        paddingVertical: 24
-      }}>
-        <Text style={{
-          color: 'rgba(255,255,255,0.4)',
-          fontSize: 11,
-          lineHeight: 16,
-          textAlign: 'center'
-        }}>
-          By continuing, you agree to our{' '}
-          <Text style={{
-            color: 'rgba(255,255,255,0.7)',
-            fontWeight: '600'
-          }}>Terms of Service</Text>
-          {' '}and{' '}
-          <Text style={{
-            color: 'rgba(255,255,255,0.7)',
-            fontWeight: '600'
-          }}>Privacy Policy</Text>.
-        </Text>
-      </View>
-    </ScrollView>
+  // If a mobile user somehow lands on /landing, redirect them to the universal mobile /welcome screen.
+  // We use useEffect to redirect safely after render.
+  useEffect(() => {
+    if (!isDesktop) {
+      router.replace('/welcome' as any);
+    }
+  }, [isDesktop, router]);
 
-    <SignupModalWidget
-      visible={isSignupModalVisible}
-      onClose={() => setSignupModalVisible(false)}
-      onGoToLogin={() => {
-        setSignupModalVisible(false);
-        setLoginModalVisible(true);
-      }}
-    />
-
-    <LoginModalWidget
-      visible={isLoginModalVisible}
-      onClose={() => setLoginModalVisible(false)}
-      initialUsername={topUsername}
-      initialPassword={topPassword}
-    />
-  </SafeAreaView>;
+  return null;
 }
 const isWeb = Platform.OS === 'web';

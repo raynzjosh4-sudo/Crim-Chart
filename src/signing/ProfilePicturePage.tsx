@@ -112,25 +112,16 @@ export default function ProfilePicturePage() {
   } = useThemeSettings();
   const authStore = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
-  const handleSkip = () => {
-    router.push('/channelIntro' as any);
-  };
   const handleAddPhoto = async () => {
     setIsLoading(true);
     await new Promise(resolve => setTimeout(resolve, 800));
     setIsLoading(false);
-    router.push('/photoEdit' as any); // Or it could push to channelIntro if skipping actual photo picking
+    router.push('/photoEdit?fromSignup=true' as any);
   };
   return <View style={[styles.container, {
     backgroundColor: colors.background
   }]}>
-            <ChartAppBar title="" showBorder={true} isLoading={isLoading} backgroundColor={colors.background} actions={[<TouchableOpacity activeOpacity={1} key="skip" onPress={handleSkip} disabled={isLoading} style={styles.actionButton}>
-                        <Text style={[styles.skipText, {
-        color: colors.primary
-      }]}>
-                            {tr('skip') || 'Skip'}
-                        </Text>
-                    </TouchableOpacity>]} />
+            <ChartAppBar title="" showBorder={true} isLoading={isLoading} backgroundColor={colors.background} actions={[]} />
             <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
                 <ScrollView contentContainerStyle={styles.content}>
                     <View style={styles.space20} />
@@ -176,7 +167,7 @@ export default function ProfilePicturePage() {
 
                     <TouchableOpacity activeOpacity={1} style={[styles.addButton, {
           backgroundColor: colors.primary
-        }]} onPress={() => router.push('/channelIntro' as any)} disabled={isLoading}>
+        }]} onPress={handleAddPhoto} disabled={isLoading}>
                         <Text style={[styles.addButtonText, {
             color: colors.surface
           }]}>

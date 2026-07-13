@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import { useTranslation } from '@/core/localization/i18n';
 
-export default function ProfilePicturePage({ onNext, onBack, onClose }: StepProps) {
+export default function ProfilePicturePage({ onNext, onBack, onClose, onFinish }: StepProps) {
   
   const { t } = useTranslation();
   const { updateProfile, user } = useAuthStore();
@@ -49,7 +49,7 @@ export default function ProfilePicturePage({ onNext, onBack, onClose }: StepProp
       }
 
       stopLoading();
-      onNext('user-suggestions');
+      if (onFinish) onFinish();
       setTimeout(() => setIsLoading(false), 1000);
     } catch (error: any) {
       console.error('Profile picture upload error:', error);
@@ -78,15 +78,7 @@ export default function ProfilePicturePage({ onNext, onBack, onClose }: StepProp
           title=""
           showBorder
           isLoading={isLoading}
-          actions={[
-            <TouchableOpacity activeOpacity={1}
-              key="skip"
-              onPress={handleSkip}
-              disabled={isLoading}
-            >
-              <Text style={styles.skipText}>{t('skip' as any) || 'Skip'}</Text>
-            </TouchableOpacity>
-          ]}
+          actions={[]}
         />
       )}
 

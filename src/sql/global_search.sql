@@ -57,15 +57,21 @@ BEGIN
   -- 2. CHANNELS
   SELECT id AS entity_id, 'channel' AS entity_type, name AS title, description AS subtitle, avatar_url AS image_url,
     ts_rank(to_tsvector('simple', coalesce(name, '') || ' ' || coalesce(description, '') || ' ' || coalesce(category, '')), search_query) AS rank
-  FROM channels WHERE to_tsvector('simple', coalesce(name, '') || ' ' || coalesce(description, '') || ' ' || coalesce(category, '')) @@ search_query
+  FROM channels WHERE to_tsvector('simple', coalesce(name, '') || ' ' || coalesce(description, '') || ' ' || coalesce(category, '')) @@ search_query AND is_discoverable = true
 
   UNION ALL
 
   -- 3. GLOBAL POSTS (Splitting Music, Video, and Standard)
   SELECT id AS entity_id,
     CASE WHEN is_audio THEN 'music' WHEN is_video THEN 'video' ELSE 'post' END AS entity_type,
-    coalesce(metadata->>'artist', caption, 'Unknown') AS title,
-    coalesce(caption, category, '') AS subtitle,
+    CASE 
+      WHEN is_audio THEN coalesce(metadata->>'title', caption, 'Unknown')
+      ELSE coalesce(metadata->>'artist', caption, 'Unknown') 
+    END AS title,
+    CASE 
+      WHEN is_audio THEN coalesce(metadata->>'artist', category, '')
+      ELSE coalesce(caption, category, '') 
+    END AS subtitle,
     coalesce(nullif(replace(replace(replace(image_urls::text, '[', ''), ']', ''), '"', ''), ''), (thumbnail_urls->>0)::text) AS image_url,
     ts_rank(to_tsvector('simple', coalesce(caption, '') || ' ' || coalesce(category, '') || ' ' || coalesce(metadata->>'artist', '') || ' ' || coalesce(metadata->>'album', '') || ' ' || coalesce(metadata->>'lyrics', '')), search_query) AS rank
   FROM posts WHERE to_tsvector('simple', coalesce(caption, '') || ' ' || coalesce(category, '') || ' ' || coalesce(metadata->>'artist', '') || ' ' || coalesce(metadata->>'album', '') || ' ' || coalesce(metadata->>'lyrics', '')) @@ search_query
@@ -73,11 +79,23 @@ BEGIN
   UNION ALL
 
   -- 4. CHANNEL POSTS
-  SELECT id AS entity_id,
-    CASE WHEN is_audio THEN 'channel_music' WHEN is_video THEN 'channel_video' ELSE 'channel_post' END AS entity_type,
-    caption AS title, channel_name AS subtitle, coalesce(nullif(replace(replace(replace(image_urls::text, '[', ''), ']', ''), '"', ''), ''), (thumbnail_urls->>0)::text) AS image_url,
-    ts_rank(to_tsvector('simple', coalesce(caption, '') || ' ' || coalesce(category, '')), search_query) AS rank
-  FROM channel_posts WHERE to_tsvector('simple', coalesce(caption, '') || ' ' || coalesce(category, '')) @@ search_query
+  SELECT cp.id AS entity_id,
+    CASE WHEN cp.is_audio THEN 'channel_music' WHEN cp.is_video THEN 'channel_video' ELSE 'channel_post' END AS entity_type,
+    CASE 
+      WHEN cp.is_audio THEN coalesce(cp.metadata->>'title', cp.caption, 'Unknown')
+      ELSE cp.caption 
+    END AS title, 
+    CASE 
+      WHEN cp.is_audio THEN coalesce(cp.metadata->>'artist', cp.channel_name, '')
+      ELSE cp.channel_name 
+    END AS subtitle, 
+    coalesce(nullif(replace(replace(replace(cp.image_urls::text, '[', ''), ']', ''), '"', ''), ''), (cp.thumbnail_urls->>0)::text) AS image_url,
+    ts_rank(to_tsvector('simple', coalesce(cp.caption, '') || ' ' || coalesce(cp.category, '')), search_query) AS rank
+  FROM channel_posts cp
+  JOIN channels c ON c.id = cp.channel_id
+  WHERE to_tsvector('simple', coalesce(cp.caption, '') || ' ' || coalesce(cp.category, '')) @@ search_query
+    AND c.is_discoverable = true
+    AND c.join_method IN ('open', 'anyone')
 
   UNION ALL
 
