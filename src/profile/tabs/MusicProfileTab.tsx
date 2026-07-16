@@ -6,6 +6,8 @@ import { SkeletonBox } from '@/components/skeletons/SkeletonBox';
 import { NativeDB } from '@/core/db/NativeDB';
 import { ProfileMusicItem } from '@/components/profileTabsWidgets/ProfileMusicItem';
 import { useRouter } from 'expo-router';
+import { Platform } from 'react-native';
+import { useDesktopNowPlayingStore } from '@/core/store/useDesktopNowPlayingStore';
 
 interface MusicItem {
   id: string;
@@ -182,16 +184,17 @@ export const MusicProfileTab: React.FC<MusicProfileTabProps> = ({
               if (onMusicPress) {
                 onMusicPress(item);
               }
-              router.push({
-                pathname: '/now-playing',
-                params: {
-                  title: item.title,
-                  artist: item.artist,
-                  coverUrl: item.thumbnailUrl,
-                  audioUrl: item.audioUrl,
-                  lyrics: item.lyrics,
-                }
-              });
+              const queue = musicPosts.map(p => ({
+                title: p.title,
+                artist: p.artist,
+                coverUrl: p.thumbnailUrl,
+                audioUrl: p.audioUrl,
+                lyrics: p.lyrics,
+                postId: p.id,
+              }));
+              const startIndex = Math.max(0, musicPosts.findIndex(p => p.id === item.id));
+              
+              useDesktopNowPlayingStore.getState().openModal(queue, startIndex);
             }}
           />
         </View>

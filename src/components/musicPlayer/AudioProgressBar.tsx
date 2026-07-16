@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import { Dimensions, PanResponder, StyleSheet, Text, View } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -12,6 +12,7 @@ interface AudioProgressBarProps {
   onScrubRelease: (seekMillis: number) => void;
   style?: any;
   compact?: boolean;
+  audioUrl?: string;
 }
 
 const formatTime = (millis: number) => {
@@ -31,6 +32,7 @@ export const AudioProgressBar: React.FC<AudioProgressBarProps> = ({
   onScrubRelease,
   style,
   compact = false,
+  audioUrl,
 }) => {
   const [layoutWidth, setLayoutWidth] = useState(width - 60);
 
@@ -72,8 +74,30 @@ export const AudioProgressBar: React.FC<AudioProgressBarProps> = ({
     }
   };
 
-  const progressPercent = duration > 0 ? (position / duration) * 100 : 0;
+  const progressPercent = duration > 0 ? (position / duration) : 0;
   const timeRemaining = duration - position;
+
+  const totalBars = compact ? 30 : 50;
+
+  const waveform = useMemo(() => {
+    const seedString = audioUrl || String(duration);
+    let hash = 0;
+    for (let i = 0; i < seedString.length; i++) {
+      hash = ((hash << 5) - hash) + seedString.charCodeAt(i);
+      hash = hash & hash;
+    }
+    const seed = Math.abs(hash) || 12345;
+    
+    const bars: number[] = [];
+    for (let i = 0; i < totalBars; i++) {
+      const noise = (Math.sin(seed * (i + 1)) * 10000) % 1;
+      const positiveNoise = Math.abs(noise);
+      const envelope = Math.sin(Math.PI * (i / totalBars));
+      const height = Math.max(0.15, 0.2 + (positiveNoise * envelope * 0.8));
+      bars.push(height);
+    }
+    return bars;
+  }, [audioUrl, duration, totalBars]);
 
   return (
     <View style={[styles.container, compact && styles.compactContainer, style]}>
@@ -83,15 +107,26 @@ export const AudioProgressBar: React.FC<AudioProgressBarProps> = ({
         {...panResponder.panHandlers}
         onLayout={(e) => setLayoutWidth(e.nativeEvent.layout.width)}
       >
-        <View style={styles.progressBarBg}>
-          <View style={[styles.progressBarFill, { width: `${progressPercent}%`, backgroundColor: primaryColor }]} />
-          <View style={[styles.progressThumb, { backgroundColor: primaryColor, left: `${progressPercent}%` }]} />
+        <View style={styles.waveformContainer}>
+          {waveform.map((height, i) => {
+            const barProgress = i / totalBars;
+            const isPlayed = barProgress <= progressPercent;
+            return (
+              <View
+                key={i}
+                style={[
+                  styles.bar,
+                  { height: `${height * 100}%` },
+                  isPlayed ? { backgroundColor: primaryColor } : { backgroundColor: 'rgba(255,255,255,0.2)' }
+                ]}
+              />
+            );
+          })}
         </View>
       </View>
 
       <View style={[styles.timeRow, compact && styles.compactTimeRow]}>
         <Text style={styles.timeText}>{formatTime(position)}</Text>
-        <Text style={styles.timeText}>-{formatTime(timeRemaining)}</Text>
       </View>
     </View>
   );
@@ -111,39 +146,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   compactHitArea: {
-    height: 20,
+    height: 30,
   },
-  progressBarBg: {
-    height: 4,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  waveformContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 30,
+    width: '100%',
+  },
+  bar: {
+    width: 3,
     borderRadius: 2,
-    position: 'relative',
-    justifyContent: 'center',
-    pointerEvents: 'none', // let the hitArea handle touches
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  progressThumb: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    position: 'absolute',
-    top: -4,
-    marginLeft: -6, // center the thumb exactly on the edge
   },
   timeRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     marginTop: 8,
   },
   compactTimeRow: {
     marginTop: 4,
   },
   timeText: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 12,
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+    fontWeight: 'bold',
     fontVariant: ['tabular-nums'],
   },
 });

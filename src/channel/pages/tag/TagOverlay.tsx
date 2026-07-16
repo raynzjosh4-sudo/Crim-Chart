@@ -292,7 +292,7 @@ const MobileTagSheet: React.FC<{
                 postId={postId}
                 targetUserId={f.id}
                 sourceTable={sourceTable}
-                onTagSuccess={() => { markTagged(f.id); onClose(); }}
+                onTagSuccess={() => { markTagged(f.id); }}
               >
                 <TouchableOpacity
                   style={[

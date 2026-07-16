@@ -31,14 +31,21 @@ export class CloudMediaService {
     const title = folderName === 'channel_avatars' ? 'Creating Channel...' : 'Uploading Media...';
     
     await notificationService.init();
-    await notificationService.showUploadProgress(notificationId, title, 10);
+    await notificationService.showUploadProgress(notificationId, 10);
 
     const id = userId || 'anonymous';
     const timestamp = Date.now();
     
-    let extension = localUri.split('.').pop() || 'jpg';
-    if (extension.length > 10 || extension.includes('/')) {
-      extension = 'jpg'; // Fallback for blob: URLs or urls without extension
+    let extension = localUri.split('.').pop() || '';
+    if (extension.length > 10 || extension.includes('/') || extension === '') {
+      // Fallback for blob: URLs or urls without extension
+      if (folderName.includes('audio')) {
+        extension = 'mp3';
+      } else if (folderName.includes('video') || folderName === 'raw') {
+        extension = 'mp4';
+      } else {
+        extension = 'jpg';
+      }
     }
     const rawFileName = `Chart_${timestamp}.${extension}`;
     const objectKey = `users/${id}/${folderName}/${rawFileName}`;
@@ -50,8 +57,9 @@ export class CloudMediaService {
       else if (extension.toLowerCase() === 'png') mimeType = 'image/png';
       else if (extension.toLowerCase() === 'mp4') mimeType = 'video/mp4';
       else if (['m4a', 'aac', 'caf'].includes(extension.toLowerCase())) mimeType = 'audio/mp4';
+      else if (extension.toLowerCase() === 'mp3') mimeType = 'audio/mpeg';
 
-      await notificationService.showUploadProgress(notificationId, title, 30);
+      await notificationService.showUploadProgress(notificationId, 30);
 
       // 1. Create a PutObjectCommand (NO Body here, just metadata for the signature)
       const command = new PutObjectCommand({
@@ -62,7 +70,7 @@ export class CloudMediaService {
 
       // 2. Generate a pre-signed URL
       const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-      await notificationService.showUploadProgress(notificationId, title, 50);
+      await notificationService.showUploadProgress(notificationId, 50);
 
       // 3. Upload directly to the presigned URL
       let uploadSuccessful = false;
@@ -84,6 +92,7 @@ export class CloudMediaService {
       } else {
         const uploadRes = await FileSystem.uploadAsync(signedUrl, localUri, {
           httpMethod: 'PUT',
+          uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
           headers: {
             'Content-Type': mimeType,
           },
@@ -100,11 +109,11 @@ export class CloudMediaService {
       const publicUrl = `${baseUrl}/${objectKey}`;
       console.log(`✅ CloudMediaService: Upload success! URL: ${publicUrl}`);
       
-      await notificationService.finishUpload(notificationId, title);
+      await notificationService.finishUpload(notificationId);
       return publicUrl;
     } catch (e: any) {
       console.error(`❌ CloudMediaService: Upload FAILED: ${e.message}`);
-      await notificationService.finishUpload(notificationId, title);
+      await notificationService.finishUpload(notificationId);
       throw e;
     }
   }
@@ -118,12 +127,12 @@ export class CloudMediaService {
     const title = 'Uploading Original Video...';
 
     await notificationService.init();
-    await notificationService.showUploadProgress(notificationId, title, 10);
+    await notificationService.showUploadProgress(notificationId, 10);
 
     const objectKey = `raw/${videoFilename}`;
 
     try {
-      await notificationService.showUploadProgress(notificationId, title, 30);
+      await notificationService.showUploadProgress(notificationId, 30);
 
       const command = new PutObjectCommand({
         Bucket: bucketName,
@@ -132,7 +141,7 @@ export class CloudMediaService {
       });
 
       const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-      await notificationService.showUploadProgress(notificationId, title, 50);
+      await notificationService.showUploadProgress(notificationId, 50);
 
       let uploadSuccessful = false;
       
@@ -153,6 +162,7 @@ export class CloudMediaService {
       } else {
         const uploadRes = await FileSystem.uploadAsync(signedUrl, localUri, {
           httpMethod: 'PUT',
+          uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
           headers: {
             'Content-Type': 'video/mp4',
           },
@@ -168,11 +178,11 @@ export class CloudMediaService {
       const publicUrl = `${baseUrl}/${objectKey}`;
       console.log(`✅ CloudMediaService: Raw Upload success! URL: ${publicUrl}`);
 
-      await notificationService.finishUpload(notificationId, title);
+      await notificationService.finishUpload(notificationId);
       return publicUrl;
     } catch (e: any) {
       console.error(`❌ CloudMediaService: Raw Upload FAILED: ${e.message}`);
-      await notificationService.finishUpload(notificationId, title);
+      await notificationService.finishUpload(notificationId);
       throw e;
     }
   }

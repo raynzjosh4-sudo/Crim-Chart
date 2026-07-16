@@ -9,16 +9,17 @@
 
 import { Audio } from 'expo-av';
 import { create } from 'zustand';
+import { useDesktopNowPlayingStore } from './useDesktopNowPlayingStore';
 
 interface GlobalAudioPlayerState {
   currentTrackId: string | null;
   isPlaying: boolean;
   position: number;
   duration: number;
-  currentTrackMeta: { id: string; title: string; artist: string; coverUrl: string } | null;
+  currentTrackMeta: { id: string; title: string; artist: string; coverUrl: string; audioUrl?: string; downloadsCount?: number } | null;
 
   // Actions
-  playTrack: (trackId: string, audioUrl: string, meta?: { title: string; artist: string; coverUrl: string }) => Promise<void>;
+  playTrack: (trackId: string, audioUrl: string, meta?: { title: string; artist: string; coverUrl: string; downloadsCount?: number }) => Promise<void>;
   pauseCurrent: () => Promise<void>;
   resumeCurrent: () => Promise<void>;
   toggleTrack: (trackId: string, audioUrl: string, meta?: { title: string; artist: string; coverUrl: string }) => Promise<void>;
@@ -38,13 +39,15 @@ export const useGlobalAudioPlayer = create<GlobalAudioPlayerState>((set, get) =>
   duration: 0,
   currentTrackMeta: null,
 
-  playTrack: async (trackId: string, audioUrl: string, meta?: { title: string; artist: string; coverUrl: string }) => {
+  playTrack: async (trackId: string, audioUrl: string, meta?: { title: string; artist: string; coverUrl: string; downloadsCount?: number }) => {
+    // Close the main player if a feed preview is started
+    useDesktopNowPlayingStore.getState().closeModal();
     const { currentTrackId: prevTrackId } = get();
     
     // Immediately set track ID and meta so UI updates instantly and scrolling away can cancel it
     set({ 
       currentTrackId: trackId, 
-      currentTrackMeta: meta ? { id: trackId, ...meta } : get().currentTrackMeta 
+      currentTrackMeta: meta ? { id: trackId, audioUrl, ...meta } : get().currentTrackMeta 
     });
 
     const requestId = ++_playRequestId;

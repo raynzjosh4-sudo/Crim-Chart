@@ -1,6 +1,8 @@
 import React from 'react';
 import { createUserTag } from '@/channel/pages/tag/tagService';
 import { useInteractionStore } from '@/core/store/useInteractionStore';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+import { Alert } from 'react-native';
 
 interface UserTagWrapperProps {
   postId: string;
@@ -20,9 +22,11 @@ export const UserTagWrapper: React.FC<UserTagWrapperProps> = ({
   sourceTable = 'posts',
 }) => {
   const incrementChannelTagCount = useInteractionStore((s) => s.incrementChannelTagCount);
+  const { startLoading, stopLoading } = useGlobalProgress();
 
   const handleTag = async () => {
     try {
+      startLoading();
       await createUserTag({ postId, targetUserId, sourceTable });
       incrementChannelTagCount(postId);
       onTagSuccess?.();
@@ -32,6 +36,9 @@ export const UserTagWrapper: React.FC<UserTagWrapperProps> = ({
         return;
       }
       console.error('[UserTagWrapper] Failed to tag user:', e);
+      Alert.alert("Tagging Failed", "Failed to tag user. Please try again.");
+    } finally {
+      stopLoading();
     }
   };
 

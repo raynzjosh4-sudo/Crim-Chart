@@ -401,7 +401,7 @@ export const UniversalComposeModal: React.FC = () => {
                             onUpdate={updateMedia}
                           />
                         ) : (
-                          <Image source={{ uri: media.uri }} style={styles.mediaImage as any} />
+                          <Image source={typeof media.uri === 'string' ? { uri: media.uri } : media.uri} style={styles.mediaImage as any} />
                         )}
                         <TouchableOpacity style={styles.removeMediaBtn} onPress={() => removeMedia(media.id)}>
                           <X size={14} color="#FFF" />

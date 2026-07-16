@@ -2,7 +2,7 @@ import { useStyles } from "@/core/hooks/useStyles";
 import React from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { colors } from '@/core/theme/colors';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+
 interface BrowserSpinnerProps {
   isVisible: boolean;
 }
@@ -31,9 +31,9 @@ export const BrowserSpinner = ({
     }
   }));
   if (!isVisible) return null;
-  return <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)} style={styles.container} pointerEvents="none">
+  return <View style={styles.container} pointerEvents="none">
       <View style={styles.spinnerWrapper}>
         <ActivityIndicator size="small" color={colors.primary} />
       </View>
-    </Animated.View>;
+    </View>;
 };

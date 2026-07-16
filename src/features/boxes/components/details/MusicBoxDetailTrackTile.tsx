@@ -7,10 +7,11 @@ import { BoxReactionRecorderWrapper } from '@/components/wrappers/BoxReactionRec
 import { MediaDownloadWrapper } from '@/components/wrappers/MediaDownloadWrapper';
 import { PostInteractionWrapper } from '@/components/wrappers/PostInteractionWrapper';
 import { useInteractionStore } from '@/core/store/useInteractionStore';
-import { Audio } from 'expo-av';
+import { useGlobalAudioPlayer } from '@/core/store/useGlobalAudioPlayer';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { useDesktopNowPlayingStore } from '@/core/store/useDesktopNowPlayingStore';
 
 export interface CommentPreview {
   id: string;
@@ -46,15 +47,16 @@ export interface MusicBoxDetailTrackTileProps {
   };
   isPlaying?: boolean;
   onCommentPress?: (postId: string) => void;
+  onPlay?: () => void;
 }
 
-export const MusicBoxDetailTrackTile = ({ song, isPlaying, onCommentPress }: MusicBoxDetailTrackTileProps) => {
+export const MusicBoxDetailTrackTile = ({ song, isPlaying, onCommentPress, onPlay }: MusicBoxDetailTrackTileProps) => {
   const router = useRouter();
-  const soundRef = useRef<Audio.Sound | null>(null);
-  const loadingPromiseRef = useRef<Promise<Audio.Sound | null> | null>(null);
-
   const [isManuallyPaused, setIsManuallyPaused] = useState(false);
   const isMounted = useRef(true);
+  
+  const globalCurrentTrackId = useGlobalAudioPlayer(state => state.currentTrackId);
+  const globalIsPlaying = useGlobalAudioPlayer(state => state.isPlaying);
 
   useEffect(() => {
     if (song.postId) {
@@ -81,9 +83,6 @@ export const MusicBoxDetailTrackTile = ({ song, isPlaying, onCommentPress }: Mus
     isMounted.current = true;
     return () => {
       isMounted.current = false;
-      if (soundRef.current) {
-        soundRef.current.unloadAsync().catch(() => { });
-      }
     };
   }, []);
 
@@ -98,63 +97,24 @@ export const MusicBoxDetailTrackTile = ({ song, isPlaying, onCommentPress }: Mus
   useEffect(() => {
     if (!song.audioUrl) return;
 
-    const handlePlayState = async () => {
-      try {
-        if (effectiveIsPlaying) {
-          if (!soundRef.current && !loadingPromiseRef.current) {
-            loadingPromiseRef.current = (async () => {
-              await Audio.setAudioModeAsync({
-                playsInSilentModeIOS: true,
-                staysActiveInBackground: true,
-              });
-              const { sound } = await Audio.Sound.createAsync(
-                { uri: song.audioUrl! },
-                { shouldPlay: true, isLooping: true }
-              );
-              if (!isMounted.current) {
-                await sound.unloadAsync().catch(() => { });
-                return null;
-              }
-              soundRef.current = sound;
-              return sound;
-            })();
-            await loadingPromiseRef.current;
-          } else if (soundRef.current) {
-            try {
-              await soundRef.current.playAsync();
-            } catch (err) {
-              console.log('Failed to play existing sound, reloading...', err);
-              await soundRef.current.unloadAsync().catch(() => { });
-              if (!isMounted.current) return;
-              const { sound } = await Audio.Sound.createAsync(
-                { uri: song.audioUrl! },
-                { shouldPlay: true, isLooping: true }
-              );
-              if (!isMounted.current) {
-                await sound.unloadAsync().catch(() => { });
-                return;
-              }
-              soundRef.current = sound;
-            }
-          } else if (loadingPromiseRef.current) {
-            const sound = await loadingPromiseRef.current;
-            if (sound && isMounted.current) await sound.playAsync();
-          }
-        } else {
-          if (soundRef.current) {
-            await soundRef.current.pauseAsync();
-          } else if (loadingPromiseRef.current) {
-            const sound = await loadingPromiseRef.current;
-            if (sound && isMounted.current) await sound.pauseAsync();
-          }
-        }
-      } catch (e) {
-        console.log('Audio playback error:', e);
-      }
-    };
+    const identifier = song.postId || song.id;
 
-    handlePlayState();
-  }, [effectiveIsPlaying, song.audioUrl]);
+    if (effectiveIsPlaying) {
+      const isAlreadyGlobalPlaying = useGlobalAudioPlayer.getState().currentTrackId === identifier && useGlobalAudioPlayer.getState().isPlaying;
+      if (!isAlreadyGlobalPlaying) {
+        useGlobalAudioPlayer.getState().playTrack(identifier, song.audioUrl, {
+          title: song.title,
+          artist: song.artist,
+          coverUrl: song.thumbnailUrl,
+          downloadsCount: currentDownloads
+        });
+      }
+    } else {
+      if (useGlobalAudioPlayer.getState().currentTrackId === identifier) {
+        useGlobalAudioPlayer.getState().pauseCurrent();
+      }
+    }
+  }, [effectiveIsPlaying, song.audioUrl, song.postId, song.id, song.title, song.artist, song.thumbnailUrl]);
 
   return (
     <View style={styles.container}>
@@ -186,23 +146,39 @@ export const MusicBoxDetailTrackTile = ({ song, isPlaying, onCommentPress }: Mus
       {/* Track Info Header */}
       <TouchableOpacity
         style={styles.mainRow}
-        onPress={() => router.push({
-          pathname: '/now-playing',
-          params: {
-            title: song.title,
-            artist: song.artist,
-            coverUrl: song.thumbnailUrl,
-            audioUrl: song.audioUrl || '',
+        onPress={() => {
+          if (onPlay) {
+            onPlay();
+          } else {
+            const params = {
+              title: song.title,
+              artist: song.artist,
+              coverUrl: song.thumbnailUrl,
+              audioUrl: song.audioUrl || '',
+              postId: song.postId,
+              boxId: song.boxId
+            };
+            useDesktopNowPlayingStore.getState().openModal([params], 0);
           }
-        })}
+        }}
         activeOpacity={0.7}
       >
         <View style={styles.thumbnailContainer}>
           <AnimatedDisk
             imageUrl={song.thumbnailUrl || undefined}
             size={180}
-            isPlaying={effectiveIsPlaying || false}
-            onPress={() => setIsManuallyPaused(!isManuallyPaused)}
+            isPlaying={globalCurrentTrackId === (song.postId || song.id) && globalIsPlaying}
+            onPress={() => {
+              if (globalCurrentTrackId === (song.postId || song.id)) {
+                if (globalIsPlaying) {
+                  useGlobalAudioPlayer.getState().pauseCurrent();
+                } else {
+                  useGlobalAudioPlayer.getState().resumeCurrent();
+                }
+              } else {
+                setIsManuallyPaused(false); // trigger effectiveIsPlaying to start it
+              }
+            }}
             showOverlayIcons={true}
             placeholderText=""
           />

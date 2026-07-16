@@ -122,7 +122,7 @@ export const AudioPreviewWidget: React.FC<AudioPreviewWidgetProps> = ({ media, o
       <View style={styles.thumbnailContainer}>
         <TouchableOpacity style={styles.thumbnailWrapper} onPress={pickThumbnail} activeOpacity={0.8}>
           {displayImage ? (
-            <Image source={{ uri: displayImage }} style={styles.thumbnailImage} contentFit="cover" />
+            <Image source={typeof displayImage === 'string' ? { uri: displayImage } : displayImage} style={styles.thumbnailImage} contentFit="cover" />
           ) : (
             <View style={styles.thumbnailPlaceholder}>
             </View>

@@ -1,14 +1,15 @@
+import { useDesktopNowPlayingStore } from '@/core/store/useDesktopNowPlayingStore';
+import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { useTheme } from '@react-navigation/native';
-import { Audio, AVPlaybackStatus } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, Heart, ListMusic, Pause, Play, Shuffle, SkipBack, SkipForward } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
-import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ChevronDown, Heart, ListMusic, Pause, Play, Shuffle, SkipBack, SkipForward } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AudioProgressBar } from './AudioProgressBar';
+import { MusicQueueSheet } from './MusicQueueSheet';
 import { SyncedLyrics } from './SyncedLyrics';
-
-const { width } = Dimensions.get('window');
+import { useGlobalAudioPlayer } from '@/core/store/useGlobalAudioPlayer';
 
 interface NowPlayingScreenProps {
   title?: string;
@@ -17,26 +18,90 @@ interface NowPlayingScreenProps {
   onBack?: () => void;
   audioUrl?: string;
   lyrics?: string;
+  postId?: string;
+  boxId?: string;
+  onNext?: () => void;
+  onPrev?: () => void;
+  onPlayStateChange?: (isPlaying: boolean) => void;
 }
 
-export const NowPlayingScreen: React.FC<NowPlayingScreenProps> = ({
+
+export interface NowPlayingScreenRef {
+  togglePlayPause: () => Promise<void>;
+  isPlaying: boolean;
+}
+
+export const NowPlayingScreen = ({
   title = 'Starlit Reverie',
   artist = 'Budiarti x Lil magrib',
   coverUrl = 'https://images.unsplash.com/photo-1516280440502-6c3f684a0d9b?auto=format&fit=crop&w=500&q=80',
   onBack,
   audioUrl,
   lyrics,
-}) => {
+  postId,
+  boxId,
+  onNext,
+  onPrev,
+  onPlayStateChange,
+  ref,
+}: NowPlayingScreenProps & { ref?: React.Ref<NowPlayingScreenRef> }) => {
   const { colors } = useTheme();
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [isLiked, setIsLiked] = useState(false);
+  const { width: windowWidth } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web';
+  // On desktop modal, the width is capped at 450. On mobile it's full window width.
+  const containerWidth = isDesktop ? Math.min(windowWidth, 450) : windowWidth;
+  const artSize = containerWidth * 0.75;
 
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
-  const [position, setPosition] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const { isShuffled, toggleShuffle } = useDesktopNowPlayingStore();
 
+
+
+  // Read actual like state from store if postId exists
+  const isLiked = useInteractionStore(state =>
+    postId ? state.likes[postId] === true : false
+  );
+
+  const toggleLike = () => {
+    if (postId) {
+      useInteractionStore.getState().toggleLike(postId, boxId);
+    }
+  };
+
+  const globalCurrentTrackId = useGlobalAudioPlayer(state => state.currentTrackId);
+  const globalIsPlaying = useGlobalAudioPlayer(state => state.isPlaying);
+  const globalPosition = useGlobalAudioPlayer(state => state.position);
+  const globalDuration = useGlobalAudioPlayer(state => state.duration);
+  const globalPlayTrack = useGlobalAudioPlayer(state => state.playTrack);
+  const globalPause = useGlobalAudioPlayer(state => state.pauseCurrent);
+  const globalResume = useGlobalAudioPlayer(state => state.resumeCurrent);
+  const globalSeek = useGlobalAudioPlayer(state => state.seekTo);
+
+  const [isQueueVisible, setIsQueueVisible] = useState(false);
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [scrubPosition, setScrubPosition] = useState(0);
+
+  const isPlaying = globalIsPlaying;
+  const position = globalPosition;
+  const duration = globalDuration;
+
+  useEffect(() => {
+    onPlayStateChange?.(isPlaying);
+  }, [isPlaying, onPlayStateChange]);
+
+  useEffect(() => {
+    if (!audioUrl) return;
+    const identifier = postId || audioUrl;
+    
+    // If the global player is not currently playing THIS track, start it!
+    // Or if it IS the track but we just clicked it from somewhere else, playTrack handles resuming.
+    if (globalCurrentTrackId !== identifier) {
+      globalPlayTrack(identifier, audioUrl, {
+        title: title || 'Unknown',
+        artist: artist || 'Unknown',
+        coverUrl: coverUrl || ''
+      });
+    }
+  }, [audioUrl, postId, title, artist, coverUrl]);
 
   const handleScrubStart = () => {
     setIsScrubbing(true);
@@ -47,83 +112,24 @@ export const NowPlayingScreen: React.FC<NowPlayingScreenProps> = ({
   };
 
   const handleScrubRelease = async (seekMillis: number) => {
-    if (!sound) {
-      setIsScrubbing(false);
-      return;
-    }
-    setPosition(seekMillis);
     setIsScrubbing(false);
-    await sound.setPositionAsync(seekMillis);
-  };
-
-  useEffect(() => {
-    let currentSound: Audio.Sound | null = null;
-    let isUnmounted = false;
-
-    const loadAudio = async () => {
-      if (!audioUrl) return;
-
-      try {
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: true,
-          staysActiveInBackground: true,
-        });
-
-        const { sound: newSound } = await Audio.Sound.createAsync(
-          { uri: audioUrl },
-          { shouldPlay: !isUnmounted },
-          onPlaybackStatusUpdate
-        );
-
-        if (isUnmounted) {
-          await newSound.unloadAsync();
-          return;
-        }
-
-        currentSound = newSound;
-        setSound(newSound);
-        setIsPlaying(true);
-      } catch (err) {
-        console.error('Error loading audio:', err);
-      }
-    };
-
-    loadAudio();
-
-    return () => {
-      isUnmounted = true;
-      if (currentSound) {
-        currentSound.unloadAsync();
-      }
-    };
-  }, [audioUrl]);
-
-  const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
-    if (status.isLoaded) {
-      setPosition(status.positionMillis);
-      setDuration(status.durationMillis || 0);
-      setIsPlaying(status.isPlaying);
-
-      if (status.didJustFinish) {
-        setIsPlaying(false);
-        setPosition(0);
-      }
-    }
+    await globalSeek(seekMillis);
   };
 
   const togglePlayPause = async () => {
-    if (!sound) return;
-
     if (isPlaying) {
-      await sound.pauseAsync();
+      await globalPause();
     } else {
-      await sound.playAsync();
+      await globalResume();
     }
   };
 
+  React.useImperativeHandle(ref, () => ({
+    togglePlayPause,
+    isPlaying,
+  }));
+
   const currentPos = isScrubbing ? scrubPosition : position;
-  const progressPercent = duration > 0 ? (currentPos / duration) * 100 : 0;
-  const timeRemaining = duration - currentPos;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -144,35 +150,43 @@ export const NowPlayingScreen: React.FC<NowPlayingScreenProps> = ({
       <SafeAreaView style={styles.safeArea}>
         {/* Top Navigation Bar */}
         <View style={styles.header}>
-          <TouchableOpacity activeOpacity={1} onPress={onBack} style={styles.iconButton}>
-            <ArrowLeft color="#FFF" size={24} />
+          <TouchableOpacity onPress={onBack} style={styles.iconButton}>
+            <ChevronDown color="#FFF" size={32} />
           </TouchableOpacity>
-
           <Text style={styles.headerTitle}>Now Playing</Text>
-
-          <TouchableOpacity activeOpacity={1} onPress={() => setIsLiked(!isLiked)} style={styles.iconButton}>
+          <TouchableOpacity onPress={toggleLike} style={styles.iconButton}>
             <Heart color="#FFF" size={24} fill={isLiked ? "#FFF" : "transparent"} />
           </TouchableOpacity>
         </View>
 
-        {/* Circular Album Art */}
-        <View style={styles.artContainer}>
-          <View style={styles.artWrapper}>
-            <Image
-              source={{ uri: coverUrl }}
-              style={styles.artImage}
-            />
-          </View>
-        </View>
+        {isDesktop && isQueueVisible ? (
+          <MusicQueueSheet
+            visible={isQueueVisible}
+            onClose={() => setIsQueueVisible(false)}
+            isEmbedded={true}
+          />
+        ) : (
+          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
+            {/* Circular Album Art */}
+            <View style={styles.artContainer}>
+              <View style={[styles.artWrapper, { width: artSize, height: artSize, borderRadius: artSize / 2 }]}>
+                <Image
+                  source={{ uri: coverUrl }}
+                  style={[styles.artImage, { borderRadius: artSize / 2 }]}
+                />
+              </View>
+            </View>
 
-        {/* Song Info */}
-        <View style={styles.infoContainer}>
-          <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
-          <Text style={styles.artist} numberOfLines={1} ellipsizeMode="tail">{artist}</Text>
-        </View>
+            {/* Song Info */}
+            <View style={styles.infoContainer}>
+              <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
+              <Text style={styles.artist} numberOfLines={1} ellipsizeMode="tail">{artist}</Text>
+            </View>
 
-        {/* Lyrics Snippet */}
-        <SyncedLyrics lyrics={lyrics} position={currentPos} duration={duration} />
+            {/* Lyrics Snippet */}
+            <SyncedLyrics lyrics={lyrics} position={currentPos} duration={duration} />
+          </ScrollView>
+        )}
 
         {/* Progress Bar */}
         <AudioProgressBar
@@ -182,41 +196,56 @@ export const NowPlayingScreen: React.FC<NowPlayingScreenProps> = ({
           onScrubStart={handleScrubStart}
           onScrubMove={handleScrubMove}
           onScrubRelease={handleScrubRelease}
+          audioUrl={audioUrl}
         />
 
         {/* Controls */}
         <View style={styles.controlsRow}>
-          <TouchableOpacity activeOpacity={1}>
-            <Shuffle color="rgba(255,255,255,0.7)" size={22} />
+          <TouchableOpacity style={styles.iconButton} onPress={toggleShuffle}>
+            <Shuffle color={isShuffled ? colors.primary : "#FFF"} size={20} />
           </TouchableOpacity>
 
-          <View style={styles.mainControls}>
-            <TouchableOpacity activeOpacity={1} style={styles.secondaryButton}>
-              <SkipBack color="#FFF" size={24} fill="#FFF" />
-            </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.secondaryButton, !onPrev && { opacity: 0.5 }]}
+            onPress={onPrev}
+            disabled={!onPrev}
+          >
+            <SkipBack color="#FFF" size={24} fill="#FFF" />
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.playPauseButton, { backgroundColor: colors.primary, shadowColor: colors.primary }]}
-              onPress={togglePlayPause}
-              activeOpacity={0.8}
-            >
-              {isPlaying ? (
-                <Pause color="#000" size={32} fill="#000" />
-              ) : (
-                <Play color="#000" size={32} fill="#000" style={{ marginLeft: 4 }} />
-              )}
-            </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.playPauseButton, { backgroundColor: colors.primary, shadowColor: colors.primary }]}
+            onPress={togglePlayPause}
+            activeOpacity={0.8}
+          >
+            {isPlaying ? (
+              <Pause color="#000" size={32} fill="#000" />
+            ) : (
+              <Play color="#000" size={32} fill="#000" style={{ marginLeft: 4 }} />
+            )}
+          </TouchableOpacity>
 
-            <TouchableOpacity activeOpacity={1} style={styles.secondaryButton}>
-              <SkipForward color="#FFF" size={24} fill="#FFF" />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={[styles.secondaryButton, !onNext && { opacity: 0.5 }]}
+            onPress={onNext}
+            disabled={!onNext}
+          >
+            <SkipForward color="#FFF" size={24} fill="#FFF" />
+          </TouchableOpacity>
 
-          <TouchableOpacity activeOpacity={1}>
-            <ListMusic color="rgba(255,255,255,0.7)" size={22} />
+          <TouchableOpacity style={styles.iconButton} onPress={() => setIsQueueVisible(!isQueueVisible)}>
+            <ListMusic color={isQueueVisible ? colors.primary : "#FFF"} size={20} />
           </TouchableOpacity>
         </View>
       </SafeAreaView>
+
+      {/* Queue Sheet (Mobile Only) */}
+      {!isDesktop && (
+        <MusicQueueSheet
+          visible={isQueueVisible}
+          onClose={() => setIsQueueVisible(false)}
+        />
+      )}
     </View>
   );
 };
@@ -230,6 +259,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'space-between',
     paddingBottom: 30,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingBottom: 20,
   },
   header: {
     flexDirection: 'row',
@@ -254,12 +288,10 @@ const styles = StyleSheet.create({
   },
   artContainer: {
     alignItems: 'center',
-    marginTop: 30,
+    marginTop: 20,
+    paddingHorizontal: 10,
   },
   artWrapper: {
-    width: width * 0.75,
-    height: width * 0.75,
-    borderRadius: (width * 0.75) / 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.5,
@@ -270,7 +302,6 @@ const styles = StyleSheet.create({
   artImage: {
     width: '100%',
     height: '100%',
-    borderRadius: (width * 0.75) / 2,
   },
   infoContainer: {
     alignItems: 'center',

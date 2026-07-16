@@ -1,20 +1,86 @@
-import React, { useEffect, useRef } from 'react';
+import { DownloadButton } from '@/components/buttons/DownloadButton';
+import { MediaDownloadWrapper } from '@/components/wrappers/MediaDownloadWrapper';
+import { useGlobalAudioPlayer } from '@/core/store/useGlobalAudioPlayer';
+import { useInteractionStore } from '@/core/store/useInteractionStore';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
+import { Music2, Pause, Play, X } from 'lucide-react-native';
+import { useEffect, useRef } from 'react';
 import {
-  View,
+  Animated,
+  Image,
+  Platform,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  Animated,
-  Platform,
   useWindowDimensions,
-  Image,
+  View,
 } from 'react-native';
-import { useGlobalAudioPlayer } from '@/core/store/useGlobalAudioPlayer';
-import { useCurrentTheme } from '@/core/store/useThemeStore';
-import { Pause, Play, X, Music2 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { usePathname } from 'expo-router';
+import { useDesktopNowPlayingStore } from '@/core/store/useDesktopNowPlayingStore';
+import { usePathname, useRouter } from 'expo-router';
+
+const styles = StyleSheet.create({
+  /** Mobile: absolute, full-width, above bottom tab bar */
+  mobileContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    borderTopWidth: 0.5,
+    zIndex: 999,
+  },
+  /** Desktop: floating card, bottom-left */
+  desktopContainer: {
+    position: 'absolute',
+    bottom: 24,
+    left: 104,
+    width: 320,
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+    zIndex: 999,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 20,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  art: {
+    width: 42,
+    height: 42,
+    borderRadius: 8,
+    marginRight: 10,
+  },
+  artFallback: {
+    width: 42,
+    height: 42,
+    borderRadius: 8,
+    marginRight: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  info: {
+    flex: 1,
+    marginRight: 4,
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  artist: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  btn: {
+    padding: 8,
+  },
+});
 
 /**
  * MiniPlayerBar
@@ -31,10 +97,10 @@ export const MiniPlayerBar = () => {
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
 
-  const hideMobileBottomNav = pathname.startsWith('/profile') || 
-                              pathname.startsWith('/notifications') || 
-                              pathname.startsWith('/my-music') || 
-                              pathname.startsWith('/statuses');
+  const hideMobileBottomNav = pathname.startsWith('/profile') ||
+    pathname.startsWith('/notifications') ||
+    pathname.startsWith('/my-music') ||
+    pathname.startsWith('/statuses');
 
   // Bottom nav height: 60px bar + safe area. If hidden, just use safe area + a little gap
   const TAB_BAR_HEIGHT = hideMobileBottomNav ? insets.bottom + 8 : 60 + insets.bottom;
@@ -45,6 +111,21 @@ export const MiniPlayerBar = () => {
   const resumeCurrent = useGlobalAudioPlayer((s) => s.resumeCurrent);
   const stopAll = useGlobalAudioPlayer((s) => s.stopAll);
   const currentMeta = useGlobalAudioPlayer((s) => s.currentTrackMeta);
+  const router = useRouter();
+
+  const handleOpenPlayer = () => {
+    if (currentMeta) {
+      useDesktopNowPlayingStore.getState().openModal([{
+        title: currentMeta.title,
+        artist: currentMeta.artist,
+        coverUrl: currentMeta.coverUrl,
+        audioUrl: currentMeta.audioUrl || '',
+        postId: currentMeta.id,
+      }], 0);
+
+      stopAll();
+    }
+  };
 
   const slideAnim = useRef(new Animated.Value(100)).current;
   const visible = !!currentTrackId;
@@ -116,106 +197,87 @@ const BarContent = ({
   onPauseResume,
   onStop,
 }: {
-  meta: { title: string; artist: string; coverUrl: string } | null;
+  meta: { id: string; title: string; artist: string; coverUrl: string; audioUrl?: string; downloadsCount?: number } | null;
   isPlaying: boolean;
   colors: any;
   onPauseResume: () => void;
   onStop: () => void;
-}) => (
-  <View style={styles.row}>
-    {/* Album art */}
-    {meta?.coverUrl ? (
-      <Image source={{ uri: meta.coverUrl }} style={styles.art} />
-    ) : (
-      <View style={[styles.artFallback, { backgroundColor: colors.primary + '22' }]}>
-        <Music2 size={18} color={colors.primary} />
-      </View>
-    )}
+}) => {
+  const currentDownloads = useInteractionStore(state => {
+    if (meta?.id) {
+      // Find download count (could be stored under postId or boxId_postId depending on how it was seeded)
+      // Since we only have meta.id (which is postId), we try to get it directly or find the first key that matches _postId
+      if (state.downloadsCount[meta.id] !== undefined) {
+        return state.downloadsCount[meta.id];
+      }
+      const boxKey = Object.keys(state.downloadsCount).find(k => k.endsWith(`_${meta.id}`));
+      if (boxKey && state.downloadsCount[boxKey] !== undefined) {
+        return state.downloadsCount[boxKey];
+      }
+    }
+    return meta?.downloadsCount || 0;
+  });
 
-    {/* Track info */}
-    <View style={styles.info}>
-      <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
-        {meta?.title ?? 'Now Playing'}
-      </Text>
-      <Text style={[styles.artist, { color: colors.textSecondary }]} numberOfLines={1}>
-        {meta?.artist ?? ''}
-      </Text>
-    </View>
-
-    {/* Play / Pause */}
-    <TouchableOpacity activeOpacity={0.7} onPress={onPauseResume} style={styles.btn}>
-      {isPlaying ? (
-        <Pause size={24} color={colors.text} />
+  return (
+    <View style={styles.row}>
+      {/* Album art */}
+      {meta?.coverUrl ? (
+        <Image source={{ uri: meta.coverUrl }} style={styles.art} />
       ) : (
-        <Play size={24} color={colors.text} />
+        <View style={[styles.artFallback, { backgroundColor: colors.primary + '22' }]}>
+          <Music2 size={18} color={colors.primary} />
+        </View>
       )}
-    </TouchableOpacity>
 
-    {/* Stop / dismiss */}
-    <TouchableOpacity activeOpacity={0.7} onPress={onStop} style={styles.btn}>
-      <X size={20} color={colors.textSecondary} />
-    </TouchableOpacity>
-  </View>
-);
+      {/* Track info */}
+      <View style={styles.info}>
+        <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
+          {meta?.title ?? 'Now Playing'}
+        </Text>
+        <Text style={[styles.artist, { color: colors.textSecondary }]} numberOfLines={1}>
+          {meta?.artist ?? ''}
+        </Text>
+      </View>
 
-const styles = StyleSheet.create({
-  /** Mobile: absolute, full-width, above bottom tab bar */
-  mobileContainer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    borderTopWidth: 0.5,
-    zIndex: 999,
-  },
-  /** Desktop: floating card, bottom-left */
-  desktopContainer: {
-    position: 'absolute',
-    bottom: 24,
-    left: 104,
-    width: 320,
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: 'hidden',
-    zIndex: 999,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 20,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  art: {
-    width: 42,
-    height: 42,
-    borderRadius: 8,
-    marginRight: 10,
-  },
-  artFallback: {
-    width: 42,
-    height: 42,
-    borderRadius: 8,
-    marginRight: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  info: {
-    flex: 1,
-    marginRight: 4,
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  artist: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  btn: {
-    padding: 8,
-  },
-});
+      {/* Download */}
+      <MediaDownloadWrapper
+        mediaUrl={meta?.audioUrl || ''}
+        title={meta?.title || 'Unknown Title'}
+        coverUrl={meta?.coverUrl || ''}
+        mediaType="audio"
+        onDownloadSuccess={() => {
+          if (meta?.id) {
+            useInteractionStore.getState().incrementDownload(meta.id, '');
+          }
+        }}
+      >
+        {({ download, isDownloading }) => (
+          <View style={styles.btn}>
+            <DownloadButton
+              onPress={download}
+              isDownloading={isDownloading}
+              color={colors.text}
+              size={20}
+              count={currentDownloads}
+            />
+          </View>
+        )}
+      </MediaDownloadWrapper>
+
+      {/* Play / Pause */}
+      <TouchableOpacity activeOpacity={0.8} onPress={onPauseResume} style={styles.btn}>
+        {isPlaying ? (
+          <Pause size={24} color={colors.text} />
+        ) : (
+          <Play size={24} color={colors.text} />
+        )}
+      </TouchableOpacity>
+
+      {/* Stop / dismiss */}
+      <TouchableOpacity activeOpacity={0.8} onPress={onStop} style={styles.btn}>
+        <X size={20} color={colors.textSecondary} />
+      </TouchableOpacity>
+    </View>
+  );
+
+}

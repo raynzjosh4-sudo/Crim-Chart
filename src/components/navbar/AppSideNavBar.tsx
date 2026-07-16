@@ -180,7 +180,7 @@ export const AppSideNavBar = ({ selectedIndex, onItemTapped, homeBadgeCount = 0 
             activeOpacity={0.8}
             onPress={() => router.navigate('/profile')}
           >
-            <UserAvatar userId={user.id} fallbackUrl={user.profileImageUrl} name={user.displayName} size={40} />
+            <UserAvatar userId={user.id} fallbackUrl={user.profileImageUrl} name={user.displayName} size={40} forceHasStatus={false} />
             {isExpanded && (
               <View style={styles.profileTextContainer}>
                 <Text style={[styles.profileName, { color: colors.text }]} numberOfLines={1}>{user.displayName}</Text>

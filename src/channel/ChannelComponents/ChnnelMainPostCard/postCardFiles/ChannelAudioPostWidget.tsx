@@ -82,6 +82,7 @@ export const ChannelAudioPostWidget: React.FC<ChannelAudioPostWidgetProps> = ({
     title: songTitle,
     artist: songArtist,
     coverUrl: displayThumbnail,
+    downloadsCount: useInteractionStore.getState().downloadsCount[postId || ''] ?? downloadsCount,
   };
 
   // Auto-play when scrolled into view, pause when scrolled away

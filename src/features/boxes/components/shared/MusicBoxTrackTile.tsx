@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Play, ThumbsUp, ThumbsDown } from 'lucide-react-native';
+import { Platform } from 'react-native';
+import { useDesktopNowPlayingStore } from '@/core/store/useDesktopNowPlayingStore';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
@@ -28,7 +30,15 @@ export const MusicBoxTrackTile = ({ song }: MusicBoxTrackTileProps) => {
   return (
     <TouchableOpacity 
       style={styles.songRow}
-      onPress={() => router.push('/now-playing')}
+      onPress={() => {
+        const params = {
+          title: song.title,
+          artist: song.artist,
+          coverUrl: song.thumbnailUrl,
+          postId: song.id,
+        };
+        useDesktopNowPlayingStore.getState().openModal([params], 0);
+      }}
       activeOpacity={0.7}
     >
       <View style={styles.thumbnailContainer}>

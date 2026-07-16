@@ -3,6 +3,7 @@ import { TouchableOpacity } from 'react-native';
 import 'react-native-get-random-values';
 import 'react-native-reanimated';
 import 'react-native-url-polyfill/auto';
+import 'fast-text-encoding';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { chartToastConfig } from '@/components/showcase/CrimChart_toast';
@@ -67,6 +68,8 @@ import { WhatsAppOverlayRoot } from '@/components/showcase/WhatsAppOverlayWidget
 import { OfflineStaleDataBanner, SlowConnectionBanner } from '@/components/offlineIndicators';
 import { useAppPresence } from '@/core/hooks/useAppPresence';
 import { usePresenceSyncWorker } from '@/core/sync/usePresenceSyncWorker';
+import { DesktopNowPlayingModal } from '@/components/musicPlayer/DesktopNowPlayingModal';
+import { MobileNowPlayingWidget } from '@/components/musicPlayer/MobileNowPlayingWidget';
 import { Modal } from 'react-native';
 
 const GlobalExploreModal = () => {
@@ -199,6 +202,8 @@ export default function RootLayout() {
               <SlowConnectionBanner />
               <GlobalExploreModal />
               <DesktopChannelModal />
+              <DesktopNowPlayingModal />
+              <MobileNowPlayingWidget />
               <WhatsAppOverlayRoot />
               <Toast config={{ ...chartToastConfig, ...toastConfig }} />
             </ProgressProvider>

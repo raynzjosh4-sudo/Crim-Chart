@@ -212,13 +212,14 @@ export const CoverArtSelectorSheet = React.forwardRef(({ onSelectArtwork }: Cove
         startLoading();
         await new Promise(r => setTimeout(r, 300));
         stopLoading();
-        setVisible(false);
 
         // If uploading manually, at least use the cleanest parsed filename
         const updatedMedia = { ...currentMedia };
         if (searchQueries.length > 0) {
           updatedMedia.name = searchQueries[0];
         }
+        
+        bottomSheetRef.current?.close();
         onSelectArtwork(updatedMedia, result.assets[0].uri);
       }
     } catch (e) {
@@ -230,7 +231,6 @@ export const CoverArtSelectorSheet = React.forwardRef(({ onSelectArtwork }: Cove
     startLoading();
     await new Promise(r => setTimeout(r, 300));
     stopLoading();
-    setVisible(false);
 
     // Inject the official iTunes title and artist!
     const updatedMedia = { ...currentMedia };
@@ -243,6 +243,7 @@ export const CoverArtSelectorSheet = React.forwardRef(({ onSelectArtwork }: Cove
       }
     }
 
+    bottomSheetRef.current?.close();
     onSelectArtwork(updatedMedia, item.url);
   };
 

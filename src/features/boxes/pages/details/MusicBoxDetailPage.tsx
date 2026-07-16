@@ -23,6 +23,7 @@ import { MusicBoxDetailTrackTile } from '../../components/details/MusicBoxDetail
 import { TrendingInBoxWidget } from '../../components/details/TrendingInBoxWidget';
 import { MusicPostingPage } from '../../components/music_posting/MusicPostingPage';
 import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+import { useDesktopNowPlayingStore } from '@/core/store/useDesktopNowPlayingStore';
 const {
   width: windowWidth
 } = Dimensions.get('window');
@@ -213,18 +214,37 @@ export const MusicBoxDetailPage = ({
     }
   }).current;
   const flatListRef = useRef<FlatList<any>>();
+  
+  const handleTrackPlay = (trackId: string, trackObj?: any) => {
+    let queue = filteredItems.map(item => ({
+      title: item.title,
+      artist: item.artist,
+      coverUrl: item.thumbnailUrl,
+      audioUrl: item.audioUrl,
+      postId: item.postId,
+      boxId: item.boxId
+    }));
+    
+    let index = filteredItems.findIndex(i => i.id === trackId);
+    
+    // Fallback if track is not in filteredItems (e.g. from Trending widget)
+    if (index === -1 && trackObj) {
+      queue = [{
+        title: trackObj.title,
+        artist: trackObj.artist,
+        coverUrl: trackObj.thumbnailUrl,
+        audioUrl: trackObj.audioUrl || '',
+      }];
+      index = 0;
+    }
+
+    useDesktopNowPlayingStore.getState().openModal(queue, index);
+  };
+
   const renderHeader = () => {
     return <View>
         <TrendingInBoxWidget boxId={id} onTrackPress={track => {
-        router.push({
-          pathname: '/now-playing',
-          params: {
-            title: track.title,
-            artist: track.artist,
-            coverUrl: track.thumbnailUrl,
-            audioUrl: track.audioUrl || ''
-          }
-        });
+        handleTrackPlay(track.id, track);
       }} />
 
         <RecentContributorsWidget contributors={members} isLoading={isLoadingMembers} isPaginating={isPaginatingMembers} onLoadMore={loadMoreMembers} boxId={id} selectedMemberId={selectedFilterUserId} onSelectMember={id => setSelectedFilterUserId(id)} onLongPressMember={id => setViewerMemberId(id)} onAddPress={() => {
@@ -242,7 +262,7 @@ export const MusicBoxDetailPage = ({
     item: any;
   }) => {
     const isPlaying = activeTrackId === song.id && isPageActive && appStateVisible === 'active';
-    return <MusicBoxDetailTrackTile song={song} isPlaying={isPlaying} onCommentPress={postId => {
+    return <MusicBoxDetailTrackTile song={song} isPlaying={isPlaying} onPlay={() => handleTrackPlay(song.id)} onCommentPress={postId => {
       setActivePostId(postId);
       setShowComments(true);
     }} />;

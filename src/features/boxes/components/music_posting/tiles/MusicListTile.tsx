@@ -94,7 +94,7 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
     if (!editedTrack.audioUrl || isLocal) return;
     if (isCurrentlyPlaying) {
       // Auto-play when scrolled into view
-      useGlobalAudioPlayer.getState().playTrack(track.id, editedTrack.audioUrl, { title: editedTrack.title, artist: editedTrack.artist, coverUrl: editedTrack.coverUrl });
+      useGlobalAudioPlayer.getState().playTrack(track.id, editedTrack.audioUrl, { title: editedTrack.title, artist: editedTrack.artist, coverUrl: editedTrack.coverUrl, downloadsCount });
     } else {
       // If this tile was the one playing, pause it
       if (useGlobalAudioPlayer.getState().currentTrackId === track.id) {
@@ -103,7 +103,7 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
     }
   }, [isCurrentlyPlaying, editedTrack.audioUrl, isLocal, track.id]);
 
-  const trackMeta = { title: editedTrack.title, artist: editedTrack.artist, coverUrl: editedTrack.coverUrl };
+  const trackMeta = { title: editedTrack.title, artist: editedTrack.artist, coverUrl: editedTrack.coverUrl, downloadsCount };
 
 
   const handlePickImage = async () => {
