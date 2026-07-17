@@ -1,13 +1,14 @@
+import { MediaGalleryBottomSheet } from '@/channel/pages/messages_tab/bottom_sheets/MediaGalleryBottomSheet';
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
-import CrimchartBackButton from '@/components/CrimChartBackButton/CrimChart_back_button';
 import { useStyles } from '@/core/hooks/useStyles';
-import { ThemeTokens } from '@/core/theme/themes';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
+import { ThemeTokens } from '@/core/theme/themes';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { UserBoxesWidget } from '@/features/boxes/components/UserBoxesWidget';
+import { UserTagsWidget } from '../components/UserTagsWidget';
 import { useRouter } from 'expo-router';
 import { LayoutGrid, Music, Play, Settings } from 'lucide-react-native';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
   DeviceEventEmitter,
   Dimensions,
@@ -27,7 +28,6 @@ import { PhotosProfileTab } from '../tabs/PhotosProfileTab';
 import { PostsProfileTab } from '../tabs/PostsProfileTab';
 import { VideosProfileTab } from '../tabs/VideosProfileTab';
 import { getStatusText } from '../utils/ConnectionStatsUtils';
-import { MediaGalleryBottomSheet } from '@/channel/pages/messages_tab/bottom_sheets/MediaGalleryBottomSheet';
 
 interface ProfilePageProps {
   userId?: string;
@@ -119,9 +119,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           showBorder={isDesktop && showScrolledActions}
           useSafeArea={false}
           actions={[
-            isDesktop && showScrolledActions ? customActions : null,
+            isDesktop && showScrolledActions && customActions ? (
+              <React.Fragment key="customActions">{customActions}</React.Fragment>
+            ) : null,
             !isDesktop && isCurrentUser ? (
-              <TouchableOpacity activeOpacity={1} onPress={goToSettings} style={styles.appBarBtn}>
+              <TouchableOpacity key="settings" activeOpacity={1} onPress={goToSettings} style={styles.appBarBtn}>
                 <Settings color={theme.colors.text} size={22} />
               </TouchableOpacity>
             ) : null
@@ -281,6 +283,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                 isCurrentUser={isCurrentUser}
               />
             )}
+
+            <UserTagsWidget 
+              userId={userId ?? user?.id} 
+              isCurrentUser={isCurrentUser}
+              userData={user}
+            />
           </View>
 
           {/* Sticky Tab Bar */}

@@ -99,21 +99,7 @@ export const ProfilePageWrapper: React.FC<ProfilePageWrapperProps> = ({
           error
         } = await supabase.from('profiles').select('*').eq('id', activeUserId).single();
         if (data) {
-          setUserData({
-            id: data.id,
-            username: data.display_name,
-            profileImageUrl: data.profile_image_url,
-            bio: data.bio,
-            followersCount: data.followers_count || 0,
-            followingCount: data.following_count || 0,
-            channelCount: data.channels_created_count || 0,
-            boxesCount: data.boxes_count || 0,
-            boxSubmissionsCount: data.box_submissions_count || 0,
-            postsCount: data.posts_count || 0,
-            inboxCount: data.inbox_count || 0,
-            downloadsCount: data.downloads_count || 0,
-            crownTitle: data.crown_title
-          } as CrimChartUserModel);
+          setUserData(CrimChartUserModel.fromMap(data));
         }
       } catch (err) {
         console.error('Error fetching profile:', err);

@@ -7,6 +7,7 @@ import { useChannelPermissions } from "@/channel/hooks/useChannelPermissions";
 import { useChannelPosts } from "@/channel/hooks/useChannelPosts";
 import { useChannelStatuses } from "@/channel/hooks/useChannelStatuses";
 import { cloudMediaService } from "@/core/network/cloudMediaService";
+import { useDesktopComposeStore } from "@/core/store/useDesktopComposeStore";
 import { useProfileCacheStore } from "@/core/store/useProfileCacheStore";
 import { useAuthStore } from "@/features/auth/application/useAuthStore";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
@@ -23,7 +24,6 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { useDesktopComposeStore } from "@/core/store/useDesktopComposeStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CustomChannelWidget } from "@/channel/components/CustomChannelWidget";
@@ -34,12 +34,13 @@ import { ChannelNavBar } from "@/features/channel/pages/discovery_widgets/Channe
 
 import { ChannelRestrictionOverlay } from "@/channel/components/ChannelRestrictionOverlay";
 import { useChannelData } from "@/channel/hooks/useChannelData";
+import { StatusGroup, StatusViewer } from '@/channel/pages/widgets2/status/StatusViewer';
 import UserAvatar from "@/components/avatar/UserAvatar";
+import { ChannelPageShimmer } from "@/components/shimmers/channelPageShimmer/ChannelPageShimmer";
 import { ChannelRestrictionWrapper } from "@/components/wrappers/ChannelRestrictionWrapper";
 import { useCurrentTheme } from "@/core/store/useThemeStore";
 import { MembersTabView } from "@/features/channel/pages/members_tab/MembersTabView";
 import { ActiveUsersBar } from "@/features/channel/pages/messages_tab/widgets/ActiveUsersBar";
-import { StatusViewer, StatusGroup } from '@/channel/pages/widgets2/status/StatusViewer';
 import { ChatBubble } from "@/features/channel/pages/messages_tab/widgets/chartbubble/ChatBubble";
 import { TypingBubble } from "@/features/channel/pages/messages_tab/widgets/chartbubble/TypingBubble";
 import { ChatInputField } from "@/features/channel/pages/messages_tab/widgets/ChatInputField";
@@ -47,7 +48,6 @@ import { VideoTabView } from "@/features/channel/pages/video_tab/VideoTabView";
 import { useChannelStyles } from "./styles/_channelStyyles.styles";
 import { DateDivider } from "./widgets/_datedivider";
 import { ChannelTitleBar } from "./widgets/ChannelTitleBar";
-import { ChannelPageShimmer } from "@/components/shimmers/channelPageShimmer/ChannelPageShimmer";
 
 
 export default function ChannelPage({ channelIdOverride, isModal }: { channelIdOverride?: string, isModal?: boolean }) {
@@ -63,6 +63,27 @@ export default function ChannelPage({ channelIdOverride, isModal }: { channelIdO
   const theme = useCurrentTheme();
   const { statuses: channelStatuses, loadMore: loadMoreChannelStatuses } = useChannelStatuses(id as string);
   const { posts: channelPosts } = useChannelPosts(id as string);
+
+  const [activeTab, setActiveTab] = useState(0);
+  // Local unread count — synced from channel data but cleared optimistically when messages tab is opened
+  const [localUnreadCount, setLocalUnreadCount] = useState(0);
+
+  // Reset local state whenever the user navigates to a DIFFERENT channel.
+  // Without this, localUnreadCount from Channel A leaks into Channel B.
+  React.useEffect(() => {
+    setLocalUnreadCount(0);
+    setActiveTab(0);
+  }, [id]);
+
+  // Keep localUnreadCount in sync with server data (but only when NOT on the messages tab).
+  // IMPORTANT: We use Math.max so that a re-fetch returning 0 never clears a badge the user
+  // hasn't explicitly dismissed. Only the user tapping the messages tab resets this to 0.
+  React.useEffect(() => {
+    if (channel?.unreadCount != null && channel.unreadCount > 0 && activeTab !== 1) {
+      setLocalUnreadCount(Math.max(localUnreadCount, channel.unreadCount));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channel?.unreadCount]);
 
   // Status Viewer State
   const [statusViewerVisible, setStatusViewerVisible] = useState(false);
@@ -86,7 +107,7 @@ export default function ChannelPage({ channelIdOverride, isModal }: { channelIdO
         thumbnail: s.thumbnailUrl || (s.imageUrls && s.imageUrls[0]) || ''
       })) || []
     }));
-    
+
     const index = mappedGroups.findIndex(g => g.id === tappedItem.id);
     setStatusViewerGroups(mappedGroups);
     setStatusInitialIndex(index >= 0 ? index : 0);
@@ -112,7 +133,6 @@ export default function ChannelPage({ channelIdOverride, isModal }: { channelIdO
     }
   }, [channelMembers]);
 
-  const [activeTab, setActiveTab] = useState(0);
   const [isMediaSheetVisible, setIsMediaSheetVisible] = useState(false);
   const [isStatusMode, setIsStatusMode] = useState(false);
   const [myTyping, setMyTyping] = useState(false);
@@ -638,10 +658,19 @@ export default function ChannelPage({ channelIdOverride, isModal }: { channelIdO
               {/* Nav Bar */}
               <ChannelNavBar
                 selectedIndex={activeTab}
-                onTabSelected={setActiveTab}
+                onTabSelected={(index) => {
+                  setActiveTab(index);
+                  // When user opens the messages tab, clear the badge and mark channel as read
+                  if (index === 1 && (localUnreadCount > 0 || (channel?.unreadCount ?? 0) > 0)) {
+                    setLocalUnreadCount(0); // Optimistic clear
+                    if (id && user?.id) {
+                      channelRepository.markChannelRead(id as string, user.id);
+                    }
+                  }
+                }}
                 totalMembers={channel?.membersCount || 0}
                 pendingRequests={channel?.pendingRequestsCount || 0}
-                unreadMessages={channel?.unreadCount || 0}
+                unreadMessages={activeTab === 1 ? 0 : (localUnreadCount || channel?.unreadCount || 0)}
               />
 
               {/* Tab Content */}

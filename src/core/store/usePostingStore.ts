@@ -492,7 +492,7 @@ export const usePostingStore = create<PostingState>((set) => ({
                 recipient_id: f.follower_id,
                 actor_id: user.id,
                 type: 'post',
-                action_text: isVideo ? 'posted a new video.' : (finalAudioUrl ? 'posted a new audio track.' : (finalImageUrls.length > 0 ? 'posted a new photo.' : 'published a new post.')),
+                action_text: isVideo ? 'posted one of their favorite videos.' : (finalAudioUrl ? 'posted one of their favorite songs.' : (finalImageUrls.length > 0 ? 'posted one of their favorite photos.' : 'published a new post.')),
                 reference_id: data.id
               }));
               // Insert in chunks of 1000 if needed, but a single batch is usually fine for most users

@@ -28,6 +28,7 @@ RETURNS TABLE (
   followers_count INT,
   has_active_members BOOLEAN
 ) AS $$
+-- Subexpression for live active moments count (not expired)
 BEGIN
   IF p_filter_type = 'owned' THEN
     RETURN QUERY
@@ -36,7 +37,12 @@ BEGIN
       p.display_name as creator_name, p.profile_image_url as creator_avatar_url,
       'owned'::TEXT as channel_type,
       COALESCE(cm.unread_count, 0) as unread_count,
-      c.moments_count, c.messages_count, c.tags_count, c.likes_count, c.followers_count, c.has_active_members
+      -- Live count of only non-expired moments instead of stale cached column
+      CAST((SELECT COUNT(*) FROM channel_moments cmo
+            WHERE cmo.channel_id = c.id
+            AND (cmo.expires_at > NOW() OR (cmo.expires_at IS NULL AND cmo.created_at > NOW() - INTERVAL '24 hours'))
+           ) AS INT) as moments_count,
+      c.messages_count, c.tags_count, c.likes_count, c.followers_count, c.has_active_members
     FROM channels c
     LEFT JOIN profiles p ON p.id = c.creator_id
     LEFT JOIN channel_members cm ON cm.channel_id = c.id AND cm.user_id = p_user_id
@@ -51,7 +57,12 @@ BEGIN
       p.display_name as creator_name, p.profile_image_url as creator_avatar_url,
       'joined'::TEXT as channel_type,
       COALESCE(cm.unread_count, 0) as unread_count,
-      c.moments_count, c.messages_count, c.tags_count, c.likes_count, c.followers_count, c.has_active_members
+      -- Live count of only non-expired moments instead of stale cached column
+      CAST((SELECT COUNT(*) FROM channel_moments cmo
+            WHERE cmo.channel_id = c.id
+            AND (cmo.expires_at > NOW() OR (cmo.expires_at IS NULL AND cmo.created_at > NOW() - INTERVAL '24 hours'))
+           ) AS INT) as moments_count,
+      c.messages_count, c.tags_count, c.likes_count, c.followers_count, c.has_active_members
     FROM channels c
     JOIN channel_members cm ON cm.channel_id = c.id
     LEFT JOIN profiles p ON p.id = c.creator_id
@@ -66,7 +77,12 @@ BEGIN
       p.display_name as creator_name, p.profile_image_url as creator_avatar_url,
       'similar'::TEXT as channel_type,
       0 as unread_count,
-      c.moments_count, c.messages_count, c.tags_count, c.likes_count, c.followers_count, c.has_active_members
+      -- Live count of only non-expired moments instead of stale cached column
+      CAST((SELECT COUNT(*) FROM channel_moments cmo
+            WHERE cmo.channel_id = c.id
+            AND (cmo.expires_at > NOW() OR (cmo.expires_at IS NULL AND cmo.created_at > NOW() - INTERVAL '24 hours'))
+           ) AS INT) as moments_count,
+      c.messages_count, c.tags_count, c.likes_count, c.followers_count, c.has_active_members
     FROM channels c
     JOIN channel_members cm1 ON cm1.channel_id = c.id
     JOIN channel_members cm2 ON cm2.channel_id = c.id

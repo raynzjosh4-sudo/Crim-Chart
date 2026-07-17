@@ -11,6 +11,13 @@ export interface UserConnectionStatsModel {
   lockedIntent: boolean;
 }
 
+export interface UserTagGroup {
+  taggerId: string;
+  taggerName: string;
+  taggerAvatar: string;
+  tags: { id: string; name: string }[];
+}
+
 export class CrimChartUserModel {
   public id: string;
   public displayName: string;
@@ -44,6 +51,7 @@ export class CrimChartUserModel {
   public inboxPermission?: string;
   public connectionStats?: UserConnectionStatsModel;
   public musicCategory?: string;
+  public receivedTags?: UserTagGroup[];
 
   constructor(params: {
     id: string;
@@ -78,6 +86,7 @@ export class CrimChartUserModel {
     inboxPermission?: string;
     connectionStats?: UserConnectionStatsModel;
     musicCategory?: string;
+    receivedTags?: UserTagGroup[];
   }) {
     this.id = params.id;
     this.displayName = params.displayName;
@@ -111,6 +120,7 @@ export class CrimChartUserModel {
     this.inboxPermission = params.inboxPermission ?? 'everyone';
     this.connectionStats = params.connectionStats;
     this.musicCategory = params.musicCategory;
+    this.receivedTags = params.receivedTags;
   }
 
   static empty(): CrimChartUserModel {
@@ -163,6 +173,9 @@ export class CrimChartUserModel {
         showAgePref: map.user_connection_stats.show_age_pref ?? true,
         lockedIntent: map.user_connection_stats.locked_intent ?? false,
       } : undefined,
+      receivedTags: typeof map.received_tags === 'string' ? (() => {
+        try { return JSON.parse(map.received_tags); } catch { return []; }
+      })() : (map.received_tags || []),
     });
   }
 

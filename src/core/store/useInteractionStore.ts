@@ -28,7 +28,7 @@ interface InteractionState {
   // Actions to interact
   toggleLike: (postId: string, boxId?: string, sourceTable?: string) => void;
   incrementView: (postId: string, boxId?: string, sourceTable?: string) => void;
-  incrementDownload: (postId: string, boxId?: string, sourceTable?: string) => void;
+  incrementDownload: (postId: string, boxId?: string, sourceTable?: string, fallbackCount?: number) => void;
   toggleTag: (postId: string, boxId: string) => void;
   incrementChannelTagCount: (postId: string) => void;
 
@@ -218,16 +218,16 @@ export const useInteractionStore = create<InteractionState>((set) => ({
     });
   },
 
-  incrementDownload: (postId, boxId, sourceTable) =>
+  incrementDownload: (postId, boxId, sourceTable, fallbackCount) =>
     set((state) => {
       // Logic: if boxId is provided, we increment both the global count and the box count
       // if sourceTable is provided, we use it for DB sync
       const key = boxId ? `${boxId}_${postId}` : postId;
-      const count = state.downloadsCount[key] || 0;
+      const count = state.downloadsCount[key] !== undefined ? state.downloadsCount[key] : (fallbackCount || 0);
       const newCount = count + 1;
 
       // Optimistically increment global downloads if we're in a box
-      const globalCount = state.downloadsCount[postId] || 0;
+      const globalCount = state.downloadsCount[postId] !== undefined ? state.downloadsCount[postId] : (fallbackCount || 0);
       let newGlobalCount = globalCount;
       if (boxId) {
         newGlobalCount += 1;
@@ -360,30 +360,33 @@ export const useInteractionStore = create<InteractionState>((set) => ({
         }
       }
 
-      // 4. Fetch Global Like Counts & Comment Counts from the source tables
+      // 4. Fetch Global Like Counts & Comment Counts & Tags Counts from the source tables
       const { data: postsData } = await supabase
         .from('posts')
-        .select('id, likes_count, comments_count, views_count')
+        .select('id, likes_count, comments_count, views_count, tags_count')
         .in('id', postIds);
 
       const { data: channelPostsData } = await supabase
         .from('channel_posts')
-        .select('id, likes_count, comments_count, views_count')
+        .select('id, likes_count, comments_count, views_count, tags_count')
         .in('id', postIds);
 
       const trueCountsMap = new Map<string, number>();
       const trueCommentsMap = new Map<string, number>();
       const trueViewsMap = new Map<string, number>();
+      const trueTagsMap = new Map<string, number>();
 
       if (postsData) postsData.forEach(p => {
         trueCountsMap.set(p.id, p.likes_count);
         trueCommentsMap.set(p.id, p.comments_count);
         trueViewsMap.set(p.id, p.views_count);
+        trueTagsMap.set(p.id, p.tags_count || 0);
       });
       if (channelPostsData) channelPostsData.forEach(p => {
         trueCountsMap.set(p.id, p.likes_count);
         trueCommentsMap.set(p.id, p.comments_count);
         trueViewsMap.set(p.id, p.views_count);
+        trueTagsMap.set(p.id, p.tags_count || 0);
       });
 
       // 5. Batch update state
@@ -393,6 +396,7 @@ export const useInteractionStore = create<InteractionState>((set) => ({
         const newViewsCount = { ...state.viewsCount };
         const newPostCommentsCount = { ...state.postCommentsCount };
         const newTags = { ...state.tags };
+        const newChannelTagsCount = { ...state.channelTagsCount };
 
         postIds.forEach(postId => {
           // Update global like status
@@ -411,6 +415,11 @@ export const useInteractionStore = create<InteractionState>((set) => ({
           // Update global views count if we fetched it
           if (trueViewsMap.has(postId)) {
             newViewsCount[postId] = trueViewsMap.get(postId)!;
+          }
+
+          // Update tags count if we fetched it
+          if (trueTagsMap.has(postId)) {
+            newChannelTagsCount[postId] = trueTagsMap.get(postId)!;
           }
 
           // Update box-specific like status
@@ -443,7 +452,8 @@ export const useInteractionStore = create<InteractionState>((set) => ({
           likesCount: newLikesCount,
           postCommentsCount: newPostCommentsCount,
           viewsCount: newViewsCount,
-          tags: newTags
+          tags: newTags,
+          channelTagsCount: newChannelTagsCount
         };
       });
     } catch (e) {

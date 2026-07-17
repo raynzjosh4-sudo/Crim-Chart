@@ -247,7 +247,7 @@ const BarContent = ({
         mediaType="audio"
         onDownloadSuccess={() => {
           if (meta?.id) {
-            useInteractionStore.getState().incrementDownload(meta.id, '');
+            useInteractionStore.getState().incrementDownload(meta.id, '', '', currentDownloads);
           }
         }}
       >

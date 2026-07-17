@@ -53,13 +53,23 @@ BEGIN
     c.youtube_channel_id,
     COALESCE(c."isActive", false) AS "isActive",
     COALESCE(c.members_count, 0),
-    COALESCE(c.moments_count, 0),
+    -- Live count of only non-expired moments — fixes ring persisting after moments expire
+    CAST((SELECT COUNT(*) FROM channel_moments cmo
+          WHERE cmo.channel_id = c.id
+          AND (cmo.expires_at > NOW() OR (cmo.expires_at IS NULL AND cmo.created_at > NOW() - INTERVAL '24 hours'))
+         ) AS INT),
     COALESCE(c.messages_count, 0),
     COALESCE(c.tags_count, 0),
     COALESCE(c.likes_count, 0),
     COALESCE(c.followers_count, 0),
-    COALESCE(c.unread_count, 0),
-    COALESCE(c.pending_requests_count, 0),
+    -- Per-user unread count from channel_members (NOT channels.unread_count which is always 0)
+    COALESCE(cm.unread_count, 0),
+    -- Live count of pending join requests — fixes members badge not showing
+    CAST((SELECT COUNT(*) FROM public.channel_requests cr
+          WHERE cr.channel_id = c.id
+          AND cr.status = 'pending'
+          AND cr.request_type = 'join_request'
+         ) AS INT),
     COALESCE(c.has_active_members, false),
     c.age_restriction,
     COALESCE(c.visible_to_other_channel_members, true),

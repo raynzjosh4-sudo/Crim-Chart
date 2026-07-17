@@ -190,6 +190,22 @@ export class ChannelRepository {
   async leaveChannel(channelId: string, userId: string): Promise<void> {
     return channelRemoteSource.leaveChannel(channelId, userId);
   }
+
+  /**
+   * Resets the unread message count for a user in a channel to 0.
+   * Call this when the user opens the messages tab of a channel.
+   */
+  async markChannelRead(channelId: string, userId: string): Promise<void> {
+    try {
+      await supabase
+        .from('channel_members')
+        .update({ unread_count: 0 })
+        .eq('channel_id', channelId)
+        .eq('user_id', userId);
+    } catch (err) {
+      console.error('[ChannelRepository] Failed to mark channel as read:', err);
+    }
+  }
 }
 
 export const channelRepository = new ChannelRepository();

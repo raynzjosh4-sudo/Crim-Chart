@@ -21,3 +21,5 @@ module.exports = function withNotifeeRepo(config) {
   });
 };
 // eas build -p android --profile preview
+// eas secret:push --scope project --env-file .env
+// eas env:push --force

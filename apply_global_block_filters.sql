@@ -1,6 +1,5 @@
 -- ==========================================
 -- GLOBAL BI-DIRECTIONAL BLOCK FILTERING
--- Execute this script in your Supabase SQL Editor
 -- ==========================================
 
 -- 1. Create a STABLE helper function to get all mutually blocked UUIDs

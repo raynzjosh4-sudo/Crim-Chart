@@ -22,7 +22,8 @@
     },
     "web": {
       "output": "single",
-      "favicon": "./assets/appicon/big-sized-app-icon.png"
+      "favicon": "./assets/appicon/big-sized-app-icon.png",
+      "backgroundColor": "#000000"
     },
     "plugins": [
       "expo-router",

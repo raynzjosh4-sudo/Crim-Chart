@@ -27,6 +27,7 @@ CREATE TABLE public.profiles (
   country text,
   inbox_permission text DEFAULT 'everyone'::text CHECK (inbox_permission = ANY (ARRAY['everyone'::text, 'require_approval'::text, 'followers_only'::text, 'only_me'::text])),
   music_category text,
+  downloads_count integer DEFAULT 0,
   CONSTRAINT profiles_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.channels (
@@ -92,8 +93,8 @@ CREATE TABLE public.crowns (
   has_status boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
   CONSTRAINT crowns_pkey PRIMARY KEY (id),
-  CONSTRAINT crowns_crowner_id_fkey FOREIGN KEY (crowner_id) REFERENCES public.profiles(id),
-  CONSTRAINT crowns_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id)
+  CONSTRAINT crowns_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id),
+  CONSTRAINT crowns_crowner_id_fkey FOREIGN KEY (crowner_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.crown_options (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -199,8 +200,8 @@ CREATE TABLE public.common_channels (
   channel_id uuid NOT NULL,
   CONSTRAINT common_channels_pkey PRIMARY KEY (user_id, other_user_id, channel_id),
   CONSTRAINT common_channels_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id),
-  CONSTRAINT common_channels_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
-  CONSTRAINT common_channels_other_user_id_fkey FOREIGN KEY (other_user_id) REFERENCES public.profiles(id)
+  CONSTRAINT common_channels_other_user_id_fkey FOREIGN KEY (other_user_id) REFERENCES public.profiles(id),
+  CONSTRAINT common_channels_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.channel_posts (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -239,8 +240,8 @@ CREATE TABLE public.channel_posts (
   type text,
   category text,
   CONSTRAINT channel_posts_pkey PRIMARY KEY (id),
-  CONSTRAINT channel_posts_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id),
-  CONSTRAINT channel_posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.profiles(id)
+  CONSTRAINT channel_posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.profiles(id),
+  CONSTRAINT channel_posts_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id)
 );
 CREATE TABLE public.channel_moments (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -254,8 +255,8 @@ CREATE TABLE public.channel_moments (
   thumbnail_url text,
   views_count integer DEFAULT 0,
   CONSTRAINT channel_moments_pkey PRIMARY KEY (id),
-  CONSTRAINT channel_moments_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id),
-  CONSTRAINT channel_moments_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.profiles(id)
+  CONSTRAINT channel_moments_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.profiles(id),
+  CONSTRAINT channel_moments_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id)
 );
 CREATE TABLE public.channel_statuses (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -271,8 +272,8 @@ CREATE TABLE public.channel_statuses (
   expires_at timestamp with time zone,
   thumbnail_url text,
   CONSTRAINT channel_statuses_pkey PRIMARY KEY (id),
-  CONSTRAINT channel_statuses_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id),
-  CONSTRAINT channel_statuses_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.profiles(id)
+  CONSTRAINT channel_statuses_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.profiles(id),
+  CONSTRAINT channel_statuses_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id)
 );
 CREATE TABLE public.channel_invitations (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -302,9 +303,9 @@ CREATE TABLE public.channel_content_tags (
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
   link_chain ARRAY DEFAULT '{}'::text[],
   CONSTRAINT channel_content_tags_pkey PRIMARY KEY (id),
-  CONSTRAINT channel_content_tags_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
   CONSTRAINT channel_content_tags_source_channel_id_fkey FOREIGN KEY (source_channel_id) REFERENCES public.channels(id),
-  CONSTRAINT channel_content_tags_target_channel_id_fkey FOREIGN KEY (target_channel_id) REFERENCES public.channels(id)
+  CONSTRAINT channel_content_tags_target_channel_id_fkey FOREIGN KEY (target_channel_id) REFERENCES public.channels(id),
+  CONSTRAINT channel_content_tags_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.app_events (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -339,8 +340,8 @@ CREATE TABLE public.inbox (
   status text DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'accepted'::text, 'rejected'::text])),
   initiated_by uuid,
   CONSTRAINT inbox_pkey PRIMARY KEY (id, user_id),
-  CONSTRAINT inbox_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
-  CONSTRAINT inbox_initiated_by_fkey FOREIGN KEY (initiated_by) REFERENCES public.profiles(id)
+  CONSTRAINT inbox_initiated_by_fkey FOREIGN KEY (initiated_by) REFERENCES public.profiles(id),
+  CONSTRAINT inbox_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.inbox_messages (
   id text NOT NULL,
@@ -386,8 +387,8 @@ CREATE TABLE public.posts (
   category text,
   CONSTRAINT posts_pkey PRIMARY KEY (id),
   CONSTRAINT posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.profiles(id),
-  CONSTRAINT posts_parent_post_id_fkey FOREIGN KEY (parent_post_id) REFERENCES public.posts(id),
-  CONSTRAINT posts_music_id_fkey FOREIGN KEY (music_id) REFERENCES public.posts(id)
+  CONSTRAINT posts_music_id_fkey FOREIGN KEY (music_id) REFERENCES public.posts(id),
+  CONSTRAINT posts_parent_post_id_fkey FOREIGN KEY (parent_post_id) REFERENCES public.posts(id)
 );
 CREATE TABLE public.channel_branding (
   channel_id uuid NOT NULL,
@@ -495,8 +496,8 @@ CREATE TABLE public.comment_likes (
   comment_id uuid NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT comment_likes_pkey PRIMARY KEY (user_id, comment_id),
-  CONSTRAINT comment_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
-  CONSTRAINT comment_likes_comment_id_fkey FOREIGN KEY (comment_id) REFERENCES public.comments(id)
+  CONSTRAINT comment_likes_comment_id_fkey FOREIGN KEY (comment_id) REFERENCES public.comments(id),
+  CONSTRAINT comment_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
 CREATE TABLE public.post_views (
   user_id uuid NOT NULL,
@@ -535,8 +536,8 @@ CREATE TABLE public.channel_requests (
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT channel_requests_pkey PRIMARY KEY (id),
   CONSTRAINT channel_requests_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channels(id),
-  CONSTRAINT channel_requests_target_user_id_fkey FOREIGN KEY (target_user_id) REFERENCES public.profiles(id),
-  CONSTRAINT channel_requests_requested_by_id_fkey FOREIGN KEY (requested_by_id) REFERENCES public.profiles(id)
+  CONSTRAINT channel_requests_requested_by_id_fkey FOREIGN KEY (requested_by_id) REFERENCES public.profiles(id),
+  CONSTRAINT channel_requests_target_user_id_fkey FOREIGN KEY (target_user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.user_connection_stats (
   user_id uuid NOT NULL,
@@ -553,22 +554,13 @@ CREATE TABLE public.user_connection_stats (
   CONSTRAINT user_connection_stats_pkey PRIMARY KEY (user_id),
   CONSTRAINT user_connection_stats_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
-CREATE TABLE public.blocked_users (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  blocker_id uuid,
-  blocked_id uuid,
-  created_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT blocked_users_pkey PRIMARY KEY (id),
-  CONSTRAINT blocked_users_blocker_id_fkey FOREIGN KEY (blocker_id) REFERENCES public.profiles(id),
-  CONSTRAINT blocked_users_blocked_id_fkey FOREIGN KEY (blocked_id) REFERENCES public.profiles(id)
-);
 CREATE TABLE public.channel_post_likes (
   user_id uuid NOT NULL,
   post_id uuid NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
   CONSTRAINT channel_post_likes_pkey PRIMARY KEY (user_id, post_id),
-  CONSTRAINT channel_post_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
-  CONSTRAINT channel_post_likes_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.channel_posts(id)
+  CONSTRAINT channel_post_likes_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.channel_posts(id),
+  CONSTRAINT channel_post_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
 CREATE TABLE public.short_video_pointers (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -584,14 +576,15 @@ CREATE TABLE public.notifications (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   recipient_id uuid NOT NULL,
   actor_id uuid NOT NULL,
-  type text NOT NULL CHECK (type = ANY (ARRAY['like'::text, 'comment'::text, 'follow'::text, 'channel_invite'::text, 'channel_request'::text, 'mention'::text, 'post_tag'::text])),
+  type text NOT NULL CHECK (type = ANY (ARRAY['like'::text, 'comment'::text, 'follow'::text, 'channel_invite'::text, 'channel_request'::text, 'mention'::text, 'post_tag'::text, 'post'::text])),
   reference_id uuid,
   is_read boolean NOT NULL DEFAULT false,
   created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  action_text text,
   CONSTRAINT notifications_pkey PRIMARY KEY (id),
-  CONSTRAINT notifications_recipient_id_fkey FOREIGN KEY (recipient_id) REFERENCES public.profiles(id),
-  CONSTRAINT notifications_actor_id_fkey FOREIGN KEY (actor_id) REFERENCES public.profiles(id)
+  CONSTRAINT notifications_actor_id_fkey FOREIGN KEY (actor_id) REFERENCES public.profiles(id),
+  CONSTRAINT notifications_recipient_id_fkey FOREIGN KEY (recipient_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.user_push_tokens (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -601,4 +594,13 @@ CREATE TABLE public.user_push_tokens (
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT user_push_tokens_pkey PRIMARY KEY (id),
   CONSTRAINT user_push_tokens_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.blocked_users (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  blocker_id uuid NOT NULL,
+  blocked_id uuid NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT blocked_users_pkey PRIMARY KEY (id),
+  CONSTRAINT blocked_users_blocker_id_fkey FOREIGN KEY (blocker_id) REFERENCES public.profiles(id),
+  CONSTRAINT blocked_users_blocked_id_fkey FOREIGN KEY (blocked_id) REFERENCES public.profiles(id)
 );

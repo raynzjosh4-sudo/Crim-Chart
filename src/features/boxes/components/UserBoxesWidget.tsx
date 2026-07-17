@@ -185,7 +185,7 @@ export const UserBoxesWidget: React.FC<UserBoxesWidgetProps> = ({ userId, isCurr
 
   return (
     <View style={styles.container}>
-      <Text style={styles.headerTitle}>Curated Boxes</Text>
+      <Text style={styles.headerTitle}>Boxes</Text>
 
       <FlatList
         data={boxes}

@@ -93,8 +93,12 @@ export const MusicPostingPage = ({ boxId, isInline, onCloseInline }: { boxId: st
   });
 
   const loadLocalMusic = async (albumOverride?: string | null, cursorOverride?: string | undefined, clearCurrent?: boolean) => {
+    console.log('=== [MusicFilter v3] loadLocalMusic called. albumOverride:', albumOverride, 'clearCurrent:', clearCurrent);
     const isFetchingNewAlbum = albumOverride !== undefined;
-    if (!hasMoreLocalMusic && !isFetchingNewAlbum) return;
+    if (!hasMoreLocalMusic && !isFetchingNewAlbum) {
+      console.log('[MusicFilter v3] Skipping: no more music and not a new album fetch');
+      return;
+    }
 
     const { status } = await MediaLibrary.requestPermissionsAsync();
     if (status !== 'granted') {
@@ -102,24 +106,74 @@ export const MusicPostingPage = ({ boxId, isInline, onCloseInline }: { boxId: st
       return;
     }
 
-    const albumToUse = albumOverride !== undefined ? albumOverride : selectedAlbum;
+    const albumIdToUse = albumOverride !== undefined ? albumOverride : selectedAlbum;
     const cursorToUse = cursorOverride !== undefined ? cursorOverride : localMediaCursor;
+    console.log('[MusicFilter v3] albumIdToUse:', albumIdToUse, '| cursor:', cursorToUse);
 
     try {
-      const mediaPage = await MediaLibrary.getAssetsAsync({
-        mediaType: 'audio',
-        first: 10,
-        after: cursorToUse,
-        album: albumToUse ? albumToUse : undefined,
-      });
+      let fetchedAssets: MediaLibrary.Asset[] = [];
+      let currentCursor = cursorToUse;
+      let hasNextPage = true;
 
-      const newLocalTracks: MusicTrackItem[] = mediaPage.assets.map(asset => {
+      if (albumIdToUse) {
+        // Get the full album object — this is more reliable than passing just the ID string
+        const albumObj = await MediaLibrary.getAlbumAsync(albumIdToUse);
+        console.log('[MusicFilter v3] albumObj from getAlbumAsync:', JSON.stringify(albumObj));
+
+        if (albumObj) {
+          const page = await MediaLibrary.getAssetsAsync({
+            mediaType: 'audio',
+            first: 200,
+            album: albumObj,
+          });
+          console.log(`[MusicFilter v3] getAssetsAsync with album object returned ${page.assets.length} assets`);
+          fetchedAssets = page.assets;
+          currentCursor = page.endCursor;
+          hasNextPage = page.hasNextPage;
+        } else {
+          // Fallback: manual scan + filter by uri path
+          console.log('[MusicFilter v3] albumObj is null — falling back to URI path filter');
+          let iterations = 0;
+          while (fetchedAssets.length < 20 && hasNextPage && iterations < 30) {
+            iterations++;
+            const page = await MediaLibrary.getAssetsAsync({
+              mediaType: 'audio',
+              first: 100,
+              after: currentCursor,
+            });
+            if (iterations === 1) {
+              console.log('[MusicFilter v3] Sample assets:', page.assets.slice(0, 3).map(a => ({ uri: a.uri, albumId: (a as any).albumId })));
+            }
+            // Filter by albumId field (Android) or by matching the selected album ID in the URI
+            const filtered = page.assets.filter(a =>
+              (a as any).albumId === albumIdToUse || a.uri.includes(albumIdToUse)
+            );
+            fetchedAssets = [...fetchedAssets, ...filtered];
+            currentCursor = page.endCursor;
+            hasNextPage = page.hasNextPage;
+          }
+          console.log(`[MusicFilter v3] Fallback fetched ${fetchedAssets.length} assets`);
+        }
+      } else {
+        // No album filter — load all audio
+        const page = await MediaLibrary.getAssetsAsync({
+          mediaType: 'audio',
+          first: 10,
+          after: cursorToUse,
+        });
+        fetchedAssets = page.assets;
+        currentCursor = page.endCursor;
+        hasNextPage = page.hasNextPage;
+        console.log(`[MusicFilter v3] No album filter, loaded ${fetchedAssets.length} assets`);
+      }
+
+      const newLocalTracks: MusicTrackItem[] = fetchedAssets.map(asset => {
         const minutes = Math.floor(asset.duration / 60);
         const seconds = Math.floor(asset.duration % 60).toString().padStart(2, '0');
 
         return {
           id: asset.id,
-          title: asset.filename.replace(/\.[^/.]+$/, ""), // remove extension
+          title: asset.filename.replace(/\.[^/.]+$/, ""),
           artist: 'Local Device',
           coverUrl: '',
           audioUrl: asset.uri,
@@ -132,9 +186,11 @@ export const MusicPostingPage = ({ boxId, isInline, onCloseInline }: { boxId: st
         };
       });
 
+      console.log(`[MusicFilter v3] Setting ${newLocalTracks.length} local tracks. clearCurrent=${clearCurrent}`);
       setLocalTracks(clearCurrent ? newLocalTracks : [...localTracks, ...newLocalTracks]);
-      setLocalMediaCursor(mediaPage.endCursor);
-      setHasMoreLocalMusic(mediaPage.hasNextPage);
+      setLocalMediaCursor(currentCursor);
+      setHasMoreLocalMusic(hasNextPage);
+
     } catch (error) {
       console.error("Error loading local music:", error);
       Alert.alert("Error", "Failed to load local music from your device.");
@@ -239,9 +295,10 @@ export const MusicPostingPage = ({ boxId, isInline, onCloseInline }: { boxId: st
         {showLocalOnly && (
           <View style={{ paddingHorizontal: 16, marginBottom: 12, alignItems: 'flex-start' }}>
             <AlbumSelectorModal
-              activeTabIndex={2}
+              activeTabKey="music"
               selectedAlbum={selectedAlbum}
               onAlbumSelected={(albumId) => {
+                console.log('[MusicFilter] Album selected:', albumId);
                 setSelectedAlbum(albumId);
                 setExpandedWidgets([]);
                 loadLocalMusic(albumId, undefined, true);

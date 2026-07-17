@@ -70,7 +70,17 @@ export const useUserChannels = (
         loadMore(true);
       }
     });
-    return () => sub.remove();
+    const markReadSub = DeviceEventEmitter.addListener('channel_marked_read', ({ channelId }) => {
+      setChannels(((prev: ChannelData[]) => prev.map(c => 
+        c.channel.id === channelId 
+          ? { ...c, channel: { ...c.channel, unreadCount: 0 } }
+          : c
+      )) as any);
+    });
+    return () => {
+      sub.remove();
+      markReadSub.remove();
+    };
   }, [filterType, loadMore]);
 
   return { channels, isLoading, hasMore, loadMore };

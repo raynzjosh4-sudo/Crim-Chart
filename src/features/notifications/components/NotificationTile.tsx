@@ -5,7 +5,7 @@ import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
 import UserAvatar from '@/components/avatar/UserAvatar';
-import { Heart, MessageCircle, UserPlus, Users, AtSign, Tag, Bell } from 'lucide-react-native';
+import { Heart, MessageCircle, UserPlus, Users, AtSign, Tag, Bell, Image as ImageIcon } from 'lucide-react-native';
 
 interface NotificationTileProps {
   notification: AppNotification;
@@ -36,6 +36,8 @@ export const NotificationTile = ({ notification, onPress }: NotificationTileProp
         return { text: `mentioned you in a comment`, icon: <AtSign size={12} color="#FFF" />, bgColor: '#FF2D55' };
       case 'post_tag':
         return { text: `tagged you in a post`, icon: <Tag size={12} color="#FFF" />, bgColor: '#5856D6' };
+      case 'post':
+        return { text: `published a new post`, icon: <ImageIcon size={12} color="#FFF" />, bgColor: '#FF2D55' };
       default:
         return { text: `interacted with you`, icon: <Bell size={12} color="#FFF" />, bgColor: colors.primary };
     }

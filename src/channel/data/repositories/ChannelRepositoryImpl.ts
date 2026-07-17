@@ -106,6 +106,32 @@ export class ChannelRepositoryImpl {
     console.log('[Pipeline Step 6] LocalDB: Successfully inserted into SQLite DB!');
     return newMsg;
   };
+
+  /**
+   * Resets the unread message count for a user in a specific channel to 0.
+   * Called when the user opens the Messages tab to dismiss the badge.
+   */
+  markChannelRead = async (channelId: string, userId: string): Promise<void> => {
+    try {
+      // 1. Optimistically clear the local SQLite cache so the channel list updates immediately
+      await channelLocalSource.updateChannelSettings(channelId, { unread_count: 0 });
+
+      // 1.5 Emit event to update React state in hooks
+      import('react-native').then(({ DeviceEventEmitter }) => {
+        DeviceEventEmitter.emit('channel_marked_read', { channelId });
+      });
+
+      // 2. Persist to Supabase
+      const { supabase } = await import('@/core/supabase/client');
+      await supabase
+        .from('channel_members')
+        .update({ unread_count: 0 })
+        .eq('channel_id', channelId)
+        .eq('user_id', userId);
+    } catch (err) {
+      console.error('[ChannelRepositoryImpl] Failed to mark channel as read:', err);
+    }
+  };
 }
 
 export const channelRepository = new ChannelRepositoryImpl();

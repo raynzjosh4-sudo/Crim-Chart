@@ -66,12 +66,13 @@ interface MusicListTileProps {
   hideTagButton?: boolean;
   hideHeader?: boolean;
   lyricsPreview?: string;
+  hideBorder?: boolean;
 }
 
 export const MusicListTile: React.FC<MusicListTileProps> = ({
   track, onAddPress, onTagPress, onDownloadPress, isAdded, isCurrentlyPlaying,
   likesCount: propsLikes, viewsCount: propsViews, downloadsCount: propsDownloads, isLiked, onLikePress,
-  hideTagButton, hideHeader, lyricsPreview
+  hideTagButton, hideHeader, lyricsPreview, hideBorder
 }) => {
   const [editedTrack, setEditedTrack] = useState<MusicTrackItem>(track);
   const [isCommentSheetVisible, setIsCommentSheetVisible] = useState(false);
@@ -122,7 +123,7 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, hideBorder && { borderBottomWidth: 0 }]}>
       {/* Header Row */}
       {!hideHeader && (
         <View style={styles.header}>

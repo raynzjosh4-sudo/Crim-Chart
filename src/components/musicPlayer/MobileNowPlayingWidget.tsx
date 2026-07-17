@@ -72,10 +72,27 @@ export const MobileNowPlayingWidget = () => {
     }).start();
   }, [visible, windowHeight, TAB_BAR_HEIGHT]);
 
+  // IMPORTANT: useInteractionStore must be called BEFORE any early returns to comply
+  // with React's Rules of Hooks (hooks cannot be called conditionally).
+  const currentTrackForHook = queue[currentIndex];
+  const currentDownloads = useInteractionStore(state => {
+    if (currentTrackForHook?.postId) {
+      if (state.downloadsCount[currentTrackForHook.postId] !== undefined) {
+        return state.downloadsCount[currentTrackForHook.postId];
+      }
+      const boxKey = Object.keys(state.downloadsCount).find(k => k.endsWith(`_${currentTrackForHook.postId}`));
+      if (boxKey && state.downloadsCount[boxKey] !== undefined) {
+        return state.downloadsCount[boxKey];
+      }
+    }
+    return currentTrackForHook?.downloadsCount || 0;
+  });
+
   if (!visible) return null;
 
-  const currentTrack = queue[currentIndex];
+  const currentTrack = currentTrackForHook;
   if (!currentTrack) return null;
+
 
   const minimizedY = windowHeight - TAB_BAR_HEIGHT - MINI_PLAYER_HEIGHT;
 
@@ -115,7 +132,7 @@ export const MobileNowPlayingWidget = () => {
             onDownloadSuccess={() => {
               if (currentTrack.postId) {
                 const incrementDownload = useInteractionStore.getState().incrementDownload;
-                incrementDownload(currentTrack.postId, currentTrack.boxId);
+                incrementDownload(currentTrack.postId, currentTrack.boxId, '', currentDownloads);
               }
             }}
           >
@@ -126,7 +143,7 @@ export const MobileNowPlayingWidget = () => {
                   isDownloading={isDownloading}
                   color={colors.text}
                   size={20}
-                  count={0}
+                  count={currentDownloads}
                 />
               </View>
             )}
