@@ -1,11 +1,12 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import { AppNotification } from '../data/NotificationRepository';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
 import UserAvatar from '@/components/avatar/UserAvatar';
 import { Heart, MessageCircle, UserPlus, Users, AtSign, Tag, Bell, Image as ImageIcon } from 'lucide-react-native';
+import { channelRepository } from '@/channel/data/channelRepository';
 
 interface NotificationTileProps {
   notification: AppNotification;
@@ -19,6 +20,36 @@ export const NotificationTile = ({ notification, onPress }: NotificationTileProp
 
   const actor = notification.actor;
   const isUnread = !notification.is_read;
+  const isInvite = notification.type === 'channel_invite';
+
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [hasResponded, setHasResponded] = useState(false);
+
+  const handleAccept = async () => {
+    if (isProcessing || !notification.reference_id) return;
+    setIsProcessing(true);
+    try {
+      await channelRepository.acceptChannelInvite(notification.reference_id, notification.recipient_id);
+      setHasResponded(true);
+    } catch (error) {
+      console.error('Accept invite error:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDecline = async () => {
+    if (isProcessing || !notification.reference_id) return;
+    setIsProcessing(true);
+    try {
+      await channelRepository.rejectChannelInvite(notification.reference_id, notification.recipient_id);
+      setHasResponded(true);
+    } catch (error) {
+      console.error('Reject invite error:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const getActionDetails = () => {
     switch (notification.type) {
@@ -103,6 +134,22 @@ export const NotificationTile = ({ notification, onPress }: NotificationTileProp
         <Text style={styles.messageText} numberOfLines={2}>
           {actionText}
         </Text>
+
+        {isInvite && !hasResponded && (
+          <View style={styles.actionButtonsRow}>
+            <TouchableOpacity style={styles.acceptButton} onPress={handleAccept} disabled={isProcessing}>
+              {isProcessing ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.acceptButtonText}>Join</Text>}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.declineButton} onPress={handleDecline} disabled={isProcessing}>
+              <Text style={styles.declineButtonText}>Decline</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {isInvite && hasResponded && (
+          <View style={{ marginTop: 8 }}>
+            <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>Responded</Text>
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -174,5 +221,39 @@ const themeStyles = (colors: ThemeTokens, scale: number) => StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 14 * scale,
     lineHeight: 18 * scale,
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    marginTop: 12 * scale,
+    gap: 8 * scale,
+  },
+  acceptButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 6 * scale,
+    paddingHorizontal: 16 * scale,
+    borderRadius: 16 * scale,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 80 * scale,
+  },
+  acceptButtonText: {
+    color: '#111',
+    fontWeight: '700',
+    fontSize: 13 * scale,
+  },
+  declineButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1 * scale,
+    borderColor: colors.surfaceVariant,
+    paddingVertical: 6 * scale,
+    paddingHorizontal: 16 * scale,
+    borderRadius: 16 * scale,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  declineButtonText: {
+    color: colors.text,
+    fontWeight: '600',
+    fontSize: 13 * scale,
   },
 });

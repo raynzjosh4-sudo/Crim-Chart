@@ -116,7 +116,7 @@ export default function ChannelPage({ channelIdOverride, isModal }: { channelIdO
     setStatusViewerVisible(true);
   };
   const { canPostStatus } = useChannelPermissions(id as string);
-  const { members: channelMembers } = useChannelMembers(id as string);
+  const { members: channelMembers, refetch: refetchChannelMembers } = useChannelMembers(id as string);
   const { openModal } = useDesktopComposeStore();
 
   React.useEffect(() => {
@@ -438,6 +438,7 @@ export default function ChannelPage({ channelIdOverride, isModal }: { channelIdO
                   channelName={channel?.title || ""}
                   avatarUrl={channel?.imageUrl || ""}
                   ownerId={channel?.creatorId}
+                  onJoined={() => refetchChannelMembers()}
                 />
               ) : (
                 <ChannelRestrictionWrapper
@@ -700,6 +701,7 @@ export default function ChannelPage({ channelIdOverride, isModal }: { channelIdO
                         channelName={channel?.title || ""}
                         avatarUrl={channel?.imageUrl || ""}
                         ownerId={channel?.creatorId}
+                        onJoined={() => refetchChannelMembers()}
                       />
                     ) : (
                       <CustomChannelWidget

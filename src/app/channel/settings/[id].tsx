@@ -4,19 +4,20 @@ import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { colors } from '@/core/theme/colors';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Bell, ChevronLeft, Clock, LogOut, Plus, Search, Shield, ThumbsDown, Trash2, UserPlus, Share as ShareIcon } from 'lucide-react-native';
-import { useState, useRef } from 'react';
-import { Alert, Platform, ScrollView, Switch, Text, TouchableOpacity, useWindowDimensions, View, Share } from 'react-native';
+import { Bell, ChevronLeft, Clock, LogOut, Plus, Search, Share as ShareIcon, Shield, ThumbsDown, Trash2, UserPlus } from 'lucide-react-native';
+import { useRef, useState } from 'react';
+import { Alert, Modal, Platform, ScrollView, Share, StyleSheet, Switch, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SelectUsersBottomSheet } from '@/channel/components/bottom_sheets/SelectUsersBottomSheet';
 import { channelRepository } from '@/channel/data/channelRepository';
 import { useChannelData } from '@/channel/hooks/useChannelData';
 import { useChannelPermissions } from '@/channel/hooks/useChannelPermissions';
-import { useAuthStore } from '@/features/auth/application/useAuthStore';
-import { captureRef } from 'react-native-view-shot';
-import * as Sharing from 'expo-sharing';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import { ChannelShareCard } from '@/components/share_widgets/ChannelShareCard';
+import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import * as Sharing from 'expo-sharing';
+import { captureRef } from 'react-native-view-shot';
 
 export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOverride?: string }) {
   const router = useRouter();
@@ -30,12 +31,35 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
   const { channel } = useChannelData(id as string);
   const user = useAuthStore(s => s.user);
 
-  const shareCardRef = useRef<View>(null);
+  const shareCardRef = useRef<any>(null);
   const [isSharing, setIsSharing] = useState(false);
   const [inviteFollowersVisible, setInviteFollowersVisible] = useState(false);
   const [inviteAdminsVisible, setInviteAdminsVisible] = useState(false);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
+  const { startLoading, stopLoading } = useGlobalProgress();
   const styles = useStyles(useStylesHook);
+
+  const handleDeleteChannel = () => {
+    setDeleteConfirmVisible(true);
+  };
+
+  const performDelete = async () => {
+    startLoading();
+    try {
+      await channelRepository.deleteChannel(id as string);
+      router.replace('/(tabs)');
+    } catch (e) {
+      console.error('Failed to delete channel:', e);
+      if (Platform.OS === 'web') {
+        window.alert('Failed to delete channel');
+      } else {
+        Alert.alert('Error', 'Failed to delete channel');
+      }
+    } finally {
+      stopLoading();
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -73,7 +97,7 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
               const inviterName = user?.displayName || user?.username || 'I';
               const channelName = channel?.title || 'this channel';
               const shareText = `${inviterName} invites you to join ${channelName} on CrimChart. Let's have some fun together while we share our favourite music, albums, and videos. Join now!`;
-              
+
               const doFallbackShare = async () => {
                 if (Platform.OS === 'web') {
                   if (navigator.share) {
@@ -100,11 +124,11 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
 
               try {
                 if (Platform.OS !== 'web' && shareCardRef.current) {
-                  const localUri = await captureRef(shareCardRef, {
+                  const localUri = await captureRef(shareCardRef as any, {
                     format: 'png',
                     quality: 1,
                   });
-                  
+
                   const isAvailable = await Sharing.isAvailableAsync();
                   if (isAvailable) {
                     await Sharing.shareAsync(localUri, {
@@ -128,7 +152,7 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
               <Text style={{ color: theme.colors.textSecondary, fontSize: 13, fontWeight: '600' }}>{isSharing ? 'Preparing...' : 'Share'}</Text>
             </TouchableOpacity>
           </View>
-          
+
           <View style={{ position: 'absolute', top: -10000, left: -10000 }} pointerEvents="none">
             <View ref={shareCardRef} collapsable={false}>
               <ChannelShareCard channel={channel} />
@@ -346,7 +370,7 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
             )}
 
             <ChannelRestrictionWrapper channelId={id as string} requiredAction="delete_channel" fallback={null}>
-              <TouchableOpacity activeOpacity={1} style={styles.settingItem}>
+              <TouchableOpacity activeOpacity={1} style={styles.settingItem} onPress={handleDeleteChannel}>
                 <View style={styles.settingIconContainer}>
                   <Trash2 size={22} color="#FF5252" />
                 </View>
@@ -380,7 +404,15 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
         title="Invite members"
         onSendRequest={async (targetId) => {
           if (!user) return;
-          await channelRepository.createChannelRequest(id as string, targetId, 'member_invite', user.id);
+          try {
+            await channelRepository.createChannelRequest(id as string, targetId, 'member_invite', user.id);
+          } catch (e: any) {
+            if (e.code === '23505' || e.message?.includes('unique_pending_request_idx')) {
+              // Ignore duplicate requests to let the button show "Sent"
+              return;
+            }
+            throw e;
+          }
         }}
       />
 
@@ -388,16 +420,42 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
         visible={inviteAdminsVisible}
         onClose={() => setInviteAdminsVisible(false)}
         title="Invite admins"
+        channelIdForMembers={id as string}
         onSendRequest={async (targetId) => {
           if (!user) return;
-          await channelRepository.createChannelRequest(id as string, targetId, 'admin_invite', user.id);
+          try {
+            await channelRepository.createChannelRequest(id as string, targetId, 'admin_invite', user.id);
+          } catch (e: any) {
+            if (e.code === '23505' || e.message?.includes('unique_pending_request_idx')) {
+              // Ignore duplicate requests to let the button show "Sent"
+              return;
+            }
+            throw e;
+          }
         }}
       />
+
+      <Modal visible={deleteConfirmVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Delete Channel</Text>
+            <Text style={styles.modalMessage}>Are you sure you want to delete this channel? This action cannot be undone.</Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalCancelButton} onPress={() => setDeleteConfirmVisible(false)}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalDeleteButton} onPress={() => { setDeleteConfirmVisible(false); performDelete(); }}>
+                <Text style={styles.modalDeleteText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
-const useStylesHook = (colors: any) => ({
+const useStylesHook = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -535,4 +593,64 @@ const useStylesHook = (colors: any) => ({
   footerSpacer: {
     height: 60,
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: '#0D0D0D',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center' as const,
+    borderWidth: 1,
+    borderColor: '#333333',
+  },
+  modalTitle: {
+    color: colors.text,
+    fontSize: 20,
+    fontWeight: '700' as const,
+    marginBottom: 12,
+    textAlign: 'center' as const,
+  },
+  modalMessage: {
+    color: colors.textSecondary,
+    fontSize: 16,
+    textAlign: 'center' as const,
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  modalActions: {
+    flexDirection: 'row' as const,
+    width: '100%',
+    gap: 12,
+  },
+  modalCancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#2A2A2A',
+    alignItems: 'center' as const,
+  },
+  modalCancelText: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '600' as const,
+  },
+  modalDeleteButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#FF5252',
+    alignItems: 'center' as const,
+  },
+  modalDeleteText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600' as const,
+  }
 });

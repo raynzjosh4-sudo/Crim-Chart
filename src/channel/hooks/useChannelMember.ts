@@ -3,7 +3,7 @@ import { supabase } from '@/core/supabase/client';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 
 export function useChannelMember(channelId: string) {
-  const user = (useAuthStore as any).getState?.()?.user;
+  const user = useAuthStore((s) => s.user);
   const [isMember, setIsMember] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 

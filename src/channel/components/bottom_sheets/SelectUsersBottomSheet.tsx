@@ -1,7 +1,7 @@
 import { useStyles } from "@/core/hooks/useStyles";
 import AppAvatar from '@/components/avatar/AppAvatar';
 import { supabase } from '@/core/supabase/supabaseConfig';
-import { Check, Search } from 'lucide-react-native';
+import { Check, Search, X } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, FlatList, KeyboardAvoidingView, Modal, PanResponder, Platform, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,17 +21,24 @@ interface SelectUsersBottomSheetProps {
   onClose: () => void;
   title: string;
   onSendRequest: (userId: string) => Promise<void>;
+  channelIdForMembers?: string;
 }
 export const SelectUsersBottomSheet: React.FC<SelectUsersBottomSheetProps> = ({
   visible,
   onClose,
   title,
-  onSendRequest
+  onSendRequest,
+  channelIdForMembers
 }) => {
+  const { width } = Dimensions.get('window');
+  const isDesktop = Platform.OS === 'web' && width >= 768;
+
   const styles = useStyles(colors => ({
     overlay: {
       flex: 1,
-      justifyContent: 'flex-end'
+      justifyContent: isDesktop ? 'center' : 'flex-end',
+      padding: isDesktop ? 20 : 0,
+      alignItems: 'center'
     },
     backdrop: {
       ...StyleSheet.absoluteFillObject,
@@ -39,10 +46,15 @@ export const SelectUsersBottomSheet: React.FC<SelectUsersBottomSheetProps> = ({
     },
     container: {
       width: '100%',
-      height: SHEET_MAX_HEIGHT,
-      backgroundColor: colors.background,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24
+      maxWidth: isDesktop ? 420 : '100%',
+      height: isDesktop ? Math.min(500, SCREEN_HEIGHT - 40) : SHEET_MAX_HEIGHT,
+      backgroundColor: isDesktop ? '#0D0D0D' : colors.background,
+      borderRadius: isDesktop ? 16 : 0,
+      borderTopLeftRadius: isDesktop ? 16 : 24,
+      borderTopRightRadius: isDesktop ? 16 : 24,
+      borderWidth: 0,
+      borderColor: 'transparent',
+      overflow: 'hidden'
     },
     dragHandle: {
       width: 36,
@@ -59,7 +71,7 @@ export const SelectUsersBottomSheet: React.FC<SelectUsersBottomSheetProps> = ({
       alignItems: 'center',
       paddingHorizontal: 20,
       paddingBottom: 16,
-      paddingTop: 8
+      paddingTop: isDesktop ? 20 : 8
     },
     headerTitle: {
       color: colors.text,
@@ -80,7 +92,8 @@ export const SelectUsersBottomSheet: React.FC<SelectUsersBottomSheetProps> = ({
       flex: 1,
       marginLeft: 12,
       color: colors.text,
-      fontSize: 16
+      fontSize: 16,
+      ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {})
     },
     scroll: {
       width: '100%'
@@ -113,22 +126,45 @@ export const SelectUsersBottomSheet: React.FC<SelectUsersBottomSheetProps> = ({
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      let query = supabase.from('profiles').select('id, display_name, profile_image_url').limit(20);
-      if (searchQuery.trim()) {
-        query = query.ilike('display_name', `%${searchQuery.trim()}%`);
-      }
-      const {
-        data,
-        error
-      } = await query;
-      if (error) throw error;
-      if (data) {
-        const realUsers: UserData[] = data.map(d => ({
-          id: d.id,
-          name: d.display_name || 'Unknown',
-          avatarUrl: d.profile_image_url || 'https://i.pravatar.cc/150'
-        }));
-        setUsers(realUsers);
+      if (channelIdForMembers) {
+        let query = supabase
+          .from('channel_members')
+          .select('user_id, profiles!inner(id, display_name, profile_image_url)')
+          .eq('channel_id', channelIdForMembers)
+          .limit(20);
+        
+        if (searchQuery.trim()) {
+          query = query.ilike('profiles.display_name', `%${searchQuery.trim()}%`);
+        }
+        
+        const { data, error } = await query;
+        if (error) throw error;
+        if (data) {
+          const realUsers: UserData[] = data.map((d: any) => ({
+            id: d.profiles.id,
+            name: d.profiles.display_name || 'Unknown',
+            avatarUrl: d.profiles.profile_image_url || 'https://i.pravatar.cc/150'
+          }));
+          setUsers(realUsers);
+        }
+      } else {
+        let query = supabase.from('profiles').select('id, display_name, profile_image_url').limit(20);
+        if (searchQuery.trim()) {
+          query = query.ilike('display_name', `%${searchQuery.trim()}%`);
+        }
+        const {
+          data,
+          error
+        } = await query;
+        if (error) throw error;
+        if (data) {
+          const realUsers: UserData[] = data.map(d => ({
+            id: d.id,
+            name: d.display_name || 'Unknown',
+            avatarUrl: d.profile_image_url || 'https://i.pravatar.cc/150'
+          }));
+          setUsers(realUsers);
+        }
       }
     } catch (e) {
       console.error('Failed to fetch users:', e);
@@ -213,7 +249,7 @@ export const SelectUsersBottomSheet: React.FC<SelectUsersBottomSheetProps> = ({
         <SendRequestButton onPress={() => onSendRequest(user.id)} />
       </View>;
   }, [onSendRequest]);
-  return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+  return <Modal visible={visible} transparent animationType={isDesktop ? "fade" : "slide"} onRequestClose={onClose}>
       <View style={styles.overlay}>
         <TouchableWithoutFeedback onPress={onClose}>
           <View style={styles.backdrop} />
@@ -223,15 +259,15 @@ export const SelectUsersBottomSheet: React.FC<SelectUsersBottomSheetProps> = ({
         alignItems: 'center'
       }}>
           <Animated.View style={[styles.container, {
-          transform: [{
+          transform: isDesktop ? [] : [{
             translateY: pan.y
           }]
         }]}>
-            <View {...panResponder.panHandlers} style={{
+            <View {...(isDesktop ? {} : panResponder.panHandlers)} style={{
             width: '100%',
             alignItems: 'center'
           }}>
-              <View style={styles.dragHandle} />
+              {!isDesktop && <View style={styles.dragHandle} />}
 
               <View style={[styles.header, {
               width: '100%'
@@ -240,9 +276,11 @@ export const SelectUsersBottomSheet: React.FC<SelectUsersBottomSheetProps> = ({
                 width: 60
               }} />
                 <Text style={styles.headerTitle}>{title}</Text>
-                <View style={{
-                width: 60
-              }} />
+                <View style={{ width: 60, alignItems: 'flex-end' }}>
+                  <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <X color="rgba(255,255,255,0.6)" size={24} />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
 

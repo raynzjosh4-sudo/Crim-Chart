@@ -197,6 +197,19 @@ export class ChannelLocalSource {
       console.error('Failed to clear channel messages', err);
     }
   }
+
+  async deleteChannel(channelId: string): Promise<void> {
+    const db = dbService.database;
+    try {
+      await db.runAsync(`DELETE FROM ${TABLES.CHANNELS} WHERE id = ?`, [channelId]);
+      await db.runAsync(`DELETE FROM ${TABLES.CHANNEL_MEMBERS} WHERE channel_id = ?`, [channelId]);
+      await db.runAsync(`DELETE FROM ${TABLES.CHANNEL_MOMENTS} WHERE channel_id = ?`, [channelId]);
+      await db.runAsync(`DELETE FROM ${TABLES.CHANNEL_STATUSES} WHERE channel_id = ?`, [channelId]);
+      await db.runAsync(`DELETE FROM ${TABLES.CHANNEL_MESSAGES} WHERE channel_id = ?`, [channelId]);
+    } catch (err) {
+      console.error('Failed to delete channel from local DB', err);
+    }
+  }
 }
 
 export const channelLocalSource = new ChannelLocalSource();

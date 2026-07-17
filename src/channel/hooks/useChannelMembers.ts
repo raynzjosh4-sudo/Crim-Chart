@@ -7,13 +7,18 @@ export function useChannelMembers(channelId: string) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const refetch = () => {
     if (!channelId) return;
+    setIsLoading(true);
     channelRemoteSource.getChannelMembers(channelId)
       .then(setMembers)
       .catch((e) => setError(e.message))
       .finally(() => setIsLoading(false));
+  };
+
+  useEffect(() => {
+    refetch();
   }, [channelId]);
 
-  return { members, isLoading, error };
+  return { members, isLoading, error, refetch };
 }

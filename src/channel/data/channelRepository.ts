@@ -146,6 +146,11 @@ export class ChannelRepository {
     }
   }
 
+  async deleteChannel(channelId: string): Promise<void> {
+    await channelRemoteSource.deleteChannel(channelId);
+    await channelLocalSource.deleteChannel(channelId);
+  }
+
   async getExploreChannels(userId: string, page: number, limit = 10): Promise<ChannelModel[]> {
     try {
       const channels = await channelRemoteSource.getExploreChannels(userId, page, limit);
@@ -205,6 +210,14 @@ export class ChannelRepository {
     } catch (err) {
       console.error('[ChannelRepository] Failed to mark channel as read:', err);
     }
+  }
+
+  async acceptChannelInvite(channelId: string, targetUserId: string): Promise<void> {
+    return channelRemoteSource.acceptChannelInvite(channelId, targetUserId);
+  }
+
+  async rejectChannelInvite(channelId: string, targetUserId: string): Promise<void> {
+    return channelRemoteSource.rejectChannelInvite(channelId, targetUserId);
   }
 }
 

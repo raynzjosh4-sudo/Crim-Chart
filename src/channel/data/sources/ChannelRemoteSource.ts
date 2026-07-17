@@ -160,6 +160,14 @@ export class ChannelRemoteSource {
     }
   }
 
+  async deleteChannel(channelId: string): Promise<void> {
+    const { error } = await supabase
+      .from('channels')
+      .delete()
+      .eq('id', channelId);
+    if (error) throw error;
+  }
+
   async createChannelRequest(channelId: string, targetUserId: string, requestType: 'admin_invite' | 'member_invite' | 'join_request' | 'leave_request', requestedById: string): Promise<void> {
     const { error } = await supabase
       .from('channel_requests')
@@ -204,6 +212,28 @@ export class ChannelRemoteSource {
       .eq('id', requestId);
     if (error) {
       console.error('Supabase update request status error:', error);
+      throw error;
+    }
+  }
+
+  async acceptChannelInvite(channelId: string, targetUserId: string): Promise<void> {
+    const { error } = await supabase.rpc('accept_channel_invite', {
+      p_channel_id: channelId,
+      p_target_user_id: targetUserId,
+    });
+    if (error) {
+      console.error('Supabase accept_channel_invite error:', error);
+      throw error;
+    }
+  }
+
+  async rejectChannelInvite(channelId: string, targetUserId: string): Promise<void> {
+    const { error } = await supabase.rpc('reject_channel_invite', {
+      p_channel_id: channelId,
+      p_target_user_id: targetUserId,
+    });
+    if (error) {
+      console.error('Supabase reject_channel_invite error:', error);
       throw error;
     }
   }
