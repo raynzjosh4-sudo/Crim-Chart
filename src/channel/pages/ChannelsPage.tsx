@@ -1,5 +1,6 @@
 import { ChannelModel } from '@/channel/models/ChannelModel';
 import ChannelListTile from '@/channel/widgets/ChannelListTile';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import { useAppRouter } from '@/core/hooks/useAppRouter';
 import { useEffect, useState, useCallback } from 'react';
@@ -25,13 +26,14 @@ export default function ChannelsPage() {
     container: { flex: 1, backgroundColor: colors.background },
     headerContainer: { paddingBottom: 8 },
     footerContainer: { paddingTop: 16 },
-    divider: { height: 1, backgroundColor: colors.muted, marginVertical: 8 },
+    divider: { height: 1, backgroundColor: colors.surfaceVariant, marginVertical: 8 },
     listContent: { paddingBottom: 40 },
     empty: { textAlign: 'center' as const, marginTop: 40, opacity: 0.5, color: colors.text },
   }));
   const router = useAppRouter();
   const user = useAuthStore(s => s.user);
   const { width } = useWindowDimensions();
+  const { startLoading } = useGlobalProgress();
 
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -112,7 +114,10 @@ export default function ChannelsPage() {
             if (Platform.OS === 'web' && width >= 768) {
               useExploreStore.getState().openExplore();
             } else {
-              router.push('/channel/explore' as any);
+              startLoading();
+              setTimeout(() => {
+                router.push('/channel/explore' as any);
+              }, 100);
             }
           }}
         />
@@ -161,7 +166,10 @@ export default function ChannelsPage() {
               if (Platform.OS === 'web' && width >= 768) {
                 router.setParams({ desktopChannelId: item.id });
               } else {
-                router.push({ pathname: '/channel/channelpage', params: { id: item.id } } as any);
+                startLoading();
+                setTimeout(() => {
+                  router.push({ pathname: '/channel/channelpage', params: { id: item.id } } as any);
+                }, 100);
               }
             }}
             onAvatarTap={(ch) => ch.momentsCount > 0 && setSelectedChannel(ch)}

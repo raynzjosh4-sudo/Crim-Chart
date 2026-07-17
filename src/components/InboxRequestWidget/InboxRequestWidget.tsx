@@ -5,11 +5,13 @@ export interface InboxRequestWidgetProps {
   displayName: string;
   isReceiver: boolean;
   onAccept?: () => void;
+  onDecline?: () => void;
 }
 export const InboxRequestWidget: React.FC<InboxRequestWidgetProps> = ({
   displayName,
   isReceiver,
-  onAccept
+  onAccept,
+  onDecline
 }) => {
   const styles = useStyles(colors => ({
     container: {
@@ -39,16 +41,35 @@ export const InboxRequestWidget: React.FC<InboxRequestWidgetProps> = ({
       marginBottom: 16,
       fontWeight: '500'
     },
+    buttonsRow: {
+      flexDirection: 'row',
+      width: '100%',
+      justifyContent: 'space-between',
+      gap: 12
+    },
     acceptButton: {
+      flex: 1,
       backgroundColor: colors.text,
       paddingVertical: 12,
       paddingHorizontal: 24,
       borderRadius: 24,
-      width: '100%',
       alignItems: 'center'
     },
     acceptButtonText: {
       color: colors.background,
+      fontSize: 15,
+      fontWeight: '700'
+    },
+    declineButton: {
+      flex: 1,
+      backgroundColor: colors.surfaceVariant,
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      borderRadius: 24,
+      alignItems: 'center'
+    },
+    declineButtonText: {
+      color: colors.text,
       fontSize: 15,
       fontWeight: '700'
     }
@@ -64,8 +85,13 @@ export const InboxRequestWidget: React.FC<InboxRequestWidgetProps> = ({
       <Text style={styles.receiverText}>
         {displayName} wants to connect with you in what kind of relation connection? Accept the request to find out!
       </Text>
-      <TouchableOpacity style={styles.acceptButton} onPress={onAccept} activeOpacity={0.8}>
-        <Text style={styles.acceptButtonText}>Accept Request</Text>
-      </TouchableOpacity>
+      <View style={styles.buttonsRow}>
+        <TouchableOpacity style={styles.declineButton} onPress={onDecline} activeOpacity={0.8}>
+          <Text style={styles.declineButtonText}>Decline</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.acceptButton} onPress={onAccept} activeOpacity={0.8}>
+          <Text style={styles.acceptButtonText}>Accept Request</Text>
+        </TouchableOpacity>
+      </View>
     </View>;
 };

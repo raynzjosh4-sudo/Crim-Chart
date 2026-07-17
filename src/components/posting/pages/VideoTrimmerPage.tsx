@@ -20,7 +20,8 @@ export const VideoTrimmerPage: React.FC = () => {
   const params = useLocalSearchParams();
 
   const selectedMediaJson = params.selectedMediaJson as string | undefined;
-  const selectedMedia = selectedMediaJson ? JSON.parse(selectedMediaJson) : [];
+  const stagingMedia = usePostingStore((s) => s.stagingMedia);
+  const selectedMedia = selectedMediaJson ? JSON.parse(selectedMediaJson) : (stagingMedia.length > 0 ? stagingMedia : []);
   const videoItem = selectedMedia[0];
 
   const targetChannelId = params.targetChannelId as string | undefined;

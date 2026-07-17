@@ -59,6 +59,11 @@ export const UserStatusViewer: React.FC<UserStatusViewerProps> = ({ userId, chan
               }))
             };
             setStatusGroups([group]);
+            
+            // Immediately mark it as read in the profile cache so the avatar ring updates everywhere
+            if (type === 'user' && activeId) {
+              useProfileCacheStore.getState().updateProfile(activeId, { isStatusRead: true });
+            }
           } else {
             setStatusGroups([]);
           }

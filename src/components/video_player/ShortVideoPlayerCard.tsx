@@ -7,6 +7,7 @@ import { VideoView, useVideoPlayer } from 'expo-video';
 import { Eye, MessageCircle, Pause, Play, Tag } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useInteractionStore } from '@/core/store/useInteractionStore';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import {
   Animated,
   Dimensions,
@@ -57,6 +58,7 @@ const ShortVideoPlayerCardComponent = ({
 }: ShortVideoPlayerCardProps) => {
   const router = useAppRouter();
   const insets = useSafeAreaInsets();
+  const { startLoading } = useGlobalProgress();
   
   // Seed the global store on mount with this video's initial data
   useEffect(() => {
@@ -233,7 +235,10 @@ const ShortVideoPlayerCardComponent = ({
 
   const handleAuthorPress = useCallback(() => {
     if (video.sourceType === 'channel_post' && video.channelId) {
-      router.push(`/channel/${video.channelId}`);
+      startLoading();
+      setTimeout(() => {
+        router.push(`/channel/${video.channelId}`);
+      }, 100);
     } else if (video.authorId) {
       router.push(`/profile/${video.authorId}`);
     }

@@ -3,6 +3,7 @@ import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
 import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
 import { useDesktopChannelModalStore } from '@/core/store/useDesktopChannelModalStore';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import { useRouter } from 'expo-router';
 import { Eye, Tag } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -82,6 +83,7 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
   const { canComment: contextCanComment } = useFeedPermissions();
   const canComment = canCommentProp && contextCanComment;
   const router = useRouter();
+  const { startLoading } = useGlobalProgress();
   const [tagOverlayVisible, setTagOverlayVisible] = useState(false);
   const [postOptionsVisible, setPostOptionsVisible] = useState(false);
   const [postOptionsPosition, setPostOptionsPosition] = useState<{ x: number; y: number } | undefined>(undefined);
@@ -136,7 +138,10 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
                 if (Platform.OS === 'web' && window.innerWidth >= 768) {
                   useDesktopChannelModalStore.getState().openChannel(channelId);
                 } else {
-                  router.push({ pathname: '/channel/channelpage', params: { id: channelId } } as any);
+                  startLoading();
+                  setTimeout(() => {
+                    router.push({ pathname: '/channel/channelpage', params: { id: channelId } } as any);
+                  }, 100);
                 }
               }
             }}
@@ -171,7 +176,10 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
               if (Platform.OS === 'web' && window.innerWidth >= 768) {
                 useDesktopChannelModalStore.getState().openChannel(channelId);
               } else {
-                router.push({ pathname: '/channel/channelpage', params: { id: channelId } } as any);
+                startLoading();
+                setTimeout(() => {
+                  router.push({ pathname: '/channel/channelpage', params: { id: channelId } } as any);
+                }, 100);
               }
             }
           }}

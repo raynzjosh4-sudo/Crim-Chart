@@ -16,6 +16,7 @@ export interface ChannelAvatarImageProps {
   onLongPress?: () => void;
   ringColor?: string;
   hasStatus?: boolean;
+  isStatusRead?: boolean;
 }
 const getInitials = (name?: string) => {
   if (!name) return '#';
@@ -33,6 +34,9 @@ const getColorsForInitials = (initials: string) => {
   return palettes[charCode % palettes.length];
 };
 import { colors as themeColors } from '@/core/theme/colors';
+import { useCurrentTheme } from '@/core/store/useThemeStore';
+import Svg, { Circle, Path } from 'react-native-svg';
+
 export const ChannelAvatarImage: React.FC<ChannelAvatarImageProps> = ({
   size = 50,
   borderWidth = 2.0,
@@ -44,7 +48,8 @@ export const ChannelAvatarImage: React.FC<ChannelAvatarImageProps> = ({
   onImageTap,
   onLongPress,
   ringColor = themeColors.primary,
-  hasStatus = false
+  hasStatus = false,
+  isStatusRead = false
 }) => {
   const styles = useStyles(colors => ({
     ringContainer: {
@@ -71,22 +76,83 @@ export const ChannelAvatarImage: React.FC<ChannelAvatarImageProps> = ({
   const initials = getInitials(name);
   const bgColors = getColorsForInitials(initials);
   const [imageError, setImageError] = useState(false);
+  const theme = useCurrentTheme();
 
   // If we don't have status, we don't render the ring at all
   const actualShowStatusRing = showStatusRing && hasStatus;
-  console.log(`[ChannelAvatarImage] name="${name}", imageUrl="${imageUrl}"`);
+  
+  const ringColorResolved = isStatusRead ? theme.colors.surfaceVariant : ringColor;
+  
+  const renderRing = () => {
+    if (!actualShowStatusRing) return null;
+    const cx = size / 2;
+    const cy = size / 2;
+    const r = size / 2 - borderWidth / 2;
+
+    if (statusCount <= 1) {
+      return (
+        <Svg width={size} height={size} style={StyleSheet.absoluteFillObject}>
+          <Circle cx={cx} cy={cy} r={r} stroke={ringColorResolved} strokeWidth={borderWidth} fill="none" />
+        </Svg>
+      );
+    }
+    
+    const desiredVisualGap = 2;
+    const gapAngle = (borderWidth + desiredVisualGap) / r;
+    
+    if (gapAngle * statusCount >= 2 * Math.PI) {
+      return (
+        <Svg width={size} height={size} style={StyleSheet.absoluteFillObject}>
+          <Circle cx={cx} cy={cy} r={r} stroke={ringColorResolved} strokeWidth={borderWidth} fill="none" />
+        </Svg>
+      );
+    }
+
+    const arcLength = (2 * Math.PI - statusCount * gapAngle) / statusCount;
+    const segments: React.ReactNode[] = [];
+
+    for (let i = 0; i < statusCount; i++) {
+      const startAngle = -Math.PI / 2 + i * (arcLength + gapAngle);
+      const endAngle = startAngle + arcLength;
+      const x1 = cx + r * Math.cos(startAngle);
+      const y1 = cy + r * Math.sin(startAngle);
+      const x2 = cx + r * Math.cos(endAngle);
+      const y2 = cy + r * Math.sin(endAngle);
+      const largeArc = arcLength > Math.PI ? 1 : 0;
+
+      segments.push(
+        <React.Fragment key={i}>
+          <Path
+            d={`M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}`}
+            stroke={ringColorResolved}
+            strokeWidth={borderWidth}
+            strokeLinecap="round"
+            fill="none"
+          />
+        </React.Fragment>
+      );
+    }
+
+    return (
+      <Svg width={size} height={size} style={StyleSheet.absoluteFillObject}>
+        {segments}
+      </Svg>
+    );
+  };
+
   const content = <View style={{
     width: size,
     height: size
   }}>
+      {renderRing()}
       <View style={[styles.ringContainer, {
-      width: size,
-      height: size,
-      borderRadius: size / 2,
-      borderWidth: actualShowStatusRing ? borderWidth : 0,
-      borderColor: actualShowStatusRing ? ringColor : 'transparent',
-      padding: actualShowStatusRing ? 2 : 0
-    }]}>
+        width: actualShowStatusRing ? size - 4 : size,
+        height: actualShowStatusRing ? size - 4 : size,
+        borderRadius: size / 2,
+        position: 'absolute',
+        top: actualShowStatusRing ? 2 : 0,
+        left: actualShowStatusRing ? 2 : 0,
+      }]}>
         <View style={{
         width: '100%',
         height: '100%',

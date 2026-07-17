@@ -125,8 +125,18 @@ export const MusicBoxDetailPage = ({
     items: fetchedItems,
     isLoading: isItemsLoading,
     isFetchingMore,
-    loadMore
+    loadMore,
+    refetch
   } = useBoxItems(id);
+
+  const isFocused = useIsFocused();
+
+  // Refetch items when navigating back to the page
+  React.useEffect(() => {
+    if (isFocused) {
+      refetch();
+    }
+  }, [isFocused, refetch]);
 
   // Track view interaction when the page mounts
   React.useEffect(() => {
@@ -174,7 +184,6 @@ export const MusicBoxDetailPage = ({
   const [showComments, setShowComments] = useState(false);
   const [activePostId, setActivePostId] = useState<string | null>(null);
   const [showPostingModal, setShowPostingModal] = useState(false);
-  const isFocused = useIsFocused();
   const pathname = usePathname();
   const isPageActive = isFocused && !pathname.includes('now-playing');
   const [appStateVisible, setAppStateVisible] = useState(AppState.currentState);

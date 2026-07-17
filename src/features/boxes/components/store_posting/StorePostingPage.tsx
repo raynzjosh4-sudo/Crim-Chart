@@ -110,6 +110,17 @@ export function StorePostingPage({ boxId }: { boxId: string }) {
       if (data && !data.success) {
         throw new Error(data.error || "Failed to tag post");
       }
+
+      // Send notification to box owner if this was an additive tag
+      if (data && data.success && data.action === 'tagged' && currentUser && box && currentUser.id !== box.owner_id) {
+        await supabase.from('notifications').insert({
+          recipient_id: box.owner_id,
+          actor_id: currentUser.id,
+          type: 'box_tag',
+          reference_id: boxId,
+          action_text: `tagged an item to your box ${box.title}`
+        });
+      }
     } catch (e: any) {
       console.error("[StorePostingPage] Failed to toggle tag for box (Exception):", e);
       // Revert optimistic update on failure

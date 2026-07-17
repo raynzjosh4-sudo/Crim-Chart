@@ -8,6 +8,7 @@ import { useAppRouter } from '@/core/hooks/useAppRouter';
 import { useDesktopSearchStore } from '@/explore/application/useDesktopSearchStore';
 import { ThemeTokens } from '@/core/theme/themes';
 import { useTranslation } from 'react-i18next';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 
 interface Props {
   item: GlobalSearchResult;
@@ -17,13 +18,17 @@ export const ChannelPostSearchRow: React.FC<Props> = ({ item }) => {
   const styles = useStyles(themeStyles);
   const { t } = useTranslation();
   const router = useAppRouter();
+  const { startLoading } = useGlobalProgress();
 
   const handlePress = () => {
     const isDesktop = Platform.OS === 'web' && Dimensions.get('window').width >= 768;
     if (isDesktop) {
       useDesktopSearchStore.getState().openResult(item);
     } else {
-      router.push(`/channel/post/${item.entity_id}?type=${item.entity_type}`);
+      startLoading();
+      setTimeout(() => {
+        router.push(`/channel/post/${item.entity_id}?type=${item.entity_type}`);
+      }, 100);
     }
   };
 

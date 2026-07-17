@@ -1,7 +1,10 @@
-import { useCurrentTheme } from "@/core/store/useThemeStore";
-import { useStyles } from "@/core/hooks/useStyles";
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
 import { CommentSheet } from '@/components/comments/CommentSheet';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+import { MoviePostingItemShimmer } from '@/components/shimmers/MoviePostingShimmer';
+import { useStyles } from "@/core/hooks/useStyles";
+import { useDesktopNowPlayingStore } from '@/core/store/useDesktopNowPlayingStore';
+import { useCurrentTheme } from "@/core/store/useThemeStore";
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { useBoxDetail } from '@/features/boxes/application/useBoxDetail';
 import { useBoxInteractionTracker } from '@/features/boxes/application/useBoxInteractionTracker';
@@ -9,18 +12,15 @@ import { useBoxItems } from '@/features/boxes/application/useBoxItems';
 import { useBoxMembers } from '@/features/boxes/application/useBoxMembers';
 import { BoxMemberActivityViewer } from '@/features/boxes/components/contributors/BoxMemberActivityViewer';
 import { RecentContributorsWidget } from '@/features/boxes/components/contributors/RecentContributorsWidget';
+import { FullPageShimmer } from '@/features/boxes/components/details/MovieBoxDetailShimmer';
 import { MovieBoxDetailVideoTile } from '@/features/boxes/components/details/MovieBoxDetailVideoTile';
 import { TrendingInBoxWidget } from '@/features/boxes/components/details/TrendingInBoxWidget';
-import { MovieBoxInfoWidget } from '@/features/boxes/components/details/widgets/MovieBoxInfoWidget';
-import { ChartLinearLoader } from '@/components/CrimchartLoader/ChartLinearLoader';
-import { MoviePostingItemShimmer } from '@/components/shimmers/MoviePostingShimmer';
-import { FullPageShimmer } from '@/features/boxes/components/details/MovieBoxDetailShimmer';
-import { VideoFeedPage } from '@/video/pages/VideoFeedPage';
 import { MoviePostingPage } from '@/features/boxes/components/video_posting/MoviePostingPage';
-import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+import { VideoFeedPage } from '@/video/pages/VideoFeedPage';
+import { useIsFocused } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Modal, SafeAreaView, StyleSheet, Text, View, Platform, useWindowDimensions } from 'react-native';
+import { FlatList, Image, Modal, Platform, SafeAreaView, Text, useWindowDimensions, View } from 'react-native';
 interface MovieBoxDetailPageProps {
   id: string;
   onClose?: () => void;
@@ -72,12 +72,17 @@ export const MovieBoxDetailPage: React.FC<MovieBoxDetailPageProps> = ({
     box: fetchedBox,
     isLoading
   } = useBoxDetail(id);
+
+  const { stopLoading } = useGlobalProgress();
+
   const {
     items: fetchedItems,
     isLoading: isItemsLoading,
     isFetchingMore,
-    loadMore
+    loadMore,
+    refetch
   } = useBoxItems(id);
+
   const {
     user
   } = useAuthStore();
@@ -85,7 +90,14 @@ export const MovieBoxDetailPage: React.FC<MovieBoxDetailPageProps> = ({
     trackInteraction
   } = useBoxInteractionTracker();
 
-  const { stopLoading } = useGlobalProgress();
+  const isFocused = useIsFocused();
+
+  // Refetch items when navigating back to the page
+  React.useEffect(() => {
+    if (isFocused) {
+      refetch();
+    }
+  }, [isFocused, refetch]);
 
   React.useEffect(() => {
     if (!isLoading && !isItemsLoading) {
@@ -152,15 +164,12 @@ export const MovieBoxDetailPage: React.FC<MovieBoxDetailPageProps> = ({
   const handleVideoPress = (item: any) => {
     const isAudio = item.isAudio || item.videoUrl && item.videoUrl.match(/\.(mp3|wav|m4a|aac)$/i);
     if (isAudio) {
-      router.push({
-        pathname: '/now-playing',
-        params: {
-          title: item.title,
-          artist: item.director || item.addedBy?.name || 'Unknown',
-          coverUrl: item.thumbnailUrl,
-          audioUrl: item.videoUrl || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'
-        }
-      });
+      useDesktopNowPlayingStore.getState().openModal([{
+        title: item.title,
+        artist: item.director || item.addedBy?.name || 'Unknown',
+        coverUrl: item.thumbnailUrl,
+        audioUrl: item.videoUrl || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'
+      }], 0);
     } else if (item.isShort) {
       setSelectedVideoParams(item);
     } else {
@@ -187,8 +196,8 @@ export const MovieBoxDetailPage: React.FC<MovieBoxDetailPageProps> = ({
 
   // Render the header component (Box Details + Members Widget)
   const renderHeader = () => <View style={styles.headerContainer}>
-      {/* Trending in this box */}
-      <TrendingInBoxWidget boxId={id} onTrackPress={track => {
+    {/* Trending in this box */}
+    <TrendingInBoxWidget boxId={id} onTrackPress={track => {
       handleVideoPress({
         id: track.postId || track.id,
         title: track.title,
@@ -203,77 +212,77 @@ export const MovieBoxDetailPage: React.FC<MovieBoxDetailPageProps> = ({
       });
     }} />
 
-      <View style={styles.contributorsSection}>
-        <RecentContributorsWidget contributors={members} isLoading={isLoadingMembers} isPaginating={isPaginatingMembers} onLoadMore={loadMoreMembers} boxId={id} selectedMemberId={selectedFilterUserId} onSelectMember={setSelectedFilterUserId} onLongPressMember={setViewerMemberId} onAddPress={() => {
-        if (isDesktop) setShowPostingModal(true);else router.push(`/movie-box/post/${id}`);
+    <View style={styles.contributorsSection}>
+      <RecentContributorsWidget contributors={members} isLoading={isLoadingMembers} isPaginating={isPaginatingMembers} onLoadMore={loadMoreMembers} boxId={id} selectedMemberId={selectedFilterUserId} onSelectMember={setSelectedFilterUserId} onLongPressMember={setViewerMemberId} onAddPress={() => {
+        if (isDesktop) setShowPostingModal(true); else router.push(`/movie-box/post/${id}`);
       }} />
-      </View>
-    </View>;
+    </View>
+  </View>;
   const renderFooter = () => {
     if (!isFetchingMore) return null;
     return <View style={{
       marginTop: 20
     }}>
-        <MoviePostingItemShimmer />
-      </View>;
+      <MoviePostingItemShimmer />
+    </View>;
   };
   const showInitialLoading = (isLoading || isItemsLoading) && displayedVideos.length === 0;
   return <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <ChartAppBar onBack={onClose} title="Movie Box" titleWidget={<View style={{
+    <View style={styles.container}>
+      <ChartAppBar onBack={onClose} title="Movie Box" titleWidget={<View style={{
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 8
       }}>
-              {fetchedBox?.coverImageUrl ? <Image source={{
+        {fetchedBox?.coverImageUrl ? <Image source={{
           uri: fetchedBox.coverImageUrl
         }} style={{
           width: 28,
           height: 28,
           borderRadius: 14
         }} /> : null}
-              <Text style={{
+        <Text style={{
           color: theme.colors.text,
           fontSize: 17,
           fontWeight: '700'
         }} numberOfLines={1}>
-                {fetchedBox?.title || 'Movie Box'}
-              </Text>
-            </View>} />
+          {fetchedBox?.title || 'Movie Box'}
+        </Text>
+      </View>} />
 
-        {/* Removed redundant ChartLinearLoader */}
+      {/* Removed redundant ChartLinearLoader */}
 
-        {showInitialLoading ? <FullPageShimmer /> : filteredVideos.length === 0 ? <View style={{
+      {showInitialLoading ? <FullPageShimmer /> : filteredVideos.length === 0 ? <View style={{
         flex: 1
       }}>
-            {renderHeader()}
-            <View style={{
+        {renderHeader()}
+        <View style={{
           flex: 1,
           justifyContent: 'center',
           alignItems: 'center'
         }}>
-              <Text style={{
+          <Text style={{
             color: 'rgba(255,255,255,0.5)'
           }}>
-                {selectedFilterUserId ? "No videos from this user." : "No videos added yet."}
-              </Text>
-            </View>
-          </View> : <FlatList data={filteredVideos} keyExtractor={item => item.id} ListHeaderComponent={renderHeader} ListFooterComponent={renderFooter} contentContainerStyle={styles.listContent} renderItem={({
+            {selectedFilterUserId ? "No videos from this user." : "No videos added yet."}
+          </Text>
+        </View>
+      </View> : <FlatList data={filteredVideos} keyExtractor={item => item.id} ListHeaderComponent={renderHeader} ListFooterComponent={renderFooter} contentContainerStyle={styles.listContent} renderItem={({
         item
       }) => <View>
-                <MovieBoxDetailVideoTile video={item} isPlaying={activeVideoId === item.id} onVideoPress={() => handleVideoPress(item)} onCommentPress={postId => {
-          setActivePostId(postId);
-          setShowComments(true);
-        }} currentUserId={user?.id} onInteraction={trackInteraction} />
-                <View style={styles.divider} />
-              </View>} viewabilityConfig={viewabilityConfig} onViewableItemsChanged={onViewableItemsChanged} showsVerticalScrollIndicator={false} ListEmptyComponent={<View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No videos found for this member.</Text>
-              </View>} onEndReached={loadMore} onEndReachedThreshold={0.5} />}
-      </View>
+          <MovieBoxDetailVideoTile video={item} isPlaying={activeVideoId === item.id} onVideoPress={() => handleVideoPress(item)} onCommentPress={postId => {
+            setActivePostId(postId);
+            setShowComments(true);
+          }} currentUserId={user?.id} onInteraction={trackInteraction} />
+          <View style={styles.divider} />
+        </View>} viewabilityConfig={viewabilityConfig} onViewableItemsChanged={onViewableItemsChanged} showsVerticalScrollIndicator={false} ListEmptyComponent={<View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No videos found for this member.</Text>
+        </View>} onEndReached={loadMore} onEndReachedThreshold={0.5} />}
+    </View>
 
-      {selectedVideoParams && <Modal visible={true} animationType="slide" onRequestClose={() => setSelectedVideoParams(null)}>
-          <VideoFeedPage initialVideos={displayedVideos.filter(t => t.isShort).map(t => ({
+    {selectedVideoParams && <Modal visible={true} animationType="slide" onRequestClose={() => setSelectedVideoParams(null)}>
+      <VideoFeedPage initialVideos={displayedVideos.filter(t => t.isShort).map(t => ({
         id: t.id,
         postId: t.id,
         videoUrl: t.videoUrl || 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
@@ -291,16 +300,16 @@ export const MovieBoxDetailPage: React.FC<MovieBoxDetailPageProps> = ({
         isCharted: false,
         tagsCount: 0
       }))} initialIndex={Math.max(0, displayedVideos.filter(t => t.isShort).findIndex(t => t.id === selectedVideoParams.id))} showBack={true} onBack={() => setSelectedVideoParams(null)} />
-        </Modal>}
+    </Modal>}
 
-      {showPostingModal && isDesktop && <Modal visible={true} transparent={true} animationType="fade" onRequestClose={() => setShowPostingModal(false)}>
-          <MoviePostingPage boxId={id} isInline onCloseInline={() => setShowPostingModal(false)} />
-        </Modal>}
+    {showPostingModal && isDesktop && <Modal visible={true} transparent={true} animationType="fade" onRequestClose={() => setShowPostingModal(false)}>
+      <MoviePostingPage boxId={id} isInline onCloseInline={() => setShowPostingModal(false)} />
+    </Modal>}
 
-      {/* Member Activity Status Modal */}
-      {viewerMemberId && activeMember && <BoxMemberActivityViewer visible={!!viewerMemberId} userId={activeMember.id} userName={activeMember.name} userAvatarUrl={activeMember.avatarUrl || ''} boxId={id} onClose={() => setViewerMemberId(null)} />}
+    {/* Member Activity Status Modal */}
+    {viewerMemberId && activeMember && <BoxMemberActivityViewer visible={!!viewerMemberId} userId={activeMember.id} userName={activeMember.name} userAvatarUrl={activeMember.avatarUrl || ''} boxId={id} onClose={() => setViewerMemberId(null)} />}
 
-      {/* Comment Sheet */}
-      {activePostId && <CommentSheet postId={activePostId} visible={showComments} onClose={() => setShowComments(false)} />}
-    </SafeAreaView>;
+    {/* Comment Sheet */}
+    {activePostId && <CommentSheet postId={activePostId} visible={showComments} onClose={() => setShowComments(false)} />}
+  </SafeAreaView>;
 };

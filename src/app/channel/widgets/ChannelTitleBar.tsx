@@ -9,6 +9,7 @@ interface ChannelTitleBarProps {
   title: string;
   channelId?: string;
   channelImageUrl?: string | null;
+  isStatusRead?: boolean;
   onBackPress?: () => void;
 }
 
@@ -16,6 +17,7 @@ export const ChannelTitleBar: React.FC<ChannelTitleBarProps> = ({
   title,
   channelId,
   channelImageUrl,
+  isStatusRead,
   onBackPress
 }) => {
   const theme = useCurrentTheme();

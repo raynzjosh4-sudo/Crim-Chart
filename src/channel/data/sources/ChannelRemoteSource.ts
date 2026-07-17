@@ -161,11 +161,15 @@ export class ChannelRemoteSource {
   }
 
   async deleteChannel(channelId: string): Promise<void> {
-    const { error } = await supabase
+    const { count, error } = await supabase
       .from('channels')
-      .delete()
+      .delete({ count: 'exact' })
       .eq('id', channelId);
     if (error) throw error;
+    if (count === 0) {
+      console.error('[Supabase DELETE] FAILED: Delete returned 0 rows! This usually means Row Level Security (RLS) blocked the delete, or the channel ID does not exist.');
+      throw new Error('Permission denied or channel not found');
+    }
   }
 
   async createChannelRequest(channelId: string, targetUserId: string, requestType: 'admin_invite' | 'member_invite' | 'join_request' | 'leave_request', requestedById: string): Promise<void> {

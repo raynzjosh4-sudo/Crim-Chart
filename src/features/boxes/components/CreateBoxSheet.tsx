@@ -167,13 +167,14 @@ export const CreateBoxSheet: React.FC<CreateBoxSheetProps> = ({
     subtitle: 'Movies, Series, and Short Clips',
     icon: <Play size={18} color="#E50914" />,
     color: '#E50914'
-  }, {
-    id: 'marketplace',
-    title: 'Marketplace & Trade',
-    subtitle: 'Selling, Swapping, and Bidding',
-    icon: <ShoppingBag size={18} color="#FF9900" />,
-    color: '#FF9900'
   }
+  // , {
+  //   id: 'marketplace',
+  //   title: 'Marketplace & Trade',
+  //   subtitle: 'Selling, Swapping, and Bidding',
+  //   icon: <ShoppingBag size={18} color="#FF9900" />,
+  //   color: '#FF9900'
+  // }
   // {
   //   id: 'sports',
   //   title: 'Sports & Highlights',

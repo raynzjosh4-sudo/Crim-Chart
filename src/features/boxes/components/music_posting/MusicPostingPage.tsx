@@ -208,6 +208,17 @@ export const MusicPostingPage = ({ boxId, isInline, onCloseInline }: { boxId: st
         console.error("[MusicPostingPage] Failed to toggle tag post - Supabase returned error:", data?.error);
         throw new Error(data.error || "Failed to tag post");
       }
+
+      // Send notification to box owner if this was an additive tag
+      if (data && data.success && data.action === 'tagged' && currentUser && box && currentUser.id !== box.owner_id) {
+        await supabase.from('notifications').insert({
+          recipient_id: box.owner_id,
+          actor_id: currentUser.id,
+          type: 'box_tag',
+          reference_id: boxId,
+          action_text: `tagged a track to your box ${box.title}`
+        });
+      }
     } catch (e: any) {
       console.error("[MusicPostingPage] Failed to toggle tag for box (Exception):", JSON.stringify(e, null, 2), e.message, e);
       // Revert optimistic update on failure
@@ -243,7 +254,10 @@ export const MusicPostingPage = ({ boxId, isInline, onCloseInline }: { boxId: st
         <View style={styles.searchContainer}>
           <Search size={20} color="rgba(255,255,255,0.4)" style={styles.searchIcon} />
           <TextInput
-            style={styles.searchInput}
+            style={[
+              styles.searchInput,
+              Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}
+            ]}
             placeholder="Search tracks"
             placeholderTextColor="rgba(255,255,255,0.4)"
             value={searchQuery}
@@ -254,31 +268,35 @@ export const MusicPostingPage = ({ boxId, isInline, onCloseInline }: { boxId: st
       </View>
 
       <VisibilityBoxTrackerWrapper box={box || {}} isCurrentUser={isOwner} actionType="upload_post">
-        <View style={styles.filterContainer}>
-          <TouchableOpacity activeOpacity={1}
-            style={styles.filterToggle}
-            onPress={() => setShowLocalOnly(!showLocalOnly)}
-          >
-            <View style={[styles.radioOuter, showLocalOnly && styles.radioOuterSelected]}>
-              {showLocalOnly && <View style={styles.radioInner} />}
+        {Platform.OS !== 'web' && (
+          <>
+            <View style={styles.filterContainer}>
+              <TouchableOpacity activeOpacity={1}
+                style={styles.filterToggle}
+                onPress={() => setShowLocalOnly(!showLocalOnly)}
+              >
+                <View style={[styles.radioOuter, showLocalOnly && styles.radioOuterSelected]}>
+                  {showLocalOnly && <View style={styles.radioInner} />}
+                </View>
+                <Text style={styles.filterText}>Show local music only</Text>
+              </TouchableOpacity>
             </View>
-            <Text style={styles.filterText}>Show local music only</Text>
-          </TouchableOpacity>
-        </View>
 
-        {showLocalOnly && (
-          <View style={{ paddingHorizontal: 16, marginBottom: 12, alignItems: 'flex-start' }}>
-            <AlbumSelectorModal
-              activeTabKey="music"
-              selectedAlbum={selectedAlbum}
-              onAlbumSelected={(albumId) => {
-                console.log('[MusicFilter] Album selected:', albumId);
-                setSelectedAlbum(albumId);
-                setExpandedWidgets([]);
-                loadLocalMusic(albumId, undefined, true);
-              }}
-            />
-          </View>
+            {showLocalOnly && (
+              <View style={{ paddingHorizontal: 16, marginBottom: 12, alignItems: 'flex-start' }}>
+                <AlbumSelectorModal
+                  activeTabKey="music"
+                  selectedAlbum={selectedAlbum}
+                  onAlbumSelected={(albumId) => {
+                    console.log('[MusicFilter] Album selected:', albumId);
+                    setSelectedAlbum(albumId);
+                    setExpandedWidgets([]);
+                    loadLocalMusic(albumId, undefined, true);
+                  }}
+                />
+              </View>
+            )}
+          </>
         )}
       </VisibilityBoxTrackerWrapper>
 

@@ -7,8 +7,9 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { X } from 'lucide-react-native';
 import { useEffect } from 'react';
-import { FlatList, ScrollView, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { Platform, ScrollView, Text, TouchableOpacity, View, FlatList } from 'react-native';
 import { useDesktopChannelModalStore } from '@/core/store/useDesktopChannelModalStore';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 interface DiscoverChannelWidgetProps {
   userId?: string;
   channelCount?: number;
@@ -129,6 +130,7 @@ export const DiscoverChannelWidget: React.FC<DiscoverChannelWidgetProps> = ({
     loadMore
   } = useExploreChannels(userId);
   const router = useRouter();
+  const { startLoading } = useGlobalProgress();
   useEffect(() => {
     if (userId) {
       loadMore(true);
@@ -173,7 +175,10 @@ export const DiscoverChannelWidget: React.FC<DiscoverChannelWidgetProps> = ({
             if (Platform.OS === 'web' && window.innerWidth >= 768) {
               useDesktopChannelModalStore.getState().openChannel(item.id);
             } else {
-              router.push({ pathname: '/channel/channelpage', params: { id: item.id } } as any);
+              startLoading();
+              setTimeout(() => {
+                router.push({ pathname: '/channel/channelpage', params: { id: item.id } } as any);
+              }, 100);
             }
           }}
         >

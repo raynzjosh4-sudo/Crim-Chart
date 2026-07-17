@@ -20,7 +20,7 @@ export const NotificationsPage = () => {
   const isDesktop = Platform.OS === 'web' && width >= 768;
 
   const { user } = useAuthStore();
-  const { stopLoading } = useGlobalProgress();
+  const { startLoading, stopLoading } = useGlobalProgress();
   const { notifications, isLoading, hasMore, fetchNotifications, markAsRead, subscribeToNotifications } = useNotificationStore();
   const [refreshing, setRefreshing] = useState(false);
   const initialLoadDone = useRef(false);
@@ -53,7 +53,10 @@ export const NotificationsPage = () => {
         // We'd typically navigate to a post detail page here. For now, navigate to profile or home
         // router.push(`/post/${notification.reference_id}`);
       } else if (notification.type === 'channel_invite' || notification.type === 'channel_request') {
-        router.push(`/channel/${notification.reference_id}` as any);
+        startLoading();
+        setTimeout(() => {
+          router.push(`/channel/${notification.reference_id}` as any);
+        }, 100);
       } else if (notification.type === 'follow') {
         router.push(`/?viewProfile=${notification.actor_id}` as any);
       }

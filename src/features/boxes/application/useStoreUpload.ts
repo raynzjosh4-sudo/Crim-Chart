@@ -52,6 +52,18 @@ export function useStoreUpload() {
 
       if (tagError) throw tagError;
 
+      // 3.1 Send notification to box owner if it's not the current user's box
+      const { data: boxData } = await supabase.from('boxes').select('owner_id, title').eq('id', boxId).single();
+      if (boxData && boxData.owner_id !== currentUser.id) {
+        await supabase.from('notifications').insert({
+          recipient_id: boxData.owner_id,
+          actor_id: currentUser.id,
+          type: 'box_upload',
+          reference_id: boxId,
+          action_text: `added an item to your box ${boxData.title}`
+        });
+      }
+
       // 4. Record the reaction to update chart points
       await supabase.rpc('record_box_item_reaction', {
         p_post_id: newPost.id,

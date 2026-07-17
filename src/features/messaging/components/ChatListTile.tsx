@@ -164,7 +164,7 @@ export const ChatListTile: React.FC<ChatListTileProps> = ({
   return <TouchableOpacity activeOpacity={1} style={[styles.container, isUnread && styles.containerUnread]} onPress={onTap}>
       <View style={styles.avatarContainer}>
         <View style={styles.avatarWrapper}>
-          <MemberImage size={56} imageUrl={chat.senderAvatarUrl} showStatusRing={true} ringColor={isUnread ? colors.primary : undefined} />
+          <MemberImage size={56} imageUrl={chat.senderAvatarUrl} showStatusRing={true} statusCount={chat.unreadCount} ringColor={isUnread ? colors.primary : undefined} />
 
           {isUnread ? <View style={styles.activeDot} /> : null}
         </View>

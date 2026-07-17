@@ -5,11 +5,14 @@ import { AppCountryPicker } from '@/components/countryPicker/AppCountryPicker';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Calendar, CheckCircle2, ChevronLeft, Circle, Globe } from 'lucide-react-native';
+import { Calendar, CheckCircle2, ChevronLeft, Circle, Globe, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View, Platform, useWindowDimensions } from 'react-native';
-import { Country } from 'react-native-country-picker-modal';
+import { Country } from '@/components/countryPicker/AppCountryPicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+import { OfflineStaleDataBanner, SlowConnectionBanner, OfflineNoDataWidget } from '@/components/offlineIndicators';
+import { useNetworkState } from '@/components/offlineIndicators/useNetworkState';
 
 export default function PrivacyPermissionsPage({ channelIdOverride }: { channelIdOverride?: string }) {
   const router = useRouter();
@@ -20,6 +23,9 @@ export default function PrivacyPermissionsPage({ channelIdOverride }: { channelI
   const { channel, loading } = useChannelData(id);
   const theme = useCurrentTheme();
   const styles = useStyles(useStylesHook);
+  const { startLoading, stopLoading } = useGlobalProgress();
+  const networkState = useNetworkState();
+  const isOffline = networkState === 'offline';
 
   // Settings State
   const [visibleToOthers, setVisibleToOthers] = useState(true);
@@ -41,26 +47,29 @@ export default function PrivacyPermissionsPage({ channelIdOverride }: { channelI
       // console.log('--- CHANNEL SETTINGS DEBUG ---');
       // console.log('Raw channel from DB:', channel);
 
-      setVisibleToOthers(channel.visible_to_other_channel_members === 1 || channel.visible_to_other_channel_members === true);
-      setVisibleToFollowed(channel.visible_to_followed_users === 1 || channel.visible_to_followed_users === true);
-      setJoinMethod(channel.join_method || channel.joinMethod || 'invite');
-      setAllowPosting((channel as any).allow_posting_by || channel.allowPostingBy || 'all');
-      setAllowCommenting((channel as any).allow_commenting_by || channel.allowCommentingBy || 'all');
-      setAllowStatus((channel as any).allow_status_posting_by || channel.allowStatusPostingBy || 'all');
-      setAllowInvitations((channel as any).allow_invitations_by || channel.allowInvitationsBy || 'all');
-      setAllowChatting((channel as any).allow_chatting_by || channel.allowChattingBy || 'all');
-      setPreventLeaving(channel.prevent_leaving === 1 || channel.prevent_leaving === true);
-      setAgeRestriction((channel.age_restriction as AgeRestrictionType) || 'All Ages');
-      if (channel.country_restrictions) {
+      setVisibleToOthers(channel.visibleToOtherChannelMembers);
+      setVisibleToFollowed(channel.visibleToFollowedUsers);
+      setJoinMethod(channel.joinMethod || 'invite');
+      setAllowPosting(channel.allowPostingBy || 'all');
+      setAllowCommenting(channel.allowCommentingBy || 'all');
+      setAllowStatus(channel.allowStatusPostingBy || 'all');
+      setAllowInvitations(channel.allowInvitationsBy || 'all');
+      setAllowChatting(channel.allowChattingBy || 'all');
+      setPreventLeaving(channel.preventLeaving);
+      setAgeRestriction((channel.ageRestriction as AgeRestrictionType) || 'All Ages');
+      if (channel.countryRestrictions) {
         try {
-          const parsed = typeof channel.country_restrictions === 'string' ? JSON.parse(channel.country_restrictions) : channel.country_restrictions;
+          const parsed = typeof channel.countryRestrictions === 'string' ? JSON.parse(channel.countryRestrictions) : channel.countryRestrictions;
           if (Array.isArray(parsed) && parsed[0] !== 'Global') {
             setSelectedCountries(parsed);
           }
         } catch (e) { }
       }
     }
-  }, [channel]);
+    if (!loading) {
+      stopLoading();
+    }
+  }, [channel, loading, stopLoading]);
 
   const updateSetting = async (key: string, value: any) => {
     if (!id) return;
@@ -75,6 +84,14 @@ export default function PrivacyPermissionsPage({ channelIdOverride }: { channelI
     if (selectedCountries.length === 0) return 'All / Global';
     if (selectedCountries.length === 1) return (selectedCountries[0].name as any)?.en || selectedCountries[0].name;
     return `${selectedCountries.length} countries`;
+  };
+
+  const handleRemoveCountry = (cca2: string) => {
+    const newCountries = selectedCountries.filter(c => c.cca2 !== cca2);
+    setSelectedCountries(newCountries);
+    // If empty, it means global
+    const payload = newCountries.length === 0 ? JSON.stringify(['Global']) : JSON.stringify(newCountries);
+    updateSetting('country_restrictions', payload);
   };
 
   const SectionHeader = ({ title }: { title: string }) => (
@@ -114,8 +131,33 @@ export default function PrivacyPermissionsPage({ channelIdOverride }: { channelI
     </TouchableOpacity>
   );
 
+  if (isOffline && !channel && !loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity activeOpacity={1} onPress={() => {
+            if (isDesktop && channelIdOverride) {
+              router.setParams({ desktopChannelView: 'settings' });
+            } else if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace(`/channel/settings/${id}` as any);
+            }
+          }} style={styles.headerButton}>
+            <ChevronLeft size={28} color={theme.colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Privacy & Permissions</Text>
+          <View style={{ width: 44 }} />
+        </View>
+        <OfflineNoDataWidget onRetry={() => {}} />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
+      <OfflineStaleDataBanner />
+      <SlowConnectionBanner />
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity activeOpacity={1} onPress={() => {
@@ -141,6 +183,19 @@ export default function PrivacyPermissionsPage({ channelIdOverride }: { channelI
           icon={Calendar}
           onPress={() => setAgePickerVisible(true)}
         />
+        {ageRestriction !== 'All Ages' && (
+          <View style={styles.chipsContainer}>
+            <View style={styles.chip}>
+              <Text style={styles.chipText}>{ageRestriction}</Text>
+              <TouchableOpacity onPress={() => {
+                setAgeRestriction('All Ages');
+                updateSetting('age_restriction', 'All Ages');
+              }} activeOpacity={0.8}>
+                <X size={14} color={theme.colors.text} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
         <SwitchTile
           title="Members in my other channels"
           value={visibleToOthers}
@@ -228,6 +283,18 @@ export default function PrivacyPermissionsPage({ channelIdOverride }: { channelI
           icon={Globe}
           onPress={() => setCountryPickerVisible(true)}
         />
+        {selectedCountries.length > 0 && (
+          <View style={styles.chipsContainer}>
+            {selectedCountries.map(country => (
+              <View key={country.cca2} style={styles.chip}>
+                <Text style={styles.chipText}>{(country.name as any)?.en || country.name}</Text>
+                <TouchableOpacity onPress={() => handleRemoveCountry(country.cca2)} activeOpacity={0.8}>
+                  <X size={14} color={theme.colors.text} />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
         <SwitchTile
           title="Allow members not leave"
           value={preventLeaving}
@@ -264,7 +331,7 @@ export default function PrivacyPermissionsPage({ channelIdOverride }: { channelI
   );
 }
 
-const useStylesHook = (colors: any) => ({
+const useStylesHook = (colors: any, scale: number) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -324,5 +391,27 @@ const useStylesHook = (colors: any) => ({
 
   footerSpacer: {
     height: 60,
+  },
+  chipsContainer: {
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    paddingTop: 8,
+    gap: 8,
+  },
+  chip: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: colors.surfaceVariant,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 6,
+  },
+  chipText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '600' as const,
   },
 });

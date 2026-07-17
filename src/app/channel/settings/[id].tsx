@@ -14,9 +14,12 @@ import { channelRepository } from '@/channel/data/channelRepository';
 import { useChannelData } from '@/channel/hooks/useChannelData';
 import { useChannelPermissions } from '@/channel/hooks/useChannelPermissions';
 import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+import { OfflineNoDataWidget, OfflineStaleDataBanner, SlowConnectionBanner } from '@/components/offlineIndicators';
+import { useNetworkState } from '@/components/offlineIndicators/useNetworkState';
 import { ChannelShareCard } from '@/components/share_widgets/ChannelShareCard';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import * as Sharing from 'expo-sharing';
+import React from 'react';
 import { captureRef } from 'react-native-view-shot';
 
 export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOverride?: string }) {
@@ -28,7 +31,7 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
   const theme = useCurrentTheme();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const { needsLeaveRequest, canLeave, canDelete, canReport, role } = useChannelPermissions(id as string);
-  const { channel } = useChannelData(id as string);
+  const { channel, loading } = useChannelData(id as string);
   const user = useAuthStore(s => s.user);
 
   const shareCardRef = useRef<any>(null);
@@ -38,7 +41,15 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
   const { startLoading, stopLoading } = useGlobalProgress();
+  const networkState = useNetworkState();
+  const isOffline = networkState === 'offline';
   const styles = useStyles(useStylesHook);
+
+  React.useEffect(() => {
+    if (!loading) {
+      stopLoading();
+    }
+  }, [loading, stopLoading]);
 
   const handleDeleteChannel = () => {
     setDeleteConfirmVisible(true);
@@ -61,8 +72,33 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
     }
   };
 
+  if (isOffline && !channel && !loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity activeOpacity={1} onPress={() => {
+            if (isDesktop && channelIdOverride) {
+              router.setParams({ desktopChannelView: '' });
+            } else if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace(`/channel/${id}` as any);
+            }
+          }} style={styles.headerButton}>
+            <ChevronLeft size={28} color="#FFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Channel Details</Text>
+          <View style={{ width: 44 }} />
+        </View>
+        <OfflineNoDataWidget onRetry={() => { }} />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
+      <OfflineStaleDataBanner />
+      <SlowConnectionBanner />
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity activeOpacity={1} onPress={() => {
@@ -455,7 +491,7 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
   );
 }
 
-const useStylesHook = (colors: any) => StyleSheet.create({
+const useStylesHook = (colors: any, scale: number) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,

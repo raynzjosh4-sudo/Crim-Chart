@@ -12,6 +12,7 @@ import { AnimatedDisk } from '@/components/AnimatedDisk';
 
 import { BottomPillTabs } from '@/components/posting/widgets/BottomPillTabs';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
+import { usePostingStore } from '@/core/store/usePostingStore';
 
 export default function MobileWebPostPage() {
   const router = useRouter();
@@ -86,10 +87,10 @@ export default function MobileWebPostPage() {
           height: asset.height,
         }));
 
+        usePostingStore.getState().setStagingMedia(mediaList);
         router.push({
           pathname: '/finalize-post',
           params: {
-            selectedMediaJson: JSON.stringify(mediaList),
             ...getNextParams()
           }
         });
@@ -117,10 +118,10 @@ export default function MobileWebPostPage() {
           duration: asset.duration || 0,
         };
 
+        usePostingStore.getState().setStagingMedia([media]);
         router.push({
           pathname: '/trim-video',
           params: {
-            selectedMediaJson: JSON.stringify([media]),
             ...getNextParams()
           }
         });

@@ -12,6 +12,7 @@ import { PostInteractionWrapper } from '@/components/wrappers/PostInteractionWra
 import { useInteractionStore } from '@/core/store/useInteractionStore';
 import { supabase } from '@/core/supabase/supabaseConfig';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { useBoxDetail } from '@/features/boxes/application/useBoxDetail';
 import { useLocalVideos } from '@/features/boxes/application/useLocalVideos';
 import { useVideoUpload } from '@/features/boxes/application/useVideoUpload';
 import { VideoFeedPage } from '@/video/pages/VideoFeedPage';
@@ -48,6 +49,8 @@ export const MoviePostingPage = ({ boxId, isInline, onCloseInline }: { boxId: st
   const tags = useInteractionStore(state => state.tags);
 
   const { globalVideos, isLoadingGlobal, hasMoreGlobal, isInitialLoad, loadGlobalVideos } = useVideoFeedStore();
+
+  const { box } = useBoxDetail(boxId);
 
   const {
     localVideos,
@@ -151,6 +154,18 @@ export const MoviePostingPage = ({ boxId, isInline, onCloseInline }: { boxId: st
         throw error;
       }
       console.log(`✅ [MoviePostingPage] Successfully tagged post to box! RPC Response:`, data);
+
+      // Send notification to box owner if this was an additive tag
+      if (data && data.success && data.action === 'tagged' && currentUser && box && currentUser.id !== box.owner_id) {
+        await supabase.from('notifications').insert({
+          recipient_id: box.owner_id,
+          actor_id: currentUser.id,
+          type: 'box_tag',
+          reference_id: boxId,
+          action_text: `tagged a video to your box ${box.title}`
+        });
+      }
+
       console.log(`==========================================\n`);
     } catch (e: any) {
       console.error("🚨 [MoviePostingPage] Failed to toggle tag for box:", e);
@@ -248,7 +263,10 @@ export const MoviePostingPage = ({ boxId, isInline, onCloseInline }: { boxId: st
         <View style={styles.searchContainer}>
           <Search size={20} color="rgba(255,255,255,0.4)" style={styles.searchIcon} />
           <TextInput
-            style={styles.searchInput}
+            style={[
+              styles.searchInput,
+              Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}
+            ]}
             placeholder="Search videos"
             placeholderTextColor="rgba(255,255,255,0.4)"
             value={searchQuery}
@@ -257,25 +275,27 @@ export const MoviePostingPage = ({ boxId, isInline, onCloseInline }: { boxId: st
         </View>
       </View>
 
-      <View style={styles.filterContainer}>
-        <TouchableOpacity
-          style={styles.filterToggle}
-          onPress={() => setShowLocalOnly(!showLocalOnly)}
-          activeOpacity={0.7}
-        >
-          <View style={[styles.radioOuter, showLocalOnly && styles.radioOuterSelected]}>
-            {showLocalOnly && <View style={styles.radioInner} />}
-          </View>
-          <Text style={styles.filterText}>Show local videos only</Text>
-        </TouchableOpacity>
+      {Platform.OS !== 'web' && (
+        <View style={styles.filterContainer}>
+          <TouchableOpacity
+            style={styles.filterToggle}
+            onPress={() => setShowLocalOnly(!showLocalOnly)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.radioOuter, showLocalOnly && styles.radioOuterSelected]}>
+              {showLocalOnly && <View style={styles.radioInner} />}
+            </View>
+            <Text style={styles.filterText}>Show local videos only</Text>
+          </TouchableOpacity>
 
-        <CreateShortVideoButton onPress={() => setIsCreateShortOpen(true)} />
-      </View>
+          <CreateShortVideoButton onPress={() => setIsCreateShortOpen(true)} />
+        </View>
+      )}
 
-      {showLocalOnly && (
+      {Platform.OS !== 'web' && showLocalOnly && (
         <View style={{ paddingHorizontal: 16, marginBottom: 12, alignItems: 'flex-start' }}>
           <AlbumSelectorModal
-            activeTabIndex={1}
+            activeTabKey="video"
             selectedAlbum={selectedAlbum}
             onAlbumSelected={(albumId) => {
               setSelectedAlbum(albumId);

@@ -106,7 +106,11 @@ export const PostInteractionWrapper: React.FC<PostInteractionWrapperProps> = ({
   const boxLiked = boxId ? (store.likes[contextKey] ?? false) : false;
   const isLiked = globalLiked || boxLiked;
 
-  const likesCount = store.likesCount[contextKey] ?? initialLikesCount;
+  let likesCount = store.likesCount[contextKey] ?? initialLikesCount;
+  if (isLiked && likesCount < 1) {
+    likesCount = 1; // Fallback for out-of-sync backend data
+  }
+
   const viewsCount = store.viewsCount[contextKey] ?? initialViewsCount;
   const downloadsCount = store.downloadsCount[contextKey] ?? initialDownloadsCount;
 

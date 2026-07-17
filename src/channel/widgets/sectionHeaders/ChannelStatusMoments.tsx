@@ -8,8 +8,10 @@ import AppAvatar from '@/components/avatar/AppAvatar';
 
 import { useRouter } from 'expo-router';
 import { StatusViewer } from '../../pages/widgets2/status/StatusViewer';
-import { useChannelMoments } from '../../hooks/useChannelMoments';
+import { useChannelMomentsStore } from '@/channel/store/useChannelMomentsStore';
 import { ChannelModel } from '@/channel/models/ChannelModel';
+import { ChannelAvatarImage } from '@/channel/components/channelavatarimage/ChannelAvatarImage';
+import { useViewedStatusStore } from '@/core/store/useViewedStatusStore';
 
 interface ChannelStatusMomentsProps {
   displayedChannels?: ChannelModel[];
@@ -21,15 +23,16 @@ export const ChannelStatusMoments: React.FC<ChannelStatusMomentsProps> = ({ disp
   
   const [viewerVisible, setViewerVisible] = React.useState(false);
   const [initialViewerIndex, setInitialViewerIndex] = React.useState(0);
+  const viewedStatusIds = useViewedStatusStore(s => s.viewedStatusIds);
 
-  // Use the new highly-scalable paginated moments hook!
-  const { momentGroups, fetchMoments, hasMore } = useChannelMoments(user?.id || '');
+  const { momentGroups, fetchMoments, setUserId, hasMore } = useChannelMomentsStore();
 
   React.useEffect(() => {
     if (user?.id) {
+      setUserId(user.id);
       fetchMoments(true);
     }
-  }, [user?.id, fetchMoments]);
+  }, [user?.id, setUserId, fetchMoments]);
 
   // Filter moments based on the channels currently shown on screen
   const filteredGroups = displayedChannels 
@@ -90,13 +93,25 @@ export const ChannelStatusMoments: React.FC<ChannelStatusMomentsProps> = ({ disp
         {momentGroups.map((group, index) => {
           // Display the thumbnail of the most recent moment as the cover image
           const coverImage = group.moments[group.moments.length - 1]?.thumbnail_url || group.moments[group.moments.length - 1]?.media_url;
+          
+          const isStatusRead = group.moments.length > 0 && group.moments.every(m => viewedStatusIds[m.id]);
 
           return (
             <TouchableOpacity activeOpacity={1} key={group.channel_id} style={styles.card} onPress={() => openViewer(index)}>
               <ExpoImage source={{ uri: coverImage }} style={styles.cardImage} contentFit="cover" />
               <View style={styles.gradient} />
-              <View style={styles.avatarRing}>
-                <ExpoImage source={{ uri: group.channel_avatar_url || 'https://i.pravatar.cc/151' }} style={styles.userAvatar} />
+              <View style={{ position: 'absolute', top: 12, left: 12 }}>
+                <ChannelAvatarImage 
+                  imageUrl={group.channel_avatar_url || 'https://i.pravatar.cc/151'}
+                  name={group.channel_name}
+                  size={36}
+                  hasStatus={true}
+                  showStatusRing={true}
+                  statusCount={group.moments.length}
+                  isStatusRead={isStatusRead}
+                  borderWidth={2}
+                  showActiveDot={false}
+                />
               </View>
               <Text style={styles.authorName} numberOfLines={1}>{group.channel_name}</Text>
             </TouchableOpacity>

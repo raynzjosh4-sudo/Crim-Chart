@@ -77,7 +77,7 @@ export default function SettingsPage({ isSplitPane = false }: { isSplitPane?: bo
         {renderDivider()}
 
         {renderSectionHeader(t('how_others_interact'))}
-        <SettingsItem
+        {/* <SettingsItem
           icon={Send}
           title={t('messages_story_reuse')}
           onTap={() => { }}
@@ -111,7 +111,7 @@ export default function SettingsPage({ isSplitPane = false }: { isSplitPane?: bo
           icon={UserPlus}
           title={t('join_invite')}
           onTap={() => { }}
-        />
+        /> */}
 
         {renderDivider()}
 
@@ -126,7 +126,7 @@ export default function SettingsPage({ isSplitPane = false }: { isSplitPane?: bo
           title={t('display_text_size' as any, { defaultValue: 'Text Size' })}
           onTap={() => router.push('/settings/display' as any)}
         />
-        <SettingsItem
+        {/* <SettingsItem
           icon={Globe}
           title={t('language')}
           onTap={() => router.push('/settings/localization' as any)}
@@ -135,7 +135,7 @@ export default function SettingsPage({ isSplitPane = false }: { isSplitPane?: bo
           icon={RefreshCw}
           title={t('data_saver')}
           onTap={() => router.push('/settings/data-saver' as any)}
-        />
+        /> */}
         <SettingsItem
           icon={DownloadCloud}
           title={t('download_data')}

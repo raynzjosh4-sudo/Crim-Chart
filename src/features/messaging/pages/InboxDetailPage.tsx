@@ -89,7 +89,7 @@ export const InboxDetailPage: React.FC<InboxDetailPageProps> = ({
     },
   }));
 
-  const { threads, messages, typingUsers, isLoadingMessages, fetchMessages, loadMoreMessages, subscribeToThread, unsubscribeFromThread, markThreadAsRead, sendMessage, startTyping, stopTyping, acceptInboxRequest } = useChatStore();
+  const { threads, messages, typingUsers, isLoadingMessages, fetchMessages, loadMoreMessages, subscribeToThread, unsubscribeFromThread, markThreadAsRead, sendMessage, startTyping, stopTyping, acceptInboxRequest, rejectInboxRequest } = useChatStore();
   const currentThread = threads.find(t => t.id === threadId);
   const { user } = useAuthStore() as any;
 
@@ -106,7 +106,18 @@ export const InboxDetailPage: React.FC<InboxDetailPageProps> = ({
 
   const participantProfile = useProfileCacheStore(state => state.profiles[activeParticipantId || '']);
 
-  const [participantStats, setParticipantStats] = useState<UserConnectionStatsModel | null>(null);
+  const [participantStats, setParticipantStats] = useState<UserConnectionStatsModel>({
+    relSentCount: 0,
+    relAcceptedCount: 0,
+    relationshipStatus: 'Unknown',
+    preferredCountries: [],
+    preferredAgeRanges: [],
+    showStatusCircle: true,
+    showStatusText: true,
+    showCountryPref: true,
+    showAgePref: true,
+    lockedIntent: false,
+  });
 
   const participantNameFallbackParam = params.participantNameFallback as string | undefined;
   const participantAvatarFallbackParam = params.participantAvatarFallback as string | undefined;
@@ -421,11 +432,18 @@ export const InboxDetailPage: React.FC<InboxDetailPageProps> = ({
                   await acceptInboxRequest(threadId);
                 }
               }}
+              onDecline={async () => {
+                if (threadId) {
+                  await rejectInboxRequest(threadId);
+                  router.back();
+                }
+              }}
             />
           )}
 
-          <View style={{ paddingBottom: keyboardHeight > 0 ? 4 : Math.max(insets.bottom, 8) }}>
-            <ChatInputField
+          {!isPending && (
+            <View style={{ paddingBottom: keyboardHeight > 0 ? 4 : Math.max(insets.bottom, 8) }}>
+              <ChatInputField
               channelId={threadId}
               onSubmitted={(val, media) => {
                 const mediaItems = media.map(m => ({ uri: m.uri, thumbnail: m.thumbnailUri, type: m.type }));
@@ -460,6 +478,7 @@ export const InboxDetailPage: React.FC<InboxDetailPageProps> = ({
               onEmojiPressed={() => setShowLottieSheet(true)}
             />
           </View>
+          )}
 
           <StickerSheet
             visible={showLottieSheet}

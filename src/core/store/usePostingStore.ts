@@ -70,13 +70,17 @@ interface PostingState {
   clearError: () => void;
   pendingPosts: any[];
   removePendingPostsByChannel: (channelId: string) => void;
+  stagingMedia: any[];
+  setStagingMedia: (media: any[]) => void;
 }
 
 export const usePostingStore = create<PostingState>((set) => ({
   isPosting: false,
   errorMessage: null,
   pendingPosts: [],
+  stagingMedia: [],
 
+  setStagingMedia: (media) => set({ stagingMedia: media }),
   clearError: () => set({ errorMessage: null }),
   removePendingPostsByChannel: (channelId) => set((state) => ({ 
     pendingPosts: state.pendingPosts.filter(p => p.channel_id !== channelId) 

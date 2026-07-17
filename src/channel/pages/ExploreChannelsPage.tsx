@@ -9,12 +9,14 @@ import { FlatList, Platform, StyleSheet, Text, TextInput, TouchableWithoutFeedba
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useExploreChannels } from '../hooks/useExploreChannels';
 import ChannelListTile from '../widgets/ChannelListTile';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 
 export const ExploreChannelsPage: React.FC<{ isModal?: boolean }> = ({ isModal }) => {
   const { colors } = useTheme() as any;
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const closeExplore = useExploreStore(s => s.closeExplore);
+  const { startLoading } = useGlobalProgress();
 
   const { channels, loadMore, isLoading, hasMore } = useExploreChannels();
   const [searchQuery, setSearchQuery] = useState('');
@@ -72,7 +74,10 @@ export const ExploreChannelsPage: React.FC<{ isModal?: boolean }> = ({ isModal }
                 if (isDesktop) {
                   router.setParams({ desktopChannelId: item.id });
                 } else {
-                  router.push({ pathname: '/channel/channelpage', params: { id: item.id } } as any);
+                  startLoading();
+                  setTimeout(() => {
+                    router.push({ pathname: '/channel/channelpage', params: { id: item.id } } as any);
+                  }, 100);
                 }
               }}
               showFollowButton={true}

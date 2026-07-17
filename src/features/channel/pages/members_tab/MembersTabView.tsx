@@ -167,7 +167,7 @@ export const MembersTabView: React.FC<MembersTabViewProps> = ({
       {sortedMembers.map(member => {
       const canChat = localChatPermissions[member.id] ?? member.canChat ?? true;
       return <React.Fragment key={member.id}>
-            <MemberListItem id={member.id} name={member.displayName} profileImageUrl={member.profileImageUrl} subtitle={member.isMe ? 'You (Admin)' : `${member.role}`} showFollow={!member.isMe} showChatToggle={showChatToggle && !member.isMe && member.role !== 'owner'} canChat={canChat} onToggleChat={() => handleToggleChat(member.id, canChat)} onAvatarTap={() => router.push('/profile' as any)} />
+            <MemberListItem id={member.id} name={member.displayName} profileImageUrl={member.profileImageUrl} subtitle={member.isMe ? (member.role === 'owner' ? 'You (Owner)' : member.role === 'admin' ? 'You (Admin)' : 'You') : `${member.role}`} showFollow={!member.isMe} showChatToggle={showChatToggle && !member.isMe && member.role !== 'owner'} canChat={canChat} onToggleChat={() => handleToggleChat(member.id, canChat)} onAvatarTap={() => router.push('/profile' as any)} />
           </React.Fragment>;
     })}
 

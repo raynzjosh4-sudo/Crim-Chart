@@ -73,13 +73,13 @@ export default function UserAvatar({
     requestSync(userId);
   }, [userId, requestSync]);
 
-  const isOnline = forceOnline !== undefined ? forceOnline : (profile?.isOnline !== undefined ? profile.isOnline : false);
+  const isOnline = profile?.isOnline !== undefined ? profile.isOnline : (forceOnline ?? false);
   
   // A user is deemed to have statuses if statusCount > 0
-  const hasStatus = forceHasStatus !== undefined ? forceHasStatus : (profile?.statusCount !== undefined ? profile.statusCount > 0 : false);
+  const hasStatus = profile?.statusCount !== undefined ? profile.statusCount > 0 : (forceHasStatus ?? false);
   const statusSegmentCount = disableSegments 
     ? 1 
-    : (forceStatusCount !== undefined ? forceStatusCount : (profile?.statusCount !== undefined ? profile.statusCount : 0));
+    : (profile?.statusCount !== undefined ? profile.statusCount : (forceStatusCount ?? 0));
 
   const handleTap = () => {
     if (hasStatus) {

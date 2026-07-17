@@ -43,12 +43,14 @@ export const InboxPrivacyWrapper: React.FC<InboxPrivacyWrapperProps> = ({
   const [isBlocked, setIsBlocked] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const checkInboxPrivacy = useChatStore(state => state.checkInboxPrivacy);
+  const [debugData, setDebugData] = useState<any>(null);
   useEffect(() => {
     const fetchPrivacy = async () => {
       if (!participantId) {
         return;
       }
       const privacy = await checkInboxPrivacy(participantId);
+      setDebugData(privacy);
       setIsBlocked(privacy.isBlocked);
       setIsLocked(privacy.isLocked);
     };
@@ -59,6 +61,7 @@ export const InboxPrivacyWrapper: React.FC<InboxPrivacyWrapperProps> = ({
   if (isBlocked) {
     return <View style={styles.centerContainer}>
         <Text style={styles.errorText}>User not found or unavailable.</Text>
+        <Text style={{color: 'red', marginTop: 10}}>{JSON.stringify(debugData)}</Text>
       </View>;
   }
 

@@ -8,7 +8,7 @@ import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { useNotificationStore } from '@/features/notifications/application/useNotificationStore';
 import { BadgeIcon } from '@/mainFeed/features/bottomappbar/iconwithbarge/BadgeIcon';
 import { useRouter, usePathname, useGlobalSearchParams } from 'expo-router';
-import { Bell, CircleDashed, Clapperboard, Compass, Feather, Home, MessageSquare, Music, Search, Settings, Sparkles } from 'lucide-react-native';
+import { Bell, CircleDashed, Clapperboard, Compass, Feather, Home, MessageCircle, Music, Search, Settings, Sparkles } from 'lucide-react-native';
 import { useState } from 'react';
 import { Platform, ScrollView, Text, TouchableOpacity, useWindowDimensions, View, Image } from 'react-native';
 
@@ -129,8 +129,8 @@ export const AppSideNavBar = ({ selectedIndex, onItemTapped, homeBadgeCount = 0 
           index={5}
           selectedIndex={selectedIndex}
           onTap={onItemTapped}
-          icon={<MessageSquare size={28} />}
-          selectedIcon={<MessageSquare size={28} fill={colors.text} />}
+          icon={<MessageCircle size={28} />}
+          selectedIcon={<MessageCircle size={28} fill={colors.text} />}
           label="Chat"
           isExpanded={isExpanded}
         />

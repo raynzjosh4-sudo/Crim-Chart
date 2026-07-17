@@ -74,15 +74,17 @@ export const ChannelAudioPostWidget: React.FC<ChannelAudioPostWidgetProps> = ({
     lyricsString = metadata.lyrics;
   }
 
-  // A beautiful default cover art if the post doesn't have one
-  const fallbackThumbnail = 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=800&auto=format&fit=crop';
-  const displayThumbnail = thumbnailUrl || fallbackThumbnail;
+  // Reactive download count
+  const reactiveDownloadsCount = useInteractionStore(state => state.downloadsCount[postId || '']) ?? downloadsCount;
+
+  const displayThumbnail = thumbnailUrl || '';
 
   const trackMeta = {
+    id: postId,
     title: songTitle,
     artist: songArtist,
     coverUrl: displayThumbnail,
-    downloadsCount: useInteractionStore.getState().downloadsCount[postId || ''] ?? downloadsCount,
+    downloadsCount: reactiveDownloadsCount,
   };
 
   // Auto-play when scrolled into view, pause when scrolled away
@@ -193,7 +195,7 @@ export const ChannelAudioPostWidget: React.FC<ChannelAudioPostWidgetProps> = ({
               isDownloading={isDownloading}
               color="rgba(255,255,255,0.8)"
               size={24}
-              count={downloadsCount}
+              count={reactiveDownloadsCount}
             />
           )}
         </MediaDownloadWrapper>

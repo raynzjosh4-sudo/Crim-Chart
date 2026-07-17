@@ -24,6 +24,7 @@ interface ChatState {
   unsubscribeFromThread: (threadId: string) => void;
   markThreadAsRead: (threadId: string) => Promise<void>;
   acceptInboxRequest: (threadId: string) => Promise<void>;
+  rejectInboxRequest: (threadId: string) => Promise<void>;
   checkInboxPrivacy: (participantId: string) => Promise<{ isBlocked: boolean, isLocked: boolean }>;
   subscribeToGlobalPresence: () => void;
   startTyping: (threadId: string) => void;
@@ -641,9 +642,26 @@ export const useChatStore = create<ChatState>()(
         }
       },
 
+      rejectInboxRequest: async (threadId: string) => {
+        try {
+          const { error } = await supabase
+            .from('inbox')
+            .delete()
+            .eq('id', threadId);
+          if (error) throw error;
+
+          set((state) => ({
+            threads: state.threads.filter(t => t.id !== threadId)
+          }));
+        } catch (e) {
+          console.error('[ChatStore] rejectInboxRequest error:', e);
+        }
+      },
+
       checkInboxPrivacy: async (participantId: string) => {
         try {
           const { data, error } = await supabase.rpc('check_inbox_privacy', { target_user_id: participantId });
+          console.log('[ChatStore] checkInboxPrivacy RPC res:', { data, error });
           if (error) throw error;
           if (data && data.length > 0) {
             return {

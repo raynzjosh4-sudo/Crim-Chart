@@ -1,10 +1,13 @@
 import { useChannelData } from '@/channel/hooks/useChannelData';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+import { UserStatusViewer } from '@/components/status/UserStatusViewer';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Platform, View } from 'react-native';
+import { useChannelMomentsStore } from '@/channel/store/useChannelMomentsStore';
+import { useViewedStatusStore } from '@/core/store/useViewedStatusStore';
 import { ChannelAvatarActionBottomSheet } from './ChannelAvatarActionBottomSheet';
 import { ChannelAvatarImage } from './ChannelAvatarImage';
-import { UserStatusViewer } from '@/components/status/UserStatusViewer';
 
 interface ChannelAvatarProps {
   channelId: string;
@@ -13,10 +16,10 @@ interface ChannelAvatarProps {
   size?: number;
   onTap?: () => void;
   onLongPress?: () => void;
-  // Let the caller override statuses if needed
   forceHasStatus?: boolean;
   forceStatusCount?: number;
   forceHasActiveMembers?: boolean;
+  isStatusRead?: boolean;
 }
 
 export const ChannelAvatar: React.FC<ChannelAvatarProps> = ({
@@ -29,8 +32,10 @@ export const ChannelAvatar: React.FC<ChannelAvatarProps> = ({
   forceHasStatus,
   forceStatusCount,
   forceHasActiveMembers,
+  isStatusRead,
 }) => {
   const router = useRouter();
+  const { startLoading } = useGlobalProgress();
   const { channel } = useChannelData(channelId);
 
   const [sheetVisible, setSheetVisible] = useState(false);
@@ -44,6 +49,15 @@ export const ChannelAvatar: React.FC<ChannelAvatarProps> = ({
   const hasStatus = forceHasStatus !== undefined ? forceHasStatus : (channel?.momentsCount && channel.momentsCount > 0);
   const statusCount = forceStatusCount !== undefined ? forceStatusCount : (channel?.momentsCount || 0);
   const hasActiveMembers = forceHasActiveMembers !== undefined ? forceHasActiveMembers : (channel?.hasActiveMembers || false);
+
+  const { momentGroups } = useChannelMomentsStore();
+  const viewedStatusIds = useViewedStatusStore(s => s.viewedStatusIds);
+  const group = momentGroups.find(g => g.channel_id === channelId);
+  const internalIsStatusRead = group && group.moments.length > 0 
+    ? group.moments.every(m => viewedStatusIds[m.id])
+    : false;
+
+  const finalIsStatusRead = isStatusRead !== undefined ? isStatusRead : internalIsStatusRead;
 
   const handleTap = () => {
     if (hasStatus) {
@@ -59,7 +73,10 @@ export const ChannelAvatar: React.FC<ChannelAvatarProps> = ({
       onTap();
     } else {
       // Default behavior if tapped and no moments
-      router.push({ pathname: '/channel/channelpage', params: { id: channelId } } as any);
+      startLoading();
+      setTimeout(() => {
+        router.push({ pathname: '/channel/channelpage', params: { id: channelId } } as any);
+      }, 100);
     }
   };
 
@@ -68,7 +85,10 @@ export const ChannelAvatar: React.FC<ChannelAvatarProps> = ({
   };
 
   const handleViewChannel = () => {
-    router.push({ pathname: '/channel/channelpage', params: { id: channelId } } as any);
+    startLoading();
+    setTimeout(() => {
+      router.push({ pathname: '/channel/channelpage', params: { id: channelId } } as any);
+    }, 100);
   };
 
   return (
@@ -83,6 +103,7 @@ export const ChannelAvatar: React.FC<ChannelAvatarProps> = ({
         showActiveDot={hasActiveMembers}
         onImageTap={handleTap}
         onLongPress={onLongPress}
+        isStatusRead={finalIsStatusRead}
       />
 
       <ChannelAvatarActionBottomSheet
@@ -102,7 +123,7 @@ export const ChannelAvatar: React.FC<ChannelAvatarProps> = ({
           type="channel"
           channelId={channelId}
           userName={actualName || 'Channel'}
-          userAvatarUrl={actualImageUrl || 'https://via.placeholder.com/60'}
+          userAvatarUrl={actualImageUrl || ''}
         />
       )}
     </View>

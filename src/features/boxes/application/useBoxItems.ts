@@ -160,10 +160,14 @@ export function useBoxItems(boxId: string) {
     }
   }, [boxId]);
 
+  const refetch = useCallback(() => {
+    fetchNetworkItems(0);
+  }, [fetchNetworkItems]);
+
   const loadMore = () => {
     if (!hasMore || isLoading || isFetchingMore) return;
     fetchNetworkItems(page + 1);
   };
 
-  return { items, isLoading, isFetchingMore, loadMore };
+  return { items, isLoading, isFetchingMore, loadMore, refetch };
 }

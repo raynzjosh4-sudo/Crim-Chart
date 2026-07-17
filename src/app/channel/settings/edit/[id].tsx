@@ -13,6 +13,9 @@ import { supabase } from '@/core/supabase/supabaseConfig';
 import { channelRepository } from '@/channel/data/repositories/ChannelRepositoryImpl';
 import { useChannelData } from '@/channel/hooks/useChannelData';
 import { cloudMediaService } from '@/core/network/cloudMediaService';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+import { OfflineStaleDataBanner, SlowConnectionBanner, OfflineNoDataWidget } from '@/components/offlineIndicators';
+import { useNetworkState } from '@/components/offlineIndicators/useNetworkState';
 
 export default function ChannelEditPage({ channelIdOverride }: { channelIdOverride?: string }) {
   const router = useRouter();
@@ -28,13 +31,19 @@ export default function ChannelEditPage({ channelIdOverride }: { channelIdOverri
   const [isSaving, setIsSaving] = useState(false);
   const theme = useCurrentTheme();
   const styles = useStyles(useStylesHook);
+  const { startLoading, stopLoading } = useGlobalProgress();
+  const networkState = useNetworkState();
+  const isOffline = networkState === 'offline';
 
   useEffect(() => {
     if (channel && !name) {
       setName(channel.title || '');
       setDescription(channel.description || '');
     }
-  }, [channel]);
+    if (!channelLoading) {
+      stopLoading();
+    }
+  }, [channel, channelLoading, stopLoading, name]);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -85,8 +94,33 @@ export default function ChannelEditPage({ channelIdOverride }: { channelIdOverri
 
   const displayAvatar = preview ?? channel?.imageUrl;
 
+  if (isOffline && !channel && !channelLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity activeOpacity={1} onPress={() => {
+            if (isDesktop && channelIdOverride) {
+              router.setParams({ desktopChannelView: 'settings' });
+            } else if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace(`/channel/settings/${id}` as any);
+            }
+          }} style={styles.headerButton}>
+            <ChevronLeft size={28} color={theme.colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Edit Channel</Text>
+          <View style={{ width: 44 }} />
+        </View>
+        <OfflineNoDataWidget onRetry={() => {}} />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
+      <OfflineStaleDataBanner />
+      <SlowConnectionBanner />
       <View style={styles.header}>
         <TouchableOpacity activeOpacity={1} onPress={() => {
           if (isDesktop && channelIdOverride) {
@@ -157,7 +191,7 @@ export default function ChannelEditPage({ channelIdOverride }: { channelIdOverri
   );
 }
 
-const useStylesHook = (colors: any) => ({
+const useStylesHook = (colors: any, scale: number) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,

@@ -22,7 +22,8 @@ export const FinalizePostPage: React.FC = () => {
   const params = useLocalSearchParams();
 
   const selectedMediaJson = params.selectedMediaJson as string | undefined;
-  const selectedMedia = selectedMediaJson ? JSON.parse(selectedMediaJson) : [];
+  const stagingMedia = usePostingStore((s) => s.stagingMedia);
+  const selectedMedia = selectedMediaJson ? JSON.parse(selectedMediaJson) : (stagingMedia.length > 0 ? stagingMedia : []);
   const targetChannelId = params.targetChannelId as string | undefined;
   const isManifestoContext = params.isManifestoContext === 'true';
   const isChannelPost = params.isChannelPost === 'true';

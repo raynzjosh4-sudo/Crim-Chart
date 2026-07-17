@@ -8,6 +8,7 @@ import { ThemeTokens } from '@/core/theme/themes';
 import { useAppRouter } from '@/core/hooks/useAppRouter';
 import { Platform, Dimensions } from 'react-native';
 import { useDesktopSearchStore } from '@/explore/application/useDesktopSearchStore';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 
 interface Props {
   item: GlobalSearchResult;
@@ -16,13 +17,17 @@ interface Props {
 export const ChannelSearchRow: React.FC<Props> = ({ item }) => {
   const styles = useStyles(themeStyles);
   const router = useAppRouter();
+  const { startLoading } = useGlobalProgress();
 
   const handlePress = () => {
     const isDesktop = Platform.OS === 'web' && Dimensions.get('window').width >= 768;
     if (isDesktop) {
       useDesktopSearchStore.getState().openResult(item);
     } else {
-      router.push({ pathname: '/channel/channelpage', params: { id: item.entity_id } } as any);
+      startLoading();
+      setTimeout(() => {
+        router.push({ pathname: '/channel/channelpage', params: { id: item.entity_id } } as any);
+      }, 100);
     }
   };
 

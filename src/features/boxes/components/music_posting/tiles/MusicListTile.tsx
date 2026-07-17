@@ -147,7 +147,8 @@ export const MusicListTile: React.FC<MusicListTileProps> = ({
               <FollowUserButton
                 targetUserId={editedTrack.owner.id}
                 size="small"
-                style={{ flex: 0, height: 32, marginRight: 12 }}
+                style={styles.followButton}
+                textStyle={styles.followButtonText}
               />
             )}
           </View>

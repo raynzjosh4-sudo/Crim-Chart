@@ -41,6 +41,11 @@ import UserAvatar from "@/components/avatar/UserAvatar";
 import { ChannelPageShimmer } from "@/components/shimmers/channelPageShimmer/ChannelPageShimmer";
 import { ChannelRestrictionWrapper } from "@/components/wrappers/ChannelRestrictionWrapper";
 import { useCurrentTheme } from "@/core/store/useThemeStore";
+import { useViewedStatusStore } from '@/core/store/useViewedStatusStore';
+import { useChannelMomentsStore } from '@/channel/store/useChannelMomentsStore';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+import { OfflineStaleDataBanner, SlowConnectionBanner, OfflineNoDataWidget } from '@/components/offlineIndicators';
+import { useNetworkState } from '@/components/offlineIndicators/useNetworkState';
 import { MembersTabView } from "@/features/channel/pages/members_tab/MembersTabView";
 import { ActiveUsersBar } from "@/features/channel/pages/messages_tab/widgets/ActiveUsersBar";
 import { ChatBubble } from "@/features/channel/pages/messages_tab/widgets/chartbubble/ChatBubble";
@@ -69,6 +74,24 @@ export default function ChannelPage({ channelIdOverride, isModal }: { channelIdO
   const [activeTab, setActiveTab] = useState(0);
   // Local unread count — synced from channel data but cleared optimistically when messages tab is opened
   const [localUnreadCount, setLocalUnreadCount] = useState(0);
+
+  const networkState = useNetworkState();
+  const isOffline = networkState === 'offline';
+
+  const { stopLoading } = useGlobalProgress();
+
+  React.useEffect(() => {
+    if (!loading) {
+      stopLoading();
+    }
+  }, [loading, stopLoading]);
+
+  const { momentGroups } = useChannelMomentsStore();
+  const viewedStatusIds = useViewedStatusStore(s => s.viewedStatusIds);
+  const group = momentGroups.find(g => g.channel_id === id);
+  const isStatusRead = group && group.moments.length > 0 
+    ? group.moments.every(m => viewedStatusIds[m.id])
+    : false;
 
   // Reset local state whenever the user navigates to a DIFFERENT channel.
   // Without this, localUnreadCount from Channel A leaks into Channel B.
@@ -278,6 +301,20 @@ export default function ChannelPage({ channelIdOverride, isModal }: { channelIdO
         }
       ]}
     >
+      <Stack.Screen options={{ headerShown: false }} />
+      <OfflineStaleDataBanner />
+      <SlowConnectionBanner />
+      
+      {isOffline && !channel && !loading ? (
+        <View style={{ flex: 1 }}>
+          <ChannelTitleBar
+            channelId={id as string}
+            title="Channel"
+            onBackPress={() => router.back()}
+          />
+          <OfflineNoDataWidget onRetry={() => {}} />
+        </View>
+      ) : (
       <ChannelRestrictionWrapper
         channelId={id}
         requiredAction="view_channel"
@@ -303,7 +340,6 @@ export default function ChannelPage({ channelIdOverride, isModal }: { channelIdO
           style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          <Stack.Screen options={{ headerShown: false }} />
           {/* Conditional Rendering of Entire View for Messages Tab */}
           {activeTab === 1 ? (
             <View style={styles.messagesTabContainer}>
@@ -667,6 +703,7 @@ export default function ChannelPage({ channelIdOverride, isModal }: { channelIdO
                 channelId={id as string}
                 title={channel?.title || ""}
                 channelImageUrl={channel?.imageUrl}
+                isStatusRead={isStatusRead}
                 onBackPress={() => router.back()}
               />
 
@@ -928,6 +965,7 @@ export default function ChannelPage({ channelIdOverride, isModal }: { channelIdO
           )}
         </KeyboardAvoidingView>
       </ChannelRestrictionWrapper>
+      )}
     </View>
   );
 }

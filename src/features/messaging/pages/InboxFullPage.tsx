@@ -23,7 +23,7 @@ export const InboxFullPage = () => {
       padding: 16,
       paddingTop: 52,
       borderBottomWidth: 0.5,
-      borderBottomColor: colors.muted
+      borderBottomColor: colors.surfaceVariant
     },
     title: {
       color: colors.text,
@@ -36,7 +36,7 @@ export const InboxFullPage = () => {
       paddingHorizontal: 16,
       paddingVertical: 10,
       borderBottomWidth: 0.5,
-      borderBottomColor: colors.muted
+      borderBottomColor: colors.surfaceVariant
     },
     avatarWrapper: {
       marginRight: 16
