@@ -1,3 +1,4 @@
+import { PermissionDialog } from '@/components/ui/PermissionDialog';
 import { colors } from '@/core/theme/colors';
 import { Audio } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
@@ -6,15 +7,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  Platform,
 } from 'react-native';
 import { StickerSheet } from './StickerSheet';
-import { PermissionDialog } from '@/components/ui/PermissionDialog';
 
 // ─── Recording State Machine ──────────────────────────────────────────────────
 enum RecordState { None, Recording, Reviewing }
@@ -200,12 +200,12 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
     setIsPlaying(false);
     playSecondsRef.current = 0;
     setPlaySeconds(0);
-    
+
     if (sound) {
       try {
         await sound.stopAsync();
         await sound.unloadAsync();
-      } catch (e) {}
+      } catch (e) { }
       setSound(null);
     }
   }, [sound]);
@@ -213,7 +213,7 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
   const togglePlayback = useCallback(async () => {
     if (isPlaying) {
       if (sound) {
-        try { await sound.pauseAsync(); } catch (e) {}
+        try { await sound.pauseAsync(); } catch (e) { }
       }
       if (playTimerRef.current) clearInterval(playTimerRef.current);
       playTimerRef.current = null;
@@ -235,7 +235,7 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
           console.error('Failed to load sound', e);
         }
       } else if (sound) {
-        try { await sound.playAsync(); } catch (e) {}
+        try { await sound.playAsync(); } catch (e) { }
       }
 
       setIsPlaying(true);
@@ -255,8 +255,26 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
     return `${m}:${sec.toString().padStart(2, '0')}`;
   };
 
-  // ─── Recording handlers ──────────────────────────────────────────────────
+  const isAudioBusyRef = useRef(false);
+  const activeRecordingRef = useRef<Audio.Recording | null>(null);
+
+  // Keep ref in sync for unmount cleanup
+  useEffect(() => {
+    activeRecordingRef.current = recording;
+  }, [recording]);
+
+  // Cleanup native recording on unmount (e.g. during hot reload)
+  useEffect(() => {
+    return () => {
+      if (activeRecordingRef.current) {
+        activeRecordingRef.current.stopAndUnloadAsync().catch(() => {});
+      }
+    };
+  }, []);
+
   const startRecording = useCallback(async () => {
+    if (isAudioBusyRef.current) return;
+    isAudioBusyRef.current = true;
     try {
       const permission = await Audio.requestPermissionsAsync();
       if (permission.status === 'granted') {
@@ -274,51 +292,66 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
       }
     } catch (err) {
       console.error('Failed to start recording', err);
+    } finally {
+      isAudioBusyRef.current = false;
     }
   }, []);
 
   const stopRecordingForReview = useCallback(async () => {
-    setRecordState(RecordState.Reviewing);
-    stopPlayback();
-    if (recording) {
-      try {
+    if (isAudioBusyRef.current) return;
+    isAudioBusyRef.current = true;
+    try {
+      setRecordState(RecordState.Reviewing);
+      stopPlayback();
+      if (recording) {
         await recording.stopAndUnloadAsync();
         const uri = recording.getURI();
         setRecordingUri(uri);
-      } catch (e) {
-        console.error('Failed to stop recording', e);
       }
+    } catch (e) {
+      console.error('Failed to stop recording', e);
+    } finally {
+      isAudioBusyRef.current = false;
     }
   }, [stopPlayback, recording]);
 
   const cancelRecording = useCallback(async () => {
-    stopPlayback();
-    setRecordState(RecordState.None);
-    setRecordSeconds(0);
-    recordSecondsRef.current = 0;
-    if (recording) {
-      try {
+    if (isAudioBusyRef.current) return;
+    isAudioBusyRef.current = true;
+    try {
+      stopPlayback();
+      if (recording) {
         await recording.stopAndUnloadAsync();
-      } catch (e) {
-        // ignore
+        setRecording(null);
       }
-      setRecording(null);
+    } catch (e) {
+      // ignore
+    } finally {
+      setRecordState(RecordState.None);
+      setRecordSeconds(0);
+      recordSecondsRef.current = 0;
+      setRecordingUri(null);
+      isAudioBusyRef.current = false;
     }
-    setRecordingUri(null);
   }, [stopPlayback, recording]);
 
   const sendRecording = useCallback(async () => {
-    stopPlayback();
-    setRecordState(RecordState.None);
-    setRecordSeconds(0);
-    recordSecondsRef.current = 0;
-
-    if (recordingUri) {
-      // Pass the actual recorded URI
-      onVoiceSubmitted?.(recordingUri, playSecondsRef.current * 1000);
+    if (isAudioBusyRef.current) return;
+    isAudioBusyRef.current = true;
+    try {
+      stopPlayback();
+      if (recordingUri) {
+        // Pass the actual recorded URI
+        onVoiceSubmitted?.(recordingUri, playSecondsRef.current * 1000);
+      }
+    } finally {
+      setRecordState(RecordState.None);
+      setRecordSeconds(0);
+      recordSecondsRef.current = 0;
       setRecordingUri(null);
+      setRecording(null);
+      isAudioBusyRef.current = false;
     }
-    setRecording(null);
   }, [stopPlayback, onVoiceSubmitted, recordingUri]);
 
 
@@ -341,7 +374,12 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
     console.log('[ChatInputField] Text is valid. Firing onSubmitted prop...');
     onSubmitted?.(text.trim());
     setText('');
-  }, [recordState, text, onSubmitted, startRecording, stopRecordingForReview, sendRecording]);
+
+    // Immediately clear the typing indicator when sending a message
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    setIsTyping(false);
+    onTypingChange?.(false);
+  }, [recordState, text, onSubmitted, startRecording, stopRecordingForReview, sendRecording, onTypingChange]);
 
   // ─── Derived send button ─────────────────────────────────────────────────
   const SendIcon = () => {

@@ -2,16 +2,19 @@ import { useEffect, useRef } from 'react';
 import { supabase } from '@/core/supabase/supabaseConfig';
 
 import { useViewedStatusStore } from '@/core/store/useViewedStatusStore';
+import { useNotificationWrapper } from '@/core/notifications/useNotificationWrapper';
 
 interface UseMediaViewTrackerProps {
   mediaId: string | undefined | null;
   tableName: string;
   idColumn: string;
   authorId?: string; // Add authorId to target the broadcast
+  isMoment?: boolean;
 }
 
-export const useMediaViewTracker = ({ mediaId, tableName, idColumn, authorId }: UseMediaViewTrackerProps) => {
+export const useMediaViewTracker = ({ mediaId, tableName, idColumn, authorId, isMoment }: UseMediaViewTrackerProps) => {
   const viewedItems = useRef<Set<string>>(new Set());
+  const { sendNotification } = useNotificationWrapper();
 
   useEffect(() => {
     if (!mediaId || viewedItems.current.has(mediaId)) return;
@@ -30,6 +33,17 @@ export const useMediaViewTracker = ({ mediaId, tableName, idColumn, authorId }: 
         
         // Prevent authors from logging views on their own content in the database
         if (authorId && user.id === authorId) return;
+
+        if (isMoment && authorId) {
+          // Moments do not currently have a views table, so we just send the notification directly.
+          await sendNotification({
+            recipientId: authorId,
+            type: 'mention', // 'custom_alert' is not a valid enum value in the DB
+            actionText: `${user.user_metadata?.display_name || 'Someone'} viewed the moment you posted in this channel.`,
+            referenceId: mediaId,
+          });
+          return;
+        }
 
         const { error } = await supabase
           .from(tableName)
@@ -58,5 +72,6 @@ export const useMediaViewTracker = ({ mediaId, tableName, idColumn, authorId }: 
     };
 
     trackView();
-  }, [mediaId, tableName, idColumn, authorId]);
+  }, [mediaId, tableName, idColumn, authorId, isMoment, sendNotification]);
 };
+

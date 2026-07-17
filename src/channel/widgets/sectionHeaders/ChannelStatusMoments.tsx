@@ -45,7 +45,7 @@ export const ChannelStatusMoments: React.FC<ChannelStatusMomentsProps> = ({ disp
       id: m.id,
       authorId: m.author_id || group.channel_id,
       url: m.media_url,
-      type: m.media_type as 'image' | 'video',
+      type: ((m.media_type === 'photo' || m.media_type === 'image') ? 'image' : 'video') as 'image' | 'video',
       caption: m.caption || ''
     }))
   }));
@@ -110,6 +110,7 @@ export const ChannelStatusMoments: React.FC<ChannelStatusMomentsProps> = ({ disp
         onClose={() => setViewerVisible(false)}
         statusGroups={statusGroups}
         initialGroupIndex={initialViewerIndex}
+        isMoment={true}
       />
     </View>
   );

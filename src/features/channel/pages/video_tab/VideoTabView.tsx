@@ -17,7 +17,7 @@ interface VideoTabViewProps {
   isLoading?: boolean;
 }
 
-const HEIGHTS = [220, 300, 260, 340, 210, 290, 250, 320, 230, 310, 270, 350];
+const CARD_HEIGHT = 250;
 
 export const VideoTabView: React.FC<VideoTabViewProps> = ({
   channelId,
@@ -56,7 +56,7 @@ export const VideoTabView: React.FC<VideoTabViewProps> = ({
     },
     postCardContainer: {
       width: '100%',
-      height: HEIGHTS[0],
+      height: CARD_HEIGHT,
       borderRadius: 16,
       overflow: 'hidden',
       backgroundColor: '#111',
@@ -192,9 +192,8 @@ export const VideoTabView: React.FC<VideoTabViewProps> = ({
             
             {/* Left Column Moments */}
             {leftColumnMoments.map((moment, index) => {
-              const globalIndex = index * 2 + 1; // 1, 3, 5...
               return (
-                <View key={moment.id} style={[styles.cardWrapper, { height: HEIGHTS[globalIndex % HEIGHTS.length] }]}>
+                <View key={moment.id} style={[styles.cardWrapper, { height: CARD_HEIGHT }]}>
                   <TouchableOpacity activeOpacity={0.9} style={{ flex: 1 }} onPress={() => handleMomentPress(moment.id)}>
                     <PromotionBannerCard moment={moment as any} />
                   </TouchableOpacity>
@@ -206,11 +205,8 @@ export const VideoTabView: React.FC<VideoTabViewProps> = ({
           {/* Right Column */}
           <View style={styles.column}>
             {rightColumnMoments.map((moment, index) => {
-              const globalIndex = index * 2; // 0, 2, 4... (shifted because of Add Moment)
-              // Wait, right column should use heights 1, 3, 5 or 2, 4, 6.
-              // Let's use globalIndex + 1 for height to stagger
               return (
-                <View key={moment.id} style={[styles.cardWrapper, { height: HEIGHTS[(globalIndex + 1) % HEIGHTS.length] }]}>
+                <View key={moment.id} style={[styles.cardWrapper, { height: CARD_HEIGHT }]}>
                   <TouchableOpacity activeOpacity={0.9} style={{ flex: 1 }} onPress={() => handleMomentPress(moment.id)}>
                     <PromotionBannerCard moment={moment as any} />
                   </TouchableOpacity>

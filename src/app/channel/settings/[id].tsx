@@ -4,9 +4,9 @@ import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { colors } from '@/core/theme/colors';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Bell, ChevronLeft, Clock, LogOut, Plus, Search, Shield, ThumbsDown, Trash2, UserPlus } from 'lucide-react-native';
-import { useState } from 'react';
-import { Alert, Platform, ScrollView, Switch, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { Bell, ChevronLeft, Clock, LogOut, Plus, Search, Shield, ThumbsDown, Trash2, UserPlus, Share as ShareIcon } from 'lucide-react-native';
+import { useState, useRef } from 'react';
+import { Alert, Platform, ScrollView, Switch, Text, TouchableOpacity, useWindowDimensions, View, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SelectUsersBottomSheet } from '@/channel/components/bottom_sheets/SelectUsersBottomSheet';
@@ -14,6 +14,9 @@ import { channelRepository } from '@/channel/data/channelRepository';
 import { useChannelData } from '@/channel/hooks/useChannelData';
 import { useChannelPermissions } from '@/channel/hooks/useChannelPermissions';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { captureRef } from 'react-native-view-shot';
+import * as Sharing from 'expo-sharing';
+import { ChannelShareCard } from '@/components/share_widgets/ChannelShareCard';
 
 export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOverride?: string }) {
   const router = useRouter();
@@ -27,6 +30,8 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
   const { channel } = useChannelData(id as string);
   const user = useAuthStore(s => s.user);
 
+  const shareCardRef = useRef<View>(null);
+  const [isSharing, setIsSharing] = useState(false);
   const [inviteFollowersVisible, setInviteFollowersVisible] = useState(false);
   const [inviteAdminsVisible, setInviteAdminsVisible] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
@@ -60,6 +65,75 @@ export default function ChannelDetailsPage({ channelIdOverride }: { channelIdOve
           />
           <Text style={styles.channelName}>{channel?.title || 'Unknown Channel'}</Text>
           <Text style={styles.channelSubtitle}>Channel • {channel?.membersCount || 0} members</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 8 }}>
+            <TouchableOpacity disabled={isSharing} activeOpacity={0.8} onPress={async () => {
+              if (isSharing) return;
+              setIsSharing(true);
+              const url = `https://crimchart.com/channel/${id}`;
+              const inviterName = user?.displayName || user?.username || 'I';
+              const channelName = channel?.title || 'this channel';
+              const shareText = `${inviterName} invites you to join ${channelName} on CrimChart. Let's have some fun together while we share our favourite music, albums, and videos. Join now!`;
+              
+              const doFallbackShare = async () => {
+                if (Platform.OS === 'web') {
+                  if (navigator.share) {
+                    try {
+                      await navigator.share({
+                        title: channel?.title || 'Channel',
+                        text: shareText,
+                        url,
+                      });
+                    } catch (err) {
+                      console.log('Share error or cancelled');
+                    }
+                  } else {
+                    navigator.clipboard.writeText(url);
+                    alert('Link copied to clipboard!');
+                  }
+                } else {
+                  Share.share({
+                    message: `${shareText}\n\n${url}`,
+                    url
+                  });
+                }
+              };
+
+              try {
+                if (Platform.OS !== 'web' && shareCardRef.current) {
+                  const localUri = await captureRef(shareCardRef, {
+                    format: 'png',
+                    quality: 1,
+                  });
+                  
+                  const isAvailable = await Sharing.isAvailableAsync();
+                  if (isAvailable) {
+                    await Sharing.shareAsync(localUri, {
+                      dialogTitle: 'Share Channel',
+                      mimeType: 'image/png',
+                    });
+                  } else {
+                    await doFallbackShare();
+                  }
+                } else {
+                  await doFallbackShare();
+                }
+              } catch (e) {
+                console.warn('Screenshot share failed, falling back', e);
+                await doFallbackShare();
+              } finally {
+                setIsSharing(false);
+              }
+            }} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 12, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 20, opacity: isSharing ? 0.5 : 1 }}>
+              <ShareIcon size={14} color={theme.colors.textSecondary} />
+              <Text style={{ color: theme.colors.textSecondary, fontSize: 13, fontWeight: '600' }}>{isSharing ? 'Preparing...' : 'Share'}</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <View style={{ position: 'absolute', top: -10000, left: -10000 }} pointerEvents="none">
+            <View ref={shareCardRef} collapsable={false}>
+              <ChannelShareCard channel={channel} />
+            </View>
+          </View>
 
           <ChannelRestrictionWrapper channelId={id as string} requiredAction="edit_settings" fallback={null}>
             <TouchableOpacity

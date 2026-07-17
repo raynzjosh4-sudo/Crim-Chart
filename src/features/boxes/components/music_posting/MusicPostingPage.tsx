@@ -116,44 +116,18 @@ export const MusicPostingPage = ({ boxId, isInline, onCloseInline }: { boxId: st
       let hasNextPage = true;
 
       if (albumIdToUse) {
-        // Get the full album object — this is more reliable than passing just the ID string
-        const albumObj = await MediaLibrary.getAlbumAsync(albumIdToUse);
-        console.log('[MusicFilter v3] albumObj from getAlbumAsync:', JSON.stringify(albumObj));
-
-        if (albumObj) {
-          const page = await MediaLibrary.getAssetsAsync({
-            mediaType: 'audio',
-            first: 200,
-            album: albumObj,
-          });
-          console.log(`[MusicFilter v3] getAssetsAsync with album object returned ${page.assets.length} assets`);
-          fetchedAssets = page.assets;
-          currentCursor = page.endCursor;
-          hasNextPage = page.hasNextPage;
-        } else {
-          // Fallback: manual scan + filter by uri path
-          console.log('[MusicFilter v3] albumObj is null — falling back to URI path filter');
-          let iterations = 0;
-          while (fetchedAssets.length < 20 && hasNextPage && iterations < 30) {
-            iterations++;
-            const page = await MediaLibrary.getAssetsAsync({
-              mediaType: 'audio',
-              first: 100,
-              after: currentCursor,
-            });
-            if (iterations === 1) {
-              console.log('[MusicFilter v3] Sample assets:', page.assets.slice(0, 3).map(a => ({ uri: a.uri, albumId: (a as any).albumId })));
-            }
-            // Filter by albumId field (Android) or by matching the selected album ID in the URI
-            const filtered = page.assets.filter(a =>
-              (a as any).albumId === albumIdToUse || a.uri.includes(albumIdToUse)
-            );
-            fetchedAssets = [...fetchedAssets, ...filtered];
-            currentCursor = page.endCursor;
-            hasNextPage = page.hasNextPage;
-          }
-          console.log(`[MusicFilter v3] Fallback fetched ${fetchedAssets.length} assets`);
-        }
+        // Use the album ID directly like we do in AlbumSelectorModal.tsx
+        // Passing the full object sometimes causes Expo to ignore the filter on Android
+        const page = await MediaLibrary.getAssetsAsync({
+          mediaType: 'audio',
+          first: 200,
+          album: albumIdToUse,
+        });
+        
+        console.log(`[MusicFilter v3] getAssetsAsync with album ID returned ${page.assets.length} assets`);
+        fetchedAssets = page.assets;
+        currentCursor = page.endCursor;
+        hasNextPage = page.hasNextPage;
       } else {
         // No album filter — load all audio
         const page = await MediaLibrary.getAssetsAsync({

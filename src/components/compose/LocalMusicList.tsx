@@ -15,11 +15,13 @@ interface LocalMusicListProps {
   selectedId?: string;
   /** Pre-fetched assets supplied by the parent (skips internal fetch when provided). */
   prefetchedAssets?: MediaLibrary.Asset[];
+  externalSelectedAlbum?: string | null;
 }
 export const LocalMusicList: React.FC<LocalMusicListProps> = ({
   onSelect,
   selectedId,
-  prefetchedAssets
+  prefetchedAssets,
+  externalSelectedAlbum
 }) => {
   const styles = useStyles(colors => ({
     container: {
@@ -78,7 +80,7 @@ export const LocalMusicList: React.FC<LocalMusicListProps> = ({
     // If the parent already pre-fetched, skip internal fetch
     if (prefetchedAssets) return;
     fetchAudio();
-  }, [permissionResponse, prefetchedAssets]);
+  }, [permissionResponse, prefetchedAssets, externalSelectedAlbum]);
   const fetchAudio = async () => {
     if (!permissionResponse) {
       const result = await requestPermission();
@@ -94,7 +96,8 @@ export const LocalMusicList: React.FC<LocalMusicListProps> = ({
       const media = await MediaLibrary.getAssetsAsync({
         mediaType: MediaLibrary.MediaType.audio,
         first: 100,
-        sortBy: [[MediaLibrary.SortBy.creationTime, false]]
+        sortBy: [[MediaLibrary.SortBy.creationTime, false]],
+        ...(externalSelectedAlbum ? { album: externalSelectedAlbum } : {})
       });
       setAssets(media.assets);
     } catch (e) {

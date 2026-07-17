@@ -313,6 +313,17 @@ export class ChannelRemoteSource {
     }
     return data;
   }
+
+  async deleteChannelMessage(messageId: string): Promise<void> {
+    const { error } = await supabase
+      .from('channel_messages')
+      .delete()
+      .eq('id', messageId);
+    if (error) {
+      console.error('Supabase delete channel message error:', error);
+      throw error;
+    }
+  }
 }
 
 export const channelRemoteSource = new ChannelRemoteSource();

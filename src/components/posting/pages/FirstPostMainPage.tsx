@@ -128,6 +128,7 @@ export const FirstPostMainPage: React.FC = () => {
       case 'music':
         return (
           <LocalMusicList 
+            externalSelectedAlbum={selectedAlbum}
             onSelect={(media) => {
               router.push({
                 pathname: '/add-post',

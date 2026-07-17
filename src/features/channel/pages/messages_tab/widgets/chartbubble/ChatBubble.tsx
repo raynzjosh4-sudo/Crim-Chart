@@ -116,8 +116,8 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
     deleteOverlay: {
       flex: 1,
       backgroundColor: 'rgba(0,0,0,0.45)',
-      justifyContent: 'center',
-      paddingHorizontal: 40
+      justifyContent: Platform.OS === 'web' ? 'center' : 'flex-end',
+      paddingHorizontal: 20
     },
     deleteMenu: {
       backgroundColor: '#1A1A2E',
@@ -254,8 +254,8 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
 
       {Platform.OS !== 'ios' && <Modal visible={showDeleteMenu} transparent animationType="fade" onRequestClose={() => setShowDeleteMenu(false)}>
           <TouchableOpacity style={styles.deleteOverlay} activeOpacity={1} onPress={() => setShowDeleteMenu(false)}>
-            <View style={styles.deleteMenu}>
-              <TouchableOpacity activeOpacity={1} style={styles.deleteMenuItem} onPress={() => {
+            <View style={[styles.deleteMenu, { width: '100%', maxWidth: 400, alignSelf: 'center', marginBottom: Platform.OS === 'web' ? 0 : 40 }]}>
+              <TouchableOpacity activeOpacity={0.8} style={styles.deleteMenuItem} onPress={() => {
             setShowDeleteMenu(false);
             onDelete?.();
           }}>

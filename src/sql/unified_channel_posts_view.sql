@@ -24,6 +24,8 @@ SELECT
   cp.video_urls,
   cp.aspect_ratio,
   cp.metadata,
+  NULL::text as tagger_name,
+  NULL::text as tagger_avatar_url,
   -- We pre-build the author object so the frontend gets it identically to the foreign-key join syntax
   jsonb_build_object(
     'id', pr.id, 
@@ -57,6 +59,8 @@ SELECT
   p.video_urls,
   p.aspect_ratio,
   p.metadata,
+  pr2.display_name as tagger_name,
+  pr2.profile_image_url as tagger_avatar_url,
   jsonb_build_object(
     'id', pr.id, 
     'display_name', pr.display_name, 
@@ -65,6 +69,7 @@ SELECT
 FROM public.posts p
 JOIN public.channel_content_tags cct ON cct.post_id = p.id
 LEFT JOIN public.profiles pr ON pr.id = p.author_id
+LEFT JOIN public.profiles pr2 ON pr2.id = cct.user_id
 WHERE p.type != 'status' OR p.type IS NULL
 
 UNION
@@ -90,6 +95,8 @@ SELECT
   cp.video_urls,
   cp.aspect_ratio,
   cp.metadata,
+  pr2.display_name as tagger_name,
+  pr2.profile_image_url as tagger_avatar_url,
   jsonb_build_object(
     'id', pr.id, 
     'display_name', pr.display_name, 
@@ -98,6 +105,7 @@ SELECT
 FROM public.channel_posts cp
 JOIN public.channel_content_tags cct ON cct.post_id = cp.id
 LEFT JOIN public.profiles pr ON pr.id = cp.author_id
+LEFT JOIN public.profiles pr2 ON pr2.id = cct.user_id
 WHERE cp.type != 'status' OR cp.type IS NULL;
 
 -- 4. Grant access to the API roles

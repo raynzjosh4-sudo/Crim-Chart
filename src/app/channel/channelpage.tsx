@@ -27,7 +27,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CustomChannelWidget } from "@/channel/components/CustomChannelWidget";
+import { JoinChannelWidget } from "@/channel/components/JoinChannelWidget";
 import { UserStatusWidget } from "@/components/UserStatusWidget/UserStatusWidget";
+import { UserStatusWidgetShimmer } from "@/components/UserStatusWidget/UserStatusWidgetShimmer";
 import { FeedPermissionsWrapper } from "@/components/wrappers/FeedPermissionsWrapper";
 import { useInteractionStore } from "@/core/store/useInteractionStore";
 import { ChannelNavBar } from "@/features/channel/pages/discovery_widgets/ChannelNavBar";
@@ -61,7 +63,7 @@ export default function ChannelPage({ channelIdOverride, isModal }: { channelIdO
   const { channel, loading } = useChannelData(id);
   const user = useAuthStore((s) => s.user);
   const theme = useCurrentTheme();
-  const { statuses: channelStatuses, loadMore: loadMoreChannelStatuses } = useChannelStatuses(id as string);
+  const { statuses: channelStatuses, loadMore: loadMoreChannelStatuses, loading: statusesLoading } = useChannelStatuses(id as string);
   const { posts: channelPosts } = useChannelPosts(id as string);
 
   const [activeTab, setActiveTab] = useState(0);
@@ -148,33 +150,36 @@ export default function ChannelPage({ channelIdOverride, isModal }: { channelIdO
     loadMore,
     loadingMore,
     loading: messagesLoading,
+    deleteMessage
   } = useChannelMessages(id as string);
 
-  // Track latest messages in a ref to avoid stale closures in useCallback without using functional updates
-  const messagesRef = useRef(messages);
-  messagesRef.current = messages;
+  // We no longer need messagesRef since we use functional updates
 
   const onMessageReceived = useCallback((newMessage: any) => {
-    // Check if we already have this message locally to avoid duplicates
-    if (!messagesRef.current.some((m) => m.id === newMessage.id)) {
-      const resolvedMessage = {
-        ...newMessage,
-        isMe: newMessage.senderId === user?.id,
-      };
-      setMessages([resolvedMessage, ...messagesRef.current]);
+    setMessages((prevMessages) => {
+      // Check if we already have this message locally to avoid duplicates
+      if (!prevMessages.some((m) => m.id === newMessage.id)) {
+        const resolvedMessage = {
+          ...newMessage,
+          isMe: newMessage.senderId === user?.id,
+        };
 
-      // Also persist the incoming message to the local SQLite database
-      import("@/channel/data/sources/ChannelLocalSource").then(
-        ({ channelLocalSource }) => {
-          channelLocalSource.saveMessage(newMessage);
-        },
-      );
+        // Also persist the incoming message to the local SQLite database
+        import("@/channel/data/sources/ChannelLocalSource").then(
+          ({ channelLocalSource }) => {
+            channelLocalSource.saveMessage(newMessage);
+          },
+        );
 
-      setTimeout(() => {
-        flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-      }, 100);
-    }
-  }, []);
+        setTimeout(() => {
+          flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+        }, 100);
+
+        return [resolvedMessage, ...prevMessages];
+      }
+      return prevMessages;
+    });
+  }, [user?.id, setMessages]);
 
   const { broadcastMessage, broadcastTyping, typingUsers, activeUsers } =
     useChannelBroadcast(id as string, onMessageReceived);
@@ -328,7 +333,7 @@ export default function ChannelPage({ channelIdOverride, isModal }: { channelIdO
                 onEndReached={loadMore}
                 onEndReachedThreshold={0.5}
                 renderItem={({ item }) => (
-                  <ChatBubble message={item} channelId={id as string} />
+                  <ChatBubble message={item} channelId={id as string} onDelete={() => deleteMessage(item.id)} />
                 )}
                 ListFooterComponent={
                   <>
@@ -427,12 +432,20 @@ export default function ChannelPage({ channelIdOverride, isModal }: { channelIdO
                 showsVerticalScrollIndicator={false}
               />
 
-              <ChannelRestrictionWrapper
-                channelId={id as string}
-                requiredAction="participate_in_chat"
-                fallback={null}
-              >
-                <ChatInputField
+              {!channelMembers?.some(m => m.userId === user?.id) ? (
+                <JoinChannelWidget
+                  channelId={id as string}
+                  channelName={channel?.title || ""}
+                  avatarUrl={channel?.imageUrl || ""}
+                  ownerId={channel?.creatorId}
+                />
+              ) : (
+                <ChannelRestrictionWrapper
+                  channelId={id as string}
+                  requiredAction="participate_in_chat"
+                  fallback={null}
+                >
+                  <ChatInputField
                   channelId={id as string}
                   onSubmitted={(msg) => {
                     console.log(
@@ -451,7 +464,7 @@ export default function ChannelPage({ channelIdOverride, isModal }: { channelIdO
                         user?.displayName || user?.username || "Admin",
                       senderAvatarUrl: user?.profileImageUrl || null,
                     };
-                    setMessages([newMsg, ...messagesRef.current]);
+                    setMessages((prev) => [newMsg, ...prev]);
 
                     console.log(
                       "[Pipeline Step 2] WebSocket: Broadcasting message to other users...",
@@ -498,7 +511,7 @@ export default function ChannelPage({ channelIdOverride, isModal }: { channelIdO
                       senderAvatarUrl: user?.profileImageUrl || null,
                       mediaItems: newMediaItems,
                     };
-                    setMessages([newMsg, ...messagesRef.current]);
+                    setMessages((prev) => [newMsg, ...prev]);
 
                     // Scroll to bottom
                     setTimeout(() => {
@@ -573,7 +586,7 @@ export default function ChannelPage({ channelIdOverride, isModal }: { channelIdO
                       senderAvatarUrl: user?.profileImageUrl || null,
                       mediaItems: [{ type: "audio", url: url }],
                     };
-                    setMessages([newMsg, ...messagesRef.current]);
+                    setMessages((prev) => [newMsg, ...prev]);
 
                     setTimeout(() => {
                       flatListRef.current?.scrollToOffset({
@@ -623,7 +636,7 @@ export default function ChannelPage({ channelIdOverride, isModal }: { channelIdO
                         "https://i.pravatar.cc/150?img=12",
                       mediaItems: [{ type: "lottie", url: String(index) }],
                     };
-                    setMessages([newMsg, ...messagesRef.current]);
+                    setMessages((prev) => [newMsg, ...prev]);
                     broadcastMessage(newMsg);
                     channelRepository.createChannelMessage(
                       id as string,
@@ -644,6 +657,7 @@ export default function ChannelPage({ channelIdOverride, isModal }: { channelIdO
                   }}
                 />
               </ChannelRestrictionWrapper>
+              )}
             </View>
           ) : (
             <>
@@ -680,113 +694,135 @@ export default function ChannelPage({ channelIdOverride, isModal }: { channelIdO
               >
                 {activeTab === 0 && (
                   <>
-                    <CustomChannelWidget
-                      userId={channel?.creatorUser?.id}
-                      username={
-                        channel?.creatorUser?.displayName ||
-                        channel?.creatorUser?.username ||
-                        "Owner"
-                      }
-                      avatarUrl={
-                        channel?.creatorUser?.profileImageUrl ||
-                        "https://i.pravatar.cc/150?img=12"
-                      }
-                      channelId={id as string}
-                      onPlusPress={() => {
-                        if (Platform.OS === 'web') {
-                          useDesktopComposeStore.getState().openModal({
-                            targetChannelId: id as string,
-                            channelName: channel?.title || '',
-                            channelAvatarUrl: channel?.imageUrl || '',
-                            postType: 'channel_post',
-                          });
-                        } else {
-                          router.push({
-                            pathname: "/first-post",
-                            params: {
-                              targetChannelId: id,
+                    {!channelMembers?.some(m => m.userId === user?.id) ? (
+                      <JoinChannelWidget
+                        channelId={id as string}
+                        channelName={channel?.title || ""}
+                        avatarUrl={channel?.imageUrl || ""}
+                        ownerId={channel?.creatorId}
+                      />
+                    ) : (
+                      <CustomChannelWidget
+                        userId={channel?.creatorUser?.id}
+                        username={
+                          channel?.creatorUser?.displayName ||
+                          channel?.creatorUser?.username ||
+                          "Owner"
+                        }
+                        avatarUrl={
+                          channel?.creatorUser?.profileImageUrl ||
+                          "https://i.pravatar.cc/150?img=12"
+                        }
+                        channelId={id as string}
+                        onPlusPress={() => {
+                          if (Platform.OS === 'web') {
+                            useDesktopComposeStore.getState().openModal({
+                              targetChannelId: id as string,
                               channelName: channel?.title || '',
                               channelAvatarUrl: channel?.imageUrl || '',
-                              isChannelPost: "true",
-                            },
-                          });
-                        }
-                      }}
-                      onMorePress={() => {
-                        if (isDesktop && channelIdOverride) {
-                          router.setParams({ desktopChannelView: 'settings' });
-                        } else {
-                          router.push(`/channel/settings/${id}` as any);
-                        }
-                      }}
-                    />
-
-                    {/* Status Section using the new component */}
-                    <ChannelRestrictionWrapper
-                      channelId={id as string}
-                      requiredAction="post_moment"
-                      fallback={
-                        channelStatuses && channelStatuses.length > 0 ? (
-                          <>
-                            <View
-                              style={{
-                                height: 6,
-                                backgroundColor: styles.dateLine.backgroundColor,
-                                marginTop: 12,
-                              }}
-                            />
-                            <UserStatusWidget
-                              channelId={id as string}
-                              currentUser={user as any}
-                              statuses={channelStatuses}
-                              onEndReached={loadMoreChannelStatuses}
-                              onStatusPress={handleStatusPress}
-                              onAddStatusPress={() => {
-                                if (Platform.OS === 'web') {
-                                  openModal({ postType: 'status', targetChannelId: id as string });
-                                } else {
-                                  router.push({
-                                    pathname: "/first-post",
-                                    params: {
-                                      targetChannelId: id,
-                                      isChannelStatus: "true",
-                                    },
-                                  });
-                                }
-                              }}
-                            />
-                          </>
-                        ) : null
-                      }
-                    >
-                      <View
-                        style={{
-                          height: 6,
-                          backgroundColor: styles.dateLine.backgroundColor,
-                          marginTop: 12,
-                        }}
-                      />
-                      <UserStatusWidget
-                        channelId={id as string}
-                        currentUser={user as any}
-                        statuses={channelStatuses}
-                        onEndReached={loadMoreChannelStatuses}
-                        onStatusPress={handleStatusPress}
-                        onAddStatusPress={() => {
-                          if (Platform.OS === 'web') {
-                            openModal({ postType: 'status', targetChannelId: id as string });
+                              postType: 'channel_post',
+                            });
                           } else {
                             router.push({
                               pathname: "/first-post",
                               params: {
                                 targetChannelId: id,
-                                isChannelStatus: "true",
+                                channelName: channel?.title || '',
+                                channelAvatarUrl: channel?.imageUrl || '',
+                                isChannelPost: "true",
                               },
                             });
                           }
                         }}
+                        onMorePress={() => {
+                          if (isDesktop && channelIdOverride) {
+                            router.setParams({ desktopChannelView: 'settings' });
+                          } else {
+                            router.push(`/channel/settings/${id}` as any);
+                          }
+                        }}
                       />
-                    </ChannelRestrictionWrapper>
+                    )}
+
+                    {/* Status Section using the new component */}
+                    {statusesLoading ? (
+                      <>
+                        <View
+                          style={{
+                            height: 6,
+                            backgroundColor: styles.dateLine.backgroundColor,
+                            marginTop: 12,
+                          }}
+                        />
+                        <UserStatusWidgetShimmer />
+                      </>
+                    ) : (
+                      <ChannelRestrictionWrapper
+                        channelId={id as string}
+                        requiredAction="post_moment"
+                        fallback={
+                          channelStatuses && channelStatuses.length > 0 ? (
+                            <>
+                              <View
+                                style={{
+                                  height: 6,
+                                  backgroundColor: styles.dateLine.backgroundColor,
+                                  marginTop: 12,
+                                }}
+                              />
+                              <UserStatusWidget
+                                channelId={id as string}
+                                currentUser={user as any}
+                                statuses={channelStatuses}
+                                onEndReached={loadMoreChannelStatuses}
+                                onStatusPress={handleStatusPress}
+                                onAddStatusPress={() => {
+                                  if (Platform.OS === 'web') {
+                                    openModal({ postType: 'status', targetChannelId: id as string });
+                                  } else {
+                                    router.push({
+                                      pathname: "/first-post",
+                                      params: {
+                                        targetChannelId: id,
+                                        isChannelStatus: "true",
+                                      },
+                                    });
+                                  }
+                                }}
+                              />
+                            </>
+                          ) : null
+                        }
+                      >
+                        <View
+                          style={{
+                            height: 6,
+                            backgroundColor: styles.dateLine.backgroundColor,
+                            marginTop: 12,
+                          }}
+                        />
+                        <UserStatusWidget
+                          channelId={id as string}
+                          currentUser={user as any}
+                          statuses={channelStatuses}
+                          onEndReached={loadMoreChannelStatuses}
+                          onStatusPress={handleStatusPress}
+                          onAddStatusPress={() => {
+                            if (Platform.OS === 'web') {
+                              openModal({ postType: 'status', targetChannelId: id as string });
+                            } else {
+                              router.push({
+                                pathname: "/first-post",
+                                params: {
+                                  targetChannelId: id,
+                                  isChannelStatus: "true",
+                                },
+                              });
+                            }
+                          }}
+                        />
+                      </ChannelRestrictionWrapper>
+                    )}
 
                     {/* Status Viewer Modal */}
                     {statusViewerVisible && (
@@ -795,6 +831,7 @@ export default function ChannelPage({ channelIdOverride, isModal }: { channelIdO
                         onClose={() => setStatusViewerVisible(false)}
                         statusGroups={statusViewerGroups}
                         initialGroupIndex={statusInitialIndex}
+                        isMoment={true}
                       />
                     )}
 
@@ -828,6 +865,8 @@ export default function ChannelPage({ channelIdOverride, isModal }: { channelIdO
                               channelName={channel?.title}
                               widgetType="channel_post"
                               canComment={canPostStatus}
+                              taggerName={post.taggerName}
+                              taggerAvatar={post.taggerAvatar}
                               onLikeTap={() => {
                                 useInteractionStore.getState().toggleLike(post.id, undefined, post.sourceTable);
                               }}

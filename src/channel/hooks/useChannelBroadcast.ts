@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/core/supabase/supabaseConfig';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export function useChannelBroadcast(channelId: string | undefined, onMessageReceived: (payload: any) => void) {
   const [typingUsers, setTypingUsers] = useState<Record<string, any>>({});
@@ -18,7 +18,7 @@ export function useChannelBroadcast(channelId: string | undefined, onMessageRece
     console.log('[Typing Debug] Setting up channel:', channelName, 'connId:', connectionIdRef.current);
 
     // Remove any lingering channel to prevent "cannot add callbacks after subscribe" error
-    const existingChannels = supabase.getChannels().filter(c => c.topic === `realtime:${channelName}`);
+    const existingChannels = supabase.getChannels().filter(c => c.topic === channelName || c.topic === `realtime:${channelName}`);
     existingChannels.forEach(c => supabase.removeChannel(c));
 
     // Create a Supabase channel for this specific chat
@@ -44,8 +44,10 @@ export function useChannelBroadcast(channelId: string | undefined, onMessageRece
       for (const id in state) {
         const presenceList = state[id] as any[];
         if (presenceList.length > 0) {
-          const presenceData = presenceList[0];
-          console.log('[Typing Debug] Presence entry:', id, 'isTyping:', presenceData.isTyping, 'myConnId:', connectionIdRef.current);
+          // Sort by updatedAt descending to get the most recent state (fixes ghost channel issues)
+          const sortedList = [...presenceList].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+          const presenceData = sortedList[0];
+          console.log('[Typing Debug] Presence entry:', id, 'listLength:', presenceList.length, 'isTyping:', presenceData.isTyping, 'myConnId:', connectionIdRef.current);
           
           if (presenceData.user) {
             uniqueActive.set(presenceData.user.id, {
@@ -59,7 +61,7 @@ export function useChannelBroadcast(channelId: string | undefined, onMessageRece
 
           // Track typing — exclude our own connection
           if (presenceData.isTyping && id !== connectionIdRef.current) {
-            console.log('[Typing Debug] Someone else is typing:', presenceData.user?.displayName);
+            console.log('[Typing Debug] Someone is typing:', presenceData.user?.displayName);
             currentTyping[id] = presenceData.user;
           }
         }
@@ -113,7 +115,7 @@ export function useChannelBroadcast(channelId: string | undefined, onMessageRece
     []
   );
 
-  const broadcastTyping = useCallback(
+    const broadcastTyping = useCallback(
     async (isTyping: boolean) => {
       const ch = channelRef.current;
       console.log('[Typing Debug] broadcastTyping called:', isTyping, 'channel ready:', !!ch);
@@ -124,7 +126,7 @@ export function useChannelBroadcast(channelId: string | undefined, onMessageRece
           username: user.username,
           profileImageUrl: user.profileImageUrl
         } : null;
-        await ch.track({ isTyping, user: plainUser });
+        await ch.track({ isTyping, user: plainUser, updatedAt: Date.now() });
       }
     },
     [user]

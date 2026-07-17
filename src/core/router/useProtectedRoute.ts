@@ -1,11 +1,14 @@
 import { AuthStatus, useAuthStore } from '@/features/auth/application/useAuthStore';
-import { useRouter, useSegments } from 'expo-router';
+import { useRouter, useSegments, usePathname, useGlobalSearchParams } from 'expo-router';
 import { useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export function useProtectedRoute() {
   const { status, checkSession, pendingGoogleOnboarding, user } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useGlobalSearchParams();
 
   useEffect(() => {
     // Call check session once on mount
@@ -35,7 +38,19 @@ export function useProtectedRoute() {
     // Rule 2: Not logged in? Stay on public/auth pages.
     if (status === AuthStatus.UNAUTHENTICATED && !inAuthGroup && !pendingGoogleOnboarding) {
       console.log('[ROUTE] UNAUTHENTICATED + not in auth group -> /welcome');
+      
+      // Save deep link if it's not the root path
+      if (pathname && pathname !== '/') {
+        let fullPath = pathname;
+        const queryParams = new URLSearchParams(searchParams as any).toString();
+        if (queryParams) {
+          fullPath += `?${queryParams}`;
+        }
+        AsyncStorage.setItem('pending_deep_link', fullPath).catch(console.error);
+      }
+      
       router.replace('/welcome');
+      return;
     } 
     // Rule 3: Logged in? Enforce onboarding completion.
     if (status === AuthStatus.AUTHENTICATED && user) {
@@ -52,10 +67,22 @@ export function useProtectedRoute() {
       } else {
         // Fully onboarded. If they try to go to login/signup pages, push them to the feed.
         if (inAuthGroup && !isSignupSetupRoute) {
-          console.log('[ROUTE] AUTHENTICATED + fully onboarded + in auth group -> /(tabs)');
-          router.replace('/(tabs)');
+          console.log('[ROUTE] AUTHENTICATED + fully onboarded + in auth group -> checking pending link');
+          
+          AsyncStorage.getItem('pending_deep_link').then((pendingLink) => {
+            if (pendingLink) {
+              AsyncStorage.removeItem('pending_deep_link');
+              console.log('[ROUTE] Found pending link, redirecting to:', pendingLink);
+              router.replace(pendingLink as any);
+            } else {
+              router.replace('/(tabs)');
+            }
+          }).catch((err) => {
+            console.error('Error reading pending link', err);
+            router.replace('/(tabs)');
+          });
         }
       }
     }
-  }, [status, segments, router, pendingGoogleOnboarding, user]);
+  }, [status, segments, router, pendingGoogleOnboarding, user, pathname, searchParams]);
 }

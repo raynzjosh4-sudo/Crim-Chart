@@ -45,6 +45,8 @@ export interface RegularPostCardProps {
   channelAvatarUrl?: string | null;
   channelName?: string | null;
   onLikeTap?: () => void;
+  taggerName?: string | null;
+  taggerAvatar?: string | null;
 }
 
 export const RegularPostCard: React.FC<RegularPostCardProps> = ({
@@ -74,6 +76,8 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
   channelAvatarUrl,
   channelName,
   onLikeTap,
+  taggerName,
+  taggerAvatar,
 }) => {
   const { canComment: contextCanComment } = useFeedPermissions();
   const canComment = canCommentProp && contextCanComment;
@@ -103,30 +107,76 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
   return (
     <View style={styles.container}>
       {/* Header */}
-      <PostHeader
-        author={author}
-        source_type={source_type}
-        timeAgo={timeAgo}
-        onAvatarTap={goToProfile}
-        onMoreTap={(e: any) => {
-          if (Platform.OS === 'web' && e?.nativeEvent) {
-            setPostOptionsPosition({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
-          }
-          setPostOptionsVisible(true);
-        }}
-        channelId={channelId}
-        channelAvatarUrl={channelAvatarUrl}
-        channelName={channelName}
-        onChannelAvatarTap={() => {
-          if (channelId) {
-            if (Platform.OS === 'web' && window.innerWidth >= 768) {
-              useDesktopChannelModalStore.getState().openChannel(channelId);
-            } else {
-              router.push({ pathname: '/channel/channelpage', params: { id: channelId } } as any);
+      {taggerName ? (
+        <View>
+          <PostHeader
+            author={{
+              id: '',
+              displayName: taggerName,
+              username: taggerName,
+              profileImageUrl: taggerAvatar || '',
+              isActive: false,
+              hasStatus: false,
+              statusCount: 0,
+            } as any}
+            source_type={source_type}
+            timeAgo={timeAgo}
+            onAvatarTap={() => {}}
+            onMoreTap={(e: any) => {
+              if (Platform.OS === 'web' && e?.nativeEvent) {
+                setPostOptionsPosition({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
+              }
+              setPostOptionsVisible(true);
+            }}
+            channelId={channelId}
+            channelAvatarUrl={channelAvatarUrl}
+            channelName={channelName}
+            onChannelAvatarTap={() => {
+              if (channelId) {
+                if (Platform.OS === 'web' && window.innerWidth >= 768) {
+                  useDesktopChannelModalStore.getState().openChannel(channelId);
+                } else {
+                  router.push({ pathname: '/channel/channelpage', params: { id: channelId } } as any);
+                }
+              }
+            }}
+          />
+          <View style={{ marginLeft: 32, paddingLeft: 12, borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.1)', marginTop: 4 }}>
+            <PostHeader
+              author={author}
+              source_type="repost"
+              timeAgo={timeAgo}
+              onAvatarTap={goToProfile}
+              onMoreTap={() => { }}
+            />
+          </View>
+        </View>
+      ) : (
+        <PostHeader
+          author={author}
+          source_type={source_type}
+          timeAgo={timeAgo}
+          onAvatarTap={goToProfile}
+          onMoreTap={(e: any) => {
+            if (Platform.OS === 'web' && e?.nativeEvent) {
+              setPostOptionsPosition({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
             }
-          }
-        }}
-      />
+            setPostOptionsVisible(true);
+          }}
+          channelId={channelId}
+          channelAvatarUrl={channelAvatarUrl}
+          channelName={channelName}
+          onChannelAvatarTap={() => {
+            if (channelId) {
+              if (Platform.OS === 'web' && window.innerWidth >= 768) {
+                useDesktopChannelModalStore.getState().openChannel(channelId);
+              } else {
+                router.push({ pathname: '/channel/channelpage', params: { id: channelId } } as any);
+              }
+            }
+          }}
+        />
+      )}
 
       {/* Content */}
       <PostContent content={content} />

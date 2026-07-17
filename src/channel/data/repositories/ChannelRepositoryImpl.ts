@@ -1,6 +1,7 @@
 import { channelLocalSource } from '@/channel/data/sources/ChannelLocalSource';
 import { channelRemoteSource } from '@/channel/data/sources/ChannelRemoteSource';
-import { Platform } from 'react-native';
+import { supabase } from '@/core/supabase/supabaseConfig';
+import { Platform, DeviceEventEmitter } from 'react-native';
 
 export class ChannelRepositoryImpl {
   getChannels = (page: number) => channelRemoteSource.getChannels(page);
@@ -107,6 +108,18 @@ export class ChannelRepositoryImpl {
     return newMsg;
   };
 
+  deleteChannelMessage = async (messageId: string) => {
+    try {
+      await channelRemoteSource.deleteChannelMessage(messageId);
+      if (Platform.OS !== 'web') {
+        await channelLocalSource.db.runAsync('DELETE FROM channel_messages WHERE id = ?', [messageId]);
+      }
+    } catch (e) {
+      console.error('Failed to delete message:', e);
+      throw e;
+    }
+  };
+
   /**
    * Resets the unread message count for a user in a specific channel to 0.
    * Called when the user opens the Messages tab to dismiss the badge.
@@ -117,12 +130,9 @@ export class ChannelRepositoryImpl {
       await channelLocalSource.updateChannelSettings(channelId, { unread_count: 0 });
 
       // 1.5 Emit event to update React state in hooks
-      import('react-native').then(({ DeviceEventEmitter }) => {
-        DeviceEventEmitter.emit('channel_marked_read', { channelId });
-      });
+      DeviceEventEmitter.emit('channel_marked_read', { channelId });
 
       // 2. Persist to Supabase
-      const { supabase } = await import('@/core/supabase/client');
       await supabase
         .from('channel_members')
         .update({ unread_count: 0 })

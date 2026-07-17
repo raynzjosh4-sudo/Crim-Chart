@@ -46,7 +46,13 @@ export function useChannelMessages(channelId: string | undefined) {
 
       // Supabase orderBy created_at DESC returns newest first.
       // This is exactly what our inverted FlatList needs.
-      setMessages(isRefresh ? mappedMessages : [...messagesRef.current, ...mappedMessages]);
+      if (isRefresh) {
+        setMessages(mappedMessages);
+      } else {
+        const existingIds = new Set(messagesRef.current.map((m: any) => m.id));
+        const uniqueNewMessages = mappedMessages.filter((m: any) => !existingIds.has(m.id));
+        setMessages([...messagesRef.current, ...uniqueNewMessages]);
+      }
 
       setHasMore(rawData.length === 10);
       setPage(pageNumber);
@@ -68,5 +74,24 @@ export function useChannelMessages(channelId: string | undefined) {
     }
   }, [loadingMore, hasMore, page, fetchMessages]);
 
-  return { messages, setMessages, loading, loadingMore, loadMore };
+  const deleteMessage = useCallback(async (messageId: string) => {
+    try {
+      // Optimistic delete
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+      await channelRepository.deleteChannelMessage(messageId);
+    } catch (err) {
+      console.error('Failed to delete message:', err);
+      // Optional: rollback optimistic update by fetching again
+      // fetchMessages(0, true);
+    }
+  }, []);
+
+  return { 
+    messages, 
+    setMessages: setMessages as React.Dispatch<React.SetStateAction<any[]>>, 
+    loading, 
+    loadingMore, 
+    loadMore,
+    deleteMessage
+  };
 }

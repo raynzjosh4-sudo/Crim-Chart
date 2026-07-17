@@ -67,6 +67,7 @@ export type MediaItem = {
   title?: string;
   artist?: string;
   lyrics?: string;
+  authorId?: string;
 };
 
 export type StatusGroup = {
@@ -83,6 +84,7 @@ interface StatusViewerProps {
   initialGroupIndex?: number;
   isLoadingData?: boolean;
   skeletonUser?: { name: string; avatar: string };
+  isMoment?: boolean;
 }
 
 
@@ -94,6 +96,7 @@ export const StatusViewer: React.FC<StatusViewerProps> = ({
   initialGroupIndex = 0,
   isLoadingData = false,
   skeletonUser,
+  isMoment = false,
 }) => {
   const [groupIndex, setGroupIndex] = useState(initialGroupIndex);
   const [mediaIndex, setMediaIndex] = useState(0);
@@ -295,7 +298,8 @@ export const StatusViewer: React.FC<StatusViewerProps> = ({
     mediaId: visible ? currentMedia?.id : undefined,
     tableName: 'status_views',
     idColumn: 'status_id',
-    authorId: currentGroup?.id,
+    authorId: currentMedia?.authorId || currentGroup?.id, // Use specific media author if available
+    isMoment,
   });
 
   if (!visible) return null;

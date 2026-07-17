@@ -108,26 +108,68 @@ export const ChannelPostCard: React.FC<ChannelPostCardProps> = ({
   return (
     <View style={styles.container}>
       {/* Header */}
-      <PostHeader
-        author={author}
-        source_type={source_type}
-        timeAgo={timeAgo}
-        onAvatarTap={goToProfile}
-        onMoreTap={() => { }} // TODO: add more options
-        channelId={channelId}
-        channelAvatarUrl={currentChannelAvatar || sourceChannelAvatar}
-        channelName={channelName}
-        channelDescription={channelDescription}
-        onChannelAvatarTap={() => {
-          if (channelId) {
-            if (Platform.OS === 'web' && window.innerWidth >= 768) {
-              useDesktopChannelModalStore.getState().openChannel(channelId);
-            } else {
-              router.push({ pathname: '/channel/channelpage', params: { id: channelId } } as any);
+      {taggerName ? (
+        <View>
+          <PostHeader
+            author={{
+              id: '',
+              displayName: taggerName,
+              username: taggerName,
+              profileImageUrl: taggerAvatar || '',
+              isActive: false,
+              hasStatus: false,
+              statusCount: 0,
+            } as any}
+            source_type={source_type}
+            timeAgo={timeAgo}
+            onAvatarTap={() => {}}
+            onMoreTap={() => { }}
+            channelId={channelId}
+            channelAvatarUrl={currentChannelAvatar || sourceChannelAvatar}
+            channelName={channelName}
+            channelDescription={channelDescription}
+            onChannelAvatarTap={() => {
+              if (channelId) {
+                if (Platform.OS === 'web' && window.innerWidth >= 768) {
+                  useDesktopChannelModalStore.getState().openChannel(channelId);
+                } else {
+                  router.push({ pathname: '/channel/channelpage', params: { id: channelId } } as any);
+                }
+              }
+            }}
+          />
+          <View style={{ marginLeft: 32, paddingLeft: 12, borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.1)', marginTop: 4 }}>
+            <PostHeader
+              author={author}
+              source_type="repost"
+              timeAgo={timeAgo}
+              onAvatarTap={goToProfile}
+              onMoreTap={() => { }}
+            />
+          </View>
+        </View>
+      ) : (
+        <PostHeader
+          author={author}
+          source_type={source_type}
+          timeAgo={timeAgo}
+          onAvatarTap={goToProfile}
+          onMoreTap={() => { }} // TODO: add more options
+          channelId={channelId}
+          channelAvatarUrl={currentChannelAvatar || sourceChannelAvatar}
+          channelName={channelName}
+          channelDescription={channelDescription}
+          onChannelAvatarTap={() => {
+            if (channelId) {
+              if (Platform.OS === 'web' && window.innerWidth >= 768) {
+                useDesktopChannelModalStore.getState().openChannel(channelId);
+              } else {
+                router.push({ pathname: '/channel/channelpage', params: { id: channelId } } as any);
+              }
             }
-          }
-        }}
-      />
+          }}
+        />
+      )}
 
       {/* Content */}
       <PostContent content={content} />
@@ -140,9 +182,6 @@ export const ChannelPostCard: React.FC<ChannelPostCardProps> = ({
       ) : allImages.length > 0 ? (
         <ChannelImagePostWidget images={allImages} />
       ) : null}
-
-      {/* Tagger Row */}
-      <TaggerRow taggerName={taggerName} taggerAvatar={taggerAvatar} tagsCount={tagsCount} />
 
       {/* Footer */}
       <View style={styles.footer}>

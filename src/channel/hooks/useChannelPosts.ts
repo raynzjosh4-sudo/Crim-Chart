@@ -47,6 +47,8 @@ export function useChannelPosts(channelId: string | undefined, limit: number = 1
         commentsCount: post.comments || 0,
         tagsCount: post.tags_count || 0,
         createdAt: post.created_at,
+        taggerName: post.tagger_name || post.taggerName || null,
+        taggerAvatar: post.tagger_avatar_url || post.taggerAvatarUrl || post.taggerAvatar || null,
         addedBy: post.author ? {
           id: post.author.id,
           name: post.author.display_name || post.author.username || 'Unknown',

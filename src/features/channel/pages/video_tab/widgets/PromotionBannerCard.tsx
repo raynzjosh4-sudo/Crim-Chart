@@ -12,12 +12,10 @@ export const PromotionBannerCard: React.FC<PromotionBannerCardProps> = ({
 }) => {
   const styles = useStyles(colors => ({
     container: {
-      width: 100,
-      // Adjusting slightly for viewport matching
-      height: 140,
+      width: '100%',
+      height: '100%',
       borderRadius: 16,
       overflow: 'hidden',
-      marginHorizontal: 6,
       backgroundColor: '#111',
       shadowColor: colors.background,
       shadowOffset: {

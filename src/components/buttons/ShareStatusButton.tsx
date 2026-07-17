@@ -5,6 +5,10 @@ import { Check, Sparkles } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, ViewStyle } from 'react-native';
 import Toast from 'react-native-toast-message';
+import { supabase } from '@/core/supabase/supabaseConfig';
+import { useAuthStore } from '@/features/auth/application/useAuthStore';
+import { useNotificationWrapper } from '@/core/notifications/useNotificationWrapper';
+
 interface ShareStatusButtonProps {
   mediaUrl: string;
   mediaType?: 'image' | 'video' | 'audio' | string;
@@ -42,8 +46,11 @@ export const ShareStatusButton: React.FC<ShareStatusButtonProps> = ({
       fontWeight: '800'
     }
   }));
+  const { user } = useAuthStore();
+  const { sendNotification } = useNotificationWrapper();
   const [isSharing, setIsSharing] = useState(false);
   const [hasShared, setHasShared] = useState(false);
+  
   const handleShare = async () => {
     if (isSharing || hasShared) return;
     console.log(`[ShareStatusButton] Tapped share button. targetType: ${targetType}, mediaUrl: ${mediaUrl}`);
@@ -70,6 +77,31 @@ export const ShareStatusButton: React.FC<ShareStatusButtonProps> = ({
     if (success) {
       setHasShared(true);
       console.log(`[ShareStatusButton] Shared successfully.`);
+      
+      if (targetType === 'moment' && channelId && user) {
+        try {
+          const { data: members } = await supabase
+            .from('channel_members')
+            .select('user_id')
+            .eq('channel_id', channelId);
+            
+          if (members) {
+            for (const member of members) {
+              if (member.user_id !== user.id) {
+                await sendNotification({
+                  recipientId: member.user_id,
+                  type: 'mention',
+                  referenceId: channelId,
+                  actionText: `${user.displayName || user.username || 'Someone'} shared a moment to the channel`,
+                });
+              }
+            }
+          }
+        } catch (err) {
+          console.error('[ShareStatusButton] Failed to send notifications', err);
+        }
+      }
+
       // Reset after a few seconds
       setTimeout(() => setHasShared(false), 3000);
     } else {
