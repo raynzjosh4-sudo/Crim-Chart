@@ -276,7 +276,7 @@ export default function WelcomePage() {
               </TouchableOpacity>
 
               <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, textAlign: 'center', marginBottom: 24, lineHeight: 18 }}>
-                By continuing, you agree to our <Text style={{ fontWeight: 'bold', color: '#FFF' }}>User Agreement</Text> and acknowledge that you understand the <Text style={{ fontWeight: 'bold', color: '#FFF' }}>Privacy Policy</Text>.
+                By continuing, you agree to our <Text style={{ fontWeight: 'bold', color: '#FFF', ...(Platform.OS === 'web' && { cursor: 'pointer' as any }) }} onPress={() => router.push('/terms')}>User Agreement</Text> and acknowledge that you understand the <Text style={{ fontWeight: 'bold', color: '#FFF', ...(Platform.OS === 'web' && { cursor: 'pointer' as any }) }} onPress={() => router.push('/privacy')}>Privacy Policy</Text>.
               </Text>
 
               <TouchableOpacity onPress={() => setActiveSheet('none')} style={{ alignItems: 'center', paddingVertical: 12 }}>

@@ -6,8 +6,9 @@ import { ThemeTokens } from '@/core/theme/themes';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { UserBoxesWidget } from '@/features/boxes/components/UserBoxesWidget';
 import { UserTagsWidget } from '../components/UserTagsWidget';
+import { ProfileOptionsSheet } from '../components/ProfileOptionsSheet';
 import { useRouter } from 'expo-router';
-import { LayoutGrid, Music, Play, Settings } from 'lucide-react-native';
+import { LayoutGrid, Music, Play, Settings, MoreVertical } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
   DeviceEventEmitter,
@@ -20,6 +21,9 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Share,
+  ActionSheetIOS,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CrimChartUserModel } from '../models/CrimChartUserModel';
@@ -62,6 +66,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   const [activeTab, setActiveTab] = useState<TabId>(isDesktop ? 'posts' : 'photos');
   const [showScrolledActions, setShowScrolledActions] = useState(false);
   const [isGalleryVisible, setIsGalleryVisible] = useState(false);
+  const [isOptionsVisible, setIsOptionsVisible] = useState(false);
+  const [optionsAnchor, setOptionsAnchor] = useState<{ x: number; y: number } | null>(null);
 
   const handleAvatarPress = () => {
     if (isCurrentUser) {
@@ -93,6 +99,27 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   const goToInbox = () => router.push('/inbox');
   const goToEditImage = () => { if (onEditProfile) onEditProfile(); };
 
+  const shareProfile = async () => {
+    try {
+      const profileUrl = `https://crimchart.com/profile/${user?.id || userId}`;
+      await Share.share({
+        message: `Check out ${user?.displayName || user?.username || 'this user'}'s profile on CrimChart! ${profileUrl}`,
+        url: profileUrl,
+      });
+    } catch (error) {
+      console.log('Error sharing profile', error);
+    }
+  };
+
+  const handleMoreOptions = (e?: any) => {
+    if (e && e.nativeEvent && 'pageX' in e.nativeEvent) {
+      setOptionsAnchor({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
+    } else {
+      setOptionsAnchor(null);
+    }
+    setIsOptionsVisible(true);
+  };
+
   const statBadge = (label: string, value: number | string, highlighted = false) => (
     <View style={[styles.statBadge, highlighted && styles.statBadgeHighlighted]}>
       <Text style={[styles.statValue, highlighted && styles.statValueHighlighted]}>
@@ -122,11 +149,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             isDesktop && showScrolledActions && customActions ? (
               <React.Fragment key="customActions">{customActions}</React.Fragment>
             ) : null,
-            !isDesktop && isCurrentUser ? (
-              <TouchableOpacity key="settings" activeOpacity={1} onPress={goToSettings} style={styles.appBarBtn}>
-                <Settings color={theme.colors.text} size={22} />
-              </TouchableOpacity>
-            ) : null
+            <TouchableOpacity key="options" activeOpacity={1} onPress={(e) => handleMoreOptions(e)} style={styles.appBarBtn}>
+              <MoreVertical color={theme.colors.text} size={22} />
+            </TouchableOpacity>
           ].filter(Boolean) as React.ReactNode[]}
         />
 
@@ -330,6 +355,16 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      <ProfileOptionsSheet
+        visible={isOptionsVisible}
+        onClose={() => setIsOptionsVisible(false)}
+        onShareProfile={shareProfile}
+        showSettings={isCurrentUser}
+        onSettings={goToSettings}
+        anchorPosition={optionsAnchor}
+        profileUrl={`https://crimchart.com/profile/${user?.id || userId}`}
+      />
 
       <MediaGalleryBottomSheet
         visible={isGalleryVisible}

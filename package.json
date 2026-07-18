@@ -111,6 +111,7 @@
     "babel-preset-expo": "~55.0.8",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~55.0.1",
+    "react-refresh": "^0.18.0",
     "typescript": "~5.9.2"
   },
   "private": true

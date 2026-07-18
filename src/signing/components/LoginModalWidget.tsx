@@ -140,7 +140,8 @@ export function LoginModalWidget({
       textAlign: 'center'
     },
     footerLink: {
-      fontWeight: '600'
+      fontWeight: '600',
+      ...(Platform.OS === 'web' && { cursor: 'pointer' as any })
     }
   }));
   const {
@@ -328,10 +329,10 @@ export function LoginModalWidget({
                   By continuing, you agree to our{' '}
                   <Text style={[styles.footerLink, {
                 color: colors.text
-              }]}>Terms of Service</Text>,{' '}
+              }]} onPress={() => { onClose(); router.push('/terms'); }}>Terms of Service</Text>,{' '}
                   <Text style={[styles.footerLink, {
                 color: colors.text
-              }]}>Privacy Policy</Text> and{' '}
+              }]} onPress={() => { onClose(); router.push('/privacy'); }}>Privacy Policy</Text> and{' '}
                   <Text style={[styles.footerLink, {
                 color: colors.text
               }]}>Cookie Use</Text>.

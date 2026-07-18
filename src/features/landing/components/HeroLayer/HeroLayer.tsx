@@ -99,9 +99,9 @@ export function HeroLayer({ onGoogleLogin, onCreateAccount, onLoginClick, onLang
             <View style={{ height: 18 }} />
             <Text style={styles.tos}>
               By signing up, you agree to our{' '}
-              <Text style={styles.tosLink}>Terms of Service</Text>
+              <Text style={styles.tosLink} onPress={() => router.push('/terms')}>Terms of Service</Text>
               {' '}and{' '}
-              <Text style={styles.tosLink}>Privacy Policy</Text>.
+              <Text style={styles.tosLink} onPress={() => router.push('/privacy')}>Privacy Policy</Text>.
             </Text>
           </View>
         </View>
@@ -244,7 +244,8 @@ const styles = StyleSheet.create({
   },
   tosLink: {
     color: 'rgba(255,255,255,0.6)',
-    fontWeight: '600'
+    fontWeight: '600',
+    ...(isWeb && { cursor: 'pointer' as any })
   },
   rightCol: {
     flex: 1,
