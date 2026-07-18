@@ -11,7 +11,7 @@ compatibility_date = "2023-10-25"
 
 [vars]
 # Add your Github Pages domain here so the worker knows where to fetch the actual HTML
-GITHUB_PAGES_URL = "https://ns8011788.github.io/crimchart"
+GITHUB_PAGES_URL = "https://raynzjosh4-sudo.github.io/Crim-Chart"
 # (Or whatever your github pages raw URL is. If crimchart.com is mapped to Github Pages via CNAME, 
 # you can technically just fetch from the github.io URL to avoid infinite loops)
 SUPABASE_URL = "https://mrcynipmpismyneyhdwh.supabase.co"

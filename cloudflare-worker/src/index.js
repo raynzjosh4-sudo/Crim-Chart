@@ -9,165 +9,151 @@ export default {
 
     const supportedTypes = ['post', 'channel', 'profile', 'box'];
 
-    // If it's not a supported route or missing ID, just proxy to GitHub Pages normally
+    // If it's not a supported route or missing ID, proxy normally
     if (!supportedTypes.includes(type) || !id) {
-      return fetchFromGithubPages(url, env);
+      return fetchFromGithubPages(request, env, url);
     }
 
-    // 1. Fetch metadata from Supabase
-    const metadata = await fetchMetadataFromSupabase(type, id, env);
+    const userAgent = (request.headers.get('User-Agent') || '').toLowerCase();
+    const isBot = /twitterbot|facebookexternalhit|whatsapp|telegrambot|linkedinbot|slackbot|discordbot|vkshare|skypeuripreview|applebot|googlebot|bingbot/.test(userAgent);
 
-    // 2. Fetch the base HTML from GitHub Pages
-    const response = await fetchFromGithubPages(url, env);
+    if (isBot) {
+      // 1. Fetch metadata from Supabase
+      const metadata = await fetchMetadataFromSupabase(type, id, env);
 
-    // If we didn't find metadata, return the original HTML
-    if (!metadata) {
-      return response;
+      if (metadata) {
+        // Return a perfectly crafted HTML response just for the bot
+        const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>${escapeHtml(metadata.title)}</title>
+  <meta property="og:title" content="${escapeHtml(metadata.title)}">
+  <meta name="twitter:title" content="${escapeHtml(metadata.title)}">
+  <meta property="og:description" content="${escapeHtml(metadata.description)}">
+  <meta name="twitter:description" content="${escapeHtml(metadata.description)}">
+  <meta property="og:image" content="${escapeHtml(metadata.image)}">
+  <meta name="twitter:image" content="${escapeHtml(metadata.image)}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="${escapeHtml(url.toString())}">
+</head>
+<body>
+  <p>View this content on the app.</p>
+</body>
+</html>`;
+        return new Response(html, {
+          headers: { 'Content-Type': 'text/html;charset=UTF-8' }
+        });
+      }
     }
 
-    // 3. Inject the Open Graph tags into the HTML using HTMLRewriter
-    return new HTMLRewriter()
-      .on('head', new OGMetaInjector(metadata))
-      .transform(response);
+    // If it's a real user or we failed to get metadata, just fetch normally
+    return fetchFromGithubPages(request, env, url);
   },
 };
 
-async function fetchFromGithubPages(url, env) {
-  // Construct the GitHub Pages URL
-  const targetUrl = new URL(url.toString());
-  const ghUrl = new URL(env.GITHUB_PAGES_URL);
-  
-  targetUrl.hostname = ghUrl.hostname;
-  targetUrl.port = ghUrl.port;
-  targetUrl.protocol = ghUrl.protocol;
-  
-  // If GitHub Pages is hosted in a subfolder (like /crimchart), prepend it
-  if (ghUrl.pathname !== '/') {
-    targetUrl.pathname = ghUrl.pathname.replace(/\/$/, '') + targetUrl.pathname;
-  }
+async function fetchFromGithubPages(request, env, url) {
+  // Let the request pass through to the origin (GitHub Pages)
+  let response = await fetch(request);
 
-  // Fetch the actual file
-  let response = await fetch(targetUrl.toString(), {
-    headers: {
-      'User-Agent': 'Cloudflare Worker'
-    }
-  });
-
-  // If 404 (because it's an SPA route like /post/123), fetch index.html
+  // If GitHub Pages returns 404 (because it's an SPA route like /post/123),
+  // we fetch the root index.html
   if (response.status === 404) {
-    const indexUrl = new URL(ghUrl.toString());
-    if (!indexUrl.pathname.endsWith('/')) {
-      indexUrl.pathname += '/';
-    }
-    indexUrl.pathname += 'index.html';
-    response = await fetch(indexUrl.toString());
+    const rootUrl = new URL(url.toString());
+    rootUrl.pathname = '/';
+    response = await fetch(rootUrl.toString(), request);
   }
 
-  // Return mutable response
   return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
+    status: response.status === 404 ? 200 : response.status,
+    statusText: response.status === 404 ? 'OK' : response.statusText,
     headers: response.headers
   });
 }
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 async function fetchMetadataFromSupabase(type, id, env) {
-  let table = '';
-  let select = '';
+  const headers = {
+    'apikey': env.SUPABASE_ANON_KEY,
+    'Authorization': `Bearer ${env.SUPABASE_ANON_KEY}`
+  };
 
-  if (type === 'post') {
-    table = 'statuses';
-    select = 'content,image_url,video_url,audio_url';
-  } else if (type === 'channel') {
-    table = 'channels';
-    select = 'name,description,profile_image_url';
-  } else if (type === 'profile') {
-    table = 'profiles';
-    select = 'username,bio,profile_image_url';
-  } else if (type === 'box') {
-    table = 'boxes';
-    select = 'title,description,image_url';
-  }
-
-  const endpoint = `${env.SUPABASE_URL}/rest/v1/${table}?id=eq.${id}&select=${select}`;
-  
   try {
-    const res = await fetch(endpoint, {
-      headers: {
-        'apikey': env.SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${env.SUPABASE_ANON_KEY}`
+    if (type === 'post') {
+      const tables = ['statuses', 'posts', 'channel_posts'];
+
+      for (const table of tables) {
+        const endpoint = `${env.SUPABASE_URL}/rest/v1/${table}?id=eq.${id}&select=*`;
+        const res = await fetch(endpoint, { headers });
+        if (!res.ok) continue;
+
+        const data = await res.json();
+        if (data && data.length > 0) {
+          const row = data[0];
+          let image = 'https://crimchart.com/default_post_image.png';
+
+          if (row.image_urls && row.image_urls.length > 0) image = row.image_urls[0];
+          else if (row.image_url) image = row.image_url;
+          else if (row.thumbnail_url) image = row.thumbnail_url;
+          else if (row.thumbnail_urls && row.thumbnail_urls.length > 0) image = row.thumbnail_urls[0];
+
+          return {
+            title: 'CrimChart Post',
+            description: row.caption || row.content || 'View this post on CrimChart',
+            image: image
+          };
+        }
       }
-    });
+      return null;
+    }
+
+    let table = '';
+    if (type === 'channel') table = 'channels';
+    else if (type === 'profile') table = 'profiles';
+    else if (type === 'box') table = 'boxes';
+
+    if (!table) return null;
+
+    const endpoint = `${env.SUPABASE_URL}/rest/v1/${table}?id=eq.${id}&select=*`;
+    const res = await fetch(endpoint, { headers });
+    if (!res.ok) return null;
 
     const data = await res.json();
     if (data && data.length > 0) {
       const row = data[0];
-      
-      // Normalize the data format depending on type
-      if (type === 'post') {
-        return {
-          title: 'CrimChart Post',
-          description: row.content || 'View this post on CrimChart',
-          image: row.image_url || row.video_url || row.audio_url || 'https://crimchart.com/default_post_image.png'
-        };
-      } else if (type === 'channel') {
+
+      if (type === 'channel') {
         return {
           title: row.name || 'CrimChart Channel',
-          description: row.description || `Join the ${row.name} channel on CrimChart`,
-          image: row.profile_image_url || 'https://crimchart.com/default_channel_image.png'
+          description: row.description || `Join the ${row.name || 'channel'} on CrimChart`,
+          image: row.avatar_url || row.profile_image_url || 'https://crimchart.com/default_channel_image.png'
         };
       } else if (type === 'profile') {
         return {
-          title: row.username || 'CrimChart User',
-          description: row.bio || `Check out ${row.username}'s profile on CrimChart`,
-          image: row.profile_image_url || 'https://crimchart.com/default_profile_image.png'
+          title: row.display_name || row.username || 'CrimChart User',
+          description: row.bio || `Check out ${row.display_name || row.username || 'this user'}'s profile on CrimChart`,
+          image: row.profile_image_url || row.avatar_url || 'https://crimchart.com/default_profile_image.png'
         };
       } else if (type === 'box') {
         return {
-          title: row.title || 'CrimChart Box',
-          description: row.description || `Explore ${row.title} on CrimChart`,
-          image: row.image_url || 'https://crimchart.com/default_box_image.png'
+          title: row.title || row.name || 'CrimChart Box',
+          description: row.description || `Explore this Box on CrimChart`,
+          image: (row.metadata && row.metadata.coverImageUrl) || row.image_url || 'https://crimchart.com/default_box_image.png'
         };
       }
     }
   } catch (err) {
     console.error('Supabase fetch error:', err);
   }
-  
+
   return null;
-}
-
-class OGMetaInjector {
-  constructor(metadata) {
-    this.metadata = metadata;
-  }
-
-  element(element) {
-    if (this.metadata.title) {
-      element.append(`<meta property="og:title" content="${this.escapeHtml(this.metadata.title)}" />`, { html: true });
-      element.append(`<meta name="twitter:title" content="${this.escapeHtml(this.metadata.title)}" />`, { html: true });
-    }
-    
-    if (this.metadata.description) {
-      element.append(`<meta property="og:description" content="${this.escapeHtml(this.metadata.description)}" />`, { html: true });
-      element.append(`<meta name="twitter:description" content="${this.escapeHtml(this.metadata.description)}" />`, { html: true });
-    }
-    
-    if (this.metadata.image) {
-      element.append(`<meta property="og:image" content="${this.escapeHtml(this.metadata.image)}" />`, { html: true });
-      element.append(`<meta name="twitter:image" content="${this.escapeHtml(this.metadata.image)}" />`, { html: true });
-      element.append(`<meta name="twitter:card" content="summary_large_image" />`, { html: true });
-    }
-    
-    element.append(`<meta property="og:type" content="website" />`, { html: true });
-  }
-
-  escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  }
 }
