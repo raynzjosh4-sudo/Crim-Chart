@@ -83,7 +83,7 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
   const { canComment: contextCanComment } = useFeedPermissions();
   const canComment = canCommentProp && contextCanComment;
   const router = useRouter();
-  const { startLoading } = useGlobalProgress();
+  const { startLoading, stopLoading } = useGlobalProgress();
   const [tagOverlayVisible, setTagOverlayVisible] = useState(false);
   const [postOptionsVisible, setPostOptionsVisible] = useState(false);
   const [postOptionsPosition, setPostOptionsPosition] = useState<{ x: number; y: number } | undefined>(undefined);
@@ -124,7 +124,10 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
             source_type={source_type}
             timeAgo={timeAgo}
             onAvatarTap={() => {}}
-            onMoreTap={(e: any) => {
+            onMoreTap={async (e: any) => {
+              startLoading();
+              await new Promise(r => setTimeout(r, 400));
+              stopLoading();
               if (Platform.OS === 'web' && e?.nativeEvent) {
                 setPostOptionsPosition({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
               }
@@ -162,7 +165,10 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
           source_type={source_type}
           timeAgo={timeAgo}
           onAvatarTap={goToProfile}
-          onMoreTap={(e: any) => {
+          onMoreTap={async (e: any) => {
+            startLoading();
+            await new Promise(r => setTimeout(r, 400));
+            stopLoading();
             if (Platform.OS === 'web' && e?.nativeEvent) {
               setPostOptionsPosition({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
             }

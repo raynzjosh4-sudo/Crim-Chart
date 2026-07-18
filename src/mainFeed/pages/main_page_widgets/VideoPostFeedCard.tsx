@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { View, Platform } from 'react-native';
 import { PostOptionsSheet } from '@/components/postOptionsSheet/PostOptionsSheet';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 
 function resolveCanComment(allowCommentingBy: string | undefined | null, isMember: boolean, isFollower: boolean): boolean {
   const policy = (allowCommentingBy ?? 'all').toLowerCase();
@@ -129,6 +130,7 @@ export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
   const otherProfileId = isLocal || !videoData?.addedBy?.id ? undefined : videoData.addedBy?.id;
   const otherProfile = useUserProfile(otherProfileId);
   const currentUserProfile = useCurrentUserProfile();
+  const { startLoading, stopLoading } = useGlobalProgress();
 
   useEffect(() => {
     let isMounted = true;
@@ -223,7 +225,10 @@ export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
               router.push(`/profile/${videoData.addedBy.id}`);
             }
           }}
-          onMoreTap={(e: any) => {
+          onMoreTap={async (e: any) => {
+            startLoading();
+            await new Promise(r => setTimeout(r, 400));
+            stopLoading();
             if (Platform.OS === 'web' && e?.nativeEvent) {
               setPostOptionsPosition({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
             }

@@ -1,14 +1,14 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
-import { StandalonePostView } from '@/components/post/StandalonePostView';
 import ChartAppBar from '@/components/chartappbar/ChartAppBar';
+import { StandalonePostView } from '@/components/post/StandalonePostView';
 import { useStyles } from '@/core/hooks/useStyles';
 import { ThemeTokens } from '@/core/theme/themes';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { StyleSheet, View } from 'react-native';
 
 export default function PostPage() {
   const { id, type } = useLocalSearchParams<{ id: string; type?: string }>();
+  const router = useRouter();
   const styles = useStyles(themeStyles);
   const { t } = useTranslation();
 
@@ -16,12 +16,19 @@ export default function PostPage() {
 
   return (
     <View style={styles.container}>
-      <ChartAppBar 
+      <ChartAppBar
         title={t('post', 'Post')}
+        onBack={() => {
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.replace('/');
+          }
+        }}
       />
-      <StandalonePostView 
-        postId={id} 
-        entityType={type || 'post'} 
+      <StandalonePostView
+        postId={id}
+        entityType={type || 'post'}
       />
     </View>
   );

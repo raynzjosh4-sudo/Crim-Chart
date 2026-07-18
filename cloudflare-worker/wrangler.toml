@@ -1,0 +1,18 @@
+name = "crimchart-og-proxy"
+main = "src/index.js"
+compatibility_date = "2023-10-25"
+
+# We will run this worker on the custom domain crimchart.com
+# Use the dashboard to map the worker to the routes:
+# crimchart.com/post/*
+# crimchart.com/channel/*
+# crimchart.com/profile/*
+# crimchart.com/box/*
+
+[vars]
+# Add your Github Pages domain here so the worker knows where to fetch the actual HTML
+GITHUB_PAGES_URL = "https://ns8011788.github.io/crimchart"
+# (Or whatever your github pages raw URL is. If crimchart.com is mapped to Github Pages via CNAME, 
+# you can technically just fetch from the github.io URL to avoid infinite loops)
+SUPABASE_URL = "https://mrcynipmpismyneyhdwh.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yY3luaXBtcGlzbXluZXloZHdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNTMxNDMsImV4cCI6MjA4OTkyOTE0M30.8yR4BZ4bMDHTQJCVRKnM_sFTGpw6xJAsdmzpRhb0gpo"

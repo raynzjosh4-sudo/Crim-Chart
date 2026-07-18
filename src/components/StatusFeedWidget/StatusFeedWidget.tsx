@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
+import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 
 import { StatusImageWidget } from './sub_widgets/StatusImageWidget';
 import { StatusAudioWidget } from './sub_widgets/StatusAudioWidget';
@@ -45,6 +46,7 @@ export const StatusFeedWidget: React.FC<StatusFeedWidgetProps> = ({
   const [postOptionsPosition, setPostOptionsPosition] = useState<{ x: number; y: number } | undefined>(undefined);
   const styles = useStyles(themeStyles);
   const theme = useCurrentTheme();
+  const { startLoading, stopLoading } = useGlobalProgress();
 
   const allImages = React.useMemo(() => {
     const imgs: string[] = [];
@@ -66,7 +68,10 @@ export const StatusFeedWidget: React.FC<StatusFeedWidgetProps> = ({
         author={author}
         timeAgo={timeAgo}
         onAvatarTap={goToProfile}
-        onMoreTap={(e: any) => {
+        onMoreTap={async (e: any) => {
+          startLoading();
+          await new Promise(r => setTimeout(r, 400));
+          stopLoading();
           if (Platform.OS === 'web' && e?.nativeEvent) {
             setPostOptionsPosition({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
           }

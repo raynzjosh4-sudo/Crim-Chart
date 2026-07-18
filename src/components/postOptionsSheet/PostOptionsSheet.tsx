@@ -4,10 +4,14 @@ import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { useBlockUser } from '@/features/profile/hooks/useBlockUser';
-import { Flag, Link2, Share, UserX, X } from 'lucide-react-native';
+import { useReportPost } from '@/features/profile/hooks/useReportPost';
+import { ChartToast } from '@/components/showcase/CrimChart_toast';
+import * as Clipboard from 'expo-clipboard';
+import { Flag, Link2, Share as ShareIcon, UserX, X } from 'lucide-react-native';
 import {
   Modal,
   Platform,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -34,6 +38,7 @@ export const PostOptionsSheet: React.FC<PostOptionsSheetProps> = ({ postId, auth
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
   const { blockUser } = useBlockUser();
+  const { reportPost } = useReportPost();
   const currentUser = useAuthStore(state => state.user);
   const { startLoading, stopLoading } = useGlobalProgress();
 
@@ -44,6 +49,40 @@ export const PostOptionsSheet: React.FC<PostOptionsSheetProps> = ({ postId, auth
     await new Promise(res => setTimeout(res, 400));
     const success = await blockUser(authorId, authorName ?? undefined, authorAvatarUrl ?? undefined);
     stopLoading();
+    if (success) {
+      onClose();
+    }
+  };
+
+  const handleShare = async () => {
+    if (!postId) return;
+    try {
+      const url = `https://crimchart.com/post/${postId}`;
+      await Share.share({
+        message: url,
+        url: url, // iOS specific
+      });
+      onClose();
+    } catch (error: any) {
+      console.error(error.message);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (!postId) return;
+    try {
+      const url = `https://crimchart.com/post/${postId}`;
+      await Clipboard.setStringAsync(url);
+      ChartToast.showSuccess(null, { title: 'Link Copied', message: 'Post link copied to clipboard.' });
+      onClose();
+    } catch (error) {
+      console.error('Failed to copy link', error);
+    }
+  };
+
+  const handleReportPost = async () => {
+    if (!postId) return;
+    const success = await reportPost(postId);
     if (success) {
       onClose();
     }
@@ -102,12 +141,12 @@ export const PostOptionsSheet: React.FC<PostOptionsSheetProps> = ({ postId, auth
           )}
 
           <View style={styles.optionsContainer}>
-            <TouchableOpacity style={styles.optionRow} onPress={() => { /* TODO */ }}>
-              <Share size={24} color={theme.colors.text} />
+            <TouchableOpacity style={styles.optionRow} onPress={handleShare} activeOpacity={0.8}>
+              <ShareIcon size={24} color={theme.colors.text} />
               <Text style={styles.optionText}>Share via...</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.optionRow} onPress={() => { /* TODO */ }} activeOpacity={0.8}>
+            <TouchableOpacity style={styles.optionRow} onPress={handleCopyLink} activeOpacity={0.8}>
               <Link2 size={24} color={theme.colors.text} />
               <Text style={styles.optionText}>Copy Link</Text>
             </TouchableOpacity>
@@ -121,7 +160,7 @@ export const PostOptionsSheet: React.FC<PostOptionsSheetProps> = ({ postId, auth
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity style={styles.optionRow} onPress={() => { /* TODO */ }} activeOpacity={0.8}>
+            <TouchableOpacity style={styles.optionRow} onPress={handleReportPost} activeOpacity={0.8}>
               <Flag size={24} color={theme.colors.error} />
               <Text style={[styles.optionText, { color: theme.colors.error }]}>Report Post</Text>
             </TouchableOpacity>
