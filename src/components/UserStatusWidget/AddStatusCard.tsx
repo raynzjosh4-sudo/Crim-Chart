@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import AppAvatar from '@/components/avatar/AppAvatar';
 import { useAppTheme } from '@/core/theme/app_theme';
 import { Plus } from 'lucide-react-native';
+import { RequireAuthWrapper } from '@/components/wrappers/RequireAuthWrapper';
 
 export interface AddStatusCardProps {
   avatarUrl?: string | null;
@@ -13,18 +14,22 @@ export const AddStatusCard: React.FC<AddStatusCardProps> = ({ avatarUrl, onPress
   const { colors } = useAppTheme();
 
   return (
-    <TouchableOpacity activeOpacity={0.8} onPress={onPress} style={styles.container}>
-      <View style={styles.avatarContainer}>
-        <AppAvatar imageUrl={avatarUrl} size={48} showStatusRing={false} />
-        <View style={[styles.plusBadge, { backgroundColor: colors.primary }]}>
-          <Plus size={14} color="#000" strokeWidth={3} />
-        </View>
-      </View>
+    <RequireAuthWrapper>
+      {({ checkAuth }) => (
+        <TouchableOpacity activeOpacity={0.8} onPress={() => checkAuth(() => onPress?.())} style={styles.container}>
+          <View style={styles.avatarContainer}>
+            <AppAvatar imageUrl={avatarUrl} size={48} showStatusRing={false} />
+            <View style={[styles.plusBadge, { backgroundColor: colors.primary }]}>
+              <Plus size={14} color="#000" strokeWidth={3} />
+            </View>
+          </View>
 
-      <Text style={styles.text} numberOfLines={1}>
-        Add status
-      </Text>
-    </TouchableOpacity>
+          <Text style={styles.text} numberOfLines={1}>
+            Add status
+          </Text>
+        </TouchableOpacity>
+      )}
+    </RequireAuthWrapper>
   );
 };
 

@@ -12,9 +12,10 @@ interface HeroLayerProps {
   onCreateAccount: () => void;
   onLoginClick: () => void;
   onLanguageClick?: () => void;
+  onBrowseAsGuest: () => void;
 }
 
-export function HeroLayer({ onGoogleLogin, onCreateAccount, onLoginClick, onLanguageClick }: HeroLayerProps) {
+export function HeroLayer({ onGoogleLogin, onCreateAccount, onLoginClick, onLanguageClick, onBrowseAsGuest }: HeroLayerProps) {
   const { t } = useTranslation();
   const router = useRouter();
 
@@ -106,9 +107,20 @@ export function HeroLayer({ onGoogleLogin, onCreateAccount, onLoginClick, onLang
           </View>
         </View>
 
-        {/* ── RIGHT: user avatar collage ── */}
+        {/* ── RIGHT: user avatar collage + guest CTA ── */}
         <View style={styles.rightCol}>
           <AvatarCollage />
+          <View style={{ height: 28 }} />
+          <Pressable
+            onPress={onBrowseAsGuest}
+            style={({ pressed }) => [
+              styles.guestPill,
+              { width: '70%', maxWidth: 340 },
+              pressed && { opacity: 0.85 }
+            ]}
+          >
+            <Text style={styles.guestPillText}>Browse without signing up</Text>
+          </Pressable>
         </View>
       </View>
     </View>
@@ -170,12 +182,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.text,
     borderRadius: 9999,
-    height: 42,
+    height: 38,
     gap: 10,
     ...(isWeb && { cursor: 'pointer' as any })
   },
   whitePillText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: '#0f1419'
   },
@@ -199,14 +211,14 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.5)'
   },
   brandPill: {
-    height: 42,
+    height: 38,
     borderRadius: 9999,
     alignItems: 'center',
     justifyContent: 'center',
     ...(isWeb && { cursor: 'pointer' as any })
   },
   brandPillText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700'
   },
   already: {
@@ -215,7 +227,7 @@ const styles = StyleSheet.create({
     color: colors.text
   },
   outlinePill: {
-    height: 42,
+    height: 38,
     borderRadius: 9999,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.22)',
@@ -224,8 +236,21 @@ const styles = StyleSheet.create({
     ...(isWeb && { cursor: 'pointer' as any })
   },
   outlinePillText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700'
+  },
+  guestPill: {
+    height: 38,
+    borderRadius: 9999,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...(isWeb && { cursor: 'pointer' as any })
+  },
+  guestPillText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#000000'
   },
   langRow: {
     flexDirection: 'row',

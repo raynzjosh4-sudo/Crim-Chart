@@ -18,14 +18,39 @@ const s3Client = new S3Client({
   },
 });
 
+/**
+ * On iOS, MediaLibrary returns `ph://` URIs and on Android `content://` URIs.
+ * `FileSystem.uploadAsync` only handles `file://` paths.
+ * This helper copies the asset to a temp file:// location and returns that path.
+ * On web or for already-resolved file:// URIs this is a no-op.
+ */
+async function normalizeNativeUri(uri: string): Promise<string> {
+  if (Platform.OS === 'web') return uri;
+  if (uri.startsWith('file://')) return uri;
+
+  // ph:// (iOS Photos) or content:// (Android) — copy to cache dir
+  try {
+    const ext = uri.split('.').pop()?.split('?')[0] || 'tmp';
+    const dest = `${FileSystem.cacheDirectory}crimchart_upload_${Date.now()}.${ext}`;
+    await FileSystem.copyAsync({ from: uri, to: dest });
+    console.log(`[CloudMediaService] Normalized ${uri.substring(0, 30)} → ${dest}`);
+    return dest;
+  } catch (e) {
+    console.warn('[CloudMediaService] normalizeNativeUri failed, using original URI:', e);
+    return uri;
+  }
+}
+
+
 export class CloudMediaService {
   async uploadMedia(
-    localUri: string,
+    localUri: string | Blob,
     folderName: string = 'channel_avatars',
     userId?: string,
     taskId?: string
   ): Promise<string> {
-    console.log(`☁️ CloudMediaService: Starting upload of ${localUri} to ${folderName}...`);
+    const uriString = localUri instanceof Blob ? '[blob]' : localUri;
+    console.log(`☁️ CloudMediaService: Starting upload of ${uriString} to ${folderName}...`);
     
     const notificationId = taskId || `upload_${Date.now()}`;
     const title = folderName === 'channel_avatars' ? 'Creating Channel...' : 'Uploading Media...';
@@ -36,15 +61,25 @@ export class CloudMediaService {
     const id = userId || 'anonymous';
     const timestamp = Date.now();
     
-    let extension = localUri.split('.').pop() || '';
-    if (extension.length > 10 || extension.includes('/') || extension === '') {
-      // Fallback for blob: URLs or urls without extension
-      if (folderName.includes('audio')) {
-        extension = 'mp3';
-      } else if (folderName.includes('video') || folderName === 'raw') {
-        extension = 'mp4';
-      } else {
-        extension = 'jpg';
+    let extension = '';
+    if (localUri instanceof Blob) {
+      // Derive extension from MIME type
+      const mime = localUri.type || '';
+      if (mime.startsWith('audio/')) extension = mime.includes('mpeg') ? 'mp3' : 'm4a';
+      else if (mime.startsWith('video/')) extension = 'mp4';
+      else if (mime.startsWith('image/png')) extension = 'png';
+      else extension = 'jpg';
+    } else {
+      extension = localUri.split('.').pop() || '';
+      if (extension.length > 10 || extension.includes('/') || extension === '') {
+        // Fallback for blob: URLs or urls without extension
+        if (folderName.includes('audio')) {
+          extension = 'mp3';
+        } else if (folderName.includes('video') || folderName === 'raw') {
+          extension = 'mp4';
+        } else {
+          extension = 'jpg';
+        }
       }
     }
     const rawFileName = `Chart_${timestamp}.${extension}`;
@@ -52,12 +87,14 @@ export class CloudMediaService {
 
     try {
       let mimeType = 'application/octet-stream';
-      if (localUri.toLowerCase().endsWith('.json')) mimeType = 'application/json';
+      if (extension.toLowerCase() === 'json') mimeType = 'application/json';
       else if (['jpg', 'jpeg'].includes(extension.toLowerCase())) mimeType = 'image/jpeg';
       else if (extension.toLowerCase() === 'png') mimeType = 'image/png';
       else if (extension.toLowerCase() === 'mp4') mimeType = 'video/mp4';
       else if (['m4a', 'aac', 'caf'].includes(extension.toLowerCase())) mimeType = 'audio/mp4';
       else if (extension.toLowerCase() === 'mp3') mimeType = 'audio/mpeg';
+      // If localUri is a Blob with a known MIME type, prefer that
+      else if (localUri instanceof Blob && localUri.type) mimeType = localUri.type;
 
       await notificationService.showUploadProgress(notificationId, 30);
 
@@ -76,8 +113,14 @@ export class CloudMediaService {
       let uploadSuccessful = false;
       
       if (Platform.OS === 'web') {
-        const response = await fetch(localUri);
-        const blob = await response.blob();
+        let blob: Blob;
+        if (localUri instanceof Blob) {
+          // Already pre-read — use directly, no fetch needed
+          blob = localUri;
+        } else {
+          const response = await fetch(localUri);
+          blob = await response.blob();
+        }
         const uploadRes = await fetch(signedUrl, {
           method: 'PUT',
           body: blob,
@@ -90,7 +133,9 @@ export class CloudMediaService {
         }
         uploadSuccessful = true;
       } else {
-        const uploadRes = await FileSystem.uploadAsync(signedUrl, localUri, {
+        // Normalize ph:// / content:// → file:// before uploading on native
+        const nativeUri = await normalizeNativeUri(localUri as string);
+        const uploadRes = await FileSystem.uploadAsync(signedUrl, nativeUri, {
           httpMethod: 'PUT',
           uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
           headers: {
@@ -160,7 +205,8 @@ export class CloudMediaService {
         }
         uploadSuccessful = true;
       } else {
-        const uploadRes = await FileSystem.uploadAsync(signedUrl, localUri, {
+        const nativeVideoUri = await normalizeNativeUri(localUri);
+        const uploadRes = await FileSystem.uploadAsync(signedUrl, nativeVideoUri, {
           httpMethod: 'PUT',
           uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
           headers: {

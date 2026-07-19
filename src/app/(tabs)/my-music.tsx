@@ -7,6 +7,7 @@ import { FollowUserButton } from '@/components/FollowUserButton';
 import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import { NetworkStatusBanner } from '@/components/network/NetworkStatusBanner';
 import { PostInteractionWrapper } from '@/components/wrappers/PostInteractionWrapper';
+import { RequireAuthWrapper } from '@/components/wrappers/RequireAuthWrapper';
 import { MUSIC_CATEGORIES } from '@/core/constants/musicCategories';
 import { useAppNavigation } from '@/core/navigation/useAppNavigation';
 import { useInteractionStore } from '@/core/store/useInteractionStore';
@@ -189,22 +190,26 @@ export default function MyMusicPage() {
             <ListFilter size={20} color="rgba(255,255,255,0.5)" />
           </TouchableOpacity>
         </View>
-        <TouchableOpacity style={[styles.addButton, {
-        backgroundColor: 'rgba(255,255,255,0.08)'
-      }]} activeOpacity={0.8} onPress={() => {
-        setActiveVideo(null); // Stop any playing video globally
-        useGlobalAudioPlayer.getState().stopAll(); // Stop any playing audio
+        <RequireAuthWrapper>
+          {({ checkAuth }) => (
+            <TouchableOpacity style={[styles.addButton, {
+            backgroundColor: 'rgba(255,255,255,0.08)'
+          }]} activeOpacity={0.8} onPress={(e) => checkAuth(() => {
+            setActiveVideo(null); // Stop any playing video globally
+            useGlobalAudioPlayer.getState().stopAll(); // Stop any playing audio
 
-        withPremiumTransition(async () => {
-          setIsComposerOpen(true);
-        });
-      }}>
-          <Text style={{
-          color: theme.colors.text,
-          fontSize: 14,
-          fontWeight: '600'
-        }}>Add</Text>
-        </TouchableOpacity>
+            withPremiumTransition(async () => {
+              setIsComposerOpen(true);
+            });
+          }, e)}>
+              <Text style={{
+              color: theme.colors.text,
+              fontSize: 14,
+              fontWeight: '600'
+            }}>Add</Text>
+            </TouchableOpacity>
+          )}
+        </RequireAuthWrapper>
       </View>
       <View style={{
       flex: 1

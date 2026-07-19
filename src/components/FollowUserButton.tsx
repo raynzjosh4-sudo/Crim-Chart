@@ -4,6 +4,7 @@ import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-nat
 import { supabase } from '@/core/supabase/client';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { colors } from '@/core/theme/colors';
+import { RequireAuthWrapper } from '@/components/wrappers/RequireAuthWrapper';
 export interface FollowUserButtonProps {
   targetUserId: string;
   size?: 'small' | 'medium' | 'large';
@@ -95,25 +96,37 @@ export const FollowUserButton: React.FC<FollowUserButtonProps> = ({
       setIsToggling(false);
     }
   };
-  if (!currentUser?.id || currentUser.id === targetUserId) {
-    return null; // Don't show follow button for self or unauthenticated
+  if (currentUser?.id === targetUserId) {
+    return null; // Don't show follow button for self
   }
 
   // Adjust styles based on size
   const buttonHeight = size === 'small' ? 32 : size === 'large' ? 48 : 40;
   const iconSize = size === 'small' ? 14 : size === 'large' ? 20 : 18;
   const fontSize = size === 'small' ? 14 : size === 'large' ? 16 : 14;
-  return <TouchableOpacity activeOpacity={1} style={[styles.button, {
-    height: buttonHeight
-  }, isFollowing ? styles.followingBtn : styles.followBtn, style]} onPress={handleToggleFollow} disabled={isLoading || isToggling}>
-      {isLoading || isToggling ? <Text style={[styles.text, {
-      fontSize
-    }, isFollowing ? styles.followingText : styles.followText, textStyle]}>-</Text> : <>
-          <Text style={[styles.text, {
-        fontSize
-      }, isFollowing ? styles.followingText : styles.followText, textStyle]}>
-            {isFollowing ? 'Following' : 'Follow'}
-          </Text>
-        </>}
-    </TouchableOpacity>;
+  return (
+    <RequireAuthWrapper>
+      {({ checkAuth }) => (
+        <TouchableOpacity 
+          activeOpacity={1} 
+          style={[
+            styles.button, 
+            { height: buttonHeight }, 
+            isFollowing ? styles.followingBtn : styles.followBtn, 
+            style
+          ]} 
+          onPress={(e) => checkAuth(() => handleToggleFollow(), e)} 
+          disabled={isLoading || isToggling}
+        >
+          {isLoading || isToggling ? (
+            <Text style={[styles.text, { fontSize }, isFollowing ? styles.followingText : styles.followText, textStyle]}>-</Text>
+          ) : (
+            <Text style={[styles.text, { fontSize }, isFollowing ? styles.followingText : styles.followText, textStyle]}>
+              {isFollowing ? 'Following' : 'Follow'}
+            </Text>
+          )}
+        </TouchableOpacity>
+      )}
+    </RequireAuthWrapper>
+  );
 };

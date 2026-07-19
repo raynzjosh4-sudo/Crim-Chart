@@ -208,37 +208,81 @@ export const UniversalComposeModal: React.FC = () => {
     setIsPosting(true);
     let primaryPostType = options?.postType || 'post';
 
-    // Fire and forget upload
-    createPost({
-      media: selectedMedia.map((m: any) => ({
-        path: m.uri || m.path || '',
+    // On web, blob: URLs created by pickers can be revoked when the component
+    // unmounts (i.e. when we closeModal). Pre-read them into real Blob objects NOW,
+    // before we close the modal, so the upload always has the bytes.
+    const resolveMediaItem = async (m: any) => {
+      let resolvedPath: string | Blob = m.uri || m.path || '';
+      let resolvedThumb: string | Blob | null = m.thumbnailUri || m.thumbnailUrl || null;
+
+      // On web: eagerly read blob: URLs into real Blob objects before closing the
+      // modal, since the browser may revoke them on unmount.
+      if (Platform.OS === 'web') {
+        const isLocalBlob = (uri: string) =>
+          typeof uri === 'string' && (uri.startsWith('blob:') || uri.startsWith('file://'));
+
+        if (isLocalBlob(resolvedPath as string)) {
+          try {
+            const resp = await fetch(resolvedPath as string);
+            resolvedPath = await resp.blob();
+          } catch (e) {
+            console.warn('[handlePost] Failed to pre-read audio blob:', e);
+          }
+        }
+        if (resolvedThumb && isLocalBlob(resolvedThumb as string)) {
+          try {
+            const resp = await fetch(resolvedThumb as string);
+            resolvedThumb = await resp.blob();
+          } catch (e) {
+            console.warn('[handlePost] Failed to pre-read thumbnail blob:', e);
+          }
+        }
+      }
+      // On native: ph:// and content:// URIs are normalized inside cloudMediaService
+      // via FileSystem.copyAsync, so no extra work is needed here.
+
+      return {
+        path: resolvedPath,
         type: m.type === 'video' ? MediaType.video : m.type === 'audio' ? MediaType.audio : MediaType.photo,
         source: MediaSource.device,
-        thumbnailUrl: m.thumbnailUri || m.thumbnailUrl,  // AudioPreviewWidget uses thumbnailUri
+        thumbnailUrl: resolvedThumb,
         aspectRatio: m.aspectRatio,
-        title: m.name || m.title,   // AudioPreviewWidget uses name for song title
+        title: m.name || m.title,
         artist: m.artist,
         lyrics: m.lyrics,
-      })),
-      caption: text.trim(),
-      channelId: options?.targetChannelId,
-      channelName: options?.channelName,
-      channelAvatarUrl: options?.channelAvatarUrl,
-      postType: primaryPostType,
-      shareToStatus: shareToStatus,
-      allowComments: allowComments,
-      isPublicFeed: isPublic,
-      isShortClip: selectedMedia.some((m: any) => m.type === 'video') ? isShortClip : undefined,
-    }).then(success => {
+      };
+    };
+
+    try {
+      const resolvedMedia = await Promise.all(selectedMedia.map(resolveMediaItem));
+
+      // Close modal immediately AFTER pre-reading blobs (so revocation is irrelevant)
+      closeModal();
+
+      const success = await createPost({
+        media: resolvedMedia as any,
+        caption: text.trim(),
+        channelId: options?.targetChannelId,
+        channelName: options?.channelName,
+        channelAvatarUrl: options?.channelAvatarUrl,
+        postType: primaryPostType,
+        shareToStatus: shareToStatus,
+        allowComments: allowComments,
+        isPublicFeed: isPublic,
+        isShortClip: selectedMedia.some((m: any) => m.type === 'video') ? isShortClip : undefined,
+      });
+
       if (success) {
         ChartToast.showSuccess(null, { title: 'Posted successfully!', message: 'Your post is now live.' });
       } else {
         ChartToast.showError(null, { title: 'Failed to post', message: 'Something went wrong, please try again.' });
       }
-    });
-
-    setIsPosting(false);
-    closeModal();
+    } catch (e) {
+      console.error('[handlePost] Error:', e);
+      ChartToast.showError(null, { title: 'Failed to post', message: 'Something went wrong, please try again.' });
+    } finally {
+      setIsPosting(false);
+    }
   };
 
   const handleSaveDraft = () => {

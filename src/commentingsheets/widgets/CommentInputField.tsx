@@ -3,7 +3,8 @@ import AnimatedSendButton from '@/components/ui/AnimatedSendButton';
 import { useLocalization } from '@/core/localization/LocalizationProvider';
 import { colors } from '@/core/theme/colors';
 import { Camera, Send } from 'lucide-react-native';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, ViewStyle, Keyboard } from 'react-native';
+import { RequireAuthWrapper } from '@/components/wrappers/RequireAuthWrapper';
 interface CommentInputFieldProps {
   controller: {
     value: string;
@@ -103,52 +104,64 @@ export default function CommentInputField({
     tr
   } = useLocalization();
   const showSend = controller.value.trim().length > 0 || hasMedia;
-  return <View style={[styles.container, {
-    backgroundColor: colors.background
-  }, isTikTokStyle && {
-    paddingTop: 10,
-    paddingBottom: 10
-  }, style]}>
-      <View style={styles.row}>
-        {/* Text Input Area */}
-        {showTextField ? <View style={[styles.inputWrapper, {
-        backgroundColor: isTikTokStyle ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.08)',
-        borderRadius: isTikTokStyle ? 24 : 28,
-        minHeight: isTikTokStyle ? 42 : 48
-      }]}>
-            {onTap ? <TouchableOpacity activeOpacity={0.7} style={[styles.input, {
-          justifyContent: 'center'
-        }]} onPress={e => {
-          e.stopPropagation();
-          onTap();
-        }}>
+  return (
+    <RequireAuthWrapper>
+      {({ checkAuth }) => (
+        <View style={[styles.container, {
+          backgroundColor: colors.background
+        }, isTikTokStyle && {
+          paddingTop: 10,
+          paddingBottom: 10
+        }, style]}>
+          <View style={styles.row}>
+            {/* Text Input Area */}
+            {showTextField ? <View style={[styles.inputWrapper, {
+              backgroundColor: isTikTokStyle ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.08)',
+              borderRadius: isTikTokStyle ? 24 : 28,
+              minHeight: isTikTokStyle ? 42 : 48
+            }]}>
+              {onTap ? <TouchableOpacity activeOpacity={0.7} style={[styles.input, {
+                justifyContent: 'center'
+              }]} onPress={e => {
+                e.stopPropagation();
+                checkAuth(() => onTap(), e);
+              }}>
                 <Text style={{
-            color: 'rgba(255,255,255,0.38)',
-            fontSize: 15
-          }}>
+                  color: 'rgba(255,255,255,0.38)',
+                  fontSize: 15
+                }}>
                   {isTikTokStyle ? 'Add comment...' : tr('message') || 'Message'}
                 </Text>
               </TouchableOpacity> : <TextInput style={[styles.input, {
-          color: 'white'
-        }]} placeholder={isTikTokStyle ? 'Add comment...' : tr('message') || 'Message'} placeholderTextColor="rgba(255,255,255,0.38)" value={controller.value} onChangeText={controller.onChange} multiline maxLength={1000} autoFocus={autoFocus} editable={true} />}
-            {isTikTokStyle && <TouchableOpacity activeOpacity={1} onPress={e => {
-          e.stopPropagation();
-          onImageTap?.();
-        }} style={styles.cameraBtn}>
+                color: 'white'
+              }]} placeholder={isTikTokStyle ? 'Add comment...' : tr('message') || 'Message'} placeholderTextColor="rgba(255,255,255,0.38)" value={controller.value} onChangeText={controller.onChange} multiline maxLength={1000} autoFocus={autoFocus} editable={true} onFocus={(e) => {
+                const authOk = checkAuth(() => { });
+                if (!authOk) {
+                  Keyboard.dismiss();
+                  e.target.blur();
+                }
+              }} />}
+              {isTikTokStyle && <TouchableOpacity activeOpacity={1} onPress={e => {
+                e.stopPropagation();
+                checkAuth(() => onImageTap?.(), e);
+              }} style={styles.cameraBtn}>
                 <Camera color="white" size={22} />
               </TouchableOpacity>}
-          </View> : <View style={styles.spacer} />}
+            </View> : <View style={styles.spacer} />}
 
-        <View style={styles.space8} />
+            <View style={styles.space8} />
 
-        {/* Send / Mic Button */}
-        {isTikTokStyle ? <TouchableOpacity activeOpacity={1} onPress={showSend ? () => onSend(controller.value) : undefined} style={styles.tiktokSend}>
-            <Send color={showSend ? colors.primary : 'rgba(255,255,255,0.24)'} size={28} />
-          </TouchableOpacity> : <View style={[styles.sendCircle, {
-        backgroundColor: showSend ? colors.primary : 'rgba(255,255,255,0.08)'
-      }, showSend && styles.sendCircleShadow]}>
-            <AnimatedSendButton Icon={Send} size={22} color={showSend ? 'white' : 'rgba(255,255,255,0.5)'} onTap={showSend ? () => onSend(controller.value) : () => {}} onLongPressStart={onLongPressStart} onLongPressEnd={onLongPressEnd} />
-          </View>}
-      </View>
-    </View>;
+            {/* Send / Mic Button */}
+            {isTikTokStyle ? <TouchableOpacity activeOpacity={1} onPress={showSend ? (e) => checkAuth(() => onSend(controller.value), e) : undefined} style={styles.tiktokSend}>
+              <Send color={showSend ? colors.primary : 'rgba(255,255,255,0.24)'} size={28} />
+            </TouchableOpacity> : <View style={[styles.sendCircle, {
+              backgroundColor: showSend ? colors.primary : 'rgba(255,255,255,0.08)'
+            }, showSend && styles.sendCircleShadow]}>
+              <AnimatedSendButton Icon={Send} size={22} color={showSend ? 'white' : 'rgba(255,255,255,0.5)'} onTap={showSend ? () => checkAuth(() => onSend(controller.value)) : () => { }} onLongPressStart={onLongPressStart} onLongPressEnd={onLongPressEnd} />
+            </View>}
+          </View>
+        </View>
+      )}
+    </RequireAuthWrapper>
+  );
 }

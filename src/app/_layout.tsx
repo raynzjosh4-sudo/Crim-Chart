@@ -1,9 +1,9 @@
 import { Buffer } from 'buffer';
+import 'fast-text-encoding';
 import { TouchableOpacity } from 'react-native';
 import 'react-native-get-random-values';
 import 'react-native-reanimated';
 import 'react-native-url-polyfill/auto';
-import 'fast-text-encoding';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { chartToastConfig } from '@/components/showcase/CrimChart_toast';
@@ -29,48 +29,38 @@ if (typeof (globalThis as any).Buffer === 'undefined') {
   (globalThis as any).Buffer = Buffer;
 }
 
-// Global touch feedback fix
-if (TouchableOpacity.defaultProps) {
-  TouchableOpacity.defaultProps.activeOpacity = 1;
-} else {
-  (TouchableOpacity as any).defaultProps = { activeOpacity: 1 };
-}
-
-import { Text, TextInput } from 'react-native';
-
-// Apply global font family
-const customTextProps = {
-  style: {
-    fontFamily: 'ComicRelief-Regular'
-  }
-};
-if ((Text as any).defaultProps == null) {
-  (Text as any).defaultProps = {};
-}
-(Text as any).defaultProps.style = [
-  (Text as any).defaultProps.style,
-  customTextProps.style
-];
-
-if ((TextInput as any).defaultProps == null) {
-  (TextInput as any).defaultProps = {};
-}
-(TextInput as any).defaultProps.style = [
-  (TextInput as any).defaultProps.style,
-  customTextProps.style
-];
-
 import { ExploreChannelsPage } from '@/channel/pages/ExploreChannelsPage';
 import { useExploreStore } from '@/channel/store/useExploreStore';
 import { DesktopChannelModal } from '@/channel/widgets/DesktopChannelModal';
 import { ProgressProvider } from '@/components/globalProgressBar/GlobalProgressBar';
-import { WhatsAppOverlayRoot } from '@/components/showcase/WhatsAppOverlayWidget';
-import { OfflineStaleDataBanner, SlowConnectionBanner } from '@/components/offlineIndicators';
-import { useAppPresence } from '@/core/hooks/useAppPresence';
-import { usePresenceSyncWorker } from '@/core/sync/usePresenceSyncWorker';
 import { DesktopNowPlayingModal } from '@/components/musicPlayer/DesktopNowPlayingModal';
 import { MobileNowPlayingWidget } from '@/components/musicPlayer/MobileNowPlayingWidget';
-import { Modal } from 'react-native';
+import { OfflineStaleDataBanner, SlowConnectionBanner } from '@/components/offlineIndicators';
+import { WhatsAppOverlayRoot } from '@/components/showcase/WhatsAppOverlayWidget';
+import { useAppPresence } from '@/core/hooks/useAppPresence';
+import { usePresenceSyncWorker } from '@/core/sync/usePresenceSyncWorker';
+import { Modal, Text, TextInput } from 'react-native';
+
+// ─── Global Defaults ──────────────────────────────────────────────────────────
+// Assign to local `any` aliases so TypeScript never type-checks the
+// `defaultProps` access — the RN types mark it as non-existent but the
+// runtime object is fully mutable. This is the standard RN community pattern.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const _Text: any = Text;
+_Text.defaultProps = _Text.defaultProps ?? {};
+_Text.defaultProps.style = { fontFamily: 'ComicRelief-Regular' };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const _TextInput: any = TextInput;
+_TextInput.defaultProps = _TextInput.defaultProps ?? {};
+_TextInput.defaultProps.style = { fontFamily: 'ComicRelief-Regular' };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const _Touchable: any = TouchableOpacity;
+_Touchable.defaultProps = _Touchable.defaultProps ?? {};
+_Touchable.defaultProps.activeOpacity = 1;
+// ─────────────────────────────────────────────────────────────────────────────
+
 
 const GlobalExploreModal = () => {
   const isOpen = useExploreStore(s => s.isOpen);
@@ -123,6 +113,13 @@ const injectWebScrollbarStyle = () => {
       * {
         scrollbar-width: none !important;
       }
+
+      /* 4. Global font — ComicRelief-Regular for every element.
+            React Native Web renders <Text> as <span> elements, so this is
+            the only reliable way to apply a custom font globally on web. */
+      *, *::before, *::after {
+        font-family: 'ComicRelief-Regular', sans-serif;
+      }
     `;
     document.head.appendChild(style);
 
@@ -133,14 +130,14 @@ const injectWebScrollbarStyle = () => {
     document.documentElement.style.margin = '0';
     document.documentElement.style.padding = '0';
     document.documentElement.style.backgroundColor = '#000000';
-    
+
     document.body.style.overflow = 'hidden';
     document.body.style.width = '100%';
     document.body.style.height = '100%';
     document.body.style.margin = '0';
     document.body.style.padding = '0';
     document.body.style.backgroundColor = '#000000';
-    
+
     const rootEl = document.getElementById('root');
     if (rootEl) {
       rootEl.style.overflow = 'hidden';

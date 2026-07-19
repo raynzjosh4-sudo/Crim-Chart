@@ -11,6 +11,8 @@ interface ChannelTagWrapperProps {
   onTagSuccess?: () => void;
 }
 
+import { RequireAuthWrapper } from './RequireAuthWrapper';
+
 export const ChannelTagWrapper: React.FC<ChannelTagWrapperProps> = ({
   postId,
   sourceChannelId,
@@ -50,13 +52,19 @@ export const ChannelTagWrapper: React.FC<ChannelTagWrapperProps> = ({
   // Clone the child element to inject our handleTag logic into its onPress
   // while preserving any existing onPress behavior if necessary, though 
   // usually it's just the button being pressed.
-  return React.cloneElement(children, {
-    onPress: (e: any) => {
-      handleTag();
-      const childProps = children.props as any;
-      if (childProps.onPress) {
-        childProps.onPress(e);
-      }
-    },
-  });
+  return (
+    <RequireAuthWrapper>
+      {({ checkAuth }) => React.cloneElement(children, {
+        onPress: (e: any) => {
+          checkAuth(() => {
+            handleTag();
+            const childProps = children.props as any;
+            if (childProps.onPress) {
+              childProps.onPress(e);
+            }
+          }, e);
+        },
+      })}
+    </RequireAuthWrapper>
+  );
 };

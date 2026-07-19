@@ -4,6 +4,13 @@ import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
 import { PostEntity } from '../../domain/entities/PostEntity';
 import { SocialFeedItem } from '../../domain/entities/SocialFeedItem';
 
+export interface GuestArtistRow {
+  authorId: string;
+  authorName: string;
+  authorAvatar: string | null;
+  posts: PostEntity[];
+}
+
 export class FeedRemoteSource {
   static async getDiscoveryFeed(limit = 20, offset = 0): Promise<SocialFeedItem[]> {
     const { data: { session } } = await supabase.auth.getSession();
@@ -206,6 +213,41 @@ export class FeedRemoteSource {
     } catch (e) {
       console.error('🚨 [FeedRemoteSource] getStoreFeed FAILED:', e);
       throw new Error(`Failed to get store feed: ${e}`);
+    }
+  }
+
+  static async getPublicMusicByArtist(limit = 80): Promise<GuestArtistRow[]> {
+    try {
+      const { data, error } = await supabase.rpc('get_public_music_by_artist', {
+        p_limit: limit,
+      });
+
+      if (error) throw error;
+      if (!data || (data as any[]).length === 0) return [];
+
+      // The RPC now returns { author_id, author_name, author_avatar, posts: JSONB }
+      return (data as any[]).map(row => {
+        const author = {
+          id: row.author_id,
+          display_name: row.author_name,
+          profile_image_url: row.author_avatar,
+        };
+        
+        return {
+          authorId: String(row.author_id),
+          authorName: row.author_name || 'Unknown',
+          authorAvatar: row.author_avatar || null,
+          posts: (row.posts || []).map((p: any) => PostEntity.fromMap({
+            ...p,
+            author,
+            is_audio: true,
+            privacy: 'public'
+          }))
+        };
+      });
+    } catch (e) {
+      console.error('🚨 [FeedRemoteSource] getPublicMusicByArtist FAILED:', e);
+      return [];
     }
   }
 }

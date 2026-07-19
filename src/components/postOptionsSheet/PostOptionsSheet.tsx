@@ -1,11 +1,12 @@
 import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
+import { ChartToast } from '@/components/showcase/CrimChart_toast';
+import { RequireAuthWrapper } from '@/components/wrappers/RequireAuthWrapper';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { useBlockUser } from '@/features/profile/hooks/useBlockUser';
 import { useReportPost } from '@/features/profile/hooks/useReportPost';
-import { ChartToast } from '@/components/showcase/CrimChart_toast';
 import * as Clipboard from 'expo-clipboard';
 import { Flag, Link2, Share as ShareIcon, UserX, X } from 'lucide-react-native';
 import {
@@ -151,19 +152,25 @@ export const PostOptionsSheet: React.FC<PostOptionsSheetProps> = ({ postId, auth
               <Text style={styles.optionText}>Copy Link</Text>
             </TouchableOpacity>
 
-            {authorId && currentUser?.id !== authorId && (
-              <TouchableOpacity style={styles.optionRow} onPress={handleBlockUser} activeOpacity={0.8}>
-                <UserX size={24} color={theme.colors.error} />
-                <Text style={[styles.optionText, { color: theme.colors.error }]}>
-                  Block {authorName || 'User'}
-                </Text>
-              </TouchableOpacity>
-            )}
+            <RequireAuthWrapper>
+              {({ checkAuth }) => (
+                <>
+                  {authorId && currentUser?.id !== authorId && (
+                    <TouchableOpacity style={styles.optionRow} onPress={(e) => checkAuth(handleBlockUser, e)} activeOpacity={0.8}>
+                      <UserX size={24} color={theme.colors.error} />
+                      <Text style={[styles.optionText, { color: theme.colors.error }]}>
+                        Block {authorName || 'User'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
 
-            <TouchableOpacity style={styles.optionRow} onPress={handleReportPost} activeOpacity={0.8}>
-              <Flag size={24} color={theme.colors.error} />
-              <Text style={[styles.optionText, { color: theme.colors.error }]}>Report Post</Text>
-            </TouchableOpacity>
+                  <TouchableOpacity style={styles.optionRow} onPress={(e) => checkAuth(handleReportPost, e)} activeOpacity={0.8}>
+                    <Flag size={24} color={theme.colors.error} />
+                    <Text style={[styles.optionText, { color: theme.colors.error }]}>Report Post</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </RequireAuthWrapper>
           </View>
         </View>
       </View>

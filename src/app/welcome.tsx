@@ -1,15 +1,14 @@
-import { colors } from '@/core/theme/colors';
-import { useRouter } from 'expo-router';
-import { ArrowLeft } from 'lucide-react-native';
-import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Image, Modal, Platform, SafeAreaView, Text, TouchableOpacity, View, useWindowDimensions, StyleSheet } from 'react-native';
-import LandingPage from './landing';
-import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { ChartToast } from '@/components/showcase/CrimChart_toast';
 import { useTranslation } from '@/core/localization/i18n';
-import { SignupModalWidget } from '@/signing/components/SignupModalWidget';
+import { colors } from '@/core/theme/colors';
+import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { LoginModalWidget } from '@/signing/components/LoginModalWidget';
+import { SignupModalWidget } from '@/signing/components/SignupModalWidget';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Image, Modal, Platform, SafeAreaView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import LandingPage from './landing';
 
 const allImages = [
   require('@/assets/images/welcome-floating/avatar1.webp'),
@@ -151,7 +150,7 @@ export default function WelcomePage() {
 
         {/* Foreground Content */}
         <View style={{ flex: 1, zIndex: 10 }}>
-          
+
           {/* Top Logo */}
           <View style={{ alignItems: 'center', marginTop: 40 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -188,15 +187,15 @@ export default function WelcomePage() {
               onPress={() => setActiveSheet('getStarted')}
               style={{
                 backgroundColor: '#FFFFFF',
-                paddingVertical: 16,
-                paddingHorizontal: 32,
+                paddingVertical: 12,
+                paddingHorizontal: 24,
                 borderRadius: 9999,
                 width: '100%',
                 alignItems: 'center',
-                marginBottom: 16
+                marginBottom: 10
               }}
             >
-              <Text style={{ color: '#000000', fontSize: 16, fontWeight: 'bold' }}>Get Started</Text>
+              <Text style={{ color: '#000000', fontSize: 14, fontWeight: 'bold' }}>Get Started</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -206,14 +205,31 @@ export default function WelcomePage() {
                 backgroundColor: 'transparent',
                 borderColor: 'rgba(255,255,255,0.3)',
                 borderWidth: 1,
-                paddingVertical: 16,
-                paddingHorizontal: 32,
+                paddingVertical: 12,
+                paddingHorizontal: 24,
+                borderRadius: 9999,
+                width: '100%',
+                alignItems: 'center',
+                marginBottom: 10
+              }}
+            >
+              <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: 'bold' }}>I already have an account</Text>
+            </TouchableOpacity>
+
+            {/* Browse as Guest */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => router.replace('/(tabs)' as any)}
+              style={{
+                backgroundColor: colors.primary,
+                paddingVertical: 12,
+                paddingHorizontal: 24,
                 borderRadius: 9999,
                 width: '100%',
                 alignItems: 'center',
               }}
             >
-              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' }}>I already have an account</Text>
+              <Text style={{ color: '#000000', fontSize: 14, fontWeight: 'bold' }}>Browse without signing up</Text>
             </TouchableOpacity>
           </LinearGradient>
         </View>
@@ -222,7 +238,7 @@ export default function WelcomePage() {
         <Modal visible={activeSheet !== 'none'} transparent animationType="slide">
           <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }} activeOpacity={1} onPress={() => setActiveSheet('none')}>
             <TouchableOpacity activeOpacity={1} style={{ backgroundColor: '#111', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}>
-              
+
               <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#FFF', marginBottom: 24, textAlign: 'center' }}>
                 {activeSheet === 'getStarted' ? 'Get Started' : 'Log In'}
               </Text>
@@ -289,17 +305,17 @@ export default function WelcomePage() {
 
         {/* Existing Widgets for email flow fallback */}
         {showSignupWidget && (
-          <SignupModalWidget 
-            visible={showSignupWidget} 
-            onClose={() => setShowSignupWidget(false)} 
-            onGoToLogin={() => { setShowSignupWidget(false); setShowLoginWidget(true); }} 
+          <SignupModalWidget
+            visible={showSignupWidget}
+            onClose={() => setShowSignupWidget(false)}
+            onGoToLogin={() => { setShowSignupWidget(false); setShowLoginWidget(true); }}
             onFinish={() => router.replace('/(tabs)' as any)}
           />
         )}
         {showLoginWidget && (
-          <LoginModalWidget 
-            visible={showLoginWidget} 
-            onClose={() => setShowLoginWidget(false)} 
+          <LoginModalWidget
+            visible={showLoginWidget}
+            onClose={() => setShowLoginWidget(false)}
           />
         )}
 

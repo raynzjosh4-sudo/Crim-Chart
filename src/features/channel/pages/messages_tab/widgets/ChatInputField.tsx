@@ -15,6 +15,7 @@ import {
   View,
 } from 'react-native';
 import { StickerSheet } from './StickerSheet';
+import { RequireAuthWrapper } from '@/components/wrappers/RequireAuthWrapper';
 
 // ─── Recording State Machine ──────────────────────────────────────────────────
 enum RecordState { None, Recording, Reviewing }
@@ -267,7 +268,7 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
   useEffect(() => {
     return () => {
       if (activeRecordingRef.current) {
-        activeRecordingRef.current.stopAndUnloadAsync().catch(() => {});
+        activeRecordingRef.current.stopAndUnloadAsync().catch(() => { });
       }
     };
   }, []);
@@ -395,140 +396,152 @@ export const ChatInputField: React.FC<ChatInputFieldProps> = ({
     outputRange: [-2, 0, 2],
   });
 
-  // ─── Fake waveform bars ───────────────────────────────────────────────────
   const BARS = 18;
   const waveHeights = [0.3, 0.5, 0.8, 0.6, 1.0, 0.7, 0.5, 0.9, 0.4, 0.7, 1.0, 0.6, 0.4, 0.8, 0.5, 0.9, 0.3, 0.6];
 
   return (
-    <>
-      <View style={styles.container}>
-        {/* ── Camera / Folder Icon ── */}
-        <TouchableOpacity
-          style={styles.cameraButton}
-          onPress={handlePickMedia}
-          activeOpacity={0.7}
-        >
-          <Animated.View style={{ transform: [{ translateY: cameraTranslateY }] }}>
-            <Camera size={24} color={colors.primary} />
-          </Animated.View>
-        </TouchableOpacity>
-
-        {/* ── Input / Recording / Reviewing area ── */}
-        <View style={styles.inputArea}>
-          {recordState === RecordState.Recording ? (
-            /* ── RECORDING PILL ── */
-            <View style={styles.recordingPill}>
-              <Animated.View style={{ opacity: blinkAnim }}>
-                <View style={styles.recordDot} />
+    <RequireAuthWrapper>
+      {({ checkAuth }) => (
+        <>
+          <View style={styles.container}>
+            {/* ── Camera / Folder Icon ── */}
+            <TouchableOpacity
+              style={styles.cameraButton}
+              onPress={(e) => checkAuth(handlePickMedia, e)}
+              activeOpacity={0.7}
+            >
+              <Animated.View style={{ transform: [{ translateY: cameraTranslateY }] }}>
+                <Camera size={24} color={colors.primary} />
               </Animated.View>
-              <Text style={styles.recordTime}>{fmtTime(recordSeconds)}</Text>
-              <Text style={styles.recordingLabel}>Recording...</Text>
-              <TouchableOpacity activeOpacity={1} onPress={cancelRecording} style={styles.trashBtn}>
-                <Trash2 size={16} color="#E41E3F" />
-              </TouchableOpacity>
+            </TouchableOpacity>
+
+            {/* ── Input / Recording / Reviewing area ── */}
+            <View style={styles.inputArea}>
+              {recordState === RecordState.Recording ? (
+                /* ── RECORDING PILL ── */
+                <View style={styles.recordingPill}>
+                  <Animated.View style={{ opacity: blinkAnim }}>
+                    <View style={styles.recordDot} />
+                  </Animated.View>
+                  <Text style={styles.recordTime}>{fmtTime(recordSeconds)}</Text>
+                  <Text style={styles.recordingLabel}>Recording...</Text>
+                  <TouchableOpacity activeOpacity={1} onPress={cancelRecording} style={styles.trashBtn}>
+                    <Trash2 size={16} color="#E41E3F" />
+                  </TouchableOpacity>
+                </View>
+              ) : recordState === RecordState.Reviewing ? (
+                /* ── REVIEWING PILL (with waveform + playback) ── */
+                <View style={styles.reviewingPill}>
+                  {/* Trash */}
+                  <TouchableOpacity activeOpacity={1} onPress={cancelRecording} style={styles.trashBtn}>
+                    <Trash2 size={16} color="#E41E3F" />
+                  </TouchableOpacity>
+
+                  {/* Play/Pause */}
+                  <TouchableOpacity activeOpacity={1} onPress={togglePlayback} style={styles.playBtn}>
+                    {isPlaying
+                      ? <Pause size={16} color="#FFF" />
+                      : <Play size={16} color="#FFF" />
+                    }
+                  </TouchableOpacity>
+
+                  {/* Fake waveform */}
+                  <View style={styles.waveform}>
+                    {waveHeights.map((h, i) => {
+                      // bars before playback progress → active color, else dim
+                      const progress = recordSeconds > 0 ? playSeconds / recordSeconds : 0;
+                      const isActive = (i / BARS) < progress;
+                      return (
+                        <Animated.View
+                          key={i}
+                          style={[
+                            styles.waveBar,
+                            {
+                              height: 28 * h,
+                              backgroundColor: isActive ? colors.primary : 'rgba(255,255,255,0.25)',
+                              transform: [{ scaleY: isPlaying ? waveAnim : 1 }],
+                            },
+                          ]}
+                        />
+                      );
+                    })}
+                  </View>
+
+                  {/* Duration */}
+                  <Text style={styles.playTime}>{fmtTime(playSeconds)}</Text>
+                </View>
+              ) : (
+                /* ── NORMAL INPUT ── */
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Type a message..."
+                    placeholderTextColor="rgba(255,255,255,0.35)"
+                    multiline
+                    value={text}
+                    onChangeText={(newText) => {
+                      if (checkAuth(() => { })) {
+                        handleTyping(newText);
+                      }
+                    }}
+                    onFocus={(e: any) => {
+                      if (!checkAuth(() => { }, e)) {
+                        e.target?.blur?.();
+                      }
+                    }}
+                  />
+                  <TouchableOpacity
+                    style={styles.iconBtn}
+                    onPress={(e) => checkAuth(() => setIsStickerSheetVisible(true), e)}
+                    activeOpacity={0.7}
+                  >
+                    <Smile size={20} color="rgba(255,255,255,0.5)" />
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
-          ) : recordState === RecordState.Reviewing ? (
-            /* ── REVIEWING PILL (with waveform + playback) ── */
-            <View style={styles.reviewingPill}>
-              {/* Trash */}
-              <TouchableOpacity activeOpacity={1} onPress={cancelRecording} style={styles.trashBtn}>
-                <Trash2 size={16} color="#E41E3F" />
-              </TouchableOpacity>
 
-              {/* Play/Pause */}
-              <TouchableOpacity activeOpacity={1} onPress={togglePlayback} style={styles.playBtn}>
-                {isPlaying
-                  ? <Pause size={16} color="#FFF" />
-                  : <Play size={16} color="#FFF" />
-                }
-              </TouchableOpacity>
+            {/* ── Send / Stop / Mic Button ── */}
+            <TouchableOpacity
+              style={[styles.sendButton, { backgroundColor: sendBgColor }]}
+              onPress={(e) => checkAuth(handleSubmit, e)}
+              activeOpacity={0.8}
+            >
+              <SendIcon />
+            </TouchableOpacity>
+          </View>
 
-              {/* Fake waveform */}
-              <View style={styles.waveform}>
-                {waveHeights.map((h, i) => {
-                  // bars before playback progress → active color, else dim
-                  const progress = recordSeconds > 0 ? playSeconds / recordSeconds : 0;
-                  const isActive = (i / BARS) < progress;
-                  return (
-                    <Animated.View
-                      key={i}
-                      style={[
-                        styles.waveBar,
-                        {
-                          height: 28 * h,
-                          backgroundColor: isActive ? colors.primary : 'rgba(255,255,255,0.25)',
-                          transform: [{ scaleY: isPlaying ? waveAnim : 1 }],
-                        },
-                      ]}
-                    />
-                  );
-                })}
-              </View>
+          {/* ── Sticker / Emoji Sheet ── */}
+          <StickerSheet
+            visible={isStickerSheetVisible}
+            onClose={() => setIsStickerSheetVisible(false)}
+            onStickerSelected={(index) => {
+              setIsStickerSheetVisible(false);
+              onLottieSubmitted?.(index);
+            }}
+          />
 
-              {/* Duration */}
-              <Text style={styles.playTime}>{fmtTime(playSeconds)}</Text>
-            </View>
-          ) : (
-            /* ── NORMAL INPUT ── */
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.input}
-                placeholder="Type a message..."
-                placeholderTextColor="rgba(255,255,255,0.35)"
-                multiline
-                value={text}
-                onChangeText={handleTyping}
-              />
-              <TouchableOpacity
-                style={styles.iconBtn}
-                onPress={() => setIsStickerSheetVisible(true)}
-                activeOpacity={0.7}
-              >
-                <Smile size={20} color="rgba(255,255,255,0.5)" />
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
+          {/* ── Permission Dialogs ── */}
+          <PermissionDialog
+            visible={showCameraPermission}
+            title="Camera Roll Permission"
+            description="We need access to your photos so you can share images and videos in the chat."
+            icon={<Camera size={24} color={colors.primary} />}
+            onCancel={() => setShowCameraPermission(false)}
+            onConfirm={() => setShowCameraPermission(false)}
+          />
 
-        {/* ── Send / Stop / Mic Button ── */}
-        <TouchableOpacity
-          style={[styles.sendButton, { backgroundColor: sendBgColor }]}
-          onPress={handleSubmit}
-          activeOpacity={0.8}
-        >
-          <SendIcon />
-        </TouchableOpacity>
-      </View>
-
-      {/* ── Sticker / Emoji Sheet ── */}
-      <StickerSheet
-        visible={isStickerSheetVisible}
-        onClose={() => setIsStickerSheetVisible(false)}
-        onStickerSelected={(index) => {
-          setIsStickerSheetVisible(false);
-          onLottieSubmitted?.(index);
-        }}
-      />
-
-      {/* ── Permission Dialogs ── */}
-      <PermissionDialog
-        visible={showCameraPermission}
-        title="Camera Roll Permission"
-        description="We need access to your photos so you can share images and videos in the chat."
-        icon={<Camera size={24} color={colors.primary} />}
-        onCancel={() => setShowCameraPermission(false)}
-        onConfirm={() => setShowCameraPermission(false)}
-      />
-
-      <PermissionDialog
-        visible={showMicPermission}
-        title="Microphone Permission"
-        description="Crown needs access to your microphone so you can record and send voice messages directly to the channel."
-        icon={<Mic size={24} color={colors.primary} />}
-        onCancel={() => setShowMicPermission(false)}
-        onConfirm={() => setShowMicPermission(false)}
-      />
-    </>
+          <PermissionDialog
+            visible={showMicPermission}
+            title="Microphone Permission"
+            description="Crown needs access to your microphone so you can record and send voice messages directly to the channel."
+            icon={<Mic size={24} color={colors.primary} />}
+            onCancel={() => setShowMicPermission(false)}
+            onConfirm={() => setShowMicPermission(false)}
+          />
+        </>
+      )}
+    </RequireAuthWrapper>
   );
 };
 

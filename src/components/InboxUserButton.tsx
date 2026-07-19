@@ -9,6 +9,7 @@ import 'react-native-get-random-values';
 import { useStyles } from '@/core/hooks/useStyles';
 import { ThemeTokens } from '@/core/theme/themes';
 import { InboxDetailPage } from '@/features/messaging/pages/InboxDetailPage';
+import { RequireAuthWrapper } from '@/components/wrappers/RequireAuthWrapper';
 
 export interface InboxUserButtonProps {
   targetUserId: string;
@@ -141,24 +142,28 @@ export const InboxUserButton: React.FC<InboxUserButtonProps> = ({ targetUserId, 
 
   return (
     <>
-      <TouchableOpacity
-        ref={buttonRef}
-        style={[style, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }]}
-        onPress={handlePress}
-        disabled={isLoading || isChecking}
-        activeOpacity={0.85}
-      >
-        {isLoading || isChecking ? (
-          <Text style={[styles.text, textStyle]}>-</Text>
-        ) : (
-          <>
-            {existingThreadId && <MessageSquareText size={16} color={textStyle?.color || '#FFF'} />}
-            <Text style={[styles.text, textStyle]}>
-              {existingThreadId ? 'Message' : 'Inbox'}
-            </Text>
-          </>
+      <RequireAuthWrapper>
+        {({ checkAuth }) => (
+          <TouchableOpacity
+            ref={buttonRef}
+            style={[style, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }]}
+            onPress={(e) => checkAuth(handlePress, e)}
+            disabled={isLoading || isChecking}
+            activeOpacity={0.85}
+          >
+            {isLoading || isChecking ? (
+              <Text style={[styles.text, textStyle]}>-</Text>
+            ) : (
+              <>
+                {existingThreadId && <MessageSquareText size={16} color={textStyle?.color || '#FFF'} />}
+                <Text style={[styles.text, textStyle]}>
+                  {existingThreadId ? 'Message' : 'Inbox'}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
         )}
-      </TouchableOpacity>
+      </RequireAuthWrapper>
 
       <Modal visible={showIntentPicker} transparent animationType={isDesktop ? "fade" : "slide"} onRequestClose={() => setShowIntentPicker(false)}>
         <TouchableOpacity activeOpacity={1} style={isDesktop ? styles.desktopModalOverlay : styles.modalOverlay} onPress={() => setShowIntentPicker(false)}>

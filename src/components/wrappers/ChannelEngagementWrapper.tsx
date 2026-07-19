@@ -3,6 +3,7 @@ import { supabase } from '@/core/supabase/client';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { useEffect, useState } from 'react';
 import { ChannelEngagementButton, EngagementUiState } from './ChannelEngagementButton';
+import { RequireAuthWrapper } from './RequireAuthWrapper';
 
 interface ChannelEngagementWrapperProps {
   channelId: string;
@@ -116,7 +117,13 @@ export const ChannelEngagementWrapper: React.FC<ChannelEngagementWrapperProps> =
   };
 
   if (!user) {
-    return <ChannelEngagementButton uiState={EngagementUiState.OpenNotJoined} onTap={() => console.log('Tapped unauth')} />;
+    return (
+      <RequireAuthWrapper>
+        {({ checkAuth }) => (
+          <ChannelEngagementButton uiState={EngagementUiState.OpenNotJoined} onTap={() => { checkAuth(() => {}); }} />
+        )}
+      </RequireAuthWrapper>
+    );
   }
 
   if (creatorId === user.id) {

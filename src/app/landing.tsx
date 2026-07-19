@@ -247,6 +247,7 @@ export default function LandingPage({ asChild }: { asChild?: boolean } = {}) {
           onCreateAccount={() => setSignupModalVisible(true)}
           onLoginClick={() => setAuthChoiceVisible(true)}
           onLanguageClick={() => setLanguageModalVisible(true)}
+          onBrowseAsGuest={() => router.replace('/(tabs)' as any)}
         />
         <TabsLayer />
         <GridLayer />

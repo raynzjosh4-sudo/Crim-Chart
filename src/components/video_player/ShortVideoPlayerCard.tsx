@@ -25,6 +25,7 @@ import { LikeButton } from '../../video/widgets/LikeButton';
 import { FollowUserButton } from '@/components/FollowUserButton';
 import ChannelFollowButton from '@/channel/widgets/ChannelFollowButton';
 import { VideoScrubber } from './VideoScrubber';
+import { RequireAuthWrapper } from '@/components/wrappers/RequireAuthWrapper';
 
 interface ShortVideoPlayerCardProps {
   video: VideoPost;
@@ -333,16 +334,24 @@ const ShortVideoPlayerCardComponent = ({
                   onLike={onLike}
                 />
               </View>
-              <ActionBtn
-                icon={<MessageCircle color="#FFF" size={30} />}
-                count={commentsCount}
-                onPress={onComment}
-              />
-              <ActionBtn
-                icon={<Tag color="#FFF" size={30} />}
-                count={video.tagsCount ?? 0}
-                onPress={() => setTagOverlayVisible(true)}
-              />
+              <RequireAuthWrapper>
+                {({ checkAuth }) => (
+                  <ActionBtn
+                    icon={<MessageCircle color="#FFF" size={30} />}
+                    count={commentsCount}
+                    onPress={() => checkAuth(() => onComment?.())}
+                  />
+                )}
+              </RequireAuthWrapper>
+              <RequireAuthWrapper>
+                {({ checkAuth }) => (
+                  <ActionBtn
+                    icon={<Tag color="#FFF" size={30} />}
+                    count={video.tagsCount ?? 0}
+                    onPress={() => checkAuth(() => setTagOverlayVisible(true))}
+                  />
+                )}
+              </RequireAuthWrapper>
               <ActionBtn
                 icon={<Eye color="#FFF" size={30} />}
                 count={viewsCount}
@@ -361,9 +370,13 @@ const ShortVideoPlayerCardComponent = ({
             {/* Bottom Input Area */}
             {!hideBottomInput && (
               <View style={[styles.inputContainerWrapper, { paddingBottom: Math.max(insets.bottom, 16) }]} pointerEvents={disableInteractions ? 'none' : 'auto'}>
-                <TouchableOpacity style={styles.commentButton} onPress={onComment} activeOpacity={0.8}>
-                  <Text style={styles.commentButtonText}>Add comment...</Text>
-                </TouchableOpacity>
+                <RequireAuthWrapper>
+                  {({ checkAuth }) => (
+                    <TouchableOpacity style={styles.commentButton} onPress={() => checkAuth(() => onComment?.())} activeOpacity={0.8}>
+                      <Text style={styles.commentButtonText}>Add comment...</Text>
+                    </TouchableOpacity>
+                  )}
+                </RequireAuthWrapper>
               </View>
             )}
           </>

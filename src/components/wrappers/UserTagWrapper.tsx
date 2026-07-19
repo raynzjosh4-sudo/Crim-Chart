@@ -13,6 +13,8 @@ interface UserTagWrapperProps {
   sourceTable?: string;
 }
 
+import { RequireAuthWrapper } from './RequireAuthWrapper';
+
 export const UserTagWrapper: React.FC<UserTagWrapperProps> = ({
   postId,
   targetUserId,
@@ -42,11 +44,17 @@ export const UserTagWrapper: React.FC<UserTagWrapperProps> = ({
     }
   };
 
-  return React.cloneElement(children, {
-    onPress: (e: any) => {
-      handleTag();
-      const childProps = children.props as any;
-      if (childProps.onPress) childProps.onPress(e);
-    },
-  });
+  return (
+    <RequireAuthWrapper>
+      {({ checkAuth }) => React.cloneElement(children, {
+        onPress: (e: any) => {
+          checkAuth(() => {
+            handleTag();
+            const childProps = children.props as any;
+            if (childProps.onPress) childProps.onPress(e);
+          }, e);
+        },
+      })}
+    </RequireAuthWrapper>
+  );
 };

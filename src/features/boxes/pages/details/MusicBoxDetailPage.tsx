@@ -24,6 +24,12 @@ import { TrendingInBoxWidget } from '../../components/details/TrendingInBoxWidge
 import { MusicPostingPage } from '../../components/music_posting/MusicPostingPage';
 import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import { useDesktopNowPlayingStore } from '@/core/store/useDesktopNowPlayingStore';
+import { Share as ShareIcon, Copy, MoreVertical } from 'lucide-react-native';
+import * as Clipboard from 'expo-clipboard';
+import { Share as RNShare, ToastAndroid, TouchableOpacity } from 'react-native';
+import { ProfileMusicItem } from '@/components/profileTabsWidgets/ProfileMusicItem';
+import UserAvatar from '@/components/avatar/UserAvatar';
+import { BoxOptionsSheet } from '../../components/BoxOptionsSheet';
 const {
   width: windowWidth
 } = Dimensions.get('window');
@@ -184,6 +190,8 @@ export const MusicBoxDetailPage = ({
   const [showComments, setShowComments] = useState(false);
   const [activePostId, setActivePostId] = useState<string | null>(null);
   const [showPostingModal, setShowPostingModal] = useState(false);
+  const [showOptionsSheet, setShowOptionsSheet] = useState(false);
+  const [optionsAnchor, setOptionsAnchor] = useState<{ x: number; y: number } | undefined>(undefined);
   const pathname = usePathname();
   const isPageActive = isFocused && !pathname.includes('now-playing');
   const [appStateVisible, setAppStateVisible] = useState(AppState.currentState);
@@ -209,23 +217,33 @@ export const MusicBoxDetailPage = ({
     if (!selectedFilterUserId) return displayedItems;
     return displayedItems.filter(item => item.addedBy.id === selectedFilterUserId);
   }, [displayedItems, selectedFilterUserId]);
+  const groupedUsers = React.useMemo(() => {
+    const map = new Map<string, { user: any, items: any[] }>();
+    filteredItems.forEach(item => {
+      const u = item.addedBy;
+      if (!u) return;
+      if (!map.has(u.id)) {
+        map.set(u.id, { user: u, items: [] });
+      }
+      map.get(u.id)!.items.push(item);
+    });
+    return Array.from(map.values());
+  }, [filteredItems]);
+
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 90,
     minimumViewTime: 300
   }).current;
-  const onViewableItemsChanged = useRef(({
-    viewableItems
-  }: {
-    viewableItems: ViewToken[];
-  }) => {
-    if (viewableItems.length > 0) {
-      setActiveTrackId(viewableItems[0].item.id);
-    }
+  
+  const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
+    // Kept for signature compatibility if needed, but horizontal lists make this less relevant globally
   }).current;
+  
   const flatListRef = useRef<FlatList<any>>();
   
-  const handleTrackPlay = (trackId: string, trackObj?: any) => {
-    let queue = filteredItems.map(item => ({
+  const handleTrackPlay = (trackId: string, trackObj?: any, contextItems?: any[]) => {
+    const itemsToUse = contextItems || filteredItems;
+    let queue = itemsToUse.map(item => ({
       title: item.title,
       artist: item.artist,
       coverUrl: item.thumbnailUrl,
@@ -234,9 +252,9 @@ export const MusicBoxDetailPage = ({
       boxId: item.boxId
     }));
     
-    let index = filteredItems.findIndex(i => i.id === trackId);
+    let index = itemsToUse.findIndex(i => i.id === trackId);
     
-    // Fallback if track is not in filteredItems (e.g. from Trending widget)
+    // Fallback if track is not in itemsToUse (e.g. from Trending widget)
     if (index === -1 && trackObj) {
       queue = [{
         title: trackObj.title,
@@ -247,7 +265,7 @@ export const MusicBoxDetailPage = ({
       index = 0;
     }
 
-    useDesktopNowPlayingStore.getState().openModal(queue, index);
+    useDesktopNowPlayingStore.getState().openModal(queue, Math.max(0, index));
   };
 
   const renderHeader = () => {
@@ -265,16 +283,39 @@ export const MusicBoxDetailPage = ({
       }} />
       </View>;
   };
-  const renderSongRow = ({
-    item: song
-  }: {
-    item: any;
-  }) => {
-    const isPlaying = activeTrackId === song.id && isPageActive && appStateVisible === 'active';
-    return <MusicBoxDetailTrackTile song={song} isPlaying={isPlaying} onPlay={() => handleTrackPlay(song.id)} onCommentPress={postId => {
-      setActivePostId(postId);
-      setShowComments(true);
-    }} />;
+  const renderUserRow = ({ item: group }: { item: { user: any, items: any[] } }) => {
+    return (
+      <View style={{ marginBottom: 24 }}>
+        <TouchableOpacity 
+          style={{ flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginBottom: 12 }}
+          activeOpacity={0.8}
+          onPress={() => router.push(`/profile/${group.user.id}` as any)}
+        >
+          <UserAvatar userId={group.user.id} fallbackUrl={group.user.avatarUrl} name={group.user.name} size={36} forceHasStatus={false} />
+          <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: '700', marginLeft: 12 }}>
+            {group.user.name}
+          </Text>
+        </TouchableOpacity>
+        <FlatList
+          data={group.items}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={track => track.id}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
+          renderItem={({ item: song }) => (
+            <View style={{ marginRight: 6 }}>
+              <ProfileMusicItem
+                thumbnailUrl={song.thumbnailUrl}
+                title={song.title}
+                artist={song.artist}
+                size={148}
+                onPress={() => handleTrackPlay(song.id, undefined, group.items)}
+              />
+            </View>
+          )}
+        />
+      </View>
+    );
   };
   const renderFooter = () => {
     if (!isFetchingMore) return null;
@@ -284,11 +325,27 @@ export const MusicBoxDetailPage = ({
         <PaginationShimmer />
       </View>;
   };
+  const handleMoreOptions = (event: any) => {
+    if (Platform.OS === 'web') {
+      const rect = event.nativeEvent?.target?.getBoundingClientRect();
+      if (rect) {
+        setOptionsAnchor({ x: rect.left, y: rect.bottom });
+      } else {
+        setOptionsAnchor({ x: windowWidth - 60, y: 60 });
+      }
+    }
+    setShowOptionsSheet(true);
+  };
+
   const isOwner = currentUser?.id === (fetchedBox as any)?.raw?.owner_id;
   const showInitialLoading = (isLoading || isItemsLoading) && displayedItems.length === 0;
   return <VisibilityBoxTrackerWrapper box={fetchedBox} isCurrentUser={isOwner} actionType="view_box">
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        <ChartAppBar onBack={onClose} backgroundColor="transparent" showBorder={false} useSafeArea={false} titleWidget={<View style={{
+        <ChartAppBar onBack={onClose} backgroundColor="transparent" showBorder={false} useSafeArea={false} actions={[
+          <TouchableOpacity key="more" onPress={handleMoreOptions} style={{ padding: 4, marginLeft: 8 }} activeOpacity={0.8}>
+            <MoreVertical size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+        ]} titleWidget={<View style={{
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'flex-start'
@@ -328,7 +385,7 @@ export const MusicBoxDetailPage = ({
                 {selectedFilterUserId ? "No tracks from this user." : "No tracks added yet."}
               </Text>
             </View>
-          </View> : <FlatList ref={flatListRef} data={filteredItems} keyExtractor={item => item.id} renderItem={renderSongRow} ItemSeparatorComponent={() => <View style={styles.separator} />} ListHeaderComponent={renderHeader()} ListFooterComponent={renderFooter()} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false} onViewableItemsChanged={onViewableItemsChanged} viewabilityConfig={viewabilityConfig} onEndReached={loadMore} onEndReachedThreshold={0.5} />}
+          </View> : <FlatList ref={flatListRef} data={groupedUsers} keyExtractor={item => item.user.id} renderItem={renderUserRow} ListHeaderComponent={renderHeader()} ListFooterComponent={renderFooter()} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false} onViewableItemsChanged={onViewableItemsChanged} viewabilityConfig={viewabilityConfig} onEndReached={loadMore} onEndReachedThreshold={0.5} />}
       </SafeAreaView>
 
       {/* Member Activity Status Modal */}
@@ -340,5 +397,12 @@ export const MusicBoxDetailPage = ({
 
       {/* Comment Sheet */}
       {showComments && activePostId && <CommentSheet postId={activePostId} visible={showComments} onClose={() => setShowComments(false)} />}
+      <BoxOptionsSheet
+        boxId={id}
+        boxTitle={fetchedBox?.title}
+        visible={showOptionsSheet}
+        onClose={() => setShowOptionsSheet(false)}
+        anchorPosition={optionsAnchor}
+      />
     </VisibilityBoxTrackerWrapper>;
 };

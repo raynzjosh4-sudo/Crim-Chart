@@ -1,7 +1,7 @@
 import { AuthStatus, useAuthStore } from '@/features/auth/application/useAuthStore';
-import { useRouter, useSegments, usePathname, useGlobalSearchParams } from 'expo-router';
-import { useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useGlobalSearchParams, usePathname, useRouter, useSegments } from 'expo-router';
+import { useEffect } from 'react';
 
 export function useProtectedRoute() {
   const { status, checkSession, pendingGoogleOnboarding, user } = useAuthStore();
@@ -35,22 +35,30 @@ export function useProtectedRoute() {
       return;
     }
 
-    // Rule 2: Not logged in? Stay on public/auth pages.
+    // Rule 2: Not logged in? Allow access to public platform pages, restrict specific routes.
     if (status === AuthStatus.UNAUTHENTICATED && !inAuthGroup && !pendingGoogleOnboarding) {
-      console.log('[ROUTE] UNAUTHENTICATED + not in auth group -> /welcome');
-      
-      // Save deep link if it's not the root path
-      if (pathname && pathname !== '/') {
-        let fullPath = pathname;
-        const queryParams = new URLSearchParams(searchParams as any).toString();
-        if (queryParams) {
-          fullPath += `?${queryParams}`;
+      const protectedRoutes = ['inbox', 'notifications', 'profile', 'settings', 'user', 'add-post'];
+      const isProtected = protectedRoutes.some(route => (segments as string[]).includes(route));
+
+      if (isProtected) {
+        console.log(`[ROUTE] UNAUTHENTICATED + protected route (${segments.join('/')}) -> /welcome`);
+        
+        // Save deep link if it's not the root path
+        if (pathname && pathname !== '/') {
+          let fullPath = pathname;
+          const queryParams = new URLSearchParams(searchParams as any).toString();
+          if (queryParams) {
+            fullPath += `?${queryParams}`;
+          }
+          AsyncStorage.setItem('pending_deep_link', fullPath).catch(console.error);
         }
-        AsyncStorage.setItem('pending_deep_link', fullPath).catch(console.error);
+        
+        router.replace('/welcome');
+        return;
       }
       
-      router.replace('/welcome');
-      return;
+      // If it's a public route (like feed, explore, (tabs)), allow access!
+      console.log(`[ROUTE] UNAUTHENTICATED + public platform route (${segments.join('/')}) -> allowed`);
     } 
     // Rule 3: Logged in? Enforce onboarding completion.
     if (status === AuthStatus.AUTHENTICATED && user) {

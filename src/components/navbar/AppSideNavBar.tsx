@@ -3,6 +3,7 @@ import { useStyles } from '@/core/hooks/useStyles';
 import { useDesktopComposeStore } from '@/core/store/useDesktopComposeStore';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { SearchPromptBadge } from '@/components/badge/SearchPromptBadge';
+import { RequireAuthWrapper } from '@/components/wrappers/RequireAuthWrapper';
 import { ThemeTokens } from '@/core/theme/themes';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { useNotificationStore } from '@/features/notifications/application/useNotificationStore';
@@ -146,31 +147,35 @@ export const AppSideNavBar = ({ selectedIndex, onItemTapped, homeBadgeCount = 0 
       </ScrollView>
 
       {/* Global Post Button */}
-      <TouchableOpacity
-        style={[styles.postButton, {
-          width: isExpanded ? '80%' : 50,
-          height: isExpanded ? 50 : 50,
-          borderRadius: 25,
-          backgroundColor: colors.primary
-        }]}
-        activeOpacity={0.8}
-        onPress={() => {
-          if (pathname.includes('/channel/channelpage') && id) {
-            useDesktopComposeStore.getState().openModal({
-              targetChannelId: id as string,
-              postType: 'channel_post',
-            });
-          } else {
-            useDesktopComposeStore.getState().openModal();
-          }
-        }}
-      >
-        {isExpanded ? (
-          <Text style={styles.postButtonText}>Post</Text>
-        ) : (
-          <Feather size={24} color="#000" />
+      <RequireAuthWrapper>
+        {({ checkAuth }) => (
+          <TouchableOpacity
+            style={[styles.postButton, {
+              width: isExpanded ? '80%' : 50,
+              height: isExpanded ? 50 : 50,
+              borderRadius: 25,
+              backgroundColor: colors.primary
+            }]}
+            activeOpacity={0.8}
+            onPress={() => checkAuth(() => {
+              if (pathname.includes('/channel/channelpage') && id) {
+                useDesktopComposeStore.getState().openModal({
+                  targetChannelId: id as string,
+                  postType: 'channel_post',
+                });
+              } else {
+                useDesktopComposeStore.getState().openModal();
+              }
+            })}
+          >
+            {isExpanded ? (
+              <Text style={styles.postButtonText}>Post</Text>
+            ) : (
+              <Feather size={24} color="#000" />
+            )}
+          </TouchableOpacity>
         )}
-      </TouchableOpacity>
+      </RequireAuthWrapper>
 
       {/* Bottom Profile Button */}
       {user && (

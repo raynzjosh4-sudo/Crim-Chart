@@ -6,6 +6,7 @@ import { ResizeMode, Video } from 'expo-av';
 import { Image as ExpoImage } from 'expo-image';
 import { Heart } from 'lucide-react-native';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { RequireAuthWrapper } from '@/components/wrappers/RequireAuthWrapper';
 export interface CommentModel {
   id: string;
   post_id: string;
@@ -130,49 +131,55 @@ export const CommentItem: React.FC<CommentItemProps> = ({
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h`;
     return `${Math.floor(diffInSeconds / 86400)}d`;
   };
-  return <View style={styles.container}>
-      <ExpoImage source={comment.author_avatar_url ? {
-      uri: comment.author_avatar_url
-    } : require('../../../assets/images/favicon.png')} style={styles.avatar} contentFit="cover" />
-      <View style={styles.contentContainer}>
-        <View style={styles.headerRow}>
-          <Text style={styles.username}>{comment.author_username}</Text>
-          <Text style={styles.timestamp}>{timeAgo(comment.created_at)}</Text>
-        </View>
-        <Text style={styles.commentText}>{comment.text}</Text>
+  return (
+    <RequireAuthWrapper>
+      {({ checkAuth }) => (
+        <View style={styles.container}>
+          <ExpoImage source={comment.author_avatar_url ? {
+            uri: comment.author_avatar_url
+          } : require('../../../assets/images/favicon.png')} style={styles.avatar} contentFit="cover" />
+          <View style={styles.contentContainer}>
+            <View style={styles.headerRow}>
+              <Text style={styles.username}>{comment.author_username}</Text>
+              <Text style={styles.timestamp}>{timeAgo(comment.created_at)}</Text>
+            </View>
+            <Text style={styles.commentText}>{comment.text}</Text>
 
-        {comment.media_url && comment.media_type === 'image' && <ExpoImage source={{
-        uri: comment.media_url
-      }} style={[styles.commentMedia, {
-        width: 200,
-        height: 200
-      }]} contentFit="cover" />}
-        {comment.media_url && comment.media_type === 'video' && <Video source={{
-        uri: comment.media_url
-      }} style={[styles.commentMedia, {
-        width: 240,
-        height: 135
-      }]} resizeMode={ResizeMode.COVER} useNativeControls isLooping={false} />}
-        {comment.media_url && comment.media_type === 'audio' && <View style={{
-        marginTop: 8,
-        marginBottom: 8
-      }}>
-            <VoiceMessagePlayer url={comment.media_url} isMe={false} />
-          </View>}
+            {comment.media_url && comment.media_type === 'image' && <ExpoImage source={{
+              uri: comment.media_url
+            }} style={[styles.commentMedia, {
+              width: 200,
+              height: 200
+            }]} contentFit="cover" />}
+            {comment.media_url && comment.media_type === 'video' && <Video source={{
+              uri: comment.media_url
+            }} style={[styles.commentMedia, {
+              width: 240,
+              height: 135
+            }]} resizeMode={ResizeMode.COVER} useNativeControls isLooping={false} />}
+            {comment.media_url && comment.media_type === 'audio' && <View style={{
+              marginTop: 8,
+              marginBottom: 8
+            }}>
+              <VoiceMessagePlayer url={comment.media_url} isMe={false} />
+            </View>}
 
-        <View style={styles.actionsRow}>
-          <TouchableOpacity activeOpacity={1} onPress={() => onReply && onReply(comment.id, comment.author_username)} style={styles.actionBtn}>
-            <Text style={styles.actionText}>Reply</Text>
-          </TouchableOpacity>
+            <View style={styles.actionsRow}>
+              <TouchableOpacity activeOpacity={1} onPress={(e) => checkAuth(() => onReply && onReply(comment.id, comment.author_username), e)} style={styles.actionBtn}>
+                <Text style={styles.actionText}>Reply</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <View style={styles.likeContainer}>
+            <TouchableOpacity onPress={(e) => checkAuth(() => toggleLike(comment.id), e)} style={styles.likeBtn} activeOpacity={0.7}>
+              <Heart size={16} color={isLiked ? colors.primary : "rgba(255,255,255,0.4)"} fill={isLiked ? colors.primary : "transparent"} />
+            </TouchableOpacity>
+            {likesCount > 0 && <Text style={[styles.likeCount, isLiked && {
+              color: colors.primary
+            }]}>{likesCount}</Text>}
+          </View>
         </View>
-      </View>
-      <View style={styles.likeContainer}>
-        <TouchableOpacity onPress={() => toggleLike(comment.id)} style={styles.likeBtn} activeOpacity={0.7}>
-          <Heart size={16} color={isLiked ? colors.primary : "rgba(255,255,255,0.4)"} fill={isLiked ? colors.primary : "transparent"} />
-        </TouchableOpacity>
-        {likesCount > 0 && <Text style={[styles.likeCount, isLiked && {
-        color: colors.primary
-      }]}>{likesCount}</Text>}
-      </View>
-    </View>;
+      )}
+    </RequireAuthWrapper>
+  );
 };

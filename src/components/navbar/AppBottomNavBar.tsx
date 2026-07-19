@@ -5,6 +5,7 @@ import { BadgeIcon } from '@/mainFeed/features/bottomappbar/iconwithbarge/BadgeI
 import { Clapperboard, Compass, Home, MessageCircle, PlusCircle } from 'lucide-react-native';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { RequireAuthWrapper } from '@/components/wrappers/RequireAuthWrapper';
 import { AppBottomNavBarProps } from './AppBottomNavBarProps';
 
 export const AppBottomNavBar = ({
@@ -107,9 +108,13 @@ const NavItem = ({
 
 const AddButton = ({ onTap, color, styles }: { onTap: () => void; color: string; styles: any }) => {
   return (
-    <TouchableOpacity onPress={onTap} style={styles.addButton} activeOpacity={0.8}>
-      <PlusCircle color={color} size={36} />
-    </TouchableOpacity>
+    <RequireAuthWrapper>
+      {({ checkAuth }) => (
+        <TouchableOpacity onPress={() => checkAuth(onTap)} style={styles.addButton} activeOpacity={0.8}>
+          <PlusCircle color={color} size={36} />
+        </TouchableOpacity>
+      )}
+    </RequireAuthWrapper>
   );
 };
 
