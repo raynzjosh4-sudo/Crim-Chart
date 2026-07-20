@@ -221,20 +221,14 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     padding: 20,
   },
   card: {
     width: '100%',
     maxWidth: 480,
-    backgroundColor: '#151515', // premium dark material look
-    borderRadius: 24,
-    padding: 32,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    ...(isWeb && {
-      boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)' as any,
-    }),
+    paddingTop: 40,
+    paddingBottom: 40,
   },
   iconCircle: {
     width: 64,
