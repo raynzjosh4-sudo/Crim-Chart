@@ -8,7 +8,7 @@ import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { useBlockUser } from '@/features/profile/hooks/useBlockUser';
 import { useReportPost } from '@/features/profile/hooks/useReportPost';
 import * as Clipboard from 'expo-clipboard';
-import { Flag, Link2, Share as ShareIcon, UserX, X } from 'lucide-react-native';
+import { Flag, Link2, Share as ShareIcon, Trash2, UserX, X } from 'lucide-react-native';
 import {
   Modal,
   Platform,
@@ -30,9 +30,10 @@ interface PostOptionsSheetProps {
   visible: boolean;
   onClose: () => void;
   anchorPosition?: { x: number; y: number };
+  onDeletePost?: () => void;
 }
 
-export const PostOptionsSheet: React.FC<PostOptionsSheetProps> = ({ postId, authorId, authorName, authorAvatarUrl, visible, onClose, anchorPosition }) => {
+export const PostOptionsSheet: React.FC<PostOptionsSheetProps> = ({ postId, authorId, authorName, authorAvatarUrl, visible, onClose, anchorPosition, onDeletePost }) => {
   const insets = useSafeAreaInsets();
   const styles = useStyles(themeStyles);
   const theme = useCurrentTheme();
@@ -152,6 +153,21 @@ export const PostOptionsSheet: React.FC<PostOptionsSheetProps> = ({ postId, auth
               <Text style={styles.optionText}>Copy Link</Text>
             </TouchableOpacity>
 
+            {/* Delete Post — only visible to the post author */}
+            {currentUser?.id && authorId && currentUser.id === authorId && onDeletePost && (
+              <TouchableOpacity
+                style={styles.optionRow}
+                activeOpacity={0.8}
+                onPress={() => {
+                  onClose();
+                  onDeletePost();
+                }}
+              >
+                <Trash2 size={24} color={theme.colors.error} />
+                <Text style={[styles.optionText, { color: theme.colors.error }]}>Delete Post</Text>
+              </TouchableOpacity>
+            )}
+
             <RequireAuthWrapper>
               {({ checkAuth }) => (
                 <>
@@ -164,10 +180,12 @@ export const PostOptionsSheet: React.FC<PostOptionsSheetProps> = ({ postId, auth
                     </TouchableOpacity>
                   )}
 
-                  <TouchableOpacity style={styles.optionRow} onPress={(e) => checkAuth(handleReportPost, e)} activeOpacity={0.8}>
-                    <Flag size={24} color={theme.colors.error} />
-                    <Text style={[styles.optionText, { color: theme.colors.error }]}>Report Post</Text>
-                  </TouchableOpacity>
+                  {authorId && currentUser?.id !== authorId && (
+                    <TouchableOpacity style={styles.optionRow} onPress={(e) => checkAuth(handleReportPost, e)} activeOpacity={0.8}>
+                      <Flag size={24} color={theme.colors.error} />
+                      <Text style={[styles.optionText, { color: theme.colors.error }]}>Report Post</Text>
+                    </TouchableOpacity>
+                  )}
                 </>
               )}
             </RequireAuthWrapper>

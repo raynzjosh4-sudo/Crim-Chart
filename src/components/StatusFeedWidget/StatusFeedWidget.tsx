@@ -8,6 +8,8 @@ import { useRouter } from 'expo-router';
 import { useStyles } from '@/core/hooks/useStyles';
 import { useCurrentTheme } from '@/core/store/useThemeStore';
 import { ThemeTokens } from '@/core/theme/themes';
+import { supabase } from '@/core/supabase/supabaseConfig';
+import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 
 import { StatusImageWidget } from './sub_widgets/StatusImageWidget';
@@ -47,6 +49,19 @@ export const StatusFeedWidget: React.FC<StatusFeedWidgetProps> = ({
   const styles = useStyles(themeStyles);
   const theme = useCurrentTheme();
   const { startLoading, stopLoading } = useGlobalProgress();
+  const currentUserId = useAuthStore(state => state.user?.id);
+
+  const handleDeleteStatus = React.useCallback(async () => {
+    try {
+      startLoading();
+      // Statuses are stored in 'profile_media' table
+      await supabase.from('profile_media').delete().eq('id', statusId);
+    } catch (err) {
+      console.error('[StatusFeedWidget] delete error:', err);
+    } finally {
+      stopLoading();
+    }
+  }, [statusId, startLoading, stopLoading]);
 
   const allImages = React.useMemo(() => {
     const imgs: string[] = [];
@@ -113,6 +128,7 @@ export const StatusFeedWidget: React.FC<StatusFeedWidgetProps> = ({
         visible={postOptionsVisible}
         onClose={() => setPostOptionsVisible(false)}
         anchorPosition={postOptionsPosition}
+        onDeletePost={currentUserId === author?.id ? handleDeleteStatus : undefined}
       />
     </View>
   );

@@ -132,6 +132,24 @@ export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
   const currentUserProfile = useCurrentUserProfile();
   const { startLoading, stopLoading } = useGlobalProgress();
 
+  const handleDeletePost = React.useCallback(async () => {
+    if (!videoData?.id || !videoData?.sourceTable) return;
+    try {
+      startLoading();
+      const { error } = await supabase
+        .from(videoData.sourceTable)
+        .delete()
+        .eq('id', videoData.id);
+      if (error) throw error;
+      // Optimistically remove from feed by hiding the card
+      setFetchedState(null);
+    } catch (err: any) {
+      console.error('[VideoPostFeedCard] delete error:', err);
+    } finally {
+      stopLoading();
+    }
+  }, [videoData?.id, videoData?.sourceTable, startLoading, stopLoading]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -262,12 +280,13 @@ export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
               />
               <PostOptionsSheet
                 postId={videoData.id}
-                authorId={videoData.author_id}
-                authorName={videoData.author_name}
-                authorAvatarUrl={videoData.author_avatar}
+                authorId={videoData.addedBy?.id}
+                authorName={videoData.addedBy?.name}
+                authorAvatarUrl={videoData.addedBy?.avatarUrl}
                 visible={postOptionsVisible}
                 onClose={() => setPostOptionsVisible(false)}
                 anchorPosition={postOptionsPosition}
+                onDeletePost={handleDeletePost}
               />
             </View>
           )}
@@ -298,12 +317,13 @@ export const VideoPostFeedCard: React.FC<VideoPostFeedCardProps> = React.memo(({
             />
             <PostOptionsSheet
               postId={videoData.id}
-              authorId={videoData.author_id}
-              authorName={videoData.author_name}
-              authorAvatarUrl={videoData.author_avatar}
+              authorId={videoData.addedBy?.id}
+              authorName={videoData.addedBy?.name}
+              authorAvatarUrl={videoData.addedBy?.avatarUrl}
               visible={postOptionsVisible}
               onClose={() => setPostOptionsVisible(false)}
               anchorPosition={postOptionsPosition}
+              onDeletePost={handleDeletePost}
             />
           </View>
         )}

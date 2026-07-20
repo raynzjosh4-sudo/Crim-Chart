@@ -5,6 +5,8 @@ import { CrimChartUserModel } from '@/profile/models/CrimChartUserModel';
 import { useDesktopChannelModalStore } from '@/core/store/useDesktopChannelModalStore';
 import { useGlobalProgress } from '@/components/globalProgressBar/GlobalProgressBar';
 import { useRouter } from 'expo-router';
+import { supabase } from '@/core/supabase/supabaseConfig';
+import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { Eye, Tag } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Platform, Text, TouchableOpacity, View } from 'react-native';
@@ -48,6 +50,8 @@ export interface RegularPostCardProps {
   onLikeTap?: () => void;
   taggerName?: string | null;
   taggerAvatar?: string | null;
+  sourceTable?: string | null;
+  onDeletePost?: () => void;
 }
 
 export const RegularPostCard: React.FC<RegularPostCardProps> = ({
@@ -79,6 +83,8 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
   onLikeTap,
   taggerName,
   taggerAvatar,
+  sourceTable,
+  onDeletePost,
 }) => {
   const { canComment: contextCanComment } = useFeedPermissions();
   const canComment = canCommentProp && contextCanComment;
@@ -89,6 +95,20 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
   const [postOptionsPosition, setPostOptionsPosition] = useState<{ x: number; y: number } | undefined>(undefined);
   const styles = useStyles(themeStyles);
   const theme = useCurrentTheme();
+  const currentUserId = useAuthStore(state => state.user?.id);
+
+  const handleDeletePost = React.useCallback(async () => {
+    if (!postId || !sourceTable) return;
+    try {
+      startLoading();
+      await supabase.from(sourceTable).delete().eq('id', postId);
+      onDeletePost?.();
+    } catch (err) {
+      console.error('[RegularPostCard] delete error:', err);
+    } finally {
+      stopLoading();
+    }
+  }, [postId, sourceTable, startLoading, stopLoading, onDeletePost]);
 
   const allImages = React.useMemo(() => {
     const imgs: string[] = [];
@@ -249,6 +269,7 @@ export const RegularPostCard: React.FC<RegularPostCardProps> = ({
         visible={postOptionsVisible}
         onClose={() => setPostOptionsVisible(false)}
         anchorPosition={postOptionsPosition}
+        onDeletePost={currentUserId === author?.id ? handleDeletePost : undefined}
       />
     </View>
   );
