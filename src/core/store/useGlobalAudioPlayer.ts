@@ -10,6 +10,7 @@
 import { Audio } from 'expo-av';
 import { create } from 'zustand';
 import { useDesktopNowPlayingStore } from './useDesktopNowPlayingStore';
+import { MediaNotificationService } from '../notifications/MediaNotificationService';
 
 interface GlobalAudioPlayerState {
   currentTrackId: string | null;
@@ -93,11 +94,26 @@ export const useGlobalAudioPlayer = create<GlobalAudioPlayerState>((set, get) =>
       await _sound.playAsync();
 
       set({ isPlaying: true });
+      
+      const updateNotification = (playing: boolean) => {
+        const { queue, currentIndex } = useDesktopNowPlayingStore.getState();
+        const hasNext = currentIndex < queue.length - 1;
+        const hasPrev = currentIndex > 0;
+        MediaNotificationService.displayMediaNotification(
+          { title: meta?.title || 'Unknown', artist: meta?.artist || 'Unknown', coverUrl: meta?.coverUrl },
+          playing,
+          hasPrev,
+          hasNext
+        );
+      };
+      
+      updateNotification(true);
 
       // Set status callback to detect when sound finishes and track progress
       newSound.setOnPlaybackStatusUpdate((status) => {
         if (!status.isLoaded) {
           set({ isPlaying: false });
+          MediaNotificationService.clearNotification();
         } else {
           set({
             position: status.positionMillis,
@@ -127,6 +143,17 @@ export const useGlobalAudioPlayer = create<GlobalAudioPlayerState>((set, get) =>
         });
       }
       set({ isPlaying: false });
+      
+      const { currentTrackMeta } = get();
+      if (currentTrackMeta) {
+        const { queue, currentIndex } = useDesktopNowPlayingStore.getState();
+        MediaNotificationService.displayMediaNotification(
+          currentTrackMeta,
+          false,
+          currentIndex > 0,
+          currentIndex < queue.length - 1
+        );
+      }
     } catch (e) {
       console.warn('[GlobalAudioPlayer] pauseCurrent error:', e);
     }
@@ -141,6 +168,17 @@ export const useGlobalAudioPlayer = create<GlobalAudioPlayerState>((set, get) =>
           }
         });
         set({ isPlaying: true });
+        
+        const { currentTrackMeta } = get();
+        if (currentTrackMeta) {
+          const { queue, currentIndex } = useDesktopNowPlayingStore.getState();
+          MediaNotificationService.displayMediaNotification(
+            currentTrackMeta,
+            true,
+            currentIndex > 0,
+            currentIndex < queue.length - 1
+          );
+        }
       }
     } catch (e) {
       console.warn('[GlobalAudioPlayer] resumeCurrent error:', e);
@@ -169,6 +207,8 @@ export const useGlobalAudioPlayer = create<GlobalAudioPlayerState>((set, get) =>
     _sound = null;
     _currentUrl = null;
     set({ currentTrackId: null, isPlaying: false, currentTrackMeta: null, position: 0, duration: 0 });
+    
+    MediaNotificationService.clearNotification();
 
     if (soundToStop) {
       try {

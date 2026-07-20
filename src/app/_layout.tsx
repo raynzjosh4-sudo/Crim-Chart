@@ -35,7 +35,6 @@ import { DesktopChannelModal } from '@/channel/widgets/DesktopChannelModal';
 import { ProgressProvider } from '@/components/globalProgressBar/GlobalProgressBar';
 import { DesktopNowPlayingModal } from '@/components/musicPlayer/DesktopNowPlayingModal';
 import { MobileNowPlayingWidget } from '@/components/musicPlayer/MobileNowPlayingWidget';
-import { FloatingMusicWidget } from '@/components/musicPlayer/FloatingMusicWidget';
 import { OfflineStaleDataBanner, SlowConnectionBanner } from '@/components/offlineIndicators';
 import { WhatsAppOverlayRoot } from '@/components/showcase/WhatsAppOverlayWidget';
 import { useAppPresence } from '@/core/hooks/useAppPresence';
@@ -203,7 +202,6 @@ export default function RootLayout() {
               <DesktopChannelModal />
               <DesktopNowPlayingModal />
               <MobileNowPlayingWidget />
-              <FloatingMusicWidget />
               <WhatsAppOverlayRoot />
               <TermsConsentWidget />
               <Toast config={{ ...chartToastConfig, ...toastConfig }} />
