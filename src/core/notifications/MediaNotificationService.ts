@@ -1,4 +1,4 @@
-import notifee, { AndroidImportance, EventType } from '@notifee/react-native';
+import notifee, { AndroidImportance, EventType, AndroidAction } from '@notifee/react-native';
 import { Platform } from 'react-native';
 import { useGlobalAudioPlayer } from '@/core/store/useGlobalAudioPlayer';
 import { useDesktopNowPlayingStore } from '@/core/store/useDesktopNowPlayingStore';
@@ -45,7 +45,7 @@ class MediaNotificationServiceImpl {
     if (Platform.OS !== 'android') return;
     await this.init();
 
-    const actions = [];
+    const actions: AndroidAction[] = [];
     
     if (hasPrev) {
       actions.push({
