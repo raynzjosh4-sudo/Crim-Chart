@@ -214,59 +214,75 @@ export const usePostingStore = create<PostingState>((set) => ({
       await checkAndWaitForNetwork();
 
       for (const m of visualMedia) {
-        let uploadedMainUrl = m.path;
+        const rawPath = m.path || (m as any).uri || '';
+        let uploadedMainUrl = rawPath;
 
-        if (m.type === MediaType.video && (m.path.startsWith('file://') || m.path.startsWith('/') || m.path.startsWith('blob:'))) {
-          console.log('[usePostingStore] 1️⃣ Uploading raw video...');
-          const videoFilename = `${user.id}_${Date.now()}.mp4`;
-          
-          // Re-check network before this heavy upload step
-          await checkAndWaitForNetwork();
-          await notificationService.showUploadProgress(taskId, 30);
-          await cloudMediaService.uploadRawVideoForTranscoding(m.path, videoFilename);
+        const isLocalString = (p: any) => typeof p === 'string' && (p.startsWith('file://') || p.startsWith('/') || p.startsWith('blob:'));
+        const isBlob = (p: any) => typeof Blob !== 'undefined' && p instanceof Blob;
 
-          console.log('[usePostingStore] 2️⃣ Processing video...');
-          await notificationService.showUploadProgress(taskId, 60);
-          const { data: functionData, error: functionError } = await supabase.functions.invoke('process-video', {
-            body: { 
-              videoFilename: videoFilename,
-              userId: user.id 
+        if (m.type === MediaType.video && (isLocalString(rawPath) || isBlob(rawPath))) {
+          if (isBlob(rawPath)) {
+            // Pre-read Blob from web modal — upload directly to R2 as a regular image/video
+            console.log('[usePostingStore] ☁️ Uploading video blob...');
+            await checkAndWaitForNetwork();
+            uploadedMainUrl = await cloudMediaService.uploadMedia(rawPath as any, 'posts_media', user.id);
+            console.log('[usePostingStore] ✅ Video blob uploaded.');
+            galleryUrls.push(uploadedMainUrl);
+            await notificationService.showUploadProgress(taskId, 75);
+          } else {
+            console.log('[usePostingStore] 1️⃣ Uploading raw video...');
+            const videoFilename = `${user.id}_${Date.now()}.mp4`;
+            
+            // Re-check network before this heavy upload step
+            await checkAndWaitForNetwork();
+            await notificationService.showUploadProgress(taskId, 30);
+            await cloudMediaService.uploadRawVideoForTranscoding(rawPath as string, videoFilename);
+
+            console.log('[usePostingStore] 2️⃣ Processing video...');
+            await notificationService.showUploadProgress(taskId, 60);
+            const { data: functionData, error: functionError } = await supabase.functions.invoke('process-video', {
+              body: { 
+                videoFilename: videoFilename,
+                userId: user.id 
+              }
+            });
+
+            if (functionData?.error) throw new Error(functionData.error); 
+            if (functionError) throw new Error('Posting failed');
+            // Guard: never store a raw .mp4 URL in the database
+            if (!functionData.streamUrl || functionData.streamUrl.endsWith('.mp4')) {
+              throw new Error('Posting failed: video not ready yet');
             }
-          });
-
-          if (functionData?.error) throw new Error(functionData.error); 
-          if (functionError) throw new Error('Posting failed');
-          // Guard: never store a raw .mp4 URL in the database
-          if (!functionData.streamUrl || functionData.streamUrl.endsWith('.mp4')) {
-            throw new Error('Posting failed: video not ready yet');
+            console.log('[usePostingStore] ✅ Video ready!');
+            
+            uploadedMainUrl = functionData.streamUrl;
+            galleryUrls.push(uploadedMainUrl);
+            galleryThumbs.push(functionData.thumbnailUrl);
+            await notificationService.showUploadProgress(taskId, 75);
           }
-          console.log('[usePostingStore] ✅ Video ready!');
-          
-          uploadedMainUrl = functionData.streamUrl;
-          galleryUrls.push(uploadedMainUrl);
-          galleryThumbs.push(functionData.thumbnailUrl);
-          await notificationService.showUploadProgress(taskId, 75);
 
-        } else if (m.path.startsWith('file://') || m.path.startsWith('/') || m.path.startsWith('blob:')) {
-          // blob: URLs come from the web image picker — upload to R2
+        } else if (isLocalString(rawPath) || isBlob(rawPath)) {
+          // blob: URLs (string) or pre-read Blob objects from the web modal picker
           console.log('[usePostingStore] ☁️ Uploading image...');
           await checkAndWaitForNetwork();
-          uploadedMainUrl = await cloudMediaService.uploadMedia(m.path, 'posts_media', user.id);
+          uploadedMainUrl = await cloudMediaService.uploadMedia(rawPath as any, 'posts_media', user.id);
           console.log('[usePostingStore] ✅ Image uploaded.');
           galleryUrls.push(uploadedMainUrl);
           await notificationService.showUploadProgress(taskId, 75);
         } else {
-          galleryUrls.push(m.path);
+          galleryUrls.push(rawPath as string);
         }
 
         // Process the local thumbnail if it exists
         if (m.thumbnailUrl) {
-          if (m.thumbnailUrl === m.path) {
+          const thumbIsLocalString = typeof m.thumbnailUrl === 'string' && (m.thumbnailUrl.startsWith('file://') || m.thumbnailUrl.startsWith('/') || m.thumbnailUrl.startsWith('blob:'));
+          const thumbIsBlob = typeof Blob !== 'undefined' && (m.thumbnailUrl as any) instanceof Blob;
+          if (m.thumbnailUrl === rawPath) {
             if (m.type !== MediaType.video) {
               galleryThumbs.push(uploadedMainUrl);
             }
-          } else if (m.thumbnailUrl.startsWith('file://') || m.thumbnailUrl.startsWith('/') || m.thumbnailUrl.startsWith('blob:')) {
-            const thumbUrl = await cloudMediaService.uploadMedia(m.thumbnailUrl, 'posts_media_thumbs', user.id);
+          } else if (thumbIsLocalString || thumbIsBlob) {
+            const thumbUrl = await cloudMediaService.uploadMedia(m.thumbnailUrl as any, 'posts_media_thumbs', user.id);
             if (m.type === MediaType.video) {
               if (galleryThumbs.length > 0) {
                 galleryThumbs[galleryThumbs.length - 1] = thumbUrl;
@@ -296,22 +312,28 @@ export const usePostingStore = create<PostingState>((set) => ({
       }
 
       if (audioMedia) {
-        if (audioMedia.path.startsWith('file://') || audioMedia.path.startsWith('/') || audioMedia.path.startsWith('blob:')) {
+        const audioPath = audioMedia.path;
+        const audioIsLocalString = typeof audioPath === 'string' && (audioPath.startsWith('file://') || audioPath.startsWith('/') || audioPath.startsWith('blob:'));
+        const audioIsBlob = typeof Blob !== 'undefined' && (audioPath as any) instanceof Blob;
+        if (audioIsLocalString || audioIsBlob) {
           console.log('[usePostingStore] ☁️ Uploading audio to Cloudflare R2...');
-          const url = await cloudMediaService.uploadMedia(audioMedia.path, 'posts_audio', user.id);
+          const url = await cloudMediaService.uploadMedia(audioPath as any, 'posts_audio', user.id);
           console.log('[usePostingStore] ✅ Audio uploaded:', url);
           finalAudioUrl = url;
         } else {
-          finalAudioUrl = audioMedia.path;
+          finalAudioUrl = typeof audioPath === 'string' ? audioPath : null;
         }
 
         // Upload the audio cover image (thumbnail)
         if (audioMedia.thumbnailUrl) {
-          if (audioMedia.thumbnailUrl.startsWith('file://') || audioMedia.thumbnailUrl.startsWith('/') || audioMedia.thumbnailUrl.startsWith('blob:')) {
-            const thumbUrl = await cloudMediaService.uploadMedia(audioMedia.thumbnailUrl, 'posts_media_thumbs', user.id);
+          const audioThumb = audioMedia.thumbnailUrl;
+          const thumbIsLocalString = typeof audioThumb === 'string' && (audioThumb.startsWith('file://') || audioThumb.startsWith('/') || audioThumb.startsWith('blob:'));
+          const thumbIsBlob = typeof Blob !== 'undefined' && (audioThumb as any) instanceof Blob;
+          if (thumbIsLocalString || thumbIsBlob) {
+            const thumbUrl = await cloudMediaService.uploadMedia(audioThumb as any, 'posts_media_thumbs', user.id);
             galleryThumbs.push(thumbUrl);
           } else {
-            galleryThumbs.push(audioMedia.thumbnailUrl);
+            galleryThumbs.push(audioThumb as string);
           }
         }
 

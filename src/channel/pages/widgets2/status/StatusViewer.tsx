@@ -7,13 +7,79 @@ import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { ChevronLeft, ChevronRight, MoreHorizontal, X } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Dimensions, Modal, Platform, StatusBar, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AudioStatusOverlay } from './AudioStatusOverlay';
 import { StatusProgressBar } from './StatusProgressBar';
+import { Audio, AVPlaybackStatus } from 'expo-av';
+
+// --- StatusAudioPlayer: uses expo-av Audio.Sound for headless audio playback ---
+// expo-video's VideoView requires a visible view to play audio on mobile.
+// expo-av's Audio.Sound plays without any UI, solving the silent audio bug.
+const StatusAudioPlayer = ({ url, isPaused, onLoad }: { url: string; isPaused: boolean; onLoad: (dur: number) => void }) => {
+  const soundRef = useRef<Audio.Sound | null>(null);
+  const onLoadRef = useRef(onLoad);
+  onLoadRef.current = onLoad;
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadSound = async () => {
+      try {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: false,
+        });
+        const { sound, status } = await Audio.Sound.createAsync(
+          { uri: url },
+          { shouldPlay: !isPaused, progressUpdateIntervalMillis: 100 }
+        );
+        if (!isMounted) { sound.unloadAsync(); return; }
+        soundRef.current = sound;
+        const loaded = status as AVPlaybackStatus;
+        if (loaded.isLoaded && loaded.durationMillis) {
+          onLoadRef.current(loaded.durationMillis);
+        }
+        sound.setOnPlaybackStatusUpdate((s: AVPlaybackStatus) => {
+          if (!isMounted) return;
+          if (s.isLoaded && s.durationMillis) {
+            onLoadRef.current(s.durationMillis);
+          }
+        });
+      } catch (e) {
+        console.warn('[StatusAudioPlayer] load error:', e);
+      }
+    };
+    loadSound();
+    return () => {
+      isMounted = false;
+      soundRef.current?.unloadAsync();
+      soundRef.current = null;
+    };
+  }, [url]);
+
+  useEffect(() => {
+    if (!soundRef.current) return;
+    if (isPaused) {
+      soundRef.current.pauseAsync().catch(() => {});
+    } else {
+      soundRef.current.playAsync().catch(() => {});
+    }
+  }, [isPaused]);
+
+  return null; // no UI needed
+};
+
+const getSafeSource = (url: any) => {
+  if (!url) return undefined;
+  if (typeof url === 'string') return url; // Let expo-image handle string vs uri object, actually {uri: url} is better
+  if (typeof url === 'number') return url;
+  if (url.uri) return { uri: url.uri };
+  return { uri: String(url) };
+};
 
 // --- StatusVideo Component ---
 const StatusVideo = ({ url, isPaused, onLoad, isPlaying, contentFit = 'cover' }: { url: string, isPaused: boolean, onLoad: (dur: number) => void, isPlaying: boolean, contentFit?: 'cover' | 'contain' }) => {
@@ -381,13 +447,13 @@ export const StatusViewer: React.FC<StatusViewerProps> = ({
                         ) : currentMedia?.type === 'image' ? (
                           <>
                             <ExpoImage
-                              source={{ uri: currentMedia.url }}
+                              source={getSafeSource(currentMedia.url)}
                               style={StyleSheet.absoluteFillObject}
                               contentFit="cover"
                               blurRadius={40}
                             />
                             <ExpoImage
-                              source={{ uri: currentMedia.url }}
+                              source={getSafeSource(currentMedia.url)}
                               style={StyleSheet.absoluteFillObject}
                               contentFit="contain"
                               onLoadStart={() => setIsMediaLoaded(false)}
@@ -400,26 +466,38 @@ export const StatusViewer: React.FC<StatusViewerProps> = ({
                             {/* On desktop, video is contained, so we also show the blurred background */}
                             {(!isMediaLoaded || currentMedia.isAudio || isDesktop) && currentMedia.thumbnail && (
                               <ExpoImage
-                                source={{ uri: currentMedia.thumbnail }}
+                                source={getSafeSource(currentMedia.thumbnail)}
                                 style={StyleSheet.absoluteFillObject}
                                 contentFit="cover"
                                 blurRadius={currentMedia.isAudio ? 20 : 40}
                               />
                             )}
 
-                            {/* The video player will play both video and audio. For audio, it will be invisible. */}
-                            <View style={currentMedia.isAudio ? { width: 1, height: 1, opacity: 0, position: 'absolute' } : [StyleSheet.absoluteFillObject, { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }]}>
-                              <StatusVideo
+                            {/* Audio statuses: use expo-av Audio.Sound (plays headlessly, no visible view needed) */}
+                            {/* Real video statuses: use StatusVideo with VideoView */}
+                            {currentMedia.isAudio ? (
+                              <StatusAudioPlayer
                                 url={currentMedia.url}
                                 isPaused={isPaused || showOptions}
-                                isPlaying={true}
-                                contentFit={isDesktop ? 'contain' : 'cover'}
                                 onLoad={(dur) => {
                                   if (dur && !isNaN(dur)) setMediaDuration(dur);
                                   setIsMediaLoaded(true);
                                 }}
                               />
-                            </View>
+                            ) : (
+                              <View style={[StyleSheet.absoluteFillObject, { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }]}>
+                                <StatusVideo
+                                  url={currentMedia.url}
+                                  isPaused={isPaused || showOptions}
+                                  isPlaying={true}
+                                  contentFit={isDesktop ? 'contain' : 'cover'}
+                                  onLoad={(dur) => {
+                                    if (dur && !isNaN(dur)) setMediaDuration(dur);
+                                    setIsMediaLoaded(true);
+                                  }}
+                                />
+                              </View>
+                            )}
 
                             {/* Render Audio Widget on top if it is an audio status */}
                             {currentMedia.isAudio && (
@@ -436,7 +514,7 @@ export const StatusViewer: React.FC<StatusViewerProps> = ({
                         {/* Prefetch Next Media */}
                         {nextMedia?.type === 'image' && (
                           <ExpoImage
-                            source={{ uri: nextMedia.url }}
+                            source={getSafeSource(nextMedia.url)}
                             style={{ width: 1, height: 1, opacity: 0, position: 'absolute' }}
                             contentFit="contain"
                           />
