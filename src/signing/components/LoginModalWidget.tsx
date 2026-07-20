@@ -4,7 +4,7 @@ import { ArrowLeft, Eye, EyeOff } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { useRouter } from 'expo-router';
-import { Image, Modal, Platform, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 interface LoginModalWidgetProps {
   visible: boolean;
   onClose: () => void;
@@ -61,10 +61,10 @@ export function LoginModalWidget({
       width: 36
     },
     content: {
-      flex: 1,
+      flexGrow: 1,
       paddingHorizontal: '8%',
       paddingTop: '6%',
-      paddingBottom: '4%'
+      paddingBottom: '8%'
     },
     title: {
       fontSize: 28,
@@ -223,7 +223,7 @@ export function LoginModalWidget({
           </View>
 
           {/* Content */}
-          <View style={styles.content}>
+          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
             {view === 'login' ? <>
                 <Image 
                   source={require('@/assets/appicon/big-sized-app-icon.png')} 
@@ -393,7 +393,7 @@ export function LoginModalWidget({
               height: 24
             }} />
               </>}
-          </View>
+          </ScrollView>
         </View>
       </View>
     </Modal>;
