@@ -21,7 +21,7 @@ import {
   Send,
   Type, UserCheck, UserPlus
 } from 'lucide-react-native';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform, Linking } from 'react-native';
 
 export default function SettingsPage({ isSplitPane = false }: { isSplitPane?: boolean }) {
   const router = useRouter();
@@ -180,6 +180,22 @@ export default function SettingsPage({ isSplitPane = false }: { isSplitPane?: bo
           }}
         >
           <Text style={[styles.textButtonLabel, { color: '#FF453A' }]}>{t('log_out')}</Text>
+        </TouchableOpacity>
+
+        {renderDivider()}
+
+        {renderSectionHeader('Danger Zone')}
+        <TouchableOpacity activeOpacity={1}
+          style={styles.textButton}
+          onPress={() => {
+            if (Platform.OS === 'web') {
+              window.open('https://crimchart.com/delete-account', '_blank');
+            } else {
+              Linking.openURL('https://crimchart.com/delete-account');
+            }
+          }}
+        >
+          <Text style={[styles.textButtonLabel, { color: '#FF3B30', fontWeight: 'bold' }]}>Delete Account</Text>
         </TouchableOpacity>
 
         <View style={styles.footerSpacer} />

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, Pressable, Platform, useWindowDimensions, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors } from '@/core/theme/colors';
-import { supabase } from '@/core/db/database';
+import { supabase } from '@/core/supabase/supabaseConfig';
 import { AlertTriangle, Lock, Trash2, CheckCircle2 } from 'lucide-react-native';
 import { useAuthStore } from '@/features/auth/application/useAuthStore';
 import { ChartToast } from '@/components/showcase/CrimChart_toast';
@@ -75,7 +75,7 @@ export default function DeleteAccountPage() {
         setDeleteError(error.message);
       } else {
         // Clear local auth store
-        useAuthStore.getState().logout();
+        useAuthStore.getState().signOut();
         setStep('done');
       }
     } catch (err: any) {
