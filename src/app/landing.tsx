@@ -245,7 +245,15 @@ export default function LandingPage({ asChild }: { asChild?: boolean } = {}) {
         <HeroLayer
           onGoogleLogin={handleGoogleLogin}
           onCreateAccount={() => setSignupModalVisible(true)}
-          onLoginClick={() => setAuthChoiceVisible(true)}
+          onLoginClick={(u, p) => {
+            if (u || p) {
+              setTopUsername(u || '');
+              setTopPassword(p || '');
+              setLoginModalVisible(true);
+            } else {
+              setAuthChoiceVisible(true);
+            }
+          }}
           onLanguageClick={() => setLanguageModalVisible(true)}
           onBrowseAsGuest={() => router.replace('/(tabs)' as any)}
         />

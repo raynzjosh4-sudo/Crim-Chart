@@ -10,7 +10,7 @@ import { UserMenuWidget } from './UserMenuWidget';
 interface HeroLayerProps {
   onGoogleLogin: () => void;
   onCreateAccount: () => void;
-  onLoginClick: () => void;
+  onLoginClick: (username?: string, password?: string) => void;
   onLanguageClick?: () => void;
   onBrowseAsGuest: () => void;
 }
@@ -77,7 +77,7 @@ export function HeroLayer({ onGoogleLogin, onCreateAccount, onLoginClick, onLang
 
             {/* Sign in */}
             <Pressable 
-              onPress={onLoginClick} 
+              onPress={() => onLoginClick()} 
               style={({ pressed }) => [styles.outlinePill, pressed && { opacity: 0.85 }]}
             >
               <Text style={[styles.outlinePillText, { color: colors.primary }]}>Log In</Text>

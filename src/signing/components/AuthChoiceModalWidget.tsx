@@ -22,7 +22,7 @@ export function AuthChoiceModalWidget({ visible, onClose, onLoginClick, onSignup
   const isDesktop = width >= 768;
 
   const modalWidth = isDesktop ? Math.min(width * 0.4, 450) : width;
-  const modalHeight = isDesktop ? Math.min(height * 0.7, 550) : height;
+  const modalHeight = isDesktop ? Math.min(height * 0.85, 650) : height;
   const modalBorderRadius = isDesktop ? 16 : 0;
 
   const handleGoogleLogin = async () => {

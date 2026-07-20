@@ -6,7 +6,7 @@ import { Platform, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, use
 const isWeb = Platform.OS === 'web';
 
 interface UserMenuWidgetProps {
-  onLoginClick: () => void;
+  onLoginClick: (username?: string, password?: string) => void;
   onCreateAccount: () => void;
 }
 
@@ -36,7 +36,7 @@ export function UserMenuWidget({ onLoginClick, onCreateAccount }: UserMenuWidget
             value={password}
             onChangeText={setPassword}
           />
-          <TouchableOpacity style={styles.loginBtnSmall} onPress={onLoginClick}>
+          <TouchableOpacity style={styles.loginBtnSmall} onPress={() => onLoginClick(username, password)}>
             <Text style={styles.loginBtnSmallText}>Log in</Text>
           </TouchableOpacity>
         </>
