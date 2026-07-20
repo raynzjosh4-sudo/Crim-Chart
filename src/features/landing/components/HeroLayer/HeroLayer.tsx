@@ -98,12 +98,17 @@ export function HeroLayer({ onGoogleLogin, onCreateAccount, onLoginClick, onLang
             </TouchableOpacity>
 
             <View style={{ height: 18 }} />
-            <Text style={styles.tos}>
-              By signing up, you agree to our{' '}
-              <Text style={styles.tosLink} onPress={() => router.push('/terms')}>Terms of Service</Text>
-              {' '}and{' '}
-              <Text style={styles.tosLink} onPress={() => router.push('/privacy')}>Privacy Policy</Text>.
-            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+              <Text style={styles.tos}>By signing up, you agree to our </Text>
+              <TouchableOpacity activeOpacity={0.7} onPress={() => router.push('/terms')}>
+                <Text style={styles.tosLink}>Terms of Service</Text>
+              </TouchableOpacity>
+              <Text style={styles.tos}> and </Text>
+              <TouchableOpacity activeOpacity={0.7} onPress={() => router.push('/privacy')}>
+                <Text style={styles.tosLink}>Privacy Policy</Text>
+              </TouchableOpacity>
+              <Text style={styles.tos}>.</Text>
+            </View>
           </View>
         </View>
 

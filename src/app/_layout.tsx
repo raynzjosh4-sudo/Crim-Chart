@@ -40,6 +40,7 @@ import { WhatsAppOverlayRoot } from '@/components/showcase/WhatsAppOverlayWidget
 import { useAppPresence } from '@/core/hooks/useAppPresence';
 import { usePresenceSyncWorker } from '@/core/sync/usePresenceSyncWorker';
 import { Modal, Text, TextInput } from 'react-native';
+import { TermsConsentWidget } from '@/components/TermsConsentWidget';
 
 // ─── Global Defaults ──────────────────────────────────────────────────────────
 // Assign to local `any` aliases so TypeScript never type-checks the
@@ -202,6 +203,7 @@ export default function RootLayout() {
               <DesktopNowPlayingModal />
               <MobileNowPlayingWidget />
               <WhatsAppOverlayRoot />
+              <TermsConsentWidget />
               <Toast config={{ ...chartToastConfig, ...toastConfig }} />
             </ProgressProvider>
           </NavThemeProvider>

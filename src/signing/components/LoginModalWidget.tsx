@@ -323,20 +323,15 @@ export function LoginModalWidget({
             }} />
 
                 {/* Footer */}
-                <Text style={[styles.footerText, {
-              color: colors.textSecondary
-            }]}>
-                  By continuing, you agree to our{' '}
-                  <Text style={[styles.footerLink, {
-                color: colors.text
-              }]} onPress={() => { onClose(); router.push('/terms'); }}>Terms of Service</Text>,{' '}
-                  <Text style={[styles.footerLink, {
-                color: colors.text
-              }]} onPress={() => { onClose(); router.push('/privacy'); }}>Privacy Policy</Text> and{' '}
-                  <Text style={[styles.footerLink, {
-                color: colors.text
-              }]}>Cookie Use</Text>.
-                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }}>
+                  <Text style={[styles.footerText, { color: colors.textSecondary }]}>By continuing, you agree to our </Text>
+                  <TouchableOpacity activeOpacity={0.7} onPress={() => { onClose(); router.push('/terms'); }}><Text style={[styles.footerText, styles.footerLink, { color: colors.text }]}>Terms of Service</Text></TouchableOpacity>
+                  <Text style={[styles.footerText, { color: colors.textSecondary }]}>, </Text>
+                  <TouchableOpacity activeOpacity={0.7} onPress={() => { onClose(); router.push('/privacy'); }}><Text style={[styles.footerText, styles.footerLink, { color: colors.text }]}>Privacy Policy</Text></TouchableOpacity>
+                  <Text style={[styles.footerText, { color: colors.textSecondary }]}> and </Text>
+                  <TouchableOpacity activeOpacity={0.7}><Text style={[styles.footerText, styles.footerLink, { color: colors.text }]}>Cookie Use</Text></TouchableOpacity>
+                  <Text style={[styles.footerText, { color: colors.textSecondary }]}>.</Text>
+                </View>
               </> : <>
                 <Image 
                   source={require('@/assets/appicon/big-sized-app-icon.png')} 

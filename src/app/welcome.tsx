@@ -291,9 +291,13 @@ export default function WelcomePage() {
                 </Text>
               </TouchableOpacity>
 
-              <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, textAlign: 'center', marginBottom: 24, lineHeight: 18 }}>
-                By continuing, you agree to our <Text style={{ fontWeight: 'bold', color: '#FFF', ...(Platform.OS === 'web' && { cursor: 'pointer' as any }) }} onPress={() => router.push('/terms')}>User Agreement</Text> and acknowledge that you understand the <Text style={{ fontWeight: 'bold', color: '#FFF', ...(Platform.OS === 'web' && { cursor: 'pointer' as any }) }} onPress={() => router.push('/privacy')}>Privacy Policy</Text>.
-              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginBottom: 24 }}>
+                <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, lineHeight: 18 }}>By continuing, you agree to our </Text>
+                <TouchableOpacity activeOpacity={0.7} onPress={() => { setActiveSheet('none'); router.push('/terms'); }}><Text style={{ fontWeight: 'bold', color: '#FFF', fontSize: 12, lineHeight: 18, ...(Platform.OS === 'web' && { cursor: 'pointer' as any }) }}>User Agreement</Text></TouchableOpacity>
+                <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, lineHeight: 18 }}> and acknowledge that you understand the </Text>
+                <TouchableOpacity activeOpacity={0.7} onPress={() => { setActiveSheet('none'); router.push('/privacy'); }}><Text style={{ fontWeight: 'bold', color: '#FFF', fontSize: 12, lineHeight: 18, ...(Platform.OS === 'web' && { cursor: 'pointer' as any }) }}>Privacy Policy</Text></TouchableOpacity>
+                <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, lineHeight: 18 }}>.</Text>
+              </View>
 
               <TouchableOpacity onPress={() => setActiveSheet('none')} style={{ alignItems: 'center', paddingVertical: 12 }}>
                 <Text style={{ color: '#FFF', fontSize: 14, fontWeight: 'bold' }}>Cancel</Text>
