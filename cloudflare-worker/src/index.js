@@ -1,6 +1,12 @@
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    
+    // Sitemap route
+    if (url.pathname === '/sitemap.xml') {
+      return generateSitemap(request, env, url);
+    }
+    
     const pathSegments = url.pathname.split('/').filter(Boolean);
 
     // We only care about /post/:id, /channel/:id, /profile/:id, /box/:id
@@ -92,7 +98,7 @@ async function fetchMetadataFromSupabase(type, id, env) {
       const tables = ['statuses', 'posts', 'channel_posts'];
 
       for (const table of tables) {
-        const endpoint = `${env.SUPABASE_URL}/rest/v1/${table}?id=eq.${id}&select=*`;
+        const endpoint = `${env.SUPABASE_URL}/rest/v1/${table}?id=eq.${id}&select=*,author:profiles!author_id(display_name)`;
         const res = await fetch(endpoint, { headers });
         if (!res.ok) continue;
 
@@ -105,10 +111,17 @@ async function fetchMetadataFromSupabase(type, id, env) {
           else if (row.image_url) image = row.image_url;
           else if (row.thumbnail_url) image = row.thumbnail_url;
           else if (row.thumbnail_urls && row.thumbnail_urls.length > 0) image = row.thumbnail_urls[0];
+          
+          let authorName = 'User';
+          if (row.author && row.author.display_name) {
+            authorName = row.author.display_name;
+          } else if (row.author_username) {
+            authorName = row.author_username;
+          }
 
           return {
-            title: 'CrimChart Post',
-            description: row.caption || row.content || 'View this post on CrimChart',
+            title: `${authorName}'s Post | Crimchart`,
+            description: row.caption || row.content || `View this post by ${authorName} on Crimchart`,
             image: image
           };
         }
@@ -156,4 +169,69 @@ async function fetchMetadataFromSupabase(type, id, env) {
   }
 
   return null;
+}
+
+async function generateSitemap(request, env, url) {
+  const headers = {
+    'apikey': env.SUPABASE_ANON_KEY,
+    'Authorization': `Bearer ${env.SUPABASE_ANON_KEY}`
+  };
+  
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
+  
+  xml += `
+  <url>
+    <loc>${url.origin}/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>`;
+  
+  try {
+    const postRes = await fetch(`${env.SUPABASE_URL}/rest/v1/posts?is_public=eq.true&order=created_at.desc&limit=1000`, { headers });
+    if (postRes.ok) {
+      const posts = await postRes.json();
+      for (const p of posts) {
+        xml += `
+  <url>
+    <loc>${url.origin}/post/${p.id}</loc>
+    <lastmod>${(p.updated_at || p.created_at).split('T')[0]}</lastmod>
+    <changefreq>weekly</changefreq>
+  </url>`;
+      }
+    }
+    
+    const channelRes = await fetch(`${env.SUPABASE_URL}/rest/v1/channels?order=created_at.desc&limit=1000`, { headers });
+    if (channelRes.ok) {
+      const channels = await channelRes.json();
+      for (const c of channels) {
+        xml += `
+  <url>
+    <loc>${url.origin}/channel/${c.id}</loc>
+    <lastmod>${(c.updated_at || c.created_at).split('T')[0]}</lastmod>
+    <changefreq>weekly</changefreq>
+  </url>`;
+      }
+    }
+    
+    const assetsRes = await fetch(`${env.SUPABASE_URL}/rest/v1/public_assets?order=created_at.desc&limit=1000`, { headers });
+    if (assetsRes.ok) {
+      const assets = await assetsRes.json();
+      for (const a of assets) {
+        xml += `
+  <url>
+    <loc>${a.url}</loc>
+    <lastmod>${a.created_at.split('T')[0]}</lastmod>
+    <changefreq>monthly</changefreq>
+  </url>`;
+      }
+    }
+  } catch (err) {
+    console.error('Sitemap generation error:', err);
+  }
+  
+  xml += `\n</urlset>`;
+  
+  return new Response(xml, {
+    headers: { 'Content-Type': 'application/xml;charset=UTF-8' }
+  });
 }

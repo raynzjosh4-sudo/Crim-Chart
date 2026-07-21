@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Platform } from 'react-native';
+import Head from 'expo-router/head';
 import { supabase } from '@/core/supabase/supabaseConfig';
 import { MainFeedCardModel, MainFeedCardType, ScrollViewType } from '../../models/MainFeedCardTypeModel';
 import { MainFeedCard } from '../../features/mainfeedcard/MainFeedCard';
@@ -200,8 +201,24 @@ export const SmartPostWidget: React.FC<SmartPostWidgetProps> = React.memo(({
   if (loading) return <PostCardSkeleton />;
   if (!postData) return null;
 
+  const getOgImage = () => {
+    if (postData.itemData.thumbnailLinkUrl) return postData.itemData.thumbnailLinkUrl;
+    if (postData.itemData.imageUrls && postData.itemData.imageUrls.length > 0) return postData.itemData.imageUrls[0];
+    return 'https://cdn.crimchart.com/assets/appicon/big-sized-app-icon.png';
+  };
+
   return (
     <FeedPermissionsWrapper permissions={{ canComment }}>
+      {Platform.OS === 'web' && (
+        <Head>
+          <title>{postData.itemData.author?.displayName}'s Post | Crimchart</title>
+          <meta name="description" content={postData.itemData.caption || 'View this post on Crimchart'} />
+          <meta property="og:title" content={`${postData.itemData.author?.displayName}'s Post | Crimchart`} />
+          <meta property="og:description" content={postData.itemData.caption || 'View this post on Crimchart'} />
+          <meta property="og:image" content={getOgImage()} />
+          <meta property="og:type" content="article" />
+        </Head>
+      )}
       <MainFeedCard card={postData} isActive={isActive} />
     </FeedPermissionsWrapper>
   );

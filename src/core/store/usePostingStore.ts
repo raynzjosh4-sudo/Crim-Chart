@@ -217,7 +217,7 @@ export const usePostingStore = create<PostingState>((set) => ({
         const rawPath = m.path || (m as any).uri || '';
         let uploadedMainUrl = rawPath;
 
-        const isLocalString = (p: any) => typeof p === 'string' && (p.startsWith('file://') || p.startsWith('/') || p.startsWith('blob:'));
+        const isLocalString = (p: any) => typeof p === 'string' && (p.startsWith('file://') || p.startsWith('/') || p.startsWith('blob:') || p.startsWith('ph://') || p.startsWith('content://'));
         const isBlob = (p: any) => typeof Blob !== 'undefined' && p instanceof Blob;
 
         if (m.type === MediaType.video && (isLocalString(rawPath) || isBlob(rawPath))) {
@@ -275,7 +275,7 @@ export const usePostingStore = create<PostingState>((set) => ({
 
         // Process the local thumbnail if it exists
         if (m.thumbnailUrl) {
-          const thumbIsLocalString = typeof m.thumbnailUrl === 'string' && (m.thumbnailUrl.startsWith('file://') || m.thumbnailUrl.startsWith('/') || m.thumbnailUrl.startsWith('blob:'));
+          const thumbIsLocalString = typeof m.thumbnailUrl === 'string' && (m.thumbnailUrl.startsWith('file://') || m.thumbnailUrl.startsWith('/') || m.thumbnailUrl.startsWith('blob:') || m.thumbnailUrl.startsWith('ph://') || m.thumbnailUrl.startsWith('content://'));
           const thumbIsBlob = typeof Blob !== 'undefined' && (m.thumbnailUrl as any) instanceof Blob;
           if (m.thumbnailUrl === rawPath) {
             if (m.type !== MediaType.video) {
@@ -313,7 +313,7 @@ export const usePostingStore = create<PostingState>((set) => ({
 
       if (audioMedia) {
         const audioPath = audioMedia.path;
-        const audioIsLocalString = typeof audioPath === 'string' && (audioPath.startsWith('file://') || audioPath.startsWith('/') || audioPath.startsWith('blob:'));
+        const audioIsLocalString = typeof audioPath === 'string' && (audioPath.startsWith('file://') || audioPath.startsWith('/') || audioPath.startsWith('blob:') || audioPath.startsWith('ph://') || audioPath.startsWith('content://'));
         const audioIsBlob = typeof Blob !== 'undefined' && (audioPath as any) instanceof Blob;
         if (audioIsLocalString || audioIsBlob) {
           console.log('[usePostingStore] ☁️ Uploading audio to Cloudflare R2...');
@@ -327,7 +327,7 @@ export const usePostingStore = create<PostingState>((set) => ({
         // Upload the audio cover image (thumbnail)
         if (audioMedia.thumbnailUrl) {
           const audioThumb = audioMedia.thumbnailUrl;
-          const thumbIsLocalString = typeof audioThumb === 'string' && (audioThumb.startsWith('file://') || audioThumb.startsWith('/') || audioThumb.startsWith('blob:'));
+          const thumbIsLocalString = typeof audioThumb === 'string' && (audioThumb.startsWith('file://') || audioThumb.startsWith('/') || audioThumb.startsWith('blob:') || audioThumb.startsWith('ph://') || audioThumb.startsWith('content://'));
           const thumbIsBlob = typeof Blob !== 'undefined' && (audioThumb as any) instanceof Blob;
           if (thumbIsLocalString || thumbIsBlob) {
             const thumbUrl = await cloudMediaService.uploadMedia(audioThumb as any, 'posts_media_thumbs', user.id);

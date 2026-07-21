@@ -8,9 +8,10 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { Search, Upload, X } from 'lucide-react-native';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions, Image as RNImage } from 'react-native';
 import { GestureHandlerRootView as _GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as FileSystem from 'expo-file-system/legacy';
 
 const GestureHandlerRootView = _GestureHandlerRootView as any;
 
@@ -229,6 +230,29 @@ export const CoverArtSelectorSheet = React.forwardRef(({ onSelectArtwork }: Cove
 
   const handleSelectArt = async (item: ArtworkResult) => {
     startLoading();
+    
+    let finalUrl = item.url as string;
+    
+    if (item.source === 'local') {
+      try {
+        const resolved = RNImage.resolveAssetSource(item.url as any);
+        if (resolved && resolved.uri) {
+          if (resolved.uri.startsWith('http')) {
+            // Dev environment URL, download to cache
+            const ext = resolved.uri.split('.').pop()?.split('?')[0] || 'jpg';
+            const dest = `${FileSystem.cacheDirectory}local_asset_${Date.now()}.${ext}`;
+            await FileSystem.downloadAsync(resolved.uri, dest);
+            finalUrl = dest;
+          } else {
+            // Prod environment URL (file://)
+            finalUrl = resolved.uri;
+          }
+        }
+      } catch (e) {
+        console.error("Failed to resolve local asset:", e);
+      }
+    }
+
     await new Promise(r => setTimeout(r, 300));
     stopLoading();
 
@@ -244,7 +268,7 @@ export const CoverArtSelectorSheet = React.forwardRef(({ onSelectArtwork }: Cove
     }
 
     bottomSheetRef.current?.close();
-    onSelectArtwork(updatedMedia, item.url);
+    onSelectArtwork(updatedMedia, finalUrl);
   };
 
   const handleClose = () => {
