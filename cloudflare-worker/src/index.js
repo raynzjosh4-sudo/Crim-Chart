@@ -13,6 +13,16 @@ export default {
         headers: { 'Content-Type': 'text/html' }
       });
     }
+
+    // Google Play Console - Static compliance pages with instant redirect to SPA
+    if (url.pathname === '/privacy.html') {
+      const html = `<!DOCTYPE html><html><head><title>Privacy Policy</title></head><body><h1>Privacy Policy</h1><p>Our Privacy Policy ensures your data is safe.</p><script>window.location.replace("/privacy");</script></body></html>`;
+      return new Response(html, { headers: { 'Content-Type': 'text/html' } });
+    }
+    if (url.pathname === '/delete-account.html') {
+      const html = `<!DOCTYPE html><html><head><title>Account Deletion</title></head><body><h1>Delete Account</h1><p>You can request to delete your account data here.</p><script>window.location.replace("/delete-account");</script></body></html>`;
+      return new Response(html, { headers: { 'Content-Type': 'text/html' } });
+    }
     
     const pathSegments = url.pathname.split('/').filter(Boolean);
 
@@ -70,12 +80,14 @@ async function fetchFromGithubPages(request, env, url) {
   // Let the request pass through to the origin (GitHub Pages)
   let response = await fetch(request);
 
-  // If GitHub Pages returns 404 (because it's an SPA route like /post/123),
-  // we fetch the root index.html
   if (response.status === 404) {
     const rootUrl = new URL(url.toString());
     rootUrl.pathname = '/';
-    response = await fetch(rootUrl.toString(), request);
+    // Use a clean fetch to avoid "body stream already read" exceptions on Cloudflare
+    response = await fetch(rootUrl.toString(), {
+      method: request.method,
+      headers: request.headers
+    });
   }
 
   return new Response(response.body, {
