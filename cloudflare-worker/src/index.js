@@ -7,6 +7,13 @@ export default {
       return generateSitemap(request, env, url);
     }
     
+    // Google Site Verification route
+    if (url.pathname === '/google05710c3c0f66b8d7.html') {
+      return new Response('google-site-verification: google05710c3c0f66b8d7.html', {
+        headers: { 'Content-Type': 'text/html' }
+      });
+    }
+    
     const pathSegments = url.pathname.split('/').filter(Boolean);
 
     // We only care about /post/:id, /channel/:id, /profile/:id, /box/:id
